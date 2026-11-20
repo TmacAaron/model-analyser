@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {MetricScope,NodeId,type CommunicationDefinition,type CommunicationEvaluation,type DeviceId,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
+import {MetricScope,NodeId,type CommunicationDefinition,type CommunicationEvaluation,type DeviceId,type MetricValue,type ParallelResolution,type Quantity,type StorageId,type ValueExpr} from '@model-analyser/contracts';
 import {jsonBytes} from '../../contracts/src/json-size.js';
 import {canonical} from '../../contracts/src/validation.js';
 import {LeafCostSourceRequest} from './leaf-cost-context.js';
@@ -10,7 +10,7 @@ import {explainValue} from './formula.js';
 import {namespaceDiagnostics} from './decode.js';
 import {communicationParameterBindingGraph,parameterReads,type AdditionalParameterRoot} from './parameter-binding-graph.js';
 import {assetParameterFrameId,workloadParameterFrameId,type ParameterCaptureTrace} from './parameter-observation.js';
-import type {CommunicationEndpointObserver,CommunicationEndpointSide,CommunicationPlanObservation} from './communication-observation.js';
+import type {CommunicationEndpointObserver,CommunicationEndpointSide,CommunicationPlanObservation,CommunicationStorageBindings} from './communication-observation.js';
 import type {PartitionOperation} from './layout-observation.js';
 
 export const CommunicationCostSelector=z.strictObject({
@@ -18,7 +18,8 @@ export const CommunicationCostSelector=z.strictObject({
  field:z.enum(['seconds','sendBytesPerMember','receiveBytesPerMember','algorithmTrafficBytesPerMember','groupSendBytes','groupReceiveBytes']),
 });
 export type CommunicationCostSelector=z.infer<typeof CommunicationCostSelector>;
-export const CommunicationCostSourceRequest=LeafCostSourceRequest.extend({selector:CommunicationCostSelector,proofVersion:z.union([z.literal(2),z.literal(3)]).optional(),decodeFrame:z.literal(true).optional()});
+export const CommunicationCostSourceRequest=LeafCostSourceRequest.extend({selector:CommunicationCostSelector,proofVersion:z.union([z.literal(2),z.literal(3),z.literal(4)]).optional(),
+ decodeFrame:z.literal(true).optional(),storagePage:z.number().int().nonnegative().max(10000).optional()});
 export type CommunicationCostSourceRequest=z.input<typeof CommunicationCostSourceRequest>;
 const pageSize=20;
 type FormulaEvidence=Omit<ReturnType<typeof explainValue>,'proof'>&{proof?:ReturnType<typeof explainValue>['proof']};
@@ -60,16 +61,50 @@ function endpointLayoutEvidence(evaluation:CommunicationEvaluation,authored:Comm
  return {source:endpoint('source'),destination:endpoint('destination'),payloadDtype:definition.payloadDtype,devices};
 }
 
+type StorageRole=CommunicationEndpointSide|'temporary';
+type StorageAllocationEvidence={storageId:StorageId;roles:StorageRole[]}&(
+ {kind:'not_on_device'|'unassigned'}|
+ {kind:'allocated';materialization:'materialized'|'elided';copies:number;perCopyBytes:ReturnType<typeof compact>;totalBytes:ReturnType<typeof compact>}
+);
+
+function communicationStorageEvidence(layout:ParallelResolution,evaluation:CommunicationEvaluation,bindings:CommunicationStorageBindings,deviceIds:DeviceId[],page:number){
+ const {definition}=evaluation,{source,destination}=bindings;
+ const temporary=new Set(definition.temporaryStorageIds??[]);
+ const storageIds=[...new Set([source.canonicalStorageId,destination.canonicalStorageId,...temporary])];
+ const start=page*pageSize;
+ if(page>0&&start>=storageIds.length)throw Error('请求的通信存储页不存在');
+ const assigned=new Map(layout.storageAllocations.map(row=>[row.storageId,row.allocation])),unassigned=new Set(layout.unassignedStorageIds);
+ const pageIds=storageIds.slice(start,start+pageSize);
+ const rows=pageIds.map(storageId=>{
+  const allocation=assigned.get(storageId);
+  if(!allocation&&!unassigned.has(storageId))throw Error('通信规范存储与分配记录不同');
+  return {storageId,allocation,perDevice:new Map(allocation?.perDevice.map(item=>[item.deviceId,item]))};
+ });
+ const devices=deviceIds.map(deviceId=>({deviceId,allocations:rows.flatMap<StorageAllocationEvidence>(({storageId,allocation,perDevice})=>{
+  const roles:StorageRole[]=[];
+  if(storageId===source.canonicalStorageId&&(definition.operation!=='send_recv'||deviceId===definition.sourceDeviceId))roles.push('source');
+  if(storageId===destination.canonicalStorageId&&(definition.operation!=='send_recv'||deviceId===definition.destinationDeviceId))roles.push('destination');
+  if(temporary.has(storageId))roles.push('temporary');
+  if(!roles.length)return [];
+  const base={storageId,roles},local=perDevice.get(deviceId);
+  if(!allocation||!local)return [{...base,kind:allocation?'not_on_device' as const:'unassigned' as const}];
+  return [{...base,kind:'allocated',materialization:allocation.materialization??'materialized',copies:local.copies,
+   perCopyBytes:compact(local.allocation.totalBytes),totalBytes:compact(local.totalBytes)}];
+ })}));
+ return {source,destination,page,pageSize,componentCount:storageIds.length,storageIds:pageIds,devices};
+}
+
 export async function replayCommunicationCostSource(input:unknown){
  const request=CommunicationCostSourceRequest.parse(input),{scenario,assets,stepContext,selector,page,inputHash,engineVersion}=request;
  const extended=request.proofVersion!==undefined,start=page*pageSize;
+ if(request.storagePage!==undefined&&request.proofVersion!==4)throw Error('通信存储分页需要第 4 版来源报告');
  if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1)throw Error('通信来源需要选择一个实际 Decode 步骤');
  if(request.decodeFrame&&!stepContext)throw Error('通信来源缺少实际 Decode 步骤上下文');
  const prefix=request.decodeFrame&&stepContext?`decode-step-${stepContext.index}::`:undefined;
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('通信固定输入、实际步骤或引擎版本不匹配');
  const observations:CommunicationPlanObservation[]=[];
  let bindingTrace:ParameterCaptureTrace|undefined;
- const endpointOperations:EndpointOperations|undefined=request.proofVersion===3?{
+ const endpointOperations:EndpointOperations|undefined=request.proofVersion===3||request.proofVersion===4?{
   source:{global:[],devices:new Map()},destination:{global:[],devices:new Map()},
  }:undefined;
  const endpoints:CommunicationEndpointObserver|undefined=endpointOperations?{start,limit:pageSize,record:(side,operation,deviceId)=>{
@@ -83,6 +118,7 @@ export async function replayCommunicationCostSource(input:unknown){
   index:selector.index,...(selector.nativeNodeId?{nativeNodeId:selector.nativeNodeId}:{}),record:trace=>observations.push(trace),
   ...(extended?{bindings:(trace:ParameterCaptureTrace)=>{bindingTrace=trace;}}:{}),
   ...(endpoints?{endpoints}:{}),
+  ...(request.proofVersion===4?{captureStorage:true as const}:{}),
  });
  if(resolved.status!=='available')throw Error('原通信布局不能复算');
  const row=resolved.result.communications.find(entry=>entry.index===selector.index),observed=observations[0];
@@ -168,15 +204,19 @@ export async function replayCommunicationCostSource(input:unknown){
   ...(uniformMessages?{uniformMessages}:{}),items,...(timing?{timing}:{}),...(timingFormula?{timingFormula}:{}),diagnostics};
  if(extended&&!bindingTrace)throw Error('未采集到实际通信参数域');
  const parameterBindings=bindingTrace?communicationParameterBindingGraph({...bindingTrace,truncated:bindingTrace.truncated||!complete||readsTruncated},assets,reads):undefined;
- const endpointLayouts=endpointOperations?endpointLayoutEvidence(evaluation,authored,items.map(item=>item.deviceId),endpointOperations):undefined;
+ const deviceIds=items.map(item=>item.deviceId);
+ const endpointLayouts=endpointOperations?endpointLayoutEvidence(evaluation,authored,deviceIds,endpointOperations):undefined;
+ if(request.proofVersion===4&&!observed.storage)throw Error('缺少通信端点的实际存储绑定');
+ const storageEvidence=observed.storage?communicationStorageEvidence(resolved.result,evaluation,observed.storage,deviceIds,request.storagePage??0):undefined;
  return {schemaVersion:request.proofVersion??1 as const,kind:'communication_cost_source' as const,inputHash,engineVersion,selector,page,pageSize,componentCount,complete,
-  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(parameterBindings?{parameterBindings}:{}),...(endpointLayouts?{endpointLayouts}:{}),request};
+  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(parameterBindings?{parameterBindings}:{}),...(endpointLayouts?{endpointLayouts}:{}),
+  ...(storageEvidence?{storageEvidence:prefix?namespaceDiagnostics(storageEvidence,prefix):storageEvidence}:{}),request};
 }
 
 export type CommunicationCostSourceReport=Awaited<ReturnType<typeof replayCommunicationCostSource>>;
 
 export async function verifyCommunicationCostSourceReport(input:unknown){
- if(!input||typeof input!=='object'||!('kind'in input)||input.kind!=='communication_cost_source'||!('schemaVersion'in input)||(input.schemaVersion!==1&&input.schemaVersion!==2&&input.schemaVersion!==3)||!('request'in input))throw Error('无效的通信来源报告');
+ if(!input||typeof input!=='object'||!('kind'in input)||input.kind!=='communication_cost_source'||!('schemaVersion'in input)||(input.schemaVersion!==1&&input.schemaVersion!==2&&input.schemaVersion!==3&&input.schemaVersion!==4)||!('request'in input))throw Error('无效的通信来源报告');
  const actual=await replayCommunicationCostSource(input.request);
  if(stableStringify(actual)!==stableStringify(input))throw Error('通信来源与固定输入复算不同');
  return actual;

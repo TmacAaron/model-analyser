@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {AssetDocument,DeviceId,NodeId,type ProjectDocument} from '@model-analyser/contracts';
+import {AssetDocument,DeviceId,NodeId,StorageId,type ProjectDocument} from '@model-analyser/contracts';
 import {analyzeScenario,replayCommunicationCostSource,verifyCommunicationCostSourceReport,type CommunicationCostSelector} from '@model-analyser/core';
 import {makeSerialGatherProject} from '../scripts/serial-gather-project.js';
 import {makeNativeCollectiveProject} from '../scripts/native-collective-project.js';
@@ -67,6 +67,56 @@ it('replays distinct effective endpoint layouts even when gather uses the same t
  const reply={taskId:task.taskId,phase:task.phase,status:'available',report};
  expect(readCommunicationSourceReply(reply,task)).toEqual(reply);
  expect(()=>readCommunicationSourceReply({...reply,report:{...report,endpointLayouts:undefined}},task)).toThrow('端点布局');
+});
+
+it('links two communication endpoints to one canonical allocation and keeps declared scratch separate',async()=>{
+ const project=makeNativeCollectiveProject(c01Project()),model=project.assetSnapshots.find(asset=>asset.definition.kind==='model');
+ if(model?.definition.kind!=='model')throw Error('Missing native model');
+ const graph=model.definition.graph,target=graph.tensors.find(tensor=>tensor.tensorId==='Yg');
+ if(!target)throw Error('Missing gather output');
+ const alias=StorageId.parse('gather-view');
+ graph.storages.push({storageId:alias,name:'Gather view alias',category:'activation',sharingDomain:'request',allocation:{kind:'alias',targetStorageId:target.storageId}});
+ target.storageId=alias;
+ const fixed={...await request(project,'groupSendBytes'),proofVersion:4 as const};
+ const report=await replayCommunicationCostSource(fixed);
+ const storage=report.storageEvidence;
+ expect(report.schemaVersion).toBe(4);
+ expect(storage).toMatchObject({source:{storageId:'sY',canonicalStorageId:'sY'},destination:{storageId:'gather-view',canonicalStorageId:'sY'},componentCount:2});
+ expect(storage?.devices.map(item=>item.allocations)).toMatchObject(Array.from({length:2},()=>[
+  {storageId:'sY',roles:['source','destination'],kind:'allocated',perCopyBytes:{quantity:{value:64,unit:'byte'}},totalBytes:{quantity:{value:64,unit:'byte'}}},
+  {storageId:'commScratch',roles:['temporary'],kind:'allocated',totalBytes:{quantity:{value:200,unit:'byte'}}},
+ ]));
+ expect(report.summary.groupSend).toMatchObject({quantity:{value:64,unit:'byte'}});
+ expect(await verifyCommunicationCostSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const tampered=structuredClone(report);
+ tampered.storageEvidence!.destination.canonicalStorageId=StorageId.parse('commScratch');
+ await expect(verifyCommunicationCostSourceReport(tampered)).rejects.toThrow('固定输入复算不同');
+ const task={taskId:'backing',phase:'communication_cost_source',request:fixed},reply={taskId:task.taskId,phase:task.phase,status:'available',report};
+ expect(readCommunicationSourceReply(reply,task)).toEqual(reply);
+ expect(()=>readCommunicationSourceReply({...reply,report:{...report,storageEvidence:{...storage,page:1}}},task)).toThrow('当前存储页');
+});
+
+it('pages declared communication buffers independently and distinguishes unassigned storage from other-device storage',async()=>{
+ const project=makeSerialGatherProject(c01Project()),scenario=project.scenarios[0]!,model=project.assetSnapshots.find(asset=>asset.definition.kind==='model');
+ const comm=scenario.parallelPlan.communications[0]!,gpu0=scenario.deviceTopology.devices[0]!.deviceId;
+ if(model?.definition.kind!=='model'||!comm.temporaryStorageIds)throw Error('Missing plan scratch');
+ const storageIds=Array.from({length:21},(_,index)=>StorageId.parse('scratch-'+index));
+ for(const id of storageIds)model.definition.graph.storages.push({storageId:id,name:id,category:'communication',sharingDomain:'device_group',allocation:{kind:'bytes',value:{kind:'literal',quantity:{value:16,unit:'byte'}}}});
+ comm.temporaryStorageIds.push(...storageIds);
+ scenario.deviceTopology.groups.push({groupId:'scratch-device',members:[gpu0]});
+ scenario.parallelPlan.assignments[0]!.storageDistributions.push({storageId:storageIds[0]!,distribution:{kind:'replicated',groupId:'scratch-device'}});
+ const fixed={...await request(project,'groupSendBytes'),proofVersion:4 as const};
+ const first=await replayCommunicationCostSource(fixed),last=await replayCommunicationCostSource({...fixed,storagePage:1});
+ expect(first.storageEvidence?.componentCount).toBe(23);
+ expect(first.storageEvidence?.storageIds).toHaveLength(20);
+ expect(first.storageEvidence?.devices[0]?.allocations.find(row=>row.storageId==='scratch-0')).toMatchObject({kind:'allocated',totalBytes:{quantity:{value:16,unit:'byte'}}});
+ expect(first.storageEvidence?.devices[1]?.allocations).toContainEqual({storageId:'scratch-0',roles:['temporary'],kind:'not_on_device'});
+ expect(first.storageEvidence?.devices[0]?.allocations).toContainEqual({storageId:'scratch-1',roles:['temporary'],kind:'unassigned'});
+ expect(last.endpointLayouts).toEqual(first.endpointLayouts);
+ expect(last.storageEvidence?.storageIds).toEqual(storageIds.slice(-3));
+ expect(last.storageEvidence?.devices.every(row=>row.allocations.length===3)).toBe(true);
+ expect(await verifyCommunicationCostSourceReport(last)).toEqual(last);
+ await expect(replayCommunicationCostSource({...fixed,storagePage:2})).rejects.toThrow('存储页不存在');
 });
 
 it('binds a plan message to the winning root parameter when the workload has the same name and value',async()=>{
@@ -194,7 +244,7 @@ it('preserves nonuniform diagnostics, per-rank factors, ordered totals, and max-
 
 it('counts only the explicit send_recv endpoints and keeps fixed seconds separate from HBM',async()=>{
  const {project}=await makeNamedParallelProject('pp2'),fixed=await request(project,'groupSendBytes');
- const report=await replayCommunicationCostSource({...fixed,proofVersion:3});
+ const report=await replayCommunicationCostSource({...fixed,proofVersion:4});
  expect(report.operation).toBe('send_recv');
  expect(report.uniformMessages?.count).toBe(1);
  expect(report.items.map(row=>row.role).sort()).toEqual(['receiver','sender']);
@@ -207,6 +257,12 @@ it('counts only the explicit send_recv endpoints and keeps fixed seconds separat
  expect(source?.destination).toBeUndefined();
  expect(destination?.source).toBeUndefined();
  expect(destination?.destination).toMatchObject({deviceId:receiver?.deviceId});
+ const senderStorage=report.storageEvidence?.devices.find(row=>row.deviceId===sender?.deviceId);
+ const receiverStorage=report.storageEvidence?.devices.find(row=>row.deviceId===receiver?.deviceId);
+ expect(senderStorage?.allocations.flatMap(row=>row.roles)).toContain('source');
+ expect(senderStorage?.allocations.flatMap(row=>row.roles)).not.toContain('destination');
+ expect(receiverStorage?.allocations.flatMap(row=>row.roles)).toContain('destination');
+ expect(receiverStorage?.allocations.flatMap(row=>row.roles)).not.toContain('source');
 });
 
 it('replays an actual Decode step, including a custom timing formula and fixed zero override',async()=>{

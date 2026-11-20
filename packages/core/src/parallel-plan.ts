@@ -220,8 +220,14 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       if(evaluation.status==='unavailable')throw new FormulaError(evaluation.diagnostics[0]?.code??'invalid_communication',evaluation.diagnostics.map(d=>d.message).join('; '));diagnostics.push(...evaluation.result.diagnostics);const native=nativeCommunications[index-planCommunicationCount];communications.push({index,...(native?{origin:{kind:'graph',nodeId:native.nodeId}}:{}),evaluation:evaluation.result});
       if(capture&&communication){
         const collective=captures.find(record=>record.nodeId===native?.nodeId);
+        function endpointStorage(id:TensorId){
+          const tensor=graph.tensors.find(row=>row.tensorId===id);
+          if(!tensor)throw new FormulaError('missing_reference','通信端点存储缺少展开张量 '+id);
+          return {storageId:tensor.storageId,canonicalStorageId:canonicalStorage(tensor.storageId)};
+        }
+        const storage=communication.captureStorage?{source:endpointStorage(definition.source.tensorId),destination:endpointStorage(definition.destination.tensorId)}:undefined;
         communication.record(structuredClone({index,...(c.placement?.nodeId?{nodeId:c.placement.nodeId}:{}),...(collective?{collective}:{}),
-          symbols:communicationSymbols(context.symbols),...(planParameterKeys?{planParameterKeys}:{}),overrides:overrideTrace,...(timing?{timing}:{})}));
+          symbols:communicationSymbols(context.symbols),...(planParameterKeys?{planParameterKeys}:{}),overrides:overrideTrace,...(timing?{timing}:{}),...(storage?{storage}:{})}));
       }
     }
     const warn=(code:string,message:string,nodeId:NodeId,severity:'warning'|'info'='warning')=>diagnostics.push({diagnosticId:'parallel-'+diagnostics.length,severity,code,message,location:{kind:'node',nodeId}});

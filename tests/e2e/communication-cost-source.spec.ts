@@ -2,7 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 import {randomUUID} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {NodeId,type ProjectDocument} from '@model-analyser/contracts';
+import {NodeId,StorageId,type ProjectDocument} from '@model-analyser/contracts';
 import {makeNativeCollectiveProject} from '../../scripts/native-collective-project.js';
 import {makeSerialGatherProject} from '../../scripts/serial-gather-project.js';
 import {c01Project} from '../model-fixtures.js';
@@ -22,6 +22,13 @@ async function inspect(page:Page,project:ProjectDocument){
 
 test('drills from a serial communication barrier to the native equation and validates its exported override',async({page})=>{
  const project=makeNativeCollectiveProject(c01Project());
+ const model=project.assetSnapshots.find(asset=>asset.definition.kind==='model');
+ if(model?.definition.kind!=='model')throw Error('Missing native model');
+ const graph=model.definition.graph,output=graph.tensors.find(tensor=>tensor.tensorId==='Yg');
+ if(!output)throw Error('Missing gather output');
+ const alias=StorageId.parse('gather-view');
+ graph.storages.push({storageId:alias,name:'Gather view',category:'activation',sharingDomain:'request',allocation:{kind:'alias',targetStorageId:output.storageId}});
+ output.storageId=alias;
  project.scenarios[0]!.numericOverrides=[{target:{kind:'node',nodeId:NodeId.parse('gather-Y')},field:'communication_bandwidth',value:{value:2000,unit:'byte_per_second'}}];
  const inspector=await inspect(page,project);
  await inspector.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
@@ -40,6 +47,21 @@ test('drills from a serial communication barrier to the native equation and vali
  await source.locator('summary').click();
  await expect(source).toContainText('[4, 8) · 有效 4 · 分配 4');
  await expect(gpu1.locator('summary').filter({hasText:'目标端布局'})).toContainText('32 个有效元素 · 32 个分配元素');
+ const storage=communication.getByRole('region',{name:'通信关联存储'});
+ await expect(storage).toContainText('目标端 gather-view → sY');
+ await gpu1.getByText('本卡关联存储 · 2 项',{exact:true}).click();
+ const backing=gpu1.getByRole('region',{name:'存储 sY',exact:true});
+ await expect(backing).toHaveCount(1);
+ await expect(backing).toContainText('源端、目标端');
+ await expect(backing).toContainText('总分配 64 byte');
+ await expect(gpu1.getByRole('region',{name:'存储 commScratch',exact:true})).toContainText('总分配 200 byte');
+ await backing.getByRole('button',{name:'复核此卡的分配推导',exact:true}).click();
+ await expect(backing).toContainText('已复核分配 64 byte');
+ const allocationDownload=page.waitForEvent('download');
+ await backing.getByRole('button',{name:'导出此页布局来源',exact:true}).click();
+ const allocationFile=await (await allocationDownload).path();if(!allocationFile)throw Error('Missing allocation export');
+ const run=promisify(execFile),allocationCli=await run(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',allocationFile]);
+ expect(JSON.parse(allocationCli.stdout)).toMatchObject({kind:'layout_source',schemaVersion:2,selector:{kind:'storage',storageId:'sY',deviceId:'gpu1'}});
  await communication.getByText('统一消息的公式与组总量',{exact:true}).click();
  await expect(communication).toContainText('rows * cols');
  const bindings=communication.getByRole('region',{name:'实际参数绑定链'});
@@ -48,8 +70,8 @@ test('drills from a serial communication barrier to the native equation and vali
  const download=page.waitForEvent('download');
  await communication.getByRole('button',{name:'导出此页通信来源',exact:true}).click();
  const file=await(await download).path();if(!file)throw Error('Missing communication export');
- const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
- expect(JSON.parse(cli.stdout)).toMatchObject({kind:'communication_cost_source',schemaVersion:3,operation:'all_gather',quantity:{value:.017,unit:'second'},parameterBindingGraph:{complete:true,roots:4}});
+ const cli=await run(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'communication_cost_source',schemaVersion:4,operation:'all_gather',quantity:{value:.017,unit:'second'},parameterBindingGraph:{complete:true,roots:4}});
 });
 
 test('switches the actual Decode workload binding for a nonuniform communication',async({page})=>{
@@ -85,4 +107,10 @@ test('switches the actual Decode workload binding for a nonuniform communication
  await expect(communication.locator('article').filter({hasText:'gpu1'})).toContainText('32 + 48 = 80 byte');
  await expect(communication).toContainText('128 ÷ 1000 = 0.128 s');
  await expect(endpoints).toContainText('row=4 × col=8');
+ const gpu0=communication.getByRole('article').filter({has:page.getByRole('heading',{name:'gpu0',exact:true})});
+ await gpu0.getByText('本卡关联存储 · 2 项',{exact:true}).click();
+ const backing=gpu0.getByRole('region',{name:'存储 sY',exact:true});
+ await expect(backing).toContainText('总分配 64 byte');
+ await backing.getByRole('button',{name:'复核此卡的分配推导',exact:true}).click();
+ await expect(backing).toContainText('已复核分配 64 byte');
 });

@@ -16,7 +16,7 @@ export function readCommunicationSourceReply(value:unknown,task:Omit<Communicati
  if(report['pageSize']!==20||typeof count!=='number'||!Number.isSafeInteger(count)||count<=page*20||!Array.isArray(items)||items.length!==Math.min(20,count-page*20)||!object(report['network'])||!Array.isArray(report['network']['overrides'])||report['network']['overrides'].length>2)throw Error('通信来源回复超过分页范围');
  const bindings=report['parameterBindings'];
  if(request.proofVersion!==undefined&&(!object(bindings)||bindings['schemaVersion']!==1||bindings['scope']!=='actual_communication_parameter_context'||!Array.isArray(bindings['nodes'])||bindings['nodes'].length>256||!Array.isArray(bindings['roots'])||bindings['roots'].length>256||!Array.isArray(bindings['candidates'])||bindings['candidates'].length>256||!Array.isArray(bindings['boundaries'])||bindings['boundaries'].length>32))throw Error('通信来源回复缺少参数链或超过证据预算');
- if(request.proofVersion===3){
+ if(request.proofVersion===3||request.proofVersion===4){
   const layouts=report['endpointLayouts'],endpoints=report['endpoints'];
   if(!object(layouts)||!object(endpoints)||!Array.isArray(layouts['devices'])||layouts['devices'].length!==items.length||!object(layouts['payloadDtype']))throw Error('通信来源回复缺少本页端点布局');
   const devices=layouts['devices'];
@@ -30,6 +30,25 @@ export function readCommunicationSourceReply(value:unknown,task:Omit<Communicati
     const placement=row[side],role=item['role'];
     const participates=report['operation']!=='send_recv'||role===(side==='source'?'sender':'receiver');
     if(participates?(!object(placement)||placement['deviceId']!==row['deviceId']||!Array.isArray(placement['operations'])||placement['operations'].length<2||placement['operations'].length>34):placement!==undefined)throw Error('通信端点布局的分片记录与设备角色不同');
+   }
+  }
+ }
+ if(request.proofVersion===4){
+  const storage=report['storageEvidence'],storagePage=request.storagePage??0;
+  if(!object(storage)||storage['page']!==storagePage||storage['pageSize']!==20||!object(storage['source'])||!object(storage['destination']))throw Error('通信来源回复缺少当前存储页');
+  const storageIds=storage['storageIds'],devices=storage['devices'],storageCount=storage['componentCount'];
+  if(typeof storageCount!=='number'||!Number.isSafeInteger(storageCount)||storageCount<=storagePage*20||!Array.isArray(storageIds)||
+     storageIds.length!==Math.min(20,storageCount-storagePage*20)||new Set(storageIds).size!==storageIds.length||storageIds.some(id=>typeof id!=='string')||
+     !Array.isArray(devices)||devices.length!==items.length)throw Error('通信存储来源回复超过分页范围');
+  for(const [index,item] of items.entries()){
+   const row=devices[index];
+   if(!object(item)||!object(row)||row['deviceId']!==item['deviceId']||!Array.isArray(row['allocations'])||row['allocations'].length>storageIds.length)throw Error('通信存储分配的设备与本页消息不同');
+   const seen=new Set<unknown>();
+   for(const allocation of row['allocations']){
+    if(!object(allocation)||!storageIds.includes(allocation['storageId'])||seen.has(allocation['storageId'])||
+       !Array.isArray(allocation['roles'])||!allocation['roles'].length||allocation['roles'].some(role=>!['source','destination','temporary'].includes(role))||
+       !['allocated','not_on_device','unassigned'].includes(String(allocation['kind'])))throw Error('通信存储分配的身份或角色有误');
+    seen.add(allocation['storageId']);
    }
   }
  }
