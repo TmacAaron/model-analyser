@@ -33,7 +33,7 @@ function isMetricEnvelope(value:unknown){
     record(value.quantity)&&typeof value.quantity.value==='number'&&typeof value.quantity.unit==='string'&&record(value.provenance));
 }
 
-function isResultEnvelope(value:unknown):value is AnalysisResult{
+export function isAnalysisResultEnvelope(value:unknown):value is AnalysisResult{
   if(!record(value)||typeof value.inputHash!=='string'||typeof value.engineVersion!=='string'||typeof value.scenarioId!=='string'||
     (value.phase!=='prefill'&&value.phase!=='decode')||!MetricScope.safeParse(value.scope).success||
     !record(value.total)||!Array.isArray(value.total.compute))return false;
@@ -51,7 +51,7 @@ export function readAnalysisCompletion(data:unknown,taskId:number):AnalysisAttem
     if(data.taskId!==taskId)throw Error('分析回复的任务身份与当前请求不同');
     const attempt=decodeAttempt(data);
     if(record(attempt)&&attempt.status==='available'){
-      if(!isResultEnvelope(attempt.result))throw Error('分析线程返回了无效结果');
+      if(!isAnalysisResultEnvelope(attempt.result))throw Error('分析线程返回了无效结果');
       return {status:'available',result:attempt.result};
     }
     data=attempt;

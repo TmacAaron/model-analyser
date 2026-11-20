@@ -1,7 +1,8 @@
 import { compareScenarios } from '@model-analyser/core';
-import type { AssetDocument,Scenario,ScenarioComparisonAttempt,ScenarioComparisonRequest,ScenarioComparisonResult } from '@model-analyser/contracts';
+import type { AssetDocument,Scenario,ScenarioComparisonRequest,ScenarioComparisonResult } from '@model-analyser/contracts';
 import type { ComparisonExportSelection } from './comparison-export.js';
 import type { ComparisonSerializationReply,ComparisonSerializationRequest } from './comparison-export-worker.js';
+import { createComparisonCompletion,type ComparisonCompletion } from './comparison-result-transport.js';
 
 type ExportRequest={kind:'export';runId:number;jobId:number;selection:ComparisonExportSelection};
 export type ComparisonWorkerRequest=
@@ -12,7 +13,7 @@ export type ComparisonWorkerRequest=
 export type ComparisonExportReply={kind:'exported';runId:number;jobId:number;selection:ComparisonExportSelection}&ComparisonSerializationReply;
 export type ComparisonWorkerResponse=
   |{kind:'progress';runId:number;completed:number;total:number}
-  |{kind:'result';runId:number;attempt:ScenarioComparisonAttempt}
+  |ComparisonCompletion
   |{kind:'failed';runId:number;message:string}
   |ComparisonExportReply;
 
@@ -75,7 +76,7 @@ endpoint.onmessage=({data})=>{
       }).then(attempt=>{
         if(active!==run)return;
         if(attempt.status==='available')run.report=attempt.result;
-        endpoint.postMessage({kind:'result',runId:run.id,attempt});
+        endpoint.postMessage(createComparisonCompletion(attempt,run.id));
       }).catch(error=>{
         if(active===run)endpoint.postMessage({kind:'failed',runId:run.id,message:error instanceof Error?error.message:'后台比较失败'});
       });

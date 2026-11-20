@@ -1,8 +1,9 @@
 import { useEffect,useRef,useState } from 'react';
-import { ScenarioComparisonAttempt,type AssetDocument,type Scenario,type ScenarioComparisonRequest } from '@model-analyser/contracts';
+import type { ScenarioComparisonAttempt,AssetDocument,Scenario,ScenarioComparisonRequest } from '@model-analyser/contracts';
 import { stableStringify } from '@model-analyser/core';
 import { comparisonExportFiles,type ComparisonExportSelection } from './comparison-export.js';
 import type { ComparisonExportReply,ComparisonWorkerRequest,ComparisonWorkerResponse } from './comparison-worker.js';
+import {readComparisonCompletion,type ComparisonPreview} from './comparison-result-transport.js';
 
 type ExportJob={id:number;selection:ComparisonExportSelection};
 type Run={id:number;worker:Worker;key:string;ready:boolean;job?:ExportJob};
@@ -20,12 +21,13 @@ export function useScenarioComparison(key:string){
   const live=useRef<Run|undefined>(undefined);
   const nonce=useRef(0),latest=useRef(key);
   latest.current=key;
-  const [cached,setCached]=useState<{key:string;attempt:ScenarioComparisonAttempt}>();
+  const [cached,setCached]=useState<{key:string;attempt:ScenarioComparisonAttempt;preview?:ComparisonPreview}>();
   const [hasResult,setHasResult]=useState(false);
   const [busy,setBusy]=useState(false),[cancelling,setCancelling]=useState(false),[error,setError]=useState('');
   const [progress,setProgress]=useState({completed:0,total:0});
   const [exportStatus,setExportStatus]=useState<ExportStatus>();
   const attempt=cached?.key===key?cached.attempt:undefined;
+  const preview=cached?.key===key?cached.preview:undefined;
   const report=attempt?.status==='available'?attempt.result:undefined;
 
   function stop(){
@@ -79,12 +81,13 @@ export function useScenarioComparison(key:string){
         if(data.kind==='progress'){setProgress({completed:data.completed,total:data.total});return;}
         if(data.kind==='failed'){fail(data.message);return;}
         if(data.kind!=='result'){fail('比较线程返回无效结果');return;}
-        const parsed=ScenarioComparisonAttempt.safeParse(data.attempt);
-        if(!parsed.success){fail('比较线程返回无效结果');return;}
-        setCached({key:run.key,attempt:parsed.data});setHasResult(true);
-        setBusy(false);setCancelling(false);
-        if(parsed.data.status==='available')run.ready=true;
-        else stop();
+        try{
+          const parsed=readComparisonCompletion(data,run.id,request,scenarios);
+          setCached({key:run.key,...parsed});setHasResult(true);
+          setBusy(false);setCancelling(false);
+          if(parsed.attempt.status==='available')run.ready=true;
+          else stop();
+        }catch(failure){fail(failure instanceof Error?failure.message:'比较线程返回无效结果');}
       };
       worker.onerror=()=>fail('后台比较失败，请缩小范围后重试');
       worker.onmessageerror=()=>fail('无法读取比较线程回复');
@@ -126,6 +129,6 @@ export function useScenarioComparison(key:string){
     setExportStatus({kind:'cancelled',selection:job.selection});
   }
 
-  return {attempt,report,busy,cancelling,error,setError,progress,previous:hasResult&&!attempt,start,cancel,exportFile,cancelExport,
+  return {attempt,report,preview,busy,cancelling,error,setError,progress,previous:hasResult&&!attempt,start,cancel,exportFile,cancelExport,
     exportStatus:report?exportStatus:undefined};
 }

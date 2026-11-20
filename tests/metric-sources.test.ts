@@ -83,7 +83,7 @@ describe('exact comparison and model compute sources',()=>{
   it('keeps whole-sequence sources separate from third-step values and never labels aggregate parameters as old missing records',async()=>{
     const r=await comparison(duplicate(makeDecodeProject(c01Project()))),a=result(r),frame=modelComputeFrame(a),row=comparisonRows(r).find(row=>row.key==='useful:'+stableStringify(frame.compute[0]?.computeClass));if(!row)throw Error();
     const proof=comparisonMetricEvidence(r,row.key,0);if(proof.kind!=='metric')throw Error();expect(number(proof.parts[0]!.metric)).toBe(12);expect(number(a.decode!.steps[2]!.result.total.compute[0]!.usefulOperations)).toBe(5);expect(proof.parts[0]?.targetId).toBe(frame.targetId);
-    const html=renderToStaticMarkup(createElement(ComparisonMetricSource,{selection:{report:r,rowKey:row.key,entryIndex:0,delta:false},onClose:()=>{}}));expect(html).toContain('整个Decode序列汇总');expect(html).toContain('序列汇总涉及不同实际调用');expect(html).not.toContain('此旧结果没有实际参数记录');
+    const html=renderToStaticMarkup(createElement(ComparisonMetricSource,{selection:{report:r,row,entryIndex:0,delta:false},onClose:()=>{}}));expect(html).toContain('整个Decode序列汇总');expect(html).toContain('序列汇总涉及不同实际调用');expect(html).not.toContain('此旧结果没有实际参数记录');
   });
   it('keeps unknown classes/modules/entries explicit and cannot create a delta from a missing side',async()=>{
     const r=await comparison(makeMetricSourceProject(c01Project()));for(const [key,i] of [['useful:missing',0],['module-seconds:absent',0],['seconds',-1],['seconds',99]] as const)expect(comparisonMetricEvidence(r,key,i).kind).toBe('missing');
@@ -91,6 +91,7 @@ describe('exact comparison and model compute sources',()=>{
   });
   it('renders independent class actions and both fixed delta sources without making the count a source action',async()=>{
     const r=await comparison(makeMetricSourceProject(c01Project(),true)),a=result(r),html=renderToStaticMarkup(createElement(ModelComputeSummary,{result:a,onSource:()=>{}}));expect(html).toContain('2 个计算分类');expect(html).toContain('查看有效工作分类 1 来源');expect(html).toContain('查看有效工作分类 2 来源');expect(html).not.toContain('aria-label="查看有效工作量来源"');
-    const delta=renderToStaticMarkup(createElement(ComparisonMetricSource,{selection:{report:r,rowKey:'seconds',entryIndex:1,delta:true},onClose:()=>{}}));expect(delta).toContain('5 − 2 = 3 second');expect(delta).toContain('基准指标依据');expect(delta).toContain('当前指标依据');expect(delta).toContain('展开基准公式、参数与假设');expect(delta).toContain('展开当前公式、参数与假设');
+    const row=comparisonRows(r).find(item=>item.key==='seconds');if(!row)throw Error('Missing time row');
+    const delta=renderToStaticMarkup(createElement(ComparisonMetricSource,{selection:{report:r,row,entryIndex:1,delta:true},onClose:()=>{}}));expect(delta).toContain('5 − 2 = 3 second');expect(delta).toContain('基准指标依据');expect(delta).toContain('当前指标依据');expect(delta).toContain('展开基准公式、参数与假设');expect(delta).toContain('展开当前公式、参数与假设');
   });
 });

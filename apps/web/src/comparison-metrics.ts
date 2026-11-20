@@ -93,6 +93,9 @@ export function comparisonCommunicationSource(result:AnalysisResult,eventIndex:n
 }
 
 export function comparisonDeltaEvidence(report:ScenarioComparisonResult,rowKey:string,entryIndex:number){
-  const row=comparisonRows(report).find(r=>r.key===rowKey),baseline=row?.values[0],current=entryIndex>0?row?.values[entryIndex]:undefined,raw=baseline!==undefined&&current!==undefined?current-baseline:undefined;
+  return comparisonRowDelta(comparisonRows(report).find(r=>r.key===rowKey),entryIndex);
+}
+export function comparisonRowDelta(row:ComparisonRow|undefined,entryIndex:number){
+  const baseline=row?.values[0],current=entryIndex>0?row?.values[entryIndex]:undefined,raw=baseline!==undefined&&current!==undefined?current-baseline:undefined;
   return {baseline,current,delta:raw!==undefined&&Number.isFinite(raw)?raw:undefined,problem:baseline===undefined||current===undefined?'任一侧指标缺失，不能计算差值。':raw===undefined||!Number.isFinite(raw)?'差值超出有限数值范围。':undefined};
 }

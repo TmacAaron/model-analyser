@@ -1,12 +1,12 @@
 import { useEffect,useMemo,useRef,useState } from 'react';
 import { Unit,type ScenarioComparisonResult } from '@model-analyser/contracts';
 import { AllocationMetricProof as MetricProof } from './memory-allocation-source.js';
-import { comparisonRows,comparisonMetricEvidence,comparisonDeltaEvidence,comparisonCommunicationSource,type ComparisonRow } from './comparison-metrics.js';
+import { comparisonMetricEvidence,comparisonRowDelta,comparisonCommunicationSource,type ComparisonRow } from './comparison-metrics.js';
 import { useDisplayUnits } from './display-units.js';
 import {CostSourceInspector,type SourceSelection} from './cost-source-view.js';
 import {MemorySourceView} from './memory-source-view.js';
 
-export type ComparisonSourceSelection={report:ScenarioComparisonResult;rowKey:string;entryIndex:number;delta:boolean};
+export type ComparisonSourceSelection={report:ScenarioComparisonResult;row:ComparisonRow;entryIndex:number;delta:boolean};
 function OperandProof({report,rowKey,row,entryIndex,label,initialDetailsOpen}:{report:ScenarioComparisonResult;rowKey:string;row:ComparisonRow|undefined;entryIndex:number;label:string;initialDetailsOpen:boolean}){
   const display=useDisplayUnits(),evidence=useMemo(()=>comparisonMetricEvidence(report,rowKey,entryIndex),[report,rowKey,entryIndex]),entry=report.entries[entryIndex],n=row?.values[entryIndex];
   const [partIndex,setPartIndex]=useState(0),[limit,setLimit]=useState(20),[expanded,setExpanded]=useState(initialDetailsOpen),[detailOpen,setDetailOpen]=useState(false);
@@ -46,7 +46,7 @@ function OperandProof({report,rowKey,row,entryIndex,label,initialDetailsOpen}:{r
   </article>;
 }
 export function ComparisonMetricSource({selection,onClose}:{selection:ComparisonSourceSelection;onClose:()=>void}){
-  const display=useDisplayUnits(),container=useRef<HTMLElement>(null),{report,rowKey,entryIndex,delta}=selection,row=useMemo(()=>comparisonRows(report).find(r=>r.key===rowKey),[report,rowKey]),difference=useMemo(()=>comparisonDeltaEvidence(report,rowKey,entryIndex),[report,rowKey,entryIndex]);
+  const display=useDisplayUnits(),container=useRef<HTMLElement>(null),{report,row,entryIndex,delta}=selection,rowKey=row.key,difference=comparisonRowDelta(row,entryIndex);
   useEffect(()=>{container.current?.scrollIntoView({block:'nearest'});},[selection]);
   return <section className="comparison-metric-source" aria-label="比较指标来源" ref={container}><div className="panel-title"><h3>{row?.label??'缺失指标'} · {delta?'差值依据':'指标依据'}</h3><button onClick={onClose}>关闭比较指标来源</button></div>
     {delta&&<><p className="comparison-delta-proof">Δ = 当前 − 基准：{difference.current===undefined?'不可用':difference.current} − {difference.baseline===undefined?'不可用':difference.baseline} = {difference.delta===undefined?'不可用':difference.delta} {row?.unit??''}</p>{difference.delta!==undefined&&row&&<p>显示值 Δ {display.quantity(difference.delta,Unit.parse(row.unit))}</p>}{difference.problem&&<p role="status">{difference.problem}</p>}<p className="scope-note">两侧输入、单位和来源分别列出。差值表示结果之差，不自动归因为某一个参数。</p></>}

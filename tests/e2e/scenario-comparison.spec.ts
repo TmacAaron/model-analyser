@@ -191,6 +191,15 @@ test('large comparison exports off the page thread and ignores cancelled or supe
       }
       override set onmessage(handler:((this:Worker,event:MessageEvent)=>unknown)|null){
         super.onmessage=handler?event=>{
+          if(this.comparison&&event.data?.kind==='result'){
+            const receivedAt=performance.now(),entries=event.data.attempt?.result?.entries;
+            document.documentElement.dataset.comparisonReceivedNodes=String(entries?.[0]?.analysis?.result?.nodes?.length??0);
+            handler.call(this,event);
+            requestAnimationFrame(()=>requestAnimationFrame(()=>{
+              document.documentElement.dataset.comparisonFirstFramesMs=String(performance.now()-receivedAt);
+            }));
+            return;
+          }
           if(!this.comparison||event.data?.kind!=='exported'){handler.call(this,event);return;}
           if(state.mode==='hold'){state.held.push(()=>handler.call(this,event));return;}
           if(state.mode==='wrong-type'){
@@ -226,6 +235,19 @@ test('large comparison exports off the page thread and ignores cancelled or supe
   page.on('download',file=>downloads.push(file.suggestedFilename()));
 
   await compare();
+  await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.dataset.comparisonReceivedNodes))).toBe(count);
+  await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.dataset.comparisonFirstFramesMs))).toBeGreaterThan(0);
+  const firstFrames=await page.evaluate(()=>{
+    const data=document.documentElement.dataset;
+    return {receivedNodes:Number(data.comparisonReceivedNodes),firstFramesMs:Number(data.comparisonFirstFramesMs)};
+  });
+  console.log('Comparison browser observation',JSON.stringify({leavesPerConfiguration:count,...firstFrames}));
+  const diagnostics=results.locator('details').filter({hasText:/诊断与固定输入/}).first();
+  await expect(diagnostics.locator('pre')).toHaveCount(0);
+  await diagnostics.locator('summary').first().click();
+  await expect(diagnostics.locator('pre')).toHaveCount(2);
+  await diagnostics.locator('summary').first().click();
+  await expect(diagnostics.locator('pre')).toHaveCount(0);
   await json.click();
   await waitForReply();
   await expect(results.getByRole('status')).toContainText('正在后台生成');
