@@ -37,7 +37,22 @@ test('cancelled partial export keeps the completed item and pending records, ign
 });
 
 test('a delayed export cannot download an older record page or an unmounted analysis',async({page})=>{
-  await page.addInitScript(()=>{const state={hold:false,releases:[] as (()=>void)[]};Object.assign(window,{executedHashTest:state});const digest=crypto.subtle.digest.bind(crypto.subtle);Object.defineProperty(crypto.subtle,'digest',{value:async(...args:Parameters<SubtleCrypto['digest']>)=>{const bytes=await digest(...args);if(state.hold)await new Promise<void>(resolve=>state.releases.push(resolve));return bytes;}});});
+  await page.addInitScript(()=>{
+    const state={hold:false,releases:[] as (()=>void)[]};
+    Object.assign(window,{executedHashTest:state});
+    const digest=crypto.subtle.digest.bind(crypto.subtle),decoder=new TextDecoder();
+    function isTestMeasurement(data:BufferSource){
+      try{
+        const input:unknown=JSON.parse(decoder.decode(data));
+        return input!==null&&typeof input==='object'&&'measurementId'in input&&typeof input.measurementId==='string'&&input.measurementId.startsWith('page-record-');
+      }catch{return false;}
+    }
+    Object.defineProperty(crypto.subtle,'digest',{value:async(...args:Parameters<SubtleCrypto['digest']>)=>{
+      const bytes=await digest(...args);
+      if(state.hold&&isTestMeasurement(args[1]))await new Promise<void>(resolve=>state.releases.push(resolve));
+      return bytes;
+    }});
+  });
   const p=fixture('replicated'),base=p.measurements[0]!;p.measurements=Array.from({length:21},(_,i)=>({...base,measurementId:'page-record-'+i}));await open(page,p);await complete(page);const downloads:string[]=[];page.on('download',d=>downloads.push(d.suggestedFilename()));const hold=()=>page.evaluate(()=>{(window as unknown as {executedHashTest:{hold:boolean}}).executedHashTest.hold=true;}),release=()=>page.evaluate(()=>{const s=(window as unknown as {executedHashTest:{hold:boolean;releases:(()=>void)[]}}).executedHashTest;s.hold=false;s.releases.splice(0).forEach(f=>f());}),pending=()=>page.evaluate(()=>(window as unknown as {executedHashTest:{releases:unknown[]}}).executedHashTest.releases.length);
   await hold();await page.getByRole('button',{name:'导出当前页比较 JSON',exact:true}).click();await expect.poll(pending).toBe(1);await page.getByLabel('测量记录页',{exact:true}).selectOption('1');await complete(page);await release();await expect(page.locator('.measurement-comparison-exports').getByRole('alert')).toContainText('记录页已变化');expect(downloads).toHaveLength(0);const current=MeasurementComparisonReport.parse(JSON.parse(await exported(page,'JSON','executed-second-page')) as unknown);expect(current.page).toEqual({offset:20,pageSize:20,totalRecords:21});expect(current.entries[0]?.record.measurementId).toBe('page-record-0');
   await hold();await page.getByRole('button',{name:'导出当前页比较 JSON',exact:true}).click();await expect.poll(pending).toBe(1);await page.getByRole('button',{name:'计算理论结果',exact:true}).click();await expect(page.locator('.analysis-cards')).toBeVisible();await complete(page);await release();await expect(page.locator('.measurement-comparison-exports').getByRole('button',{name:'导出当前页比较 JSON',exact:true})).toBeEnabled();expect(downloads).toHaveLength(1);await unchanged(page,p);
