@@ -5,11 +5,12 @@ import { ScalarButton } from './scalar-source.js';
 import { parseTarget,targetProblem,type AnalysisFocus } from './analysis-focus.js';
 import { useDisplayUnits } from './display-units.js';
 import { useEffect,useMemo,useState } from 'react';
-import { RooflineStudyRequest,type AnalysisResult,type Scenario,type AssetDocument,type RooflineObservation,type RooflineBalance,type MetricValue } from '@model-analyser/contracts';
-import { calculationInput,stableStringify } from '@model-analyser/core';
+import { RooflineStudyAttempt,RooflineStudyRequest,type RooflineStudyResult,type AnalysisResult,type Scenario,type AssetDocument,type RooflineObservation,type RooflineBalance,type MetricValue } from '@model-analyser/contracts';
+import { calculationInput,ENGINE_VERSION,stableStringify } from '@model-analyser/core';
 import { AnalysisTargetPicker } from './analysis-target-picker.js';
-import { RooflineEvidenceDetails,RooflineEvidencePager,RooflineSampleTable,RooflineTransitionEvidence,rooflineNumber as num,rooflineSeriesLabel as label,rooflineSeriesPageSize,rooflineSide as side,type ShowRooflineSource } from './roofline-study-evidence.js';
-import { useRooflineStudy } from './use-roofline-study.js';
+import { RooflineSampleTable,RooflineTransitionEvidence,rooflineNumber as num,rooflineSeriesLabel as label,rooflineSeriesPageSize,rooflineSide as side,type ShowRooflineSource } from './roofline-study-evidence.js';
+import { useIntegerStudy } from './use-integer-study.js';
+import { StudyEvidenceDetails,StudyEvidencePager } from './study-evidence.js';
 
 const colors=['#397954','#a0643f','#526db6','#97629d','#4e8a89'];
 function Balance({value,onSource,prefix}:{value:RooflineBalance;prefix:string;onSource:(field:RooflineField)=>void}){
@@ -43,14 +44,27 @@ export function RooflineStudyView({scenario,assets,result,focus}:{scenario:Scena
     catch{return stableStringify([scenario,assets]);}
   },[scenario,assets]);
   const key=useMemo(()=>stableStringify([input,chosen,step,scan,selectedVariable,min,max]),[input,chosen,step,scan,selectedVariable,min,max]);
-  const {attempt,report,busy,cancelling,error,setError,progress,previous,start,cancel,exportFile,cancelExport,exportState}=useRooflineStudy(key);
+  const {attempt,report,busy,cancelling,error,setError,progress,previous,start,cancel,exportFile,cancelExport,exportState}=useIntegerStudy<RooflineStudyRequest,RooflineStudyResult>(key,{
+    createWorker:()=>new Worker(new URL('./roofline-study-worker.ts',import.meta.url),{type:'module'}),
+    label:' Roofline 研究',filename:'roofline-study.json',
+  });
   useEffect(()=>setSourceTarget(undefined),[key]);
   function run(){try{
     if(targetError)throw Error(targetError);
     if(scan&&(!min.trim()||!max.trim()))throw Error('请填写明确整数范围');
     const request=RooflineStudyRequest.parse({target:chosen==='model'?{kind:'model'}:chosen.startsWith('module:')?{kind:'module',nodeId:chosen.slice(7)}:{kind:'node',nodeId:chosen.slice(5)},...(result.decode?{decodeStep:Number(step)}:{}),...(scan?{scan:{variable:selectedVariable.startsWith('parameter:')?{kind:'parameter',parameterKey:selectedVariable.slice(10)}:{kind:'workload',field:selectedVariable.slice(9)},searchRange:{min:Number(min),max:Number(max)}}}:{})});
     setSourceTarget(undefined);setSeriesPage(0);
-    start(scenario,assets,request,result.inputHash);
+    start({scenario,assets,request},value=>{
+      const study=RooflineStudyAttempt.parse(value);
+      if(study.status==='available'){
+        const {engineVersion,scenario:pinned,request:actual,analysis}=study.result;
+        if(engineVersion!==ENGINE_VERSION||pinned.scenarioId!==scenario.scenarioId||stableStringify(actual)!==stableStringify(request)||
+          (analysis.status==='available'&&analysis.result.inputHash!==result.inputHash)){
+          throw Error('后台 Roofline 结果与当前计算输入不同');
+        }
+      }
+      return study;
+    });
   }catch(e){setError(e instanceof Error?e.message:'Roofline输入无效');}}
   const {series,seriesLabels}=useMemo(()=>{
     const seriesLabels=new Map<string,string>();
@@ -83,17 +97,17 @@ export function RooflineStudyView({scenario,assets,result,focus}:{scenario:Scena
       </div>
       <AnalysisTargetPicker label="筛选Roofline分类" searchLabel="查找 Roofline 分类" value={selectedFilter} targets={series} unavailableLabel={selectedFilter}
         onChange={value=>{setFilter(value);setSeriesPage(0);setSourceTarget(undefined);}}/>
-      {!selectedFilter&&<RooflineEvidencePager label="计算分类" page={seriesPage} size={rooflineSeriesPageSize} total={seriesLabels.size}
+      {!selectedFilter&&<StudyEvidencePager label="计算分类" page={seriesPage} size={rooflineSeriesPageSize} total={seriesLabels.size}
         onChange={page=>{setSeriesPage(page);setSourceTarget(undefined);}}/>}
       <Plot observations={observations}/>
-      <div className="analysis-table"><table><thead><tr><th>物理范围 / 精度</th><th>执行工作 / 流量 / 强度</th><th>硬件声明屋顶</th><th>有效屋顶</th><th>理论预测性能</th></tr></thead><tbody>{observations.map(o=><tr key={o.seriesId}><td>{label(o)}<small>{o.aggregation==='pooled'?'池化聚合，可能掩盖局部瓶颈':'单叶局部'} · {o.point.scope.aggregation}</small></td><td><ScalarButton label="Roofline 执行工作" onClick={()=>showSource(o,"operations")}>{metric(o.point.operations)} op</ScalarButton><br/><ScalarButton label="Roofline 流量" onClick={()=>showSource(o,"traffic")}>{metric(o.point.trafficBytes)}</ScalarButton><small>{o.point.trafficBasis}</small><ScalarButton label="Roofline 运算强度" onClick={()=>showSource(o,"intensity")}>{o.point.arithmeticIntensity.status==='available'?num(o.point.arithmeticIntensity.operationsPerByte)+' op/B':'强度不可用'}</ScalarButton></td><td><ScalarButton label="Roofline 硬件计算屋顶" onClick={()=>showSource(o,"hardware-compute")}>{metric(o.hardwareComputeCeiling)} op/s</ScalarButton> · {o.hardwareComputeKind}<br/><ScalarButton label="Roofline 硬件带宽" onClick={()=>showSource(o,"hardware-memory")}>{metric(o.hardwareMemoryBandwidth)} B/s</ScalarButton> · {o.hardwareMemoryKind}<Balance value={o.hardwareBalance} prefix="硬件" onSource={field=>showSource(o,field)}/></td><td><ScalarButton label="Roofline 有效计算屋顶" onClick={()=>showSource(o,"effective-compute")}>{metric(o.point.computeCeiling)} op/s</ScalarButton><br/><ScalarButton label="Roofline 有效带宽" onClick={()=>showSource(o,"effective-memory")}>{metric(o.point.memoryBandwidth)} B/s</ScalarButton><Balance value={o.effectiveBalance} prefix="有效" onSource={field=>showSource(o,field)}/></td><td><ScalarButton label="Roofline 理论预测性能" onClick={()=>showSource(o,"predicted")}>{metric(o.point.actualOrPredictedPerformance)} op/s</ScalarButton><RooflineEvidenceDetails summary="指标与公式来源" render={()=> <pre>{JSON.stringify(o,null,2)}</pre>}/></td></tr>)}</tbody></table></div>{!observations.length&&<p>当前选择在基础输入下没有可用计算分类。</p>}
-      <RooflineEvidenceDetails summary={'基础输入、公式与诊断 · '+report.base.diagnostics.length+'项'} render={()=> <pre>{JSON.stringify({scenario:report.scenario,request:report.request,diagnostics:report.base.diagnostics},null,2)}</pre>}/>
+      <div className="analysis-table"><table><thead><tr><th>物理范围 / 精度</th><th>执行工作 / 流量 / 强度</th><th>硬件声明屋顶</th><th>有效屋顶</th><th>理论预测性能</th></tr></thead><tbody>{observations.map(o=><tr key={o.seriesId}><td>{label(o)}<small>{o.aggregation==='pooled'?'池化聚合，可能掩盖局部瓶颈':'单叶局部'} · {o.point.scope.aggregation}</small></td><td><ScalarButton label="Roofline 执行工作" onClick={()=>showSource(o,"operations")}>{metric(o.point.operations)} op</ScalarButton><br/><ScalarButton label="Roofline 流量" onClick={()=>showSource(o,"traffic")}>{metric(o.point.trafficBytes)}</ScalarButton><small>{o.point.trafficBasis}</small><ScalarButton label="Roofline 运算强度" onClick={()=>showSource(o,"intensity")}>{o.point.arithmeticIntensity.status==='available'?num(o.point.arithmeticIntensity.operationsPerByte)+' op/B':'强度不可用'}</ScalarButton></td><td><ScalarButton label="Roofline 硬件计算屋顶" onClick={()=>showSource(o,"hardware-compute")}>{metric(o.hardwareComputeCeiling)} op/s</ScalarButton> · {o.hardwareComputeKind}<br/><ScalarButton label="Roofline 硬件带宽" onClick={()=>showSource(o,"hardware-memory")}>{metric(o.hardwareMemoryBandwidth)} B/s</ScalarButton> · {o.hardwareMemoryKind}<Balance value={o.hardwareBalance} prefix="硬件" onSource={field=>showSource(o,field)}/></td><td><ScalarButton label="Roofline 有效计算屋顶" onClick={()=>showSource(o,"effective-compute")}>{metric(o.point.computeCeiling)} op/s</ScalarButton><br/><ScalarButton label="Roofline 有效带宽" onClick={()=>showSource(o,"effective-memory")}>{metric(o.point.memoryBandwidth)} B/s</ScalarButton><Balance value={o.effectiveBalance} prefix="有效" onSource={field=>showSource(o,field)}/></td><td><ScalarButton label="Roofline 理论预测性能" onClick={()=>showSource(o,"predicted")}>{metric(o.point.actualOrPredictedPerformance)} op/s</ScalarButton><StudyEvidenceDetails summary="指标与公式来源" render={()=> <pre>{JSON.stringify(o,null,2)}</pre>}/></td></tr>)}</tbody></table></div>{!observations.length&&<p>当前选择在基础输入下没有可用计算分类。</p>}
+      <StudyEvidenceDetails summary={'基础输入、公式与诊断 · '+report.base.diagnostics.length+'项'} render={()=> <pre>{JSON.stringify({scenario:report.scenario,request:report.request,diagnostics:report.base.diagnostics},null,2)}</pre>}/>
       {report.request.scan&&<>
         <h4>整数参数拐点证据</h4>
         {transitions.map(transition=><RooflineTransitionEvidence key={transition.seriesId+':'+transition.roof} transition={transition}
           title={seriesLabels.get(transition.seriesId)??transition.seriesId}/>)}
         {report.scan?.status==='unavailable'&&report.scan.diagnostics.map(d=><p key={d.diagnosticId} className="error">{d.message}</p>)}
-        <RooflineEvidenceDetails className="roofline-samples" summary={'逐整数指标与诊断 · '+report.samples.length+'点'}
+        <StudyEvidenceDetails className="roofline-samples" summary={'逐整数指标与诊断 · '+report.samples.length+'点'}
           render={()=> <RooflineSampleTable report={report} seriesIds={seriesIds} showSource={showSource}/>}/>
       </>}
       {sourceTarget?.report===report&&<RooflineSourcePanel key={sourceTarget.seriesId+":"+sourceTarget.field+":"+sourceTarget.sampleValue} target={sourceTarget} onClose={()=>setSourceTarget(undefined)}/>}

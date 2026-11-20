@@ -464,6 +464,7 @@ type MetricValue =
 - 容量 solved 表示完整指定区间中的最大可容纳整数；逐点检查允许后续出现非单调的可行区间。若最大已知可行值以上仍有不可计算点，则 unavailable；区间没有可行点也不返回虚构的 0。上界仍可容纳时必须诊断范围受限；limitingDeviceIds 在下一整数记录实际超限设备，在区间上界记录剩余 bytes 最少的设备，后者不代表已证明全局瓶颈。
 - 搜索在 Web Worker 中执行，逐点让出消息处理以接收取消；取消保留已完成点但 capacityStatus unavailable。计算输入或搜索条件改变后终止过期 worker，隐藏旧结论。单点分析报告的 point_only 与独立容量搜索报告分开，搜索结果不覆盖基础方案的 inputHash。
 - 搜索结果除结构 Schema 外另经 `validateCapacitySearch` 核对完整枚举、点顺序、设备范围、fit 与峰值/容量、最大值证据、取消状态和诊断引用；格式合法不代表容量结论成立。
+- 画布容量表每页显示 40 个整数，可直接定位已计算的样本。每点最多同时显示 12 台设备，其余设备可翻页查看。固定输入、逐点诊断按需显示。密集曲线按判定结果合并 SVG 路径，保留每个已计算点的原坐标。完整 JSON 在后台生成，支持取消与重试。改变配置或区间后，过期下载请求随搜索结果失效。
 - TensorPartitionResult 包含 tensorId/dtype/groupId/distribution/globalShape、coverage、placements 和诊断。每个 placement 保留设备、logicalShape/allocatedShape、每份 logicalElements/allocatedElements、copies 及 `[start,end)` 全局 slices/paddedExtent。unused mesh 轴保留副本；padded 不能将物理补齐元素算作有效逻辑元素；manual 不证明全局覆盖，partial 不代表已归约。
 - 显式分片对每个设备的每个分片轴提供唯一非空切片；按已用 mesh 坐标去除副本后，检查盒子无重叠且体积完整覆盖逻辑张量。同一未分片 mesh 坐标上的副本必须相同；不同分片轴不复用同一 mesh 轴。单组分布上限 1024 设备，张量/mesh 上限 32 维。
 - StoragePartitionResult 包含请求 storageId、canonicalStorageId、distribution、perDevice 和诊断。每设备提供 copies、一份完整 StorageAllocationResult 及 totalBytes；一份局部存储先按物理局部 shape 重新分配，再乘 copies，不能先把各份元素拼起来再对齐。显式辅助数公式使用当前求值上下文，不自动猜测局部参数绑定。bytes 分配没有轴，不能隐式切分。

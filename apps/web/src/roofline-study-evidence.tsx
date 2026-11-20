@@ -1,7 +1,8 @@
-import { useMemo,useState,type ReactNode } from 'react';
+import { useMemo,useState } from 'react';
 import type { CapacitySearchPoint,RooflineBalance,RooflineObservation,RooflineStudyResult,RooflineStudySample,RooflineStudyTransition } from '@model-analyser/contracts';
 import type { RooflineField } from './roofline-source.js';
 import { ScalarButton } from './scalar-source.js';
+import { StudyEvidenceDetails,StudyEvidencePager } from './study-evidence.js';
 
 const formatter=new Intl.NumberFormat('en-US',{maximumFractionDigits:4});
 const samplePageSize=20;
@@ -18,23 +19,6 @@ function fit(point:CapacitySearchPoint|undefined){
   return point?.status==='available'?point.fit==='fits'?'可容纳':point.fit==='exceeds'?'超容量':'缺项':'未计算';
 }
 
-export function RooflineEvidenceDetails({summary,render,className}:{summary:string;render:()=>ReactNode;className?:string}){
-  const [open,setOpen]=useState(false);
-  return <details className={className} onToggle={event=>setOpen(event.currentTarget.open)}>
-    <summary>{summary}</summary>
-    {open&&render()}
-  </details>;
-}
-
-export function RooflineEvidencePager({label,page,size,total,onChange}:{label:string;page:number;size:number;total:number;onChange:(page:number)=>void}){
-  if(total<=size)return null;
-  return <nav className="asset-actions" aria-label={label+'分页'}>
-    <button type="button" disabled={page===0} onClick={()=>onChange(page-1)}>上一页{label}</button>
-    <span aria-live="polite">{label} {page*size+1}–{Math.min((page+1)*size,total)} / {total}</span>
-    <button type="button" disabled={(page+1)*size>=total} onClick={()=>onChange(page+1)}>下一页{label}</button>
-  </nav>;
-}
-
 export function RooflineTransitionEvidence({transition,title}:{transition:RooflineStudyTransition;title:string}){
   const [page,setPage]=useState(0);
   const {events,expectedPoints,knownPoints,roof}=transition;
@@ -43,13 +27,13 @@ export function RooflineTransitionEvidence({transition,title}:{transition:Roofli
     {visible.map(event=><p key={event.kind+':'+event.lower+':'+event.upper}>
       {event.kind==='balanced_samples'?'平衡采样点':'相邻整数限制侧改变区间'} [{event.lower}, {event.upper}]
     </p>)}
-    <RooflineEvidencePager label="拐点区间" page={page} size={samplePageSize} total={events.length} onChange={setPage}/>
+    <StudyEvidencePager label="拐点区间" page={page} size={samplePageSize} total={events.length} onChange={setPage}/>
   </>;
   return <div className="roofline-transition">
     <strong>{title} · {roof==='effective'?'有效屋顶':'硬件声明屋顶'}</strong>
     <p>可用限制侧 {knownPoints}/{expectedPoints}点{knownPoints<expectedPoints?' · 缺项或未完成，不覆盖全区间':''}</p>
     {events.length===0?<p>已知整数点未发现平衡或相邻限制侧改变；不推断连续区间或范围外拐点。</p>:
-      events.length>samplePageSize?<RooflineEvidenceDetails summary={events.length+' 个拐点区间'} render={eventRows}/>:eventRows()}
+      events.length>samplePageSize?<StudyEvidenceDetails summary={events.length+' 个拐点区间'} render={eventRows}/>:eventRows()}
   </div>;
 }
 
@@ -61,7 +45,7 @@ export function RooflineSampleTable({report,seriesIds,showSource}:{report:Roofli
   const capacity=useMemo(()=>new Map(scan?.status==='available'?scan.result.points.map(point=>[point.value,point] as const):[]),[scan]);
   const visible=samples.slice(page*samplePageSize,(page+1)*samplePageSize);
   return <>
-    <RooflineEvidencePager label="整数样本" page={page} size={samplePageSize} total={samples.length} onChange={setPage}/>
+    <StudyEvidencePager label="整数样本" page={page} size={samplePageSize} total={samples.length} onChange={setPage}/>
     <div className="analysis-table"><table>
       <thead><tr><th>整数 / input hash</th><th>容量判定</th><th>强度与有效屋顶侧</th><th>硬件声明屋顶侧</th><th>证据</th></tr></thead>
       <tbody>{visible.map(sample=>{
@@ -78,7 +62,7 @@ export function RooflineSampleTable({report,seriesIds,showSource}:{report:Roofli
           <td>{observations.map(observation=><div key={observation.seriesId}>
             <ScalarButton label={'样本 '+sample.value+' 硬件屋顶侧依据'} onClick={()=>showSource(observation,'hardware-ridge',sample)}>{rooflineSide(observation.hardwareBalance)}</ScalarButton>
           </div>)}</td>
-          <td><RooflineEvidenceDetails summary={sample.diagnostics.length+'诊断 · 原始指标'} render={()=><pre>{JSON.stringify(sample,null,2)}</pre>}/></td>
+          <td><StudyEvidenceDetails summary={sample.diagnostics.length+'诊断 · 原始指标'} render={()=><pre>{JSON.stringify(sample,null,2)}</pre>}/></td>
         </tr>;
       })}</tbody>
     </table></div>

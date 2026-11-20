@@ -1,5 +1,7 @@
 # 阶段退出条件复核
 
+提交 `ec5dfe3` 的干净 Windows 快照通过 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。907 项单元与契约测试、16 项 HTTP 测试、280 项 Chrome 回归、45 组运行基线、生产构建和全部参考复算通过。Chrome 在每种配置 2,048 个算子的两配置案例中核对了比较结果、首屏显示和后台导出。
+
 提交 `81c3d95` 的干净 Windows 快照通过 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。904 项单元与契约测试、16 项 HTTP 测试、280 项 Chrome 回归、45 组运行基线、生产构建与全部参考复算通过。Chrome 覆盖配置比较后台导出、取消、重试和丢弃过期文件。
 
 提交 `fccca98` 的干净 Windows 快照完成 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。903 项单元与契约测试、16 项 HTTP 测试、278 项 Chrome 回归、45 组运行基线、生产构建与参考复算全部通过。Chrome 已覆盖[画布结构编辑](CANVAS_WORKBENCH.md)，包括固定依赖插入、模块内部编辑、替换、删除和两配置重开。早期重跑遇到 CSA2 与 Compression 的测试时限，最终重跑保留原有采样和数值断言。
