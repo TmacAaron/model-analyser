@@ -13,6 +13,8 @@ Git保留可构建、可测试、可离线复算的项目文件：
 
 普通 Git 克隆即可取得测试输入。仓库无需 Git LFS。测试复用可导入的固定项目，并在需要时计算结果。少数历史结果用作冻结基线，用于发现数值、字段或协议意外变化。Ascend 完整描述文件和 Kineto trace 是导入测试的原始输入，以普通 Git 保存。
 
+`references/models/` 各模型目录中的固定来源按原始字节存储。Git 在检出和导出时保留这些文件的换行，供参考脚本核对来源清单中的长度和 SHA-256。
+
 新增大型生成件放在 `_local/`。例如 `npm run reference:ascend` 把完整工作区和分析结果写到 `_local/references/ascend-quantization/`，只在 `examples/` 更新小型独立账本。部分已有 `npm run reference:*` 命令仍将生成结果写回 `examples/`，`.gitignore` 中列出这些输出。仓库首次发布前移出了 80 个大型派生文件，体积约 1.16 GiB，原内容和 SHA256 清单保存在本机 `_local/generated-before-first-push/`。GQA 时间份额与 Qwen 融合回归改为从已保存的项目复算，并核对原有断言。
 
 历史检查点、临时脚本、日志、探测记录、历史截图和遗留测试目录统一放在 `_local/history/`，由Git忽略。迁移清单 `relocation-manifest.json`记录原路径、归档路径、大小和SHA256，文件内容不改写。旧报告内部路径保持历史原文；归档脚本仅用于回顾，不属于当前构建或验收入口。文档中的历史证据链接指向该目录；其他克隆不自动携带这些本机记录。
