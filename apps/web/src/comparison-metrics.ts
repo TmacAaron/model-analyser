@@ -6,7 +6,7 @@ export type ComparisonRow={key:string;label:string;unit:string;values:(number|un
 const value=(m:MetricValue|undefined)=>m?.status==='available'?m.quantity.value:undefined;
 export function comparisonRows(report:ScenarioComparisonResult):ComparisonRow[]{
   const results=report.entries.map(e=>e.analysis.status==='available'?e.analysis.result:undefined),out:ComparisonRow[]=[];
-  const add=(key:string,label:string,unit:string,get:(r:AnalysisResult)=>number|undefined)=>out.push({key,label,unit,values:results.map(r=>r?get(r):undefined)});
+  const add=(key:string,label:string,unit:string,get:(r:AnalysisResult,index:number)=>number|undefined)=>out.push({key,label,unit,values:results.map((r,index)=>r?get(r,index):undefined)});
   add('seconds','端到端理论跨度','second',r=>value(r.total.seconds));add('hbm','模型 HBM 流量（缺项不补零）','byte',r=>value(r.total.hbmBytes));
   const physicalClasses=new Map(results.flatMap(r=>r?.total.compute.map(c=>[stableStringify(c.computeClass),c.computeClass] as const)??[]));
   const logicalClasses=new Map(results.flatMap(r=>r?modelComputeFrame(r).compute.map(c=>[stableStringify(c.computeClass),c.computeClass] as const):[]));
@@ -20,8 +20,12 @@ export function comparisonRows(report:ScenarioComparisonResult):ComparisonRow[]{
   for(const id of deviceIds){const memory=(r:AnalysisResult)=>r.memory.find(m=>m.deviceScope.kind==='per_device'?m.deviceScope.deviceId===id:m.deviceScope.deviceIds.includes(id));add('peak:'+id,id+' 生命周期峰值','byte',r=>value(memory(r)?.peakBytes));add('capacity:'+id,id+' 硬件容量','byte',r=>memory(r)?.capacityBytes);}
   const groups=[...new Set(results.flatMap(r=>r?.total.communications.map(c=>c.groupId)??[]))];
   for(const id of groups){add('send:'+id,id+' 通信 group send（多事件累计）','byte',r=>{const c=r.total.communications.filter(c=>c.groupId===id);const total=c.length&&c.every(v=>v.groupSendBytes.status==='available')?c.reduce((n,v)=>n+(value(v.groupSendBytes)??0),0):undefined;return total!==undefined&&Number.isFinite(total)?total:undefined;});}
-  const modules=[...new Set(results.flatMap(r=>r?.modules.map(m=>m.nodeId)??[]))];
-  for(const id of modules){add('module-seconds:'+id,'模块 '+id+' 跨度','second',r=>value(r.modules.find(m=>m.nodeId===id)?.cost.seconds));add('module-hbm:'+id,'模块 '+id+' HBM','byte',r=>value(r.modules.find(m=>m.nodeId===id)?.cost.hbmBytes));}
+  const modulesByResult=results.map(result=>new Map(result?.modules.map(module=>[module.nodeId,module.cost])));
+  const modules=new Set(modulesByResult.flatMap(byId=>[...byId.keys()]));
+  for(const id of modules){
+    add('module-seconds:'+id,'模块 '+id+' 跨度','second',(_result,index)=>value(modulesByResult[index]?.get(id)?.seconds));
+    add('module-hbm:'+id,'模块 '+id+' HBM','byte',(_result,index)=>value(modulesByResult[index]?.get(id)?.hbmBytes));
+  }
   return out;
 }
 

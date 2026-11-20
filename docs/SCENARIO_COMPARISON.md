@@ -51,6 +51,8 @@ Decode 可切换序列汇总和实际步骤。融合组按成员身份匹配，�
 
 “导出方案比较 JSON”包含 `scenario-comparison.1`、引擎版本、请求、完成状态、原始方案、可达固定资产快照、完整分析与逐点 hash/成本/诊断、输入差异和成对交叉证据。“导出方案结果 CSV”以长表输出原始数值、单位、方案 ID、输入 hash 和基准差值；缺项写 `unavailable`。它们是结果文件，项目继续通过原项目导入/导出入口保存与恢复。
 
+完整 JSON、结果 CSV、所选范围 CSV 和 Roofline JSON 由后台线程生成。范围文件沿用点击导出时的范围、步骤和指标。生成期间可继续查看结果、调整显示单位或取消导出，取消后可用同一轮结果重试。修改比较输入、重新计算或离开比较面板会使旧导出失效。界面只下载与本轮比较和导出任务匹配的文件。
+
 运行 `npm run reference:comparison` 生成 [可移植项目](../examples/comparison/project.json)、[完整结果](../examples/comparison/result.json) 和[独立摘要](../examples/comparison/reference.json)。人工定义如下，非实测性能：
 
 | 方案 | 理论时间 second | 常驻 byte | 64 byte容量下，在X=1..8中的最大整数 |

@@ -5,6 +5,7 @@ import { DeviceId,ProjectDocument,ScenarioComparisonResult,RooflineStudySample }
 import { makeComparisonProject } from '../../scripts/comparison-project.js';
 import { makeFusedProject } from '../../scripts/fused-project.js';
 import { c01Project } from '../model-fixtures.js';
+import { largeCanvasEditProject } from '../canvas-edit-preparation-fixtures.js';
 test.setTimeout(90000);
 async function open(page:Page){const p=makeComparisonProject(ProjectDocument.parse(JSON.parse(readFileSync('examples/contracts/project.json','utf8')) as unknown));p.projectId=randomUUID();p.name='Comparison '+p.projectId.slice(0,8);await page.goto('/?legacy=1&workspace=projects');await page.getByLabel('导入项目文件',{exact:true}).setInputFiles({name:'comparison.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});await expect(page.locator('.project-editor .save-state')).toContainText('已保存 · 修订 1');return p;}
 async function exported(page:Page,name:string){const wait=page.waitForEvent('download');await page.getByRole('button',{name:'导出方案比较 JSON',exact:true}).click();const file=await wait,path='test-results/'+name+'.json';await file.saveAs(path);return ScenarioComparisonResult.parse(JSON.parse(readFileSync(path,'utf8')) as unknown);}
@@ -165,4 +166,110 @@ test('scoped comparison totals same-class segments and keeps fused members disti
   await expect(scoped.getByRole('heading')).toContainText('融合组 pair');
   await expect(table.getByRole('columnheader',{name:/^Unfused/})).toContainText('没有相同成员的融合组');
   await expect(table.getByRole('row',{name:/^理论跨度/}).getByRole('cell').first()).toContainText('3.1 s');
+});
+
+type ExportProbe={mode:'hold'|'normal'|'wrong-type';held:Array<()=>void>};
+
+test('large comparison exports off the page thread and ignores cancelled or superseded files',async({page})=>{
+  test.setTimeout(120000);
+  await page.addInitScript(()=>{
+    const state:ExportProbe={mode:'hold',held:[]};
+    Object.assign(window,{comparisonExportProbe:state});
+    JSON.stringify=new Proxy(JSON.stringify,{
+      apply(stringify,receiver,args){
+        const value=args[0] as {version?:string}|null;
+        if(value?.version==='scenario-comparison.1')throw Error('A full comparison report was serialized on the page');
+        return Reflect.apply(stringify,receiver,args);
+      },
+    });
+    const WorkerConstructor=window.Worker;
+    window.Worker=class extends WorkerConstructor{
+      private comparison:boolean;
+      constructor(url:string|URL,options?:WorkerOptions){
+        super(url,options);
+        this.comparison=String(url).includes('comparison-worker-');
+      }
+      override set onmessage(handler:((this:Worker,event:MessageEvent)=>unknown)|null){
+        super.onmessage=handler?event=>{
+          if(!this.comparison||event.data?.kind!=='exported'){handler.call(this,event);return;}
+          if(state.mode==='hold'){state.held.push(()=>handler.call(this,event));return;}
+          if(state.mode==='wrong-type'){
+            handler.call(this,new MessageEvent('message',{data:{...event.data,blob:new Blob(['wrong'],{type:'text/plain'})}}));
+            return;
+          }
+          handler.call(this,event);
+        }:null;
+      }
+    };
+  });
+  const count=2048,project=largeCanvasEditProject(count);
+  project.projectId=randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({
+    name:'large-comparison.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+  await page.getByRole('button',{name:'配置对比',exact:true}).click();
+  const panel=page.locator('.comparison-panel'),results=panel.locator('.comparison-results');
+  const compare=async()=>{
+    await panel.getByRole('button',{name:'计算方案比较',exact:true}).click();
+    await expect(results).toContainText('方案比较完成',{timeout:45000});
+  };
+  const waitForReply=()=>expect.poll(()=>page.evaluate(()=>(window as unknown as {comparisonExportProbe:ExportProbe}).comparisonExportProbe.held.length),{timeout:45000}).toBe(1);
+  const release=()=>page.evaluate(async()=>{
+    (window as unknown as {comparisonExportProbe:ExportProbe}).comparisonExportProbe.held.splice(0).forEach(callback=>callback());
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  });
+  const json=panel.getByRole('button',{name:'导出方案比较 JSON',exact:true});
+  const downloads:string[]=[];
+  page.on('download',file=>downloads.push(file.suggestedFilename()));
+
+  await compare();
+  await json.click();
+  await waitForReply();
+  await expect(results.getByRole('status')).toContainText('正在后台生成');
+  await page.getByRole('button',{name:'显示单位设置',exact:true}).click();
+  await page.getByLabel('时间显示单位',{exact:true}).selectOption('ms');
+  await expect(page.getByLabel('时间显示单位',{exact:true})).toHaveValue('ms');
+  await page.getByRole('button',{name:'关闭显示单位设置',exact:true}).click();
+  await results.getByRole('button',{name:'取消比较导出',exact:true}).click();
+  await expect(results.getByRole('status')).toHaveText('比较导出已取消');
+  await release();
+  expect(downloads).toEqual([]);
+
+  await panel.getByRole('button',{name:'导出方案结果 CSV',exact:true}).click();
+  await waitForReply();
+  const scan=panel.getByLabel('扫描参数交叉点',{exact:true});
+  await scan.check();
+  await expect(results).toHaveCount(0);
+  await scan.uncheck();
+  await release();
+  await expect(results).toHaveCount(0);
+  expect(downloads).toEqual([]);
+  await compare();
+
+  await page.evaluate(()=>{(window as unknown as {comparisonExportProbe:ExportProbe}).comparisonExportProbe.mode='wrong-type';});
+  await panel.getByRole('button',{name:'导出方案结果 CSV',exact:true}).click();
+  await expect(results.getByRole('alert')).toHaveText('后台返回了无效的比较文件');
+  expect(downloads).toEqual([]);
+
+  await page.evaluate(()=>{(window as unknown as {comparisonExportProbe:ExportProbe}).comparisonExportProbe.mode='normal';});
+  const waiting=page.waitForEvent('download');
+  await json.click();
+  const file=await waiting,path=await file.path();
+  if(!path)throw Error('Missing comparison download');
+  const bytes=readFileSync(path);
+  expect(bytes.length).toBeGreaterThan(1_000_000);
+  const report=ScenarioComparisonResult.parse(JSON.parse(bytes.toString('utf8')));
+  expect(downloads).toEqual(['scenario-comparison.json']);
+  expect(report.entries.map(entry=>entry.scenario)).toEqual(project.scenarios);
+  for(const entry of report.entries){
+    expect(entry.analysis.status).toBe('available');
+    if(entry.analysis.status==='available'){
+      expect(entry.analysis.result.nodes).toHaveLength(count);
+      expect(entry.analysis.result.total.seconds).toMatchObject({status:'available',quantity:{value:expect.closeTo(count*1e-6,12)}});
+    }
+  }
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
 });
