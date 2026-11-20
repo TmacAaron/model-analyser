@@ -5,6 +5,8 @@ import { solveKvSlots } from '../packages/core/src/kv-capacity-slots.js';
 import { makeDecodeProject } from '../scripts/decode-project.js';
 import { makeDeepSeekProject,makeQwenProject } from '../scripts/model-project.js';
 import { makeGqaProject } from '../scripts/gqa-project.js';
+import { makeCompressionProject } from '../scripts/compression-project.js';
+import { makeNamedParallelProject } from '../scripts/named-parallel-project.js';
 import { c01Project } from './model-fixtures.js';
 
 function stateTensor(windowed=false){
@@ -20,6 +22,22 @@ function stateTensor(windowed=false){
 }
 
 describe('KV capacity',()=>{
+  it('reports the authored DCP slot limit and bytes per physical slot',async()=>{
+    const {project}=await makeNamedParallelProject('dcp2');
+    const result=await estimateKvCapacity(project.scenarios[0]!,project.assetSnapshots);
+    expect(result).toMatchObject({status:'available',report:{budget:{status:'fixed'},
+      fixedSlotsPerRequest:8,referenceTokensPerRequest:6,currentKvBytes:128,averageBytesPerToken:16}});
+  });
+
+  it('sizes the completed groups in the original dynamic compression preset',async()=>{
+    const project=makeCompressionProject(2,'prefill');
+    const result=await estimateKvCapacity(project.scenarios[0]!,project.assetSnapshots);
+    expect(result).toMatchObject({status:'available',report:{
+      rowProfile:{groupSizes:[2]},referenceTokensPerRequest:5,currentKvBytes:18,averageBytesPerToken:3.6,
+      budget:{status:'available',tokensPerRequest:455,more:[{bytes:9}]},
+    }});
+  });
+
   it('sizes complete single-card KV storage using the peak from multi-stream execution',async()=>{
     const {project}=await makeGqaProject('tp-heads');
     const scenario=project.scenarios[0]!;

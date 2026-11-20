@@ -142,3 +142,39 @@ test('repairs unbound cards in the current configuration and calculates both str
     ...original, deviceTopology: { ...original.deviceTopology, devices: original.deviceTopology.devices.slice(0, 1) },
   }]);
 });
+
+test('an older DCP workspace can apply its required layout and calculate directly from the canvas', async ({ page }) => {
+  const project = makeNamedParallelBase('dcp2');
+  const original = project.scenarios[0]!;
+  original.deviceTopology = { devices: original.deviceTopology.devices.slice(0, 1), groups: [] };
+  await importProject(page, project);
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  const notice = page.locator('.studio-layout-notice');
+  await expect(notice).toContainText('此结构需要 2 张卡');
+  await notice.getByRole('button', { name: '应用内置并行布局' }).click();
+  await expect(page.locator('.analysis-cards')).toContainText('理论耗时 · 串行');
+  await expect(page.locator('.analysis-cards').getByRole('button', { name: '查看理论耗时 · 串行来源' })).not.toContainText('不可用');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  const saved = (await storedProject(page, project)).scenarios[0]!;
+  expect(saved.deviceTopology.devices).toHaveLength(2);
+  expect(saved.workload).toEqual(original.workload);
+  expect(saved.parallelPlan.nativeBindings?.network).toEqual({ bytesPerSecond: 1000, latencySeconds: 0.001 });
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('8 token / 请求');
+  await expect(capacity).toContainText('固定槽位，已用 6');
+  await expect(capacity).toContainText('16 B / token');
+});
+
+test('opening a built-in PP model starts with the authored two-card layout already applied', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('当前模型', { exact: true }).selectOption('builtin:model:parallel-pp2');
+  await expect(page.locator('.canvas-breadcrumb')).toContainText('PP2');
+  await expect(page.locator('.canvas-status')).toContainText('2 物理设备');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('32 B / token');
+  await expect(capacity).toContainText('token / 请求');
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  await expect(page.locator('.analysis-cards').getByRole('button', { name: '查看理论耗时 · 串行来源' })).not.toContainText('不可用');
+});

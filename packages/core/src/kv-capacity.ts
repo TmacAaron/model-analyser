@@ -25,6 +25,7 @@ export type KvCapacityReport={
   decodeStep?:number|undefined;
   currentKvBytes?:number|undefined;
   averageBytesPerToken?:number|undefined;
+  fixedSlotsPerRequest?:number;
   rowProfile?:{groupSizes:number[];fixedWindows:number[];includesIndexer:boolean};
   devices:DeviceRow[];
   budget:Budget;
@@ -123,6 +124,17 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     const expanded=instantiateModel(active,pack.assets,undefined,frame.stepContext);
     if(expanded.status!=='available')return {status:'unavailable',message:expanded.diagnostics[0]?.message??'无法读取当前缓存结构。'};
     const graph=expanded.resolved.graph;
+    const model=pack.assets.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision);
+    // These published research revisions describe their allocations in the model
+    // rather than in the state policy used by newer presets. Keep their snapshots intact.
+    const compression=model?.extensions?.['compression'];
+    const groupedRatio=active.model.revision===1&&active.model.assetId.startsWith('builtin:compression:')&&
+      typeof compression==='object'&&compression!==null&&!Array.isArray(compression)&&
+      compression['version']==='compression-research.1'&&compression['allocation']==='dynamic'&&
+      (compression['ratio']===2||compression['ratio']===4)?compression['ratio']:undefined;
+    const fixedParam=active.model.revision===1&&['builtin:model:parallel-dcp2','example:dcp:2:model','example:dcp:1:model'].includes(active.model.assetId)?
+      expanded.resolved.parameters.find(parameter=>parameter.nodeId==='$model'&&parameter.parameterKey==='M')?.value:undefined;
+    const fixedSlots=fixedParam?.kind==='integer'?fixedParam.value:undefined;
     applyStorageAllocationOverrides(graph.storages,active.numericOverrides);
     const storages=new Map(graph.storages.map(row=>[row.storageId,row]));
     const isKv=(state:StateSpec)=>state.stateKind==='kv'||state.stateKind==='latent'||
@@ -158,14 +170,15 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
       const first=axes[0];
       return first?axes.length===1&&extent(first)===batchSize:batchSize===1;
     });
-    const batchTokens=reference===undefined?0:reference*batchSize;
+    const batchTokens=(fixedSlots??reference??0)*batchSize;
     const averageBytesPerToken=currentKvBytes!==undefined&&matchesBatch&&Number.isSafeInteger(batchTokens)&&batchTokens>0?currentKvBytes/batchTokens:undefined;
     let budget:Budget,rowProfile:KvCapacityReport['rowProfile'];
     try{
       if(!states.length)throw Error('此模型在当前阶段没有声明 KV 或 MLA latent 缓存。');
       const rules=new Map<StorageId,SlotRows|undefined>();
       for(const state of states){
-        const rule=rowsForState(state);
+        const rule:SlotRows|undefined=state.stateKind==='kv'&&fixedSlots!==undefined?{kind:'fixed',rows:fixedSlots}:
+          state.stateKind==='latent'&&state.stateId==='compress::main'&&groupedRatio!==undefined?{kind:'grouped',tokensPerRow:groupedRatio}:rowsForState(state);
         for(const storageId of state.storageIds){
           const id=backing(storageId,storages);
           if(rules.has(id)&&stableStringify(rules.get(id)??null)!==stableStringify(rule??null)){
@@ -177,7 +190,7 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
       const groupSizes=new Set<number>(),fixedWindows=new Set<number>();
       for(const rule of rules.values()){
         if(rule?.kind==='grouped')groupSizes.add(rule.tokensPerRow);
-        if(rule?.kind==='fixed')fixedWindows.add(rule.rows);
+        if(rule?.kind==='fixed'&&fixedSlots===undefined)fixedWindows.add(rule.rows);
       }
       const includesIndexer=states.some(state=>state.stateKind==='indexer');
       if(groupSizes.size||fixedWindows.size||includesIndexer)rowProfile={groupSizes:[...groupSizes].sort((a,b)=>a-b),
@@ -207,7 +220,8 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     }
     return {status:'available',report:{inputHash:result.inputHash,scenarioId:result.scenarioId,phase:result.phase,batchSize,
       stateCount:states.length,storageCount:ids.size,referenceTokensPerRequest:reference,decodeStep:step?.index,
-      currentKvBytes,averageBytesPerToken,devices:rows,budget,...(rowProfile?{rowProfile}:{})}};
+      currentKvBytes,averageBytesPerToken,devices:rows,budget,
+      ...(budget.status==='fixed'&&fixedSlots!==undefined?{fixedSlotsPerRequest:fixedSlots}:{}),...(rowProfile?{rowProfile}:{})}};
   }catch(error){
     return {status:'unavailable',message:error instanceof Error?error.message:'无法计算当前配置的 KV 容量。'};
   }
