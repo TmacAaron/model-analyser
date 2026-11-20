@@ -1,0 +1,829 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:model:communication-study",
+  "revision": 1,
+  "name": "GEMM / AllGather · authored two-link study",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "N",
+      "name": "N",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "synthetic",
+    "variant": "C01",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        },
+        {
+          "portId": "w",
+          "tensorId": "W"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Y"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "module",
+          "name": "module",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "w",
+              "tensorId": "W"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Y"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "example:module:gemm-serial-gather",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "x",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "module",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "w",
+          "from": {
+            "kind": "graph_input",
+            "portId": "w"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "module",
+            "portId": "w"
+          },
+          "tensorId": "W"
+        },
+        {
+          "edgeId": "y",
+          "from": {
+            "kind": "node",
+            "nodeId": "module",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "Y"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sX"
+        },
+        {
+          "tensorId": "W",
+          "name": "W",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sW"
+        },
+        {
+          "tensorId": "Y",
+          "name": "Y",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sY"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "sX",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sW",
+          "name": "W",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sY",
+          "name": "Y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "commScratch",
+          "name": "Explicit 200-byte communication scratch",
+          "category": "communication",
+          "sharingDomain": "device_group",
+          "allocation": {
+            "kind": "bytes",
+            "value": {
+              "kind": "literal",
+              "quantity": {
+                "value": 200,
+                "unit": "byte"
+              }
+            }
+          }
+        }
+      ],
+      "states": []
+    }
+  },
+  "parallelPresets": [
+    {
+      "presetId": "intra_group",
+      "name": "组内链路假设",
+      "description": "Two physical devices, equal BF16 column split then explicit AllGather; link parameters are authored study inputs.",
+      "strategy": "declared_plan",
+      "phases": [
+        "decode"
+      ],
+      "tensorShards": [],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 1000,
+        "latencySeconds": 0.001,
+        "description": "Authored two-scope arithmetic; editable, not measured hardware"
+      },
+      "reductions": [],
+      "assumptions": [
+        "Exactly two physical devices; group aliases do not add devices.",
+        "Payload follows M*N bytes per rank; scratch 200 bytes per physical member.",
+        "Link scopes select explicit arithmetic defaults, not automatic topology discovery."
+      ],
+      "declaredPlan": {
+        "deviceSlots": [
+          "gpu0",
+          "gpu1"
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "tp",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "plan": {
+          "assignments": [
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "$model"
+              },
+              "phases": [
+                "decode"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                },
+                {
+                  "tensorId": "W",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "tp",
+                    "axes": [
+                      {
+                        "tensorAxisId": "col",
+                        "meshAxisId": "tp"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "Y",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "tp",
+                    "axes": [
+                      {
+                        "tensorAxisId": "col",
+                        "meshAxisId": "tp"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                }
+              ],
+              "storageDistributions": [
+                {
+                  "storageId": "sY",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                },
+                {
+                  "storageId": "commScratch",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                }
+              ]
+            }
+          ],
+          "communications": [
+            {
+              "operation": "all_gather",
+              "groupId": "tp",
+              "source": {
+                "tensorId": "Y",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "tp",
+                  "axes": [
+                    {
+                      "tensorAxisId": "col",
+                      "meshAxisId": "tp"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "Y",
+                "distribution": {
+                  "kind": "replicated",
+                  "groupId": "tp"
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:two-card-gather-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "rows": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "cols": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:two-card-gather-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "rows": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "cols": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Synthetic two-member gather, one transfer/startup",
+                "trafficFactor": 1,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "gather-Y",
+                "phases": [
+                  "decode"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": [
+                "commScratch"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+          ]
+        }
+      }
+    },
+    {
+      "presetId": "inter_group",
+      "name": "跨组链路假设",
+      "description": "Two physical devices, equal BF16 column split then explicit AllGather; link parameters are authored study inputs.",
+      "strategy": "declared_plan",
+      "phases": [
+        "decode"
+      ],
+      "tensorShards": [],
+      "networkDefaults": {
+        "scope": "inter_group",
+        "bytesPerSecond": 100,
+        "latencySeconds": 0.01,
+        "description": "Authored two-scope arithmetic; editable, not measured hardware"
+      },
+      "reductions": [],
+      "assumptions": [
+        "Exactly two physical devices; group aliases do not add devices.",
+        "Payload follows M*N bytes per rank; scratch 200 bytes per physical member.",
+        "Link scopes select explicit arithmetic defaults, not automatic topology discovery."
+      ],
+      "declaredPlan": {
+        "deviceSlots": [
+          "gpu0",
+          "gpu1"
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "tp",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "plan": {
+          "assignments": [
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "$model"
+              },
+              "phases": [
+                "decode"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                },
+                {
+                  "tensorId": "W",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "tp",
+                    "axes": [
+                      {
+                        "tensorAxisId": "col",
+                        "meshAxisId": "tp"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "Y",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "tp",
+                    "axes": [
+                      {
+                        "tensorAxisId": "col",
+                        "meshAxisId": "tp"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                }
+              ],
+              "storageDistributions": [
+                {
+                  "storageId": "sY",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                },
+                {
+                  "storageId": "commScratch",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "tp"
+                  }
+                }
+              ]
+            }
+          ],
+          "communications": [
+            {
+              "operation": "all_gather",
+              "groupId": "tp",
+              "source": {
+                "tensorId": "Y",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "tp",
+                  "axes": [
+                    {
+                      "tensorAxisId": "col",
+                      "meshAxisId": "tp"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "Y",
+                "distribution": {
+                  "kind": "replicated",
+                  "groupId": "tp"
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:two-card-gather-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "rows": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "cols": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:two-card-gather-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "rows": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "cols": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Synthetic two-member gather, one transfer/startup",
+                "trafficFactor": 1,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 100,
+                "latencySeconds": 0.01
+              },
+              "placement": {
+                "nodeId": "gather-Y",
+                "phases": [
+                  "decode"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": [
+                "commScratch"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+          ]
+        }
+      }
+    }
+  ]
+}

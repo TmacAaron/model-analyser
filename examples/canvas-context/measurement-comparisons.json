@@ -1,0 +1,1286 @@
+[
+  {
+    "measurementId": "canvas-context-mean",
+    "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+    "measurementHash": "5a7a589cc27cf16bee82f9dfb6478cc5803728de7a7ac211256ac9dd82fdaaa3",
+    "engineVersion": "0.1.0-execution.20",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mfuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mbuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "executedUtilization": {
+      "version": "executed-utilization.1",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "value": {
+            "status": "available",
+            "quantity": {
+              "value": 0.2048,
+              "unit": "ratio"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "Measurement canvas-context-mean; time kind=mean, count=2; per-call equivalent 5 second.",
+                "Executed-work utilization uses declared physical executed operations and unique matching peak capability on each actual device. It is separate from model-useful MFU and is not a measured hardware counter."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ]
+    },
+    "normalizedTime": {
+      "kind": "mean",
+      "count": 2,
+      "intervalSeconds": 10,
+      "perCallEquivalentSeconds": 5
+    },
+    "mfu": [
+      {
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "value": {
+          "status": "available",
+          "quantity": {
+            "value": 0.2048,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "Measurement canvas-context-mean, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=mean, count=2.",
+              "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    ],
+    "mbu": {
+      "status": "available",
+      "quantity": {
+        "value": 0.8959999999999999,
+        "unit": "ratio"
+      },
+      "basis": "measured",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:K",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "module:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:K",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:K",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "Measurement canvas-context-mean, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=mean, count=2.",
+          "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+          "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "mbuBasis": "measured_hbm",
+    "diagnostics": []
+  },
+  {
+    "measurementId": "canvas-context-sum",
+    "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+    "measurementHash": "46d1ef8e9ba3dd513946ce0de708dafd5008067dbbec853392a3d3b2311cf0b6",
+    "engineVersion": "0.1.0-execution.20",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mfuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mbuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "executedUtilization": {
+      "version": "executed-utilization.1",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "value": {
+            "status": "available",
+            "quantity": {
+              "value": 0.2048,
+              "unit": "ratio"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "Measurement canvas-context-sum; time kind=sum, count=2; per-call equivalent 5 second.",
+                "Executed-work utilization uses declared physical executed operations and unique matching peak capability on each actual device. It is separate from model-useful MFU and is not a measured hardware counter."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ]
+    },
+    "normalizedTime": {
+      "kind": "sum",
+      "count": 2,
+      "intervalSeconds": 10,
+      "perCallEquivalentSeconds": 5
+    },
+    "mfu": [
+      {
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "value": {
+          "status": "available",
+          "quantity": {
+            "value": 0.2048,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "Measurement canvas-context-sum, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=sum, count=2.",
+              "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    ],
+    "mbu": {
+      "status": "available",
+      "quantity": {
+        "value": 0.8959999999999999,
+        "unit": "ratio"
+      },
+      "basis": "measured",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:K",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "module:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:K",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:K",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "Measurement canvas-context-sum, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=sum, count=2.",
+          "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+          "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "mbuBasis": "measured_hbm",
+    "diagnostics": []
+  },
+  {
+    "measurementId": "canvas-context-span",
+    "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+    "measurementHash": "7f34d2a94e8464e70420a38cfee64dd77e448b88804e894a20ae53d8cf3a03ab",
+    "engineVersion": "0.1.0-execution.20",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mfuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "mbuScope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "executedUtilization": {
+      "version": "executed-utilization.1",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "value": {
+            "status": "available",
+            "quantity": {
+              "value": 0.2048,
+              "unit": "ratio"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "Measurement canvas-context-span; time kind=span, count=2; per-call equivalent 5 second.",
+                "Executed-work utilization uses declared physical executed operations and unique matching peak capability on each actual device. It is separate from model-useful MFU and is not a measured hardware counter."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ]
+    },
+    "normalizedTime": {
+      "kind": "span",
+      "count": 2,
+      "intervalSeconds": 10,
+      "perCallEquivalentSeconds": 5
+    },
+    "mfu": [
+      {
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "value": {
+          "status": "available",
+          "quantity": {
+            "value": 0.2048,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "Measurement canvas-context-span, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=span, count=2.",
+              "Span/count is interval-normalized time, not an individual call latency.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    ],
+    "mbu": {
+      "status": "available",
+      "quantity": {
+        "value": 0.8959999999999999,
+        "unit": "ratio"
+      },
+      "basis": "measured",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:K",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "module:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:K",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:K",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "Measurement canvas-context-span, input a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5; time kind=span, count=2.",
+          "Span/count is interval-normalized time, not an individual call latency.",
+          "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "mbuBasis": "measured_hbm",
+    "diagnostics": []
+  }
+]

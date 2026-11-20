@@ -1,0 +1,164 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "Four BF16 elements yield8B payload; local-P BF16 scales add2*P bytes. Root2/local3 yields14B each; nearest ancestor5 yields18B. Compatible readers share one canonical allocation, not access counts. Capacity local binding Z2/3/4 yields24/28/32B and maximum3 at28B capacity. Source assets and hardware are independent synthetic fixtures; no hardware performance claim.",
+  "cases": [
+    {
+      "kind": "short",
+      "status": "available",
+      "inputHash": "6502479669572ce9a488b05964677f6802a76d84301c578e42249c9b10ab6ce5",
+      "expectedAllocations": [
+        14,
+        14
+      ],
+      "actualAllocations": [
+        14,
+        14
+      ],
+      "expectedPeak": 28,
+      "expectedHbm": 28,
+      "expectedSeconds": 0.28,
+      "project": "examples/quantization-scope/short-project.json"
+    },
+    {
+      "kind": "nested",
+      "status": "available",
+      "inputHash": "dcf07c2ddeaf7b13000b0c8287046f65bd8767da37435eec7b62da2253ccc2fe",
+      "expectedAllocations": [
+        14,
+        14
+      ],
+      "actualAllocations": [
+        14,
+        14
+      ],
+      "expectedPeak": 28,
+      "expectedHbm": 28,
+      "expectedSeconds": 0.28,
+      "project": "examples/quantization-scope/nested-project.json"
+    },
+    {
+      "kind": "ancestor",
+      "status": "available",
+      "inputHash": "d69f9d95a8edb9547639d2c285ccbbe1cda942a7fd883dbdcce1985449030897",
+      "expectedAllocations": [
+        18,
+        18
+      ],
+      "actualAllocations": [
+        18,
+        18
+      ],
+      "expectedPeak": 36,
+      "expectedHbm": 36,
+      "expectedSeconds": 0.36,
+      "project": "examples/quantization-scope/ancestor-project.json"
+    },
+    {
+      "kind": "repeat",
+      "status": "available",
+      "inputHash": "c80067006ea30ddfb6b3021b14a0c4227a7f17b52db1cd99005aa4b9fdabf0d8",
+      "expectedAllocations": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "actualAllocations": [
+        14,
+        14,
+        14,
+        14
+      ],
+      "expectedPeak": 56,
+      "expectedHbm": 56,
+      "expectedSeconds": 0.56,
+      "project": "examples/quantization-scope/repeat-project.json"
+    },
+    {
+      "kind": "shared",
+      "status": "available",
+      "inputHash": "f2597c996de2beb1c64ab81e1bce6f7b264d2e9654b23e671a063e71c2d4c920",
+      "expectedAllocations": [
+        14,
+        14,
+        14
+      ],
+      "actualAllocations": [
+        14,
+        14,
+        14
+      ],
+      "expectedPeak": 42,
+      "expectedHbm": 56,
+      "expectedSeconds": 0.56,
+      "project": "examples/quantization-scope/shared-project.json"
+    },
+    {
+      "kind": "conflict",
+      "status": "unavailable",
+      "expectedDiagnostic": "shared_quantization_conflict",
+      "project": "examples/quantization-scope/conflict-project.json"
+    },
+    {
+      "kind": "decode",
+      "status": "available",
+      "inputHash": "99daf3a59d3c18fc90ba0bbb642eade6888b064449b16a8c69c05d7e42492a66",
+      "expectedAllocations": [
+        12,
+        12,
+        14,
+        14,
+        16,
+        16
+      ],
+      "actualAllocations": [
+        12,
+        12,
+        14,
+        14,
+        16,
+        16
+      ],
+      "project": "examples/quantization-scope/decode-project.json"
+    },
+    {
+      "kind": "fixed-decode",
+      "status": "available",
+      "inputHash": "dc255bed8dec50c085f3b4af0a5e895b5d97de1a475be0e5c24f0c9572c7b73b",
+      "expectedAllocations": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12
+      ],
+      "actualAllocations": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12
+      ],
+      "project": "examples/quantization-scope/fixed-decode-project.json"
+    },
+    {
+      "kind": "capacity",
+      "status": "available",
+      "inputHash": "d344398eebd2e21af9a4cb98b9252c4400b862a57b8ac2fb7218b69c1d8548af",
+      "expectedAllocations": [
+        14,
+        14
+      ],
+      "actualAllocations": [
+        14,
+        14
+      ],
+      "expectedPeak": 28,
+      "expectedHbm": 28,
+      "expectedSeconds": 0.28,
+      "project": "examples/quantization-scope/capacity-project.json"
+    }
+  ]
+}

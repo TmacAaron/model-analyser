@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "arithmetic": {
+      "type": "string",
+      "enum": [
+        "float",
+        "integer"
+      ]
+    },
+    "inputDtypes": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "multiplyDtype": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "accumulateDtype": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "resource": {
+      "type": "string",
+      "enum": [
+        "matrix",
+        "vector",
+        "custom"
+      ]
+    },
+    "resourceKey": {
+      "$ref": "#/$defs/__schema1"
+    }
+  },
+  "required": [
+    "arithmetic",
+    "inputDtypes",
+    "multiplyDtype",
+    "accumulateDtype",
+    "resource"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "format": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

@@ -1,0 +1,827 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "baseInputHash": "fffae6097c19169cc21433e931bcd6d02abb0ba52bd445a2c0e8a7d113797aa1",
+  "baseScenario": {
+    "scenarioId": "example:scenario:c05",
+    "name": "C05 stream overlap",
+    "model": {
+      "assetId": "example:model:c05-streams",
+      "revision": 1,
+      "kind": "model"
+    },
+    "bindings": [],
+    "workload": {
+      "kind": "decode",
+      "batchSize": 1,
+      "contextTokensPerRequest": 0,
+      "queryTokensPerRequest": 1,
+      "steps": 1
+    },
+    "deviceTopology": {
+      "devices": [
+        {
+          "deviceId": "gpu0",
+          "hardware": {
+            "assetId": "example:hardware:c05",
+            "revision": 1,
+            "kind": "hardware"
+          }
+        }
+      ],
+      "groups": [
+        {
+          "groupId": "main",
+          "members": [
+            "gpu0"
+          ]
+        }
+      ]
+    },
+    "parallelPlan": {
+      "assignments": [],
+      "communications": [],
+      "assumptions": []
+    },
+    "executionPlan": {
+      "kind": "streams",
+      "assignments": [
+        {
+          "nodeId": "A/work",
+          "groupId": "main",
+          "streamId": "left"
+        },
+        {
+          "nodeId": "B/work",
+          "groupId": "main",
+          "streamId": "right"
+        }
+      ],
+      "extraDependencies": [],
+      "resourcePolicy": {
+        "kind": "ideal"
+      }
+    },
+    "quantizationOverrides": [],
+    "numericOverrides": [],
+    "modulePeakOverrides": [
+      {
+        "overrideId": "private-A",
+        "nodeId": "A",
+        "phases": [
+          "decode"
+        ],
+        "peakBytes": {
+          "kind": "formula",
+          "call": {
+            "formula": {
+              "assetId": "reference:module-private-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            "bindings": {
+              "B": {
+                "kind": "symbol",
+                "name": "batchSize"
+              }
+            }
+          }
+        },
+        "description": "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+      },
+      {
+        "overrideId": "private-B",
+        "nodeId": "B",
+        "phases": [
+          "decode"
+        ],
+        "peakBytes": {
+          "kind": "literal",
+          "quantity": {
+            "value": 200,
+            "unit": "byte"
+          }
+        },
+        "description": "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+      }
+    ],
+    "fusionGroups": []
+  },
+  "request": {
+    "variable": {
+      "kind": "workload",
+      "field": "batchSize"
+    },
+    "searchRange": {
+      "min": 1,
+      "max": 4
+    }
+  },
+  "method": "exhaustive_integer",
+  "completion": "complete",
+  "points": [
+    {
+      "status": "available",
+      "value": 1,
+      "inputHash": "fffae6097c19169cc21433e931bcd6d02abb0ba52bd445a2c0e8a7d113797aa1",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 300,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "reference:module-private-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Private module budgets are reserved for the complete actual call span. Persistent, boundary and cross-module canonical allocations remain unchanged. The opaque private budget is classified as reserve; it is not a measured category breakdown.",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 450
+        }
+      ],
+      "compute": [],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "group_total"
+      },
+      "modelUsefulCompute": [],
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+            "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+            "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+            "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+            "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.006500000000000001,
+          "unit": "second"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+            "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+            "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+            "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+            "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+            "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "temporal-memory-gpu0-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前多流峰值超过设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "distributed-memory-gpu0-2",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前点显存 3221225472 byte 超过设备容量 450 byte",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        }
+      ]
+    },
+    {
+      "status": "available",
+      "value": 2,
+      "inputHash": "be8c17e9873ff149f60e7c003ddce5d9f62eb4356a81ed308bae88749fdd7af4",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 400,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "reference:module-private-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Private module budgets are reserved for the complete actual call span. Persistent, boundary and cross-module canonical allocations remain unchanged. The opaque private budget is classified as reserve; it is not a measured category breakdown.",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 450
+        }
+      ],
+      "compute": [],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "group_total"
+      },
+      "modelUsefulCompute": [],
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+            "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+            "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+            "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+            "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.006500000000000001,
+          "unit": "second"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+            "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+            "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+            "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+            "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+            "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "temporal-memory-gpu0-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前多流峰值超过设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "distributed-memory-gpu0-2",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前点显存 3221225472 byte 超过设备容量 450 byte",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        }
+      ]
+    },
+    {
+      "status": "available",
+      "value": 3,
+      "inputHash": "b3d525433ec829cb1f9188b841357a2fbad0e03982c403f77afca2ad31a22f67",
+      "fit": "exceeds",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 500,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "reference:module-private-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Private module budgets are reserved for the complete actual call span. Persistent, boundary and cross-module canonical allocations remain unchanged. The opaque private budget is classified as reserve; it is not a measured category breakdown.",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 450
+        }
+      ],
+      "compute": [],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "group_total"
+      },
+      "modelUsefulCompute": [],
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+            "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+            "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+            "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+            "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.006500000000000001,
+          "unit": "second"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+            "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+            "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+            "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+            "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+            "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "temporal-memory-gpu0-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前多流峰值超过设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "module-peak-gpu0-2",
+          "severity": "error",
+          "code": "module_peak_capacity_exceeded",
+          "message": "含模块私有预算的峰值超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "distributed-memory-gpu0-3",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前点显存 3221225472 byte 超过设备容量 450 byte",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        }
+      ]
+    },
+    {
+      "status": "available",
+      "value": 4,
+      "inputHash": "d4fc83ed42a91c3f57d2beebb2913bb6bdd7f823163e6277624ba3b65c9f7cbe",
+      "fit": "exceeds",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 600,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "reference:module-private-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Private module budgets are reserved for the complete actual call span. Persistent, boundary and cross-module canonical allocations remain unchanged. The opaque private budget is classified as reserve; it is not a measured category breakdown.",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded",
+                "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 450
+        }
+      ],
+      "compute": [],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "group_total"
+      },
+      "modelUsefulCompute": [],
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+            "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+            "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+            "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+            "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.006500000000000001,
+          "unit": "second"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+            "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+            "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+            "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+            "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+            "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "temporal-memory-gpu0-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前多流峰值超过设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "module-peak-gpu0-2",
+          "severity": "error",
+          "code": "module_peak_capacity_exceeded",
+          "message": "含模块私有预算的峰值超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        },
+        {
+          "diagnosticId": "distributed-memory-gpu0-3",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前点显存 3221225472 byte 超过设备容量 450 byte",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:c05"
+          }
+        }
+      ]
+    }
+  ],
+  "capacityStatus": {
+    "kind": "solved",
+    "fixedVariables": [
+      {
+        "parameterKey": "workload.contextTokensPerRequest",
+        "value": {
+          "kind": "integer",
+          "value": 0
+        }
+      },
+      {
+        "parameterKey": "workload.queryTokensPerRequest",
+        "value": {
+          "kind": "integer",
+          "value": 1
+        }
+      },
+      {
+        "parameterKey": "workload.steps",
+        "value": {
+          "kind": "integer",
+          "value": 1
+        }
+      }
+    ],
+    "solveVariable": "workload.batchSize",
+    "maximum": 2,
+    "searchRange": {
+      "min": 1,
+      "max": 4
+    },
+    "limitingDeviceIds": [
+      "gpu0"
+    ]
+  },
+  "diagnostics": []
+}

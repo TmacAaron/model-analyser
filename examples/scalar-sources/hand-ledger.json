@@ -1,0 +1,61 @@
+{
+  "version": "scalar-source-reference.1",
+  "engine": "0.1.0-execution.20",
+  "independent": {
+    "matrix": {
+      "operations": "256*M",
+      "bytes": "48*M+256",
+      "capacity": 4096,
+      "lastFit": 80,
+      "firstExceeded": 81,
+      "seconds": "max(256*M/1000,(48*M+256)/100)"
+    },
+    "measurement": {
+      "usefulOperations": 1024,
+      "perCallSeconds": 5,
+      "peakOpsPerSecond": 1000,
+      "peakBytesPerSecond": 100,
+      "mfu": 0.2048,
+      "mbu": 0.896
+    },
+    "decode": {
+      "baseContexts": [
+        2,
+        3,
+        4
+      ],
+      "thirdCallStart": 16,
+      "thirdReserved": 18,
+      "scanContexts": [
+        3,
+        4,
+        5
+      ],
+      "scanThirdCallStart": 18,
+      "scanThirdReserved": 20
+    },
+    "budget": {
+      "overlappingPrivateBytes": 300,
+      "originalPrivateBytes": 5368709120
+    },
+    "roofline": {
+      "hardware": {
+        "compute": 400,
+        "bandwidth": 100,
+        "ridge": 4
+      },
+      "effective": {
+        "compute": 200,
+        "bandwidth": 25,
+        "ridge": 8
+      },
+      "intensity": 2.2857142857142856
+    }
+  },
+  "notes": [
+    "Portable projects reread from disk with complete fixed snapshots; all100 integers independently checked.",
+    "Source replay validates original full point projection, actual hash and actual step parameter table.",
+    "Raw floating point values are retained; tolerance compares mathematical expectations only.",
+    "Shared provenance is recorded context, not a per-expression independent dependency chain."
+  ]
+}

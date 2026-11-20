@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "index": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "name": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "category": {
+      "type": "string",
+      "const": "ROCm kernel"
+    },
+    "pid": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "tid": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "startSeconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "sourceDevice": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "correlation": {
+      "type": "string"
+    },
+    "rawStartNanoseconds": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "rawEndNanoseconds": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "dispatchId": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "sourceQueue": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "csvLine": {
+      "minimum": 2,
+      "$ref": "#/$defs/__schema0"
+    },
+    "rawDispatchNanoseconds": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "rawCompleteNanoseconds": {
+      "$ref": "#/$defs/__schema2"
+    }
+  },
+  "required": [
+    "index",
+    "name",
+    "category",
+    "pid",
+    "tid",
+    "startSeconds",
+    "seconds",
+    "sourceDevice",
+    "rawStartNanoseconds",
+    "rawEndNanoseconds",
+    "dispatchId",
+    "sourceQueue",
+    "csvLine"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema2": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d{0,19})$"
+    }
+  }
+}

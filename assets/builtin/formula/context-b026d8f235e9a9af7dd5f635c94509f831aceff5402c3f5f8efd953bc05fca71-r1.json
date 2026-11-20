@@ -1,0 +1,55 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:pp2:formula:7523a848555242bb",
+  "revision": 1,
+  "name": "2 * B * Q * H [byte]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic explicit GQA attention/residual block: separate Q/K/V projections, append cache, causal useful versus rectangular executed attention, vector softmax proxy, row-parallel output and residual. BF16 tensors/matrix, FP32 vector proxy. No norm, RoPE, MLP, embedding/head, inference, measured kernel or full language-model claim."
+    },
+    {
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/user_guide/feature_guide/pipeline_parallel.md",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model. Two consecutive synthetic GQA attention/residual blocks on distinct physical stage devices. Each stage owns its full weights and K/V state; a single microbatch traverses both stages serially. No claim of steady-state pipeline overlap or a full language model. The original GQA local equations and materialized buffers remain explicit. BF16 intermediate activation is sent once, without dividing payload by PP size. Network HBM/reduction arithmetic are unknown, not zero."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "H": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * Q * H",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

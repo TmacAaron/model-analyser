@@ -1,0 +1,49 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:parallel:replicated",
+  "revision": 1,
+  "name": "复制布局样例",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "parallel",
+    "plan": {
+      "assignments": [
+        {
+          "selector": {
+            "kind": "nodes",
+            "nodeIds": [
+              "module/op"
+            ]
+          },
+          "phases": [
+            "decode"
+          ],
+          "tensorDistributions": [
+            {
+              "tensorId": "X",
+              "distribution": {
+                "kind": "replicated",
+                "groupId": "tp"
+              }
+            }
+          ],
+          "storageDistributions": []
+        }
+      ],
+      "communications": [],
+      "assumptions": [
+        "Example selector and group are bound by the consuming scenario."
+      ]
+    }
+  }
+}

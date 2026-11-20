@@ -1,0 +1,75 @@
+{
+  "scope": "View filtering and background dispatch retain original math. C05: prepare 1ms, B 5ms, join .5ms, B original ordinal3 and absolute interval1..6ms; whole-model makespan6.5ms. A fusion member shows its complete execution unit. C01:1024/(1000*5)=.2048 MFU;448/(100*5)=.896 estimated MBU. Decode uses the third actual call.",
+  "evidence": [
+    {
+      "name": "c01-page",
+      "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+      "timelineProof": {
+        "mfu": 0.2048,
+        "estimatedMbu": 0.896,
+        "records": 20
+      }
+    },
+    {
+      "name": "c05-stream",
+      "inputHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+      "timelineProof": {
+        "selected": "B",
+        "startSeconds": 0.001,
+        "endSeconds": 0.006,
+        "globalMakespanSeconds": 0.0065,
+        "originalOrdinal": 3
+      }
+    },
+    {
+      "name": "atomic-fusion",
+      "inputHash": "cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c",
+      "timelineProof": {
+        "selected": "A",
+        "wholeExecutionUnit": "$fusion:pair"
+      }
+    },
+    {
+      "name": "decode-third",
+      "inputHash": "21246635c46108a2d0e327923bf9faf54986ae85a575ce894d89234f8c65e2dd",
+      "timelineProof": {
+        "steps": [
+          {
+            "nodeId": "update",
+            "deviceScope": {
+              "kind": "per_device",
+              "deviceId": "gpu0"
+            },
+            "streamId": "serial",
+            "startSeconds": 0,
+            "endSeconds": 0.06,
+            "decodeStepIndex": 0
+          },
+          {
+            "nodeId": "update",
+            "deviceScope": {
+              "kind": "per_device",
+              "deviceId": "gpu0"
+            },
+            "streamId": "serial",
+            "startSeconds": 0.06,
+            "endSeconds": 0.14,
+            "decodeStepIndex": 1
+          },
+          {
+            "nodeId": "update",
+            "deviceScope": {
+              "kind": "per_device",
+              "deviceId": "gpu0"
+            },
+            "streamId": "serial",
+            "startSeconds": 0.14,
+            "endSeconds": 0.24000000000000002,
+            "decodeStepIndex": 2
+          }
+        ],
+        "actualThirdHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1"
+      }
+    }
+  ]
+}

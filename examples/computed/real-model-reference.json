@@ -1,0 +1,937 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "Commit-pinned model structures and explicit analytical equations; synthetic hardware, no inference or benchmark. Checksums and independent inventory are verified before authoring. Qwen Dense/GQA and DeepSeek MoE with reference expanded cache versus explicitly assumed absorbed MLA execution.",
+  "inventory": {
+    "checkedOn": "2026-11-14",
+    "qwen": {
+      "serializedParameters": 751632384,
+      "uniqueParameters": 596049920,
+      "tiedEmbeddingParameters": 155582464,
+      "bf16ResidentWeightBytes": 1192099840,
+      "kvBytesPerTokenPerRequest": 114688
+    },
+    "deepseek": {
+      "uniqueParameters": 15706484224,
+      "bf16ResidentWeightBytes": 31412968448,
+      "referenceExpandedKVBytesPerTokenPerRequest": 276480,
+      "theoreticalCompressedMLABytesPerTokenPerRequest": 31104
+    },
+    "files": 7
+  },
+  "rows": [
+    {
+      "file": "qwen3-0.6b-decode",
+      "phase": "decode",
+      "scenario": {
+        "scenarioId": "example:scenario:builtin:model:qwen3-0.6b",
+        "name": "Qwen3-0.6B 固定来源单卡理论参考",
+        "model": {
+          "assetId": "builtin:model:qwen3-0.6b",
+          "revision": 2,
+          "kind": "model"
+        },
+        "bindings": [],
+        "workload": {
+          "kind": "decode",
+          "batchSize": 1,
+          "contextTokensPerRequest": 2,
+          "queryTokensPerRequest": 1,
+          "steps": 2
+        },
+        "deviceTopology": {
+          "devices": [
+            {
+              "deviceId": "gpu0",
+              "hardware": {
+                "assetId": "example:hardware:transformer-hand-reference",
+                "revision": 1,
+                "kind": "hardware"
+              }
+            }
+          ],
+          "groups": []
+        },
+        "parallelPlan": {
+          "assignments": [],
+          "communications": [],
+          "assumptions": [
+            "One device; no inferred parallelism, fusion or measured kernel efficiency."
+          ]
+        },
+        "executionPlan": {
+          "kind": "serial"
+        },
+        "quantizationOverrides": [],
+        "numericOverrides": [],
+        "fusionGroups": []
+      },
+      "inputHash": "eec38e507a4679c3deccc519c285b51a82f9559829056c99504416f96184d4ba",
+      "nodes": 395,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 3122496,
+          "executedOperations": 3122496
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 2385543168,
+          "executedOperations": 2385543168
+        }
+      ],
+      "hbmBytes": 2391644688,
+      "seconds": 0.002392635663999998,
+      "peakBytes": 1192864512,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 1192099840
+        },
+        {
+          "category": "state",
+          "bytes": 458752
+        },
+        {
+          "category": "activation",
+          "bytes": 305920
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ],
+      "decode": [
+        {
+          "index": 0,
+          "contextBefore": 2,
+          "contextAfter": 3,
+          "states": 28,
+          "stateBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 344064,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:qwen3:02f922dbddc03786",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:04f2a4014d6ba6d2",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:0973cd21fec14dc9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:397644c572a414e5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:3cd73477a7204325",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:439fb241f957f884",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:540e4cdb9509ecb5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:54eed11a6fc14e79",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:57179c25015b99df",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:64ac84d46136ef30",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:6e7ccfeb6cb11cdb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7523a848555242bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7986c8dba1519aab",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:8aa36434d47cd1bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:a5554bf244420307",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b7252a03e5b5eea4",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b9fd61582993d7f9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d0ae8766bb4b4933",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d5423a27570e19e3",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:model:qwen3-0.6b",
+                  "revision": 2,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "builtin:module:qwen3-decoder",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:hardware:transformer-hand-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:qwen3:02f922dbddc03786",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:04f2a4014d6ba6d2",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:0973cd21fec14dc9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:397644c572a414e5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:3cd73477a7204325",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:439fb241f957f884",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:540e4cdb9509ecb5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:54eed11a6fc14e79",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:57179c25015b99df",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:64ac84d46136ef30",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:6e7ccfeb6cb11cdb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7523a848555242bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7986c8dba1519aab",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:8aa36434d47cd1bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:a5554bf244420307",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b7252a03e5b5eea4",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b9fd61582993d7f9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d0ae8766bb4b4933",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d5423a27570e19e3",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Offline snapshots and SHA256: references/models/source-lock.json. BF16 mathematical/materialized causal GQA reference; no measured kernel or GPU performance claim. Weight tying follows config, despite duplicate serialized lm_head. HBM assumption: one declared read/write per buffer; no cache/reuse/materialized repeat_kv guarantee. Vector counts approximate norms 5/element, QK norm + RoPE 8/element, softmax 5/score, SiLU×up 6/element. FP32 vector work is separated from BF16 matrix work. No fused attention, rotary table/trig construction, allocator/runtime overhead or network model.",
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "peakBytes": 1192749824
+        },
+        {
+          "index": 1,
+          "contextBefore": 3,
+          "contextAfter": 4,
+          "states": 28,
+          "stateBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 458752,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:qwen3:02f922dbddc03786",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:04f2a4014d6ba6d2",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:0973cd21fec14dc9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:397644c572a414e5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:3cd73477a7204325",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:439fb241f957f884",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:540e4cdb9509ecb5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:54eed11a6fc14e79",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:57179c25015b99df",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:64ac84d46136ef30",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:6e7ccfeb6cb11cdb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7523a848555242bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7986c8dba1519aab",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:8aa36434d47cd1bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:a5554bf244420307",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b7252a03e5b5eea4",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b9fd61582993d7f9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d0ae8766bb4b4933",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d5423a27570e19e3",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:model:qwen3-0.6b",
+                  "revision": 2,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "builtin:module:qwen3-decoder",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:hardware:transformer-hand-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:qwen3:02f922dbddc03786",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:04f2a4014d6ba6d2",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:0973cd21fec14dc9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:397644c572a414e5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:3cd73477a7204325",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:439fb241f957f884",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:540e4cdb9509ecb5",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:54eed11a6fc14e79",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:57179c25015b99df",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:64ac84d46136ef30",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:6e7ccfeb6cb11cdb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7523a848555242bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:7986c8dba1519aab",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:8aa36434d47cd1bb",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:a5554bf244420307",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b7252a03e5b5eea4",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:b9fd61582993d7f9",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d0ae8766bb4b4933",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:d5423a27570e19e3",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Offline snapshots and SHA256: references/models/source-lock.json. BF16 mathematical/materialized causal GQA reference; no measured kernel or GPU performance claim. Weight tying follows config, despite duplicate serialized lm_head. HBM assumption: one declared read/write per buffer; no cache/reuse/materialized repeat_kv guarantee. Vector counts approximate norms 5/element, QK norm + RoPE 8/element, softmax 5/score, SiLU×up 6/element. FP32 vector work is separated from BF16 matrix work. No fused attention, rotary table/trig construction, allocator/runtime overhead or network model.",
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "peakBytes": 1192864512
+        }
+      ]
+    },
+    {
+      "file": "qwen3-0.6b-prefill",
+      "phase": "prefill",
+      "scenario": {
+        "scenarioId": "example:scenario:builtin:model:qwen3-0.6b",
+        "name": "Qwen3-0.6B 固定来源单卡理论参考",
+        "model": {
+          "assetId": "builtin:model:qwen3-0.6b",
+          "revision": 2,
+          "kind": "model"
+        },
+        "bindings": [],
+        "workload": {
+          "kind": "prefill",
+          "batchSize": 2,
+          "queryTokensPerRequest": 4,
+          "pastTokensPerRequest": 3,
+          "chunkTokens": 4
+        },
+        "deviceTopology": {
+          "devices": [
+            {
+              "deviceId": "gpu0",
+              "hardware": {
+                "assetId": "example:hardware:transformer-hand-reference",
+                "revision": 1,
+                "kind": "hardware"
+              }
+            }
+          ],
+          "groups": []
+        },
+        "parallelPlan": {
+          "assignments": [],
+          "communications": [],
+          "assumptions": [
+            "One device; no inferred parallelism, fusion or measured kernel efficiency."
+          ]
+        },
+        "executionPlan": {
+          "kind": "serial"
+        },
+        "quantizationOverrides": [],
+        "numericOverrides": [],
+        "fusionGroups": []
+      },
+      "inputHash": "3708a63048e9935b7b1cdd4530db0a26ae4bf51e865f17abdec7d0efed9e3d7c",
+      "nodes": 395,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 12525824,
+          "executedOperations": 12552704
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 9545842688,
+          "executedOperations": 9548595200
+        }
+      ],
+      "hbmBytes": 1220474944,
+      "seconds": 0.009565485119999995,
+      "peakBytes": 1196152832,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 1192099840
+        },
+        {
+          "category": "state",
+          "bytes": 1605632
+        },
+        {
+          "category": "activation",
+          "bytes": 2447360
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "file": "deepseek-v2-lite-expanded",
+      "phase": "decode",
+      "scenario": {
+        "scenarioId": "example:scenario:builtin:model:deepseek-v2-lite-expanded",
+        "name": "DeepSeek-V2-Lite expanded 固定来源单卡理论参考",
+        "model": {
+          "assetId": "builtin:model:deepseek-v2-lite-expanded",
+          "revision": 2,
+          "kind": "model"
+        },
+        "bindings": [],
+        "workload": {
+          "kind": "decode",
+          "batchSize": 1,
+          "contextTokensPerRequest": 2,
+          "queryTokensPerRequest": 1,
+          "steps": 1
+        },
+        "deviceTopology": {
+          "devices": [
+            {
+              "deviceId": "gpu0",
+              "hardware": {
+                "assetId": "example:hardware:transformer-hand-reference",
+                "revision": 1,
+                "kind": "hardware"
+              }
+            }
+          ],
+          "groups": []
+        },
+        "parallelPlan": {
+          "assignments": [],
+          "communications": [],
+          "assumptions": [
+            "One device; no inferred parallelism, fusion or measured kernel efficiency."
+          ]
+        },
+        "executionPlan": {
+          "kind": "serial"
+        },
+        "quantizationOverrides": [],
+        "numericOverrides": [],
+        "fusionGroups": []
+      },
+      "inputHash": "4e1ec7ab6a199eb8e89a7c1f566c5f068c4e9f9f21ce1cd89653a3a47ebbf6f2",
+      "nodes": 697,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 10176656,
+          "executedOperations": 10176656
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 4896630784,
+          "executedOperations": 4896630784
+        },
+        {
+          "resource": "custom",
+          "usefulOperations": 9984,
+          "executedOperations": 9984
+        }
+      ],
+      "hbmBytes": 4915350184,
+      "seconds": 0.004915351640000003,
+      "peakBytes": 31414412288,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 31412968448
+        },
+        {
+          "category": "state",
+          "bytes": 829440
+        },
+        {
+          "category": "activation",
+          "bytes": 614400
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "file": "deepseek-v2-lite-absorbed",
+      "phase": "decode",
+      "scenario": {
+        "scenarioId": "example:scenario:builtin:model:deepseek-v2-lite-absorbed",
+        "name": "DeepSeek-V2-Lite absorbed 固定来源单卡理论参考",
+        "model": {
+          "assetId": "builtin:model:deepseek-v2-lite-absorbed",
+          "revision": 2,
+          "kind": "model"
+        },
+        "bindings": [],
+        "workload": {
+          "kind": "decode",
+          "batchSize": 1,
+          "contextTokensPerRequest": 2,
+          "queryTokensPerRequest": 1,
+          "steps": 1
+        },
+        "deviceTopology": {
+          "devices": [
+            {
+              "deviceId": "gpu0",
+              "hardware": {
+                "assetId": "example:hardware:transformer-hand-reference",
+                "revision": 1,
+                "kind": "hardware"
+              }
+            }
+          ],
+          "groups": []
+        },
+        "parallelPlan": {
+          "assignments": [],
+          "communications": [],
+          "assumptions": [
+            "One device; no inferred parallelism, fusion or measured kernel efficiency."
+          ]
+        },
+        "executionPlan": {
+          "kind": "serial"
+        },
+        "quantizationOverrides": [],
+        "numericOverrides": [],
+        "fusionGroups": []
+      },
+      "inputHash": "b8fde0b20781c558af6c835e5bd07cc9983a546d14da0bbb55bed4e1ffcc2373",
+      "nodes": 724,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 10176656,
+          "executedOperations": 10176656
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 4898621440,
+          "executedOperations": 4898621440
+        },
+        {
+          "resource": "custom",
+          "usefulOperations": 9984,
+          "executedOperations": 9984
+        }
+      ],
+      "hbmBytes": 4915778728,
+      "seconds": 0.004917478807999996,
+      "peakBytes": 31413676160,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 31412968448
+        },
+        {
+          "category": "state",
+          "bytes": 93312
+        },
+        {
+          "category": "activation",
+          "bytes": 614400
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ]
+    }
+  ]
+}

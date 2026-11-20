@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "stateId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "name": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "stateKind": {
+      "type": "string",
+      "enum": [
+        "kv",
+        "latent",
+        "indexer",
+        "indices",
+        "recurrent",
+        "window",
+        "custom"
+      ]
+    },
+    "allocationBasis": {
+      "type": "string",
+      "enum": [
+        "context_boundary",
+        "step_end"
+      ]
+    },
+    "storageIds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "creator": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema1"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "initialized"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "readers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "writers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "updatePolicy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "append"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "windowed"
+            },
+            "window": {
+              "$ref": "#/$defs/__schema2"
+            }
+          },
+          "required": [
+            "kind",
+            "window"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "replace"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "static"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "stateId",
+    "name",
+    "stateKind",
+    "storageIds",
+    "creator",
+    "readers",
+    "writers",
+    "updatePolicy"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "node"
+        },
+        "nodeId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "portId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "kind",
+        "nodeId",
+        "portId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema2": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "quantity": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "scalar",
+                    "count",
+                    "ratio",
+                    "byte",
+                    "second",
+                    "operation",
+                    "operation_per_second",
+                    "byte_per_second"
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "symbol"
+            },
+            "name": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "formula"
+            },
+            "call": {
+              "type": "object",
+              "properties": {
+                "formula": {
+                  "type": "object",
+                  "properties": {
+                    "assetId": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "module",
+                        "operator",
+                        "formula",
+                        "parallel",
+                        "quantization",
+                        "hardware"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "assetId",
+                    "revision",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "bindings": {
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                }
+              },
+              "required": [
+                "formula",
+                "bindings"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "call"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

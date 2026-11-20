@@ -1,0 +1,863 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "be0dd6ba3dc025355cd5054cfbfa8db3ee539af2c6d384083c8791bccfd55954",
+  "target": {
+    "kind": "model"
+  },
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": false,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:local-gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:two-card-gather-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-serial-gather",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-serial-gather",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-serial-gather",
+              "revision": 1,
+              "kind": "operator"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "batchSize",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "contextTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "queryTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "steps",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "M",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "N",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "K",
+              "source": "evaluation_context"
+            }
+          ],
+          "assumptions": [
+            "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op"
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y"
+        }
+      ]
+    },
+    {
+      "deviceId": "gpu1",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:local-gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:two-card-gather-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-serial-gather",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-serial-gather",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-serial-gather",
+              "revision": 1,
+              "kind": "operator"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "batchSize",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "contextTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "queryTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "steps",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "M",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "N",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "K",
+              "source": "evaluation_context"
+            }
+          ],
+          "assumptions": [
+            "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op"
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sY",
+        "name": "Y",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 64,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 64,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 64,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": false,
+          "writes": true,
+          "temporary": false
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": false,
+          "writes": true,
+          "temporary": false
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": true,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "commScratch",
+        "name": "Explicit 200-byte communication scratch",
+        "allocationKind": "bytes",
+        "category": "communication",
+        "sharingDomain": "device_group",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 200,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 1,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": false,
+      "private": true,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sX",
+        "name": "X",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 0
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": true,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sW",
+        "name": "W",
+        "allocationKind": "tensor",
+        "category": "weight",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": true,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": true,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu1",
+      "storage": {
+        "storageId": "sY",
+        "name": "Y",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 64,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 64,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 64,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": false,
+          "writes": true,
+          "temporary": false
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": false,
+          "writes": true,
+          "temporary": false
+        },
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": true,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu1",
+      "storage": {
+        "storageId": "commScratch",
+        "name": "Explicit 200-byte communication scratch",
+        "allocationKind": "bytes",
+        "category": "communication",
+        "sharingDomain": "device_group",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 200,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 1,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "gather-Y",
+          "executionNodeId": "gather-Y",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": false,
+      "private": true,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu1",
+      "storage": {
+        "storageId": "sX",
+        "name": "X",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 0
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": true,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu1",
+      "storage": {
+        "storageId": "sW",
+        "name": "W",
+        "allocationKind": "tensor",
+        "category": "weight",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": true,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 128,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "module/op",
+          "executionNodeId": "module/op",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": true,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    }
+  ]
+}

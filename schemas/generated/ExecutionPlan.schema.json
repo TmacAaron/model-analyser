@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "serial"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "streams"
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "groupId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "streamId": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "required": [
+              "nodeId",
+              "groupId",
+              "streamId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "extraDependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "edgeId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "fromNodeId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "toNodeId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "control",
+                  "synchronization"
+                ]
+              }
+            },
+            "required": [
+              "edgeId",
+              "fromNodeId",
+              "toNodeId",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "resourcePolicy": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "ideal"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "shared_bandwidth"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "user_efficiency"
+                },
+                "efficiency": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "kind",
+                "efficiency"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "assignments",
+        "extraDependencies",
+        "resourcePolicy"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

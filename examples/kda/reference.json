@@ -1,0 +1,2495 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "source": {
+    "checkedOn": "2026-11-15",
+    "modelRepository": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct",
+    "modelCommit": "e1df551a447157d4658b573f9a695d57658590e9",
+    "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+    "kernelRepository": "https://github.com/fla-org/flash-linear-attention",
+    "kernelTag": "v0.4.0",
+    "kernelCommit": "2e0f6c31f9db50f010cb157c712c048b8a3a89d2",
+    "files": [
+      {
+        "repository": "model",
+        "path": "config.json",
+        "local": "config.json",
+        "sha256": "a6ac3c2c4b5aa72370f9727f49ffa4432715d20061889acdb37c688be853096e"
+      },
+      {
+        "repository": "model",
+        "path": "configuration_kimi.py",
+        "local": "configuration_kimi.py",
+        "sha256": "79422aca3ee6c89d201e0c15c4c9a6db517ba83d87ecdc4e41fa0f71297238d9"
+      },
+      {
+        "repository": "model",
+        "path": "modeling_kimi.py",
+        "local": "modeling_kimi.py",
+        "sha256": "d79b365e37378881b9f1585007a56e236ca27a414920943cb85d1dacb75dda99"
+      },
+      {
+        "repository": "kernel",
+        "path": "fla/ops/kda/fused_recurrent.py",
+        "local": "fused_recurrent.py",
+        "sha256": "5c976b9b43e172a781c60faef5b93a08dc097dd6098a3cbc7e9f931377258e60"
+      },
+      {
+        "repository": "kernel",
+        "path": "fla/ops/gated_delta_rule/fused_recurrent.py",
+        "local": "gated_delta_recurrent.py",
+        "sha256": "5dc380064ab3a15a6e549a3c58ee0b925cf4554a0c82d01d3ceb65228e8afd33"
+      },
+      {
+        "repository": "kernel",
+        "path": "fla/ops/kda/gate.py",
+        "local": "gate.py",
+        "sha256": "1069bb1893eeb8293c0b54a9922e7574c82c9864f8a4c0d0c9a2abda357d9936"
+      },
+      {
+        "repository": "kernel",
+        "path": "fla/modules/convolution.py",
+        "local": "convolution.py",
+        "sha256": "72c2230daea713fb9110354b7f1aadd59ac5619a63421621d0c66b169e7ce098"
+      },
+      {
+        "repository": "kernel",
+        "path": "fla/modules/fused_norm_gate.py",
+        "local": "fused_norm_gate.py",
+        "sha256": "beea77b18f7fd8e1002fa59dcb29170713236fd23b44db9d62d36bd7734595b7"
+      }
+    ],
+    "verifiedSemantics": [
+      "Fixed config first four one-based layers are KDA/KDA/KDA/MLA; all 27 layers have explicit lists, not an exactly repeated 3:1 pattern at the final group. KDA short convolution width is four, head dimension 128 and head count 32.",
+      "KDA projects Q/K/V separately, maintains three in-place BF16 short-convolution caches, computes a per-key-channel decay from two projections plus A_log/dt_bias, head-wise beta, L2-normalized Q/K, an FP32 matrix recurrent state, low-rank output gate, sigmoid-gated RMSNorm and output projection.",
+      "Pinned FLA recurrent kernel decays matrix rows by exp(g), computes beta*(v-H_decayed^T*k), adds k outer residual, and emits H_updated^T*q with q scaled by inverse sqrt(key dimension). Output follows v dtype; final state is a newly allocated FP32 tensor. The short-convolution cache stores a full kernel-width buffer and is updated in place.",
+      "Reference Kimi MLA has q_lora_rank=None and uses direct Q projection, latent normalization and per-head K/V expansion. Its NoPE path applies no rotary transform. DynamicCache stores expanded K/V and concatenates old/current entries at every update, rather than retaining only latent KV or silently appending to a preallocated buffer."
+    ],
+    "authoredAssumptions": [
+      "Four attention-plus-input-norm/residual fragments from the first KDA/KDA/KDA/MLA group, omitting all interleaved FFN/MoE, embeddings and full-model costs. All-MLA and all-KDA are four-fragment counterfactuals, not output/accuracy-equivalent models. Decode Q=1 only; B=1,C=15,H=8, heads N=2, KDA key/value D=4, conv W=4, MLA latent R=4, key nonpositional/extra dimensions D/P=4/2 and value D=4.",
+      "Projection, convolution and normalization weights are declared BF16; A_log/dt_bias are explicit FP32. Gate and beta are FP32; three convolution buffers are BF16 and matrix state is FP32. Nonlinear operations use stated FP32-vector proxies. Recurrent useful arithmetic is B*N*(7*D*D+8*D+2), with explicit input/output conversion execution-only work. No instruction-level throughput, tensor-core, training or chunk-prefill claim.",
+      "source allocation records newly allocated recurrent state with an extra FP32 state-sized temporary. K/V concatenation is grouped as one atomic leaf, conservatively retaining both old/new tuple buffers with an old-prefix-sized temporary; Python assigns key/value list entries sequentially and can release one old tensor earlier. Semantic state traffic counts old inputs/new outputs once; allocation-only temporaries are not charged a second copy. Labels track logical carried allocation, not physical pointers or Python allocator simulation.",
+      "inplace is a separate theoretical implementation with no extra recurrent allocation and preallocated expanded K/V. It writes only new K/V rows and does not copy history; it is not claimed to be the released Python path. Both variants retain full per-layer independent states and do not share recurrent matrices across layers.",
+      "Inputs include initialized warm convolution/matrix/KV state, including explicit zero-initialized buffers if C=0. Allocation/initialization/weight-loading startup and source tensor views or allocator slack are not simulated. Materialized graph intermediates use last-read liveness; norm/gate/recurrent internal arithmetic workspace is on chip apart from the declared new-state allocation.",
+      "Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+    ]
+  },
+  "rows": [
+    {
+      "name": "hybrid-source",
+      "oracle": {
+        "profile": "hybrid",
+        "allocation": "source",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 3,
+        "mlas": 1,
+        "weights": 3736,
+        "state": 1600,
+        "activation": 76,
+        "workspace": 600,
+        "peak": 6012,
+        "peakNode": "l3/cache",
+        "seconds": 98.64000000000001,
+        "hbm": 9864,
+        "matrix": 3584,
+        "vectorUseful": 2468,
+        "vector": 3242,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l0/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l1/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l2/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "seconds": 12.76,
+            "hbm": 1276,
+            "workspace": 600
+          },
+          {
+            "id": "l3/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "1bea083b6645b272e3f318faf72d457f47ae7ecc0f087fbd4503e55c84d0d6d1"
+    },
+    {
+      "name": "hybrid-inplace",
+      "oracle": {
+        "profile": "hybrid",
+        "allocation": "inplace",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 3,
+        "mlas": 1,
+        "weights": 3736,
+        "state": 1600,
+        "activation": 144,
+        "workspace": 0,
+        "peak": 5480,
+        "peakNode": "l3/soft",
+        "seconds": 86.64000000000001,
+        "hbm": 8664,
+        "matrix": 3584,
+        "vectorUseful": 2468,
+        "vector": 3242,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l0/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l1/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l2/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "seconds": 0.76,
+            "hbm": 76,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "34e00d80c5d2d591207491a5bce8d2241928936b063a8eb32ec9a54487e22625"
+    },
+    {
+      "name": "all-kda-source",
+      "oracle": {
+        "profile": "all-kda",
+        "allocation": "source",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 4,
+        "mlas": 0,
+        "weights": 4224,
+        "state": 1280,
+        "activation": 136,
+        "workspace": 128,
+        "peak": 5768,
+        "peakNode": "l0/rnn",
+        "seconds": 91.19999999999997,
+        "hbm": 9120,
+        "matrix": 3200,
+        "vectorUseful": 2944,
+        "vector": 3976,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l0/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l1/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l2/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 128
+          },
+          {
+            "id": "l3/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "c86da914d2292d872980782f030c7095d1ad801e933dcb91a39366fe929588ae"
+    },
+    {
+      "name": "all-kda-inplace",
+      "oracle": {
+        "profile": "all-kda",
+        "allocation": "inplace",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 4,
+        "mlas": 0,
+        "weights": 4224,
+        "state": 1280,
+        "activation": 136,
+        "workspace": 0,
+        "peak": 5640,
+        "peakNode": "l0/decay",
+        "seconds": 91.19999999999997,
+        "hbm": 9120,
+        "matrix": 3200,
+        "vectorUseful": 2944,
+        "vector": 3976,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l0/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l0/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l0/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l1/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l1/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l1/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l2/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l2/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l2/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/vp",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/fa",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ga",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/betap",
+            "seconds": 0.52,
+            "hbm": 52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/vc",
+            "seconds": 2.08,
+            "hbm": 208,
+            "workspace": 0
+          },
+          {
+            "id": "l3/fb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/gb",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/beta",
+            "seconds": 0.12,
+            "hbm": 12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/decay",
+            "seconds": 0.88,
+            "hbm": 88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/rnn",
+            "seconds": 3.6,
+            "hbm": 360,
+            "workspace": 0
+          },
+          {
+            "id": "l3/onorm",
+            "seconds": 0.56,
+            "hbm": 56,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "2b02f21bb05506d4159f4ba724fd621158e9b19d961704de71d2053deb285996"
+    },
+    {
+      "name": "all-mla-source",
+      "oracle": {
+        "profile": "all-mla",
+        "allocation": "source",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 0,
+        "mlas": 4,
+        "weights": 2272,
+        "state": 2560,
+        "activation": 76,
+        "workspace": 600,
+        "peak": 5508,
+        "peakNode": "l0/cache",
+        "seconds": 120.96,
+        "hbm": 12096,
+        "matrix": 4736,
+        "vectorUseful": 1040,
+        "vector": 1040,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cache",
+            "seconds": 12.76,
+            "hbm": 1276,
+            "workspace": 600
+          },
+          {
+            "id": "l0/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l0/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l0/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cache",
+            "seconds": 12.76,
+            "hbm": 1276,
+            "workspace": 600
+          },
+          {
+            "id": "l1/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l1/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l1/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cache",
+            "seconds": 12.76,
+            "hbm": 1276,
+            "workspace": 600
+          },
+          {
+            "id": "l2/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l2/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l2/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "seconds": 12.76,
+            "hbm": 1276,
+            "workspace": 600
+          },
+          {
+            "id": "l3/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "f7b44fa44941403055751b0b7ff02eb2cf9b602849599d0a236bb6440486ce0f"
+    },
+    {
+      "name": "all-mla-inplace",
+      "oracle": {
+        "profile": "all-mla",
+        "allocation": "inplace",
+        "B": 1,
+        "C": 15,
+        "H": 8,
+        "N": 2,
+        "kdas": 0,
+        "mlas": 4,
+        "weights": 2272,
+        "state": 2560,
+        "activation": 144,
+        "workspace": 0,
+        "peak": 4976,
+        "peakNode": "l0/soft",
+        "seconds": 72.96,
+        "hbm": 7296,
+        "matrix": 4736,
+        "vectorUseful": 1040,
+        "vector": 1040,
+        "perKdaWeights": 1056,
+        "perMlaWeights": 568,
+        "events": [
+          {
+            "id": "l0/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cache",
+            "seconds": 0.76,
+            "hbm": 76,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l0/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l0/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cache",
+            "seconds": 0.76,
+            "hbm": 76,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l1/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l1/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cache",
+            "seconds": 0.76,
+            "hbm": 76,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l2/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l2/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "seconds": 2.32,
+            "hbm": 232,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "seconds": 1.24,
+            "hbm": 124,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "seconds": 0.32,
+            "hbm": 32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "seconds": 1.68,
+            "hbm": 168,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "seconds": 0.76,
+            "hbm": 76,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "seconds": 4.72,
+            "hbm": 472,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "seconds": 1.28,
+            "hbm": 128,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "seconds": 3.36,
+            "hbm": 336,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "seconds": 1.6,
+            "hbm": 160,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "seconds": 0.48,
+            "hbm": 48,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "0e357ee5d18298f00bdd9243e53e46dab1847ab1827ae6e687a71bff13b150d9"
+    }
+  ],
+  "capacities": [
+    {
+      "profile": "hybrid",
+      "allocation": "source",
+      "range": [
+        40,
+        44
+      ],
+      "maximum": 42
+    },
+    {
+      "profile": "hybrid",
+      "allocation": "inplace",
+      "range": [
+        69,
+        73
+      ],
+      "maximum": 71
+    },
+    {
+      "profile": "all-mla",
+      "allocation": "source",
+      "range": [
+        26,
+        30
+      ],
+      "maximum": 28
+    },
+    {
+      "profile": "all-mla",
+      "allocation": "inplace",
+      "range": [
+        32,
+        36
+      ],
+      "maximum": 34
+    }
+  ],
+  "numericFixture": {
+    "next": [
+      [
+        1.5,
+        2.5
+      ],
+      [
+        1.5,
+        2
+      ]
+    ],
+    "output": [
+      1.5,
+      2.25
+    ]
+  },
+  "sequence": [
+    {
+      "context": 15,
+      "seconds": 98.64000000000001,
+      "peak": 6012
+    },
+    {
+      "context": 16,
+      "seconds": 100.00000000000001,
+      "peak": 6092
+    },
+    {
+      "context": 17,
+      "seconds": 101.36000000000001,
+      "peak": 6172
+    }
+  ]
+}

@@ -1,0 +1,1788 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:csa2:csa2:packed:model",
+  "revision": 1,
+  "name": "CSA2 decoder reuse fragment · csa2 packed",
+  "tags": [
+    "research",
+    "csa2",
+    "attention-fragment"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 5
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 128,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 16,
+      "max": 16,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    },
+    {
+      "key": "J",
+      "name": "J",
+      "type": "integer",
+      "unit": "count",
+      "min": 8,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "O",
+      "name": "O",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "W",
+      "name": "W",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "BS",
+      "name": "BS",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Four ordered decoder attention fragments corresponding to layers 20,21,24,25, omitting intervening layers and all non-attention network components. This is not the complete model or a benchmark prediction. One query per decode call. Artificial H=4, query/output ranks=2, one attention/index head, D=16, index D=8, window=2, Top-K=2, one candidate block of width 2. Existing cache is initialized and append/window updates reserve the call-end capacity in place. Profiles are counterfactual all-Full, main/indexer-K sharing with four index computations, and source-pattern Full/Reuse/Reindex/Reuse. Each counterfactual is explicit graph data, not an inferred reuse ratio. BF16 weights and matrix arithmetic, explicit FP32 vector proxies for normalization, rotary transform, packing, selection and unpacking. Cache payload/metadata accesses and independent staging buffers are declared separately. In the packed variant, indexer K unpack is an explicit vector segment inside the score leaf, using registers with no additional HBM backing. Gather and index-key unpack increase executed operations only; cache representation does not increase model-useful arithmetic. The packed theoretical variant uses row-local FP4 main/index and FP8 window payloads with one-byte scale metadata; the BF16 cache variant keeps uncompressed allocation. Neither claims bitwise numerical equivalence to the inference demo. Artificial 4096-byte device, matrix/vector 1000 operations/s and HBM 100 bytes/s. Ideal streams ignore contention; shared_bandwidth is the existing declared-HBM resource model. No kernel fusion, communication, allocator slack or omitted model components are inferred."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "deepseek-v41-fragment",
+    "variant": "csa2-packed",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Z3"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "layer0",
+          "name": "CSA2 Full · source layer 20 · csa2 packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z0"
+            },
+            {
+              "portId": "main-out",
+              "tensorId": "Main0"
+            },
+            {
+              "portId": "index-out",
+              "tensorId": "Index0"
+            },
+            {
+              "portId": "indices-out",
+              "tensorId": "TopK0"
+            },
+            {
+              "portId": "candidates-out",
+              "tensorId": "Candidates"
+            }
+          ],
+          "stateBindings": [
+            {
+              "localStateId": "main",
+              "parentStateId": "main0"
+            },
+            {
+              "localStateId": "index",
+              "parentStateId": "index0"
+            }
+          ],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:csa2:csa2:packed:module:layer0",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "O",
+                "value": {
+                  "kind": "symbol",
+                  "name": "O"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "BS",
+                "value": {
+                  "kind": "symbol",
+                  "name": "BS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer1",
+          "name": "CSA2 Reuse · source layer 21 · csa2 packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z0"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z1"
+            },
+            {
+              "portId": "main",
+              "tensorId": "Main0"
+            },
+            {
+              "portId": "indices",
+              "tensorId": "TopK0"
+            }
+          ],
+          "stateBindings": [
+            {
+              "localStateId": "main",
+              "parentStateId": "main0"
+            }
+          ],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:csa2:csa2:packed:module:layer1",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "O",
+                "value": {
+                  "kind": "symbol",
+                  "name": "O"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "BS",
+                "value": {
+                  "kind": "symbol",
+                  "name": "BS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer2",
+          "name": "CSA2 Reindex · source layer 24 · csa2 packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z1"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z2"
+            },
+            {
+              "portId": "main",
+              "tensorId": "Main0"
+            },
+            {
+              "portId": "index",
+              "tensorId": "Index0"
+            },
+            {
+              "portId": "indices-out",
+              "tensorId": "TopK2"
+            },
+            {
+              "portId": "candidates",
+              "tensorId": "Candidates"
+            }
+          ],
+          "stateBindings": [
+            {
+              "localStateId": "main",
+              "parentStateId": "main0"
+            },
+            {
+              "localStateId": "index",
+              "parentStateId": "index0"
+            }
+          ],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:csa2:csa2:packed:module:layer2",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "O",
+                "value": {
+                  "kind": "symbol",
+                  "name": "O"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "BS",
+                "value": {
+                  "kind": "symbol",
+                  "name": "BS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer3",
+          "name": "CSA2 Reuse · source layer 25 · csa2 packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z2"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z3"
+            },
+            {
+              "portId": "main",
+              "tensorId": "Main0"
+            },
+            {
+              "portId": "indices",
+              "tensorId": "TopK2"
+            }
+          ],
+          "stateBindings": [
+            {
+              "localStateId": "main",
+              "parentStateId": "main0"
+            }
+          ],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:csa2:csa2:packed:module:layer3",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "O",
+                "value": {
+                  "kind": "symbol",
+                  "name": "O"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "BS",
+                "value": {
+                  "kind": "symbol",
+                  "name": "BS"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "layer0-x",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "layer1-x",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "x"
+          },
+          "tensorId": "Z0"
+        },
+        {
+          "edgeId": "layer1-main",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "main-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "main"
+          },
+          "tensorId": "Main0"
+        },
+        {
+          "edgeId": "layer1-indices",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "indices-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "indices"
+          },
+          "tensorId": "TopK0"
+        },
+        {
+          "edgeId": "layer2-x",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "x"
+          },
+          "tensorId": "Z1"
+        },
+        {
+          "edgeId": "layer2-main",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "main-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "main"
+          },
+          "tensorId": "Main0"
+        },
+        {
+          "edgeId": "layer2-index",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "index-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "index"
+          },
+          "tensorId": "Index0"
+        },
+        {
+          "edgeId": "layer2-candidates",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "candidates-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "candidates"
+          },
+          "tensorId": "Candidates"
+        },
+        {
+          "edgeId": "layer3-x",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "x"
+          },
+          "tensorId": "Z2"
+        },
+        {
+          "edgeId": "layer3-main",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "main-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "main"
+          },
+          "tensorId": "Main0"
+        },
+        {
+          "edgeId": "layer3-indices",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "indices-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "indices"
+          },
+          "tensorId": "TopK2"
+        },
+        {
+          "edgeId": "model-output",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "Z3"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "Main0",
+          "name": "Main0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Main0"
+        },
+        {
+          "tensorId": "Index0",
+          "name": "Index0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "j",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "J"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Index0"
+        },
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "Candidates",
+          "name": "Candidates",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "uint",
+            "bits": 8,
+            "format": "uint8"
+          },
+          "storageId": "Candidates"
+        },
+        {
+          "tensorId": "Z0",
+          "name": "Z0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z0"
+        },
+        {
+          "tensorId": "TopK0",
+          "name": "TopK0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "k",
+              "semantic": "custom",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:csa2:csa2:packed:formula:558775cdb657199a",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "K": {
+                      "kind": "symbol",
+                      "name": "K"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "int",
+            "bits": 32,
+            "format": "int32"
+          },
+          "storageId": "TopK0"
+        },
+        {
+          "tensorId": "Z1",
+          "name": "Z1",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z1"
+        },
+        {
+          "tensorId": "Z2",
+          "name": "Z2",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z2"
+        },
+        {
+          "tensorId": "TopK2",
+          "name": "TopK2",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "k",
+              "semantic": "custom",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:csa2:csa2:packed:formula:558775cdb657199a",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "K": {
+                      "kind": "symbol",
+                      "name": "K"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "int",
+            "bits": 32,
+            "format": "int32"
+          },
+          "storageId": "TopK2"
+        },
+        {
+          "tensorId": "Z3",
+          "name": "Z3",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z3"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "Main0",
+          "name": "Main0",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "quantization": {
+              "payloadBits": 4,
+              "packingUnitElements": 2,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "row-scales",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 8,
+                    "format": "e4m3"
+                  },
+                  "count": {
+                    "kind": "block",
+                    "axes": [
+                      {
+                        "axisId": "d",
+                        "blockSize": 16
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "storageId": "Index0",
+          "name": "Index0",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "j",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "quantization": {
+              "payloadBits": 4,
+              "packingUnitElements": 2,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "row-scales",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 8,
+                    "format": "e8m0"
+                  },
+                  "count": {
+                    "kind": "block",
+                    "axes": [
+                      {
+                        "axisId": "j",
+                        "blockSize": 32
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Candidates",
+          "name": "Candidates",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:csa2:csa2:packed:formula:46341b99ebadbb9c",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "uint",
+              "bits": 8,
+              "format": "uint8"
+            }
+          }
+        },
+        {
+          "storageId": "Z0",
+          "name": "Z0",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "TopK0",
+          "name": "TopK0",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "k",
+                "semantic": "custom",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:csa2:csa2:packed:formula:558775cdb657199a",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "K": {
+                        "kind": "symbol",
+                        "name": "K"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "int",
+              "bits": 32,
+              "format": "int32"
+            }
+          }
+        },
+        {
+          "storageId": "Z1",
+          "name": "Z1",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z2",
+          "name": "Z2",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "TopK2",
+          "name": "TopK2",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "k",
+                "semantic": "custom",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:csa2:csa2:packed:formula:558775cdb657199a",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "K": {
+                        "kind": "symbol",
+                        "name": "K"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "int",
+              "bits": 32,
+              "format": "int32"
+            }
+          }
+        },
+        {
+          "storageId": "Z3",
+          "name": "Z3",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": [
+        {
+          "stateId": "main0",
+          "name": "main0",
+          "stateKind": "latent",
+          "allocationBasis": "step_end",
+          "storageIds": [
+            "Main0"
+          ],
+          "creator": {
+            "kind": "initialized"
+          },
+          "readers": [],
+          "writers": [],
+          "updatePolicy": {
+            "kind": "append"
+          }
+        },
+        {
+          "stateId": "index0",
+          "name": "index0",
+          "stateKind": "indexer",
+          "allocationBasis": "step_end",
+          "storageIds": [
+            "Index0"
+          ],
+          "creator": {
+            "kind": "initialized"
+          },
+          "readers": [],
+          "writers": [],
+          "updatePolicy": {
+            "kind": "append"
+          }
+        }
+      ]
+    },
+    "assumptions": [
+      "Four ordered decoder attention fragments corresponding to layers 20,21,24,25, omitting intervening layers and all non-attention network components. This is not the complete model or a benchmark prediction.",
+      "One query per decode call. Artificial H=4, query/output ranks=2, one attention/index head, D=16, index D=8, window=2, Top-K=2, one candidate block of width 2. Existing cache is initialized and append/window updates reserve the call-end capacity in place.",
+      "Profiles are counterfactual all-Full, main/indexer-K sharing with four index computations, and source-pattern Full/Reuse/Reindex/Reuse. Each counterfactual is explicit graph data, not an inferred reuse ratio.",
+      "BF16 weights and matrix arithmetic, explicit FP32 vector proxies for normalization, rotary transform, packing, selection and unpacking. Cache payload/metadata accesses and independent staging buffers are declared separately. In the packed variant, indexer K unpack is an explicit vector segment inside the score leaf, using registers with no additional HBM backing. Gather and index-key unpack increase executed operations only; cache representation does not increase model-useful arithmetic.",
+      "The packed theoretical variant uses row-local FP4 main/index and FP8 window payloads with one-byte scale metadata; the BF16 cache variant keeps uncompressed allocation. Neither claims bitwise numerical equivalence to the inference demo.",
+      "Artificial 4096-byte device, matrix/vector 1000 operations/s and HBM 100 bytes/s. Ideal streams ignore contention; shared_bandwidth is the existing declared-HBM resource model. No kernel fusion, communication, allocator slack or omitted model components are inferred."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "extensions": {
+    "csa2": {
+      "sourceLayers": [
+        20,
+        21,
+        24,
+        25
+      ],
+      "profile": "csa2",
+      "storage": "packed",
+      "globalGroups": 1,
+      "indexerExecutions": 2,
+      "topkLifetime": "forward-local activation; no cross-call reuse"
+    }
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "available"
+        },
+        "quantity": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "scalar",
+                "count",
+                "ratio",
+                "byte",
+                "second",
+                "operation",
+                "operation_per_second",
+                "byte_per_second"
+              ]
+            }
+          },
+          "required": [
+            "value",
+            "unit"
+          ],
+          "additionalProperties": false
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "theoretical",
+            "estimated",
+            "measured"
+          ]
+        },
+        "provenance": {
+          "type": "object",
+          "properties": {
+            "assetRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "formulaRefs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "parameterSources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "parameterKey": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "source": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                },
+                "required": [
+                  "parameterKey",
+                  "source"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "assumptions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "assetRefs",
+            "formulaRefs",
+            "parameterSources",
+            "assumptions"
+          ],
+          "additionalProperties": false
+        },
+        "diagnosticIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "quantity",
+        "basis",
+        "provenance",
+        "diagnosticIds"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unavailable"
+        },
+        "diagnosticIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "diagnosticIds"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "model",
+            "module",
+            "operator",
+            "formula",
+            "parallel",
+            "quantization",
+            "hardware"
+          ]
+        }
+      },
+      "required": [
+        "assetId",
+        "revision",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

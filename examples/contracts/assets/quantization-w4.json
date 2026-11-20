@@ -1,0 +1,47 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:quantization:w4",
+  "revision": 1,
+  "name": "C02 W4 group32",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "quantization",
+    "quantization": {
+      "selector": {
+        "kind": "nodes",
+        "nodeIds": [
+          "module/op"
+        ]
+      },
+      "weight": {
+        "payloadBits": 4,
+        "packingUnitElements": 1,
+        "alignmentBytes": 1,
+        "auxiliaries": [
+          {
+            "name": "scale",
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "fp16"
+            },
+            "count": {
+              "kind": "group",
+              "groupSize": 32
+            }
+          }
+        ]
+      }
+    }
+  }
+}

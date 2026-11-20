@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "logicalGroupId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "physicalGroupId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "meshAxes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "logicalAxisId": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "physicalAxisId": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "logicalAxisId",
+                "physicalAxisId"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "logicalGroupId",
+          "physicalGroupId",
+          "meshAxes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "devices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "logicalDeviceId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "physicalDeviceId": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "logicalDeviceId",
+          "physicalDeviceId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "bytesPerSecond": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "latencySeconds": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "bytesPerSecond",
+        "latencySeconds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "groups",
+    "devices"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

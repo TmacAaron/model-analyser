@@ -1,0 +1,307 @@
+{
+  "scope": "Per-physical-device total peak overrides only. Module ownership/envelope overrides remain pending F04. Theory is preserved independently; unknown category/location is explicit. No new benchmark claims.",
+  "scalarOracles": {
+    "singleTheoryBytes": "256 weight + 128 input + 64 output = 448",
+    "streamsTheoryGiB": "overlap 2+3=5, serial max(2,3)=3",
+    "decodeTheoryBytes": [
+      14,
+      16,
+      18
+    ],
+    "dynamicBudgetBytes": "ceil(B/2)*16 + C*2; final decode C=4; at 40B capacity B=4 fits40, B=5 exceeds56"
+  },
+  "cases": [
+    {
+      "name": "single-total",
+      "project": "single-total-project.json",
+      "result": "single-total-result.json",
+      "inputHash": "e2d3c1861a8a3cb441f6ea93418c8ee0a5a7ddaca6a405c6370e19ab06a4b284",
+      "expected": {
+        "peak": [
+          700
+        ],
+        "theory": [
+          448
+        ],
+        "seconds": 4.48
+      },
+      "actual": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "capacityBytes": 4096,
+          "peakBytes": 700,
+          "theoreticalPeakBytes": 448,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "user-total"
+          },
+          "classification": "unknown"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "name": "pcp-two-card",
+      "project": "pcp-two-card-project.json",
+      "result": "pcp-two-card-result.json",
+      "inputHash": "ebc596ac9cc93e59fb5ac26085ad94ad58ac8cf8f55c5d8288874a32b582ebf3",
+      "expected": {
+        "peak": [
+          400,
+          700
+        ],
+        "theory": [
+          320,
+          320
+        ],
+        "seconds": 7.394
+      },
+      "actual": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "capacityBytes": 4096,
+          "peakBytes": 400,
+          "theoreticalPeakBytes": 320,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "group"
+          },
+          "classification": "unknown"
+        },
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu1"
+          },
+          "capacityBytes": 4096,
+          "peakBytes": 700,
+          "theoreticalPeakBytes": 320,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "device"
+          },
+          "classification": "unknown"
+        }
+      ],
+      "diagnostics": [
+        {
+          "diagnosticId": "communication-world-gather-K-1",
+          "severity": "error",
+          "code": "missing_communication_memory",
+          "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "communication"
+          }
+        },
+        {
+          "diagnosticId": "communication-world-gather-V-1",
+          "severity": "error",
+          "code": "missing_communication_memory",
+          "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "communication"
+          }
+        }
+      ]
+    },
+    {
+      "name": "streams-total",
+      "project": "streams-total-project.json",
+      "result": "streams-total-result.json",
+      "inputHash": "3c02f1c671bfb56d11458dec9251f3ceabf01988d3e12f76d7cf9fb73e64807c",
+      "expected": {
+        "peak": [
+          6442450944
+        ],
+        "theory": [
+          5368709120
+        ],
+        "seconds": 0.0065
+      },
+      "actual": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "capacityBytes": 4294967296,
+          "peakBytes": 6442450944,
+          "theoreticalPeakBytes": 5368709120,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "user-total"
+          },
+          "classification": "unknown"
+        }
+      ],
+      "diagnostics": [
+        {
+          "diagnosticId": "temporal-memory-gpu0-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前多流峰值超过设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-streams-total"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-2",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-streams-total"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-3",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-streams-total"
+          }
+        }
+      ]
+    },
+    {
+      "name": "decode-total",
+      "project": "decode-total-project.json",
+      "result": "decode-total-result.json",
+      "inputHash": "d83b06372a92c778c73280c844251a5ee4675956540169e36e017b8398fefdd5",
+      "expected": {
+        "peak": [
+          40
+        ],
+        "theory": [
+          18
+        ],
+        "seconds": 0.24
+      },
+      "actual": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "capacityBytes": 18,
+          "peakBytes": 40,
+          "theoreticalPeakBytes": 18,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "user-total",
+            "decodeStepIndex": 0
+          },
+          "classification": "unknown"
+        }
+      ],
+      "diagnostics": [
+        {
+          "diagnosticId": "decode-step-0::peak-override-gpu0-1",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-2",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        },
+        {
+          "diagnosticId": "decode-step-1::peak-override-gpu0-1",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-4",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        },
+        {
+          "diagnosticId": "decode-step-2::peak-override-gpu0-1",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-6",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-total"
+          }
+        }
+      ]
+    },
+    {
+      "name": "decode-formula",
+      "project": "decode-formula-project.json",
+      "result": "decode-formula-result.json",
+      "inputHash": "63dba334f7b5edc017c7f7f4acaf8463bf01e88383bf79c2eb2387add8d245af",
+      "expected": {
+        "peak": [
+          24
+        ],
+        "theory": [
+          18
+        ],
+        "seconds": 0.24
+      },
+      "actual": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "capacityBytes": 40,
+          "peakBytes": 24,
+          "theoreticalPeakBytes": 18,
+          "peakPoint": {
+            "kind": "unlocated",
+            "overrideId": "user-total",
+            "decodeStepIndex": 2
+          },
+          "classification": "unknown"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "capacityProof": "capacity-proof.json"
+}

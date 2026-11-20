@@ -1,0 +1,66 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v2:61af4952d726170e",
+  "revision": 1,
+  "name": "2 * B * Q * K * H * J [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite/resolve/604d5664dddd88a0433dbae533b7fe9472482de0/config.json",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite/resolve/604d5664dddd88a0433dbae533b7fe9472482de0/modeling_deepseek.py",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Offline SHA256 snapshots: references/models/source-lock.json. BF16 residency includes all 64 routed experts and two shared experts in 26 MoE layers, first layer dense; untied embedding/head. Top-6 work per token; weight-read upper-bound assumes min(64,B*Q*6) distinct experts, one read per touched expert matrix, not measured routing. Greedy selection uses an explicit K-pass E-comparison proxy on a separate custom resource, not floating-point MFU. FP32 vector router and softmax; no renormalization of selected probabilities (config norm_topk_prob=false, scale=1). Dense materialized attention with useful causal pairs. Norm/softmax/SiLU vector counts are approximations; declared logical buffer reads/writes assume HBM factor=1. No inference, measured kernel claim, routing imbalance/expert parallel/network, sorting implementation, YaRN table/trig creation or allocator/runtime overhead."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "H": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "J": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "K": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * Q * K * H * J",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

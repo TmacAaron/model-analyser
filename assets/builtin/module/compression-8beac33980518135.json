@@ -1,0 +1,3845 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:compression:r2:prefill:dynamic:packed:module",
+  "revision": 1,
+  "name": "Complete-group compressor R2 prefill dynamic packed",
+  "tags": [
+    "research",
+    "compression",
+    "component",
+    "prefill"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 5
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 128,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8192,
+      "default": {
+        "kind": "integer",
+        "value": 512
+      }
+    },
+    {
+      "key": "W",
+      "name": "W",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 32,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 16,
+      "max": 16,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Compressor plus independent window/cache preparation components only, not full attention, an indexer, or a complete language model. Two modules export new pre-rotary latents, full cache/ring capacity buffers and current-window KV. Active entries and partial occupancy are reported separately; unfilled capacity is not an attention-valid token. Artificial H=4, D=16 and W=2. Each ratio is a fixed asset identity with matching precision; prefill starts at C=0, decode uses Q=1. Initialized warm history includes the declared pending slots. Version numbers denote call snapshots, not the number of completed groups. Materialized FP32 softmax, elementwise product and reduction buffers; explicit BF16/FP32 casts. Window weights/projection use BF16, and ratio-greater-than-one value/gate weights and arithmetic use FP32. Normalization, rotary and quantization use declared vector proxies and on-chip internal workspace. Conversions add execution only, not model-useful arithmetic. Declared last-use liveness is not Python local-variable or allocator lifetime. The packed theoretical cache uses FP4 main rows with one E4M3 byte per 16 channels and FP8 window rows with one E8M0 byte per 32 channels. Partial metadata blocks use ceil; this is not a source-kernel shape/accuracy claim. BF16-cache comparison retains fake-quant work. Dynamic cache reserves floor((C+Q)/R) rows at call start; provisioned cache reserves floor(M/R) rows as a separate variant. Both keep two full FP32 partial-group buffers and a full W-row window ring. Demo max-batch/max-sequence preallocation is not silently equated with current active length. Artificial 4096-byte device with BF16 matrix, FP32 matrix and FP32 vector ceilings of 1000 operations/s and HBM 100 bytes/s. Serial, ideal two-stream and declared-HBM sharing policies use the existing engine. No implicit communication, allocator slack, fusion or omitted attention costs."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "cache",
+          "tensorId": "Cache"
+        },
+        {
+          "portId": "new-latent",
+          "tensorId": "Latent"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "cast-input",
+          "name": "Explicit BF16 to FP32 input conversion",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "X32",
+              "tensorId": "X32"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 0,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:397644c572a414e5",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-X32",
+                  "storageId": "X32",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "X32",
+                "tensorId": "X32"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "project",
+          "name": "FP32 value projection",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "X32",
+              "tensorId": "X32"
+            },
+            {
+              "portId": "WKV",
+              "tensorId": "WKV"
+            },
+            {
+              "portId": "Projected",
+              "tensorId": "Projected"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:d9c00dc108a1b5e1",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:d9c00dc108a1b5e1",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X32",
+                  "storageId": "X32",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WKV",
+                  "storageId": "WKV",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Projected",
+                  "storageId": "Projected",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "X32",
+                "tensorId": "X32"
+              },
+              {
+                "portId": "WKV",
+                "tensorId": "WKV"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Projected",
+                "tensorId": "Projected"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "gate",
+          "name": "FP32 pooling-gate projection",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "X32",
+              "tensorId": "X32"
+            },
+            {
+              "portId": "WGate",
+              "tensorId": "WGate"
+            },
+            {
+              "portId": "Gate",
+              "tensorId": "Gate"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:d9c00dc108a1b5e1",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:d9c00dc108a1b5e1",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X32",
+                  "storageId": "X32",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WGate",
+                  "storageId": "WGate",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Gate",
+                  "storageId": "Gate",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "X32",
+                "tensorId": "X32"
+              },
+              {
+                "portId": "WGate",
+                "tensorId": "WGate"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Gate",
+                "tensorId": "Gate"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "save-tail",
+          "name": "Retain prefill remainder or write the current decode slot",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Projected",
+              "tensorId": "Projected"
+            },
+            {
+              "portId": "Gate",
+              "tensorId": "Gate"
+            },
+            {
+              "portId": "TailKV",
+              "tensorId": "TailKV"
+            },
+            {
+              "portId": "TailScore",
+              "tensorId": "TailScore"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Projected",
+                  "storageId": "Projected",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f5d39fd1268c573b",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Gate",
+                  "storageId": "Gate",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f5d39fd1268c573b",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-TailKV",
+                  "storageId": "TailKV",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f5d39fd1268c573b",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-TailScore",
+                  "storageId": "TailScore",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f5d39fd1268c573b",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Projected",
+                "tensorId": "Projected"
+              },
+              {
+                "portId": "Gate",
+                "tensorId": "Gate"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "TailKV",
+                "tensorId": "TailKV"
+              },
+              {
+                "portId": "TailScore",
+                "tensorId": "TailScore"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "pool-softmax",
+          "name": "Materialized FP32 gate softmax over complete groups",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Gate",
+              "tensorId": "Gate"
+            },
+            {
+              "portId": "Probabilities",
+              "tensorId": "Probabilities"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f159dee8711a793d",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:f159dee8711a793d",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Gate",
+                  "storageId": "Gate",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:1c3968d813042b6d",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Probabilities",
+                  "storageId": "Probabilities",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Gate",
+                "tensorId": "Gate"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Probabilities",
+                "tensorId": "Probabilities"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "pool-multiply",
+          "name": "Materialized gated values",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Projected",
+              "tensorId": "Projected"
+            },
+            {
+              "portId": "Probabilities",
+              "tensorId": "Probabilities"
+            },
+            {
+              "portId": "Weighted",
+              "tensorId": "Weighted"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:676b584eb6224d4e",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:676b584eb6224d4e",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Projected",
+                  "storageId": "Projected",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:1c3968d813042b6d",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Probabilities",
+                  "storageId": "Probabilities",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Weighted",
+                  "storageId": "Weighted",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Projected",
+                "tensorId": "Projected"
+              },
+              {
+                "portId": "Probabilities",
+                "tensorId": "Probabilities"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Weighted",
+                "tensorId": "Weighted"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "pool-reduce",
+          "name": "Sum each complete group",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Weighted",
+              "tensorId": "Weighted"
+            },
+            {
+              "portId": "Pooled",
+              "tensorId": "Pooled"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:6bae75ee7060876a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:6bae75ee7060876a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Weighted",
+                  "storageId": "Weighted",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Pooled",
+                  "storageId": "Pooled",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Weighted",
+                "tensorId": "Weighted"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Pooled",
+                "tensorId": "Pooled"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "cast-latent",
+          "name": "Explicit pooled FP32 to BF16 conversion",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Pooled",
+              "tensorId": "Pooled"
+            },
+            {
+              "portId": "Pooled16",
+              "tensorId": "Pooled16"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 0,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:130d2fe3b085e1df",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Pooled",
+                  "storageId": "Pooled",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Pooled16",
+                  "storageId": "Pooled16",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Pooled",
+                "tensorId": "Pooled"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Pooled16",
+                "tensorId": "Pooled16"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "norm",
+          "name": "Pooled latent RMSNorm proxy",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Pooled16",
+              "tensorId": "Pooled16"
+            },
+            {
+              "portId": "Norm",
+              "tensorId": "Norm"
+            },
+            {
+              "portId": "Latent",
+              "tensorId": "Latent"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:34b363acd6bd5fe7",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:34b363acd6bd5fe7",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Pooled16",
+                  "storageId": "Pooled16",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Norm",
+                  "storageId": "Norm",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:02824a3b777c575e",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Latent",
+                  "storageId": "Latent",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Pooled16",
+                "tensorId": "Pooled16"
+              },
+              {
+                "portId": "Norm",
+                "tensorId": "Norm"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Latent",
+                "tensorId": "Latent"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "rotary",
+          "name": "Main-cache rotary proxy on completed latents",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Latent",
+              "tensorId": "Latent"
+            },
+            {
+              "portId": "Rotated",
+              "tensorId": "Rotated"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:8adc1982e5bc267a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:8adc1982e5bc267a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Latent",
+                  "storageId": "Latent",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Rotated",
+                  "storageId": "Rotated",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Latent",
+                "tensorId": "Latent"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Rotated",
+                "tensorId": "Rotated"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "store",
+          "name": "Fake-quant proxy and append only newly completed rows",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "Rotated",
+              "tensorId": "Rotated"
+            },
+            {
+              "portId": "Cache",
+              "tensorId": "Cache"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 0,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:19eecef14ad2bb19",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Rotated",
+                  "storageId": "Rotated",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Cache",
+                  "storageId": "Cache",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:compression:formula:4af7cdbc8c232167",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "R": {
+                          "kind": "symbol",
+                          "name": "R"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "Rotated",
+                "tensorId": "Rotated"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Cache",
+                "tensorId": "Cache"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "cast-input-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cast-input",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "project-in-X32",
+          "from": {
+            "kind": "node",
+            "nodeId": "cast-input",
+            "portId": "X32"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "project",
+            "portId": "X32"
+          },
+          "tensorId": "X32"
+        },
+        {
+          "edgeId": "gate-in-X32",
+          "from": {
+            "kind": "node",
+            "nodeId": "cast-input",
+            "portId": "X32"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "gate",
+            "portId": "X32"
+          },
+          "tensorId": "X32"
+        },
+        {
+          "edgeId": "save-tail-in-Projected",
+          "from": {
+            "kind": "node",
+            "nodeId": "project",
+            "portId": "Projected"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "save-tail",
+            "portId": "Projected"
+          },
+          "tensorId": "Projected"
+        },
+        {
+          "edgeId": "save-tail-in-Gate",
+          "from": {
+            "kind": "node",
+            "nodeId": "gate",
+            "portId": "Gate"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "save-tail",
+            "portId": "Gate"
+          },
+          "tensorId": "Gate"
+        },
+        {
+          "edgeId": "pool-softmax-in-Gate",
+          "from": {
+            "kind": "node",
+            "nodeId": "gate",
+            "portId": "Gate"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pool-softmax",
+            "portId": "Gate"
+          },
+          "tensorId": "Gate"
+        },
+        {
+          "edgeId": "pool-multiply-in-Projected",
+          "from": {
+            "kind": "node",
+            "nodeId": "project",
+            "portId": "Projected"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pool-multiply",
+            "portId": "Projected"
+          },
+          "tensorId": "Projected"
+        },
+        {
+          "edgeId": "pool-multiply-in-Probabilities",
+          "from": {
+            "kind": "node",
+            "nodeId": "pool-softmax",
+            "portId": "Probabilities"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pool-multiply",
+            "portId": "Probabilities"
+          },
+          "tensorId": "Probabilities"
+        },
+        {
+          "edgeId": "pool-reduce-in-Weighted",
+          "from": {
+            "kind": "node",
+            "nodeId": "pool-multiply",
+            "portId": "Weighted"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pool-reduce",
+            "portId": "Weighted"
+          },
+          "tensorId": "Weighted"
+        },
+        {
+          "edgeId": "cast-latent-in-Pooled",
+          "from": {
+            "kind": "node",
+            "nodeId": "pool-reduce",
+            "portId": "Pooled"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cast-latent",
+            "portId": "Pooled"
+          },
+          "tensorId": "Pooled"
+        },
+        {
+          "edgeId": "norm-in-Pooled16",
+          "from": {
+            "kind": "node",
+            "nodeId": "cast-latent",
+            "portId": "Pooled16"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "norm",
+            "portId": "Pooled16"
+          },
+          "tensorId": "Pooled16"
+        },
+        {
+          "edgeId": "rotary-in-Latent",
+          "from": {
+            "kind": "node",
+            "nodeId": "norm",
+            "portId": "Latent"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "rotary",
+            "portId": "Latent"
+          },
+          "tensorId": "Latent"
+        },
+        {
+          "edgeId": "store-in-Rotated",
+          "from": {
+            "kind": "node",
+            "nodeId": "rotary",
+            "portId": "Rotated"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "store",
+            "portId": "Rotated"
+          },
+          "tensorId": "Rotated"
+        },
+        {
+          "edgeId": "out-cache",
+          "from": {
+            "kind": "node",
+            "nodeId": "store",
+            "portId": "Cache"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "cache"
+          },
+          "tensorId": "Cache"
+        },
+        {
+          "edgeId": "out-new-latent",
+          "from": {
+            "kind": "node",
+            "nodeId": "norm",
+            "portId": "Latent"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "new-latent"
+          },
+          "tensorId": "Latent"
+        }
+      ],
+      "dependencies": [
+        {
+          "edgeId": "save-before-pool",
+          "fromNodeId": "save-tail",
+          "toNodeId": "pool-softmax",
+          "kind": "control"
+        }
+      ],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "Cache",
+          "name": "Cache",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:2a74da521828db8a",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Cache"
+        },
+        {
+          "tensorId": "Latent",
+          "name": "Latent",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Latent"
+        },
+        {
+          "tensorId": "Rotated",
+          "name": "Rotated",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Rotated"
+        },
+        {
+          "tensorId": "Norm",
+          "name": "Norm",
+          "shape": [
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Norm"
+        },
+        {
+          "tensorId": "X32",
+          "name": "X32",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "X32"
+        },
+        {
+          "tensorId": "Projected",
+          "name": "Projected",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Projected"
+        },
+        {
+          "tensorId": "Gate",
+          "name": "Gate",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Gate"
+        },
+        {
+          "tensorId": "WKV",
+          "name": "WKV",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "WKV"
+        },
+        {
+          "tensorId": "WGate",
+          "name": "WGate",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "WGate"
+        },
+        {
+          "tensorId": "TailKV",
+          "name": "TailKV",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "R"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "TailKV"
+        },
+        {
+          "tensorId": "TailScore",
+          "name": "TailScore",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "R"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "TailScore"
+        },
+        {
+          "tensorId": "Probabilities",
+          "name": "Probabilities",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "R"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Probabilities"
+        },
+        {
+          "tensorId": "Weighted",
+          "name": "Weighted",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "R"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Weighted"
+        },
+        {
+          "tensorId": "Pooled",
+          "name": "Pooled",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Pooled"
+        },
+        {
+          "tensorId": "Pooled16",
+          "name": "Pooled16",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Pooled16"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Cache",
+          "name": "Cache",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:2a74da521828db8a",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "quantization": {
+              "payloadBits": 4,
+              "packingUnitElements": 2,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "row-scales",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 8,
+                    "format": "e4m3"
+                  },
+                  "count": {
+                    "kind": "block",
+                    "axes": [
+                      {
+                        "axisId": "d",
+                        "blockSize": 16
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "storageId": "Latent",
+          "name": "Latent",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Rotated",
+          "name": "Rotated",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Norm",
+          "name": "Norm",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "X32",
+          "name": "X32",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Projected",
+          "name": "Projected",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Gate",
+          "name": "Gate",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "WKV",
+          "name": "WKV",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "WGate",
+          "name": "WGate",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "TailKV",
+          "name": "TailKV",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "TailScore",
+          "name": "TailScore",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Probabilities",
+          "name": "Probabilities",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Weighted",
+          "name": "Weighted",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Pooled",
+          "name": "Pooled",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Pooled16",
+          "name": "Pooled16",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:9fc6e5c66c9b15d7",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": [
+        {
+          "stateId": "partial",
+          "name": "partial",
+          "stateKind": "custom",
+          "allocationBasis": "step_end",
+          "storageIds": [
+            "TailKV",
+            "TailScore"
+          ],
+          "creator": {
+            "kind": "initialized"
+          },
+          "readers": [],
+          "writers": [
+            {
+              "kind": "node",
+              "nodeId": "save-tail",
+              "portId": "TailKV"
+            },
+            {
+              "kind": "node",
+              "nodeId": "save-tail",
+              "portId": "TailScore"
+            }
+          ],
+          "updatePolicy": {
+            "kind": "replace"
+          }
+        },
+        {
+          "stateId": "main",
+          "name": "main",
+          "stateKind": "latent",
+          "allocationBasis": "step_end",
+          "storageIds": [
+            "Cache"
+          ],
+          "creator": {
+            "kind": "initialized"
+          },
+          "readers": [],
+          "writers": [
+            {
+              "kind": "node",
+              "nodeId": "store",
+              "portId": "Cache"
+            }
+          ],
+          "updatePolicy": {
+            "kind": "append"
+          }
+        }
+      ]
+    }
+  }
+}

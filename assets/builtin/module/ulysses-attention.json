@@ -1,0 +1,2049 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:module:ulysses-attention",
+  "revision": 1,
+  "name": "Ulysses attention · materialized reference",
+  "tags": [
+    "research",
+    "ulysses",
+    "synthetic"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "S",
+      "name": "S",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "C",
+      "name": "No past cache in this prefill study",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/deepspeedai/DeepSpeed/blob/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Pinned Ulysses core layout roles; 49d730cb416643bfd73eeae3217027ae00778ce604b58ea19be34588248e543b"
+    },
+    {
+      "kind": "note",
+      "text": "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model. Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed. Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds. Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown. All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks. Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "q",
+          "tensorId": "Q"
+        },
+        {
+          "portId": "k",
+          "tensorId": "K"
+        },
+        {
+          "portId": "v",
+          "tensorId": "V"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "a",
+          "tensorId": "A"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "qk",
+          "name": "Dense QK transpose",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Q",
+              "tensorId": "Q"
+            },
+            {
+              "portId": "K",
+              "tensorId": "K"
+            },
+            {
+              "portId": "Scores",
+              "tensorId": "Scores"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:d81277e800caf7ce",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:d81277e800caf7ce",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Q",
+                  "storageId": "Q",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-K",
+                  "storageId": "K",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Scores",
+                  "storageId": "Scores",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Q"
+              },
+              "bindings": [
+                {
+                  "symbol": "lb",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Q",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "ls",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Q",
+                    "axisId": "s",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "lh",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Q",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "ld",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Q",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:qk:05e95dc1fba9d711",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "ld": {
+                            "kind": "symbol",
+                            "name": "ld"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "ls": {
+                            "kind": "symbol",
+                            "name": "ls"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:qk:05e95dc1fba9d711",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "ld": {
+                            "kind": "symbol",
+                            "name": "ld"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "ls": {
+                            "kind": "symbol",
+                            "name": "ls"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Q",
+                    "storageId": "Q",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-K",
+                    "storageId": "K",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Scores",
+                    "storageId": "Scores",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact per-device tensor axes and complete physical storage allocations; no device-count division. All dimensions divide evenly; replicated weights remain complete."
+            },
+            "inputs": [
+              {
+                "portId": "Q",
+                "tensorId": "Q"
+              },
+              {
+                "portId": "K",
+                "tensorId": "K"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Scores",
+                "tensorId": "Scores"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "softmax",
+          "name": "Materialized softmax proxy; full FP32 scratch",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Scores",
+              "tensorId": "Scores"
+            },
+            {
+              "portId": "Probs",
+              "tensorId": "Probs"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:e29c2a752d564752",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:e29c2a752d564752",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Scores",
+                  "storageId": "Scores",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Probs",
+                  "storageId": "Probs",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-scratch-FP32scratch",
+                  "storageId": "FP32scratch",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scratch-FP32scratch",
+                  "storageId": "FP32scratch",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [
+                "FP32scratch"
+              ],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Scores"
+              },
+              "bindings": [
+                {
+                  "symbol": "lb",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Scores",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "lh",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Scores",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "lq",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Scores",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "lk",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Scores",
+                    "axisId": "k",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "temporary_4",
+                  "source": {
+                    "kind": "tensor_elements",
+                    "tensorId": "FP32scratch",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "vector"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:softmax:b811f8e7a06a5a24",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "lk": {
+                            "kind": "symbol",
+                            "name": "lk"
+                          },
+                          "lq": {
+                            "kind": "symbol",
+                            "name": "lq"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:softmax:b811f8e7a06a5a24",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "lk": {
+                            "kind": "symbol",
+                            "name": "lk"
+                          },
+                          "lq": {
+                            "kind": "symbol",
+                            "name": "lq"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Scores",
+                    "storageId": "Scores",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Probs",
+                    "storageId": "Probs",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-scratch-FP32scratch",
+                    "storageId": "FP32scratch",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-scratch-FP32scratch",
+                    "storageId": "FP32scratch",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [
+                  "FP32scratch"
+                ],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact per-device tensor axes and complete physical storage allocations; no device-count division. All dimensions divide evenly; replicated weights remain complete."
+            },
+            "inputs": [
+              {
+                "portId": "Scores",
+                "tensorId": "Scores"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Probs",
+                "tensorId": "Probs"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "av",
+          "name": "Attention weighted values",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Probs",
+              "tensorId": "Probs"
+            },
+            {
+              "portId": "V",
+              "tensorId": "V"
+            },
+            {
+              "portId": "A",
+              "tensorId": "A"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:d81277e800caf7ce",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:ulysses:d81277e800caf7ce",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "S": {
+                          "kind": "symbol",
+                          "name": "S"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Probs",
+                  "storageId": "Probs",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-V",
+                  "storageId": "V",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-A",
+                  "storageId": "A",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Probs"
+              },
+              "bindings": [
+                {
+                  "symbol": "lb",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "V",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "ls",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "V",
+                    "axisId": "s",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "lh",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "V",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "ld",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "V",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:av:05e95dc1fba9d711",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "ld": {
+                            "kind": "symbol",
+                            "name": "ld"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "ls": {
+                            "kind": "symbol",
+                            "name": "ls"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:ulysses-local:av:05e95dc1fba9d711",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lb": {
+                            "kind": "symbol",
+                            "name": "lb"
+                          },
+                          "ld": {
+                            "kind": "symbol",
+                            "name": "ld"
+                          },
+                          "lh": {
+                            "kind": "symbol",
+                            "name": "lh"
+                          },
+                          "ls": {
+                            "kind": "symbol",
+                            "name": "ls"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Probs",
+                    "storageId": "Probs",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-V",
+                    "storageId": "V",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-A",
+                    "storageId": "A",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact per-device tensor axes and complete physical storage allocations; no device-count division. All dimensions divide evenly; replicated weights remain complete."
+            },
+            "inputs": [
+              {
+                "portId": "Probs",
+                "tensorId": "Probs"
+              },
+              {
+                "portId": "V",
+                "tensorId": "V"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "A",
+                "tensorId": "A"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "qk-in-Q",
+          "from": {
+            "kind": "graph_input",
+            "portId": "q"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "Q"
+          },
+          "tensorId": "Q"
+        },
+        {
+          "edgeId": "qk-in-K",
+          "from": {
+            "kind": "graph_input",
+            "portId": "k"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "K"
+          },
+          "tensorId": "K"
+        },
+        {
+          "edgeId": "softmax-in-Scores",
+          "from": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "Scores"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "softmax",
+            "portId": "Scores"
+          },
+          "tensorId": "Scores"
+        },
+        {
+          "edgeId": "av-in-Probs",
+          "from": {
+            "kind": "node",
+            "nodeId": "softmax",
+            "portId": "Probs"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "Probs"
+          },
+          "tensorId": "Probs"
+        },
+        {
+          "edgeId": "av-in-V",
+          "from": {
+            "kind": "graph_input",
+            "portId": "v"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "V"
+          },
+          "tensorId": "V"
+        },
+        {
+          "edgeId": "out-a",
+          "from": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "A"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "a"
+          },
+          "tensorId": "A"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "Q",
+          "name": "Q",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Q"
+        },
+        {
+          "tensorId": "K",
+          "name": "K",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "K"
+        },
+        {
+          "tensorId": "V",
+          "name": "V",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "V"
+        },
+        {
+          "tensorId": "Scores",
+          "name": "Scores",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "k",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Scores"
+        },
+        {
+          "tensorId": "Probs",
+          "name": "Probs",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "k",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Probs"
+        },
+        {
+          "tensorId": "FP32scratch",
+          "name": "FP32scratch",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "k",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "FP32scratch"
+        },
+        {
+          "tensorId": "A",
+          "name": "A",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "A"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "Q",
+          "name": "Q",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "K",
+          "name": "K",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "V",
+          "name": "V",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Scores",
+          "name": "Scores",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "k",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Probs",
+          "name": "Probs",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "k",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "FP32scratch",
+          "name": "FP32scratch",
+          "category": "workspace",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "k",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "A",
+          "name": "A",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    }
+  }
+}

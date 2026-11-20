@@ -1,0 +1,80 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:hardware:communication-study",
+  "revision": 1,
+  "name": "Authored communication study · two link scopes",
+  "tags": [
+    "p6-expansion"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Authored modeling assumptions; editable fixed revision. Not a measurement."
+    },
+    {
+      "kind": "note",
+      "text": "Synthetic 4096-byte capacity, 1000 op/s, 100 B/s HBM; intra 1000 B/s + 1ms; inter 100 B/s + 10ms. These are chosen arithmetic inputs, not hardware specifications."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 4096,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": [
+        {
+          "scope": "intra_group",
+          "bytesPerSecond": 1000,
+          "latencySeconds": 0.001,
+          "description": "Authored intra-group arithmetic, no physical-link claim"
+        },
+        {
+          "scope": "inter_group",
+          "bytesPerSecond": 100,
+          "latencySeconds": 0.01,
+          "description": "Authored inter-group arithmetic, no physical-link claim"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "documentType": {
+      "type": "string",
+      "const": "asset_draft"
+    },
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "draftId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "assetId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "assetKind": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "baseRevision": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema2"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "draftGeneration": {
+      "$ref": "#/$defs/__schema3"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "storageFormat": {
+      "type": "string",
+      "enum": [
+        "json",
+        "yaml"
+      ]
+    },
+    "importIntent": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "object",
+          "properties": {
+            "assetId": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "revision": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "kind": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "assetId",
+            "revision",
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "preserve",
+            "next"
+          ]
+        }
+      },
+      "required": [
+        "source",
+        "mode"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "documentType",
+    "schemaVersion",
+    "draftId",
+    "assetId",
+    "assetKind",
+    "baseRevision",
+    "draftGeneration",
+    "updatedAt"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "string",
+      "enum": [
+        "model",
+        "module",
+        "operator",
+        "formula",
+        "parallel",
+        "quantization",
+        "hardware"
+      ]
+    },
+    "__schema2": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema3"
+    },
+    "__schema3": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

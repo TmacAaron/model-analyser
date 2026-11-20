@@ -1,0 +1,2064 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "inputHash": "28eac6bdc86bfc80e4dab8b60e9d643d2f83d7df3774b620b2b6357b370f2481",
+  "scenarioId": "example:scenario:shared-state",
+  "phase": "decode",
+  "scope": {
+    "phase": "decode",
+    "target": {
+      "kind": "model"
+    },
+    "deviceIds": [
+      "gpu0"
+    ],
+    "aggregation": "per_device"
+  },
+  "memoryEvidence": [
+    {
+      "version": "canonical-memory.1",
+      "deviceId": "gpu0",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:state-reference",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:shared-state",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:shared-state",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:B",
+              "source": "asset_workload_binding"
+            },
+            {
+              "parameterKey": "layer[0]:B",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "layer[1]:B",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+          ]
+        }
+      ],
+      "interfaces": [
+        {
+          "nodeId": "layer[0]/read",
+          "storageIds": [
+            "state"
+          ]
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "storageIds": [
+            "state"
+          ]
+        },
+        {
+          "nodeId": "layer[0]",
+          "storageIds": [
+            "state"
+          ]
+        },
+        {
+          "nodeId": "layer[1]",
+          "storageIds": [
+            "state"
+          ]
+        },
+        {
+          "nodeId": "layer",
+          "storageIds": [
+            "state"
+          ]
+        },
+        {
+          "nodeId": "$model",
+          "storageIds": []
+        }
+      ],
+      "initialStorageIds": [],
+      "outputStorageIds": [],
+      "carriedStorageIds": [],
+      "allocations": [
+        {
+          "storageId": "state",
+          "name": "before",
+          "allocationKind": "tensor",
+          "category": "state",
+          "sharingDomain": "request",
+          "aliasIds": [],
+          "eliminatedBy": [],
+          "resident": true,
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "perCopyAllocation": {
+            "copies": 1,
+            "payloadBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 192,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "totalBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 192,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "auxiliaryBytes": []
+          },
+          "intervals": [
+            {
+              "start": 0,
+              "end": 1
+            }
+          ]
+        }
+      ],
+      "uses": [
+        {
+          "nodeId": "layer[0]/read",
+          "executionNodeId": "layer[0]/read",
+          "reads": [
+            "state"
+          ],
+          "writes": [],
+          "temporary": []
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "executionNodeId": "layer[1]/read",
+          "reads": [
+            "state"
+          ],
+          "writes": [],
+          "temporary": []
+        }
+      ]
+    }
+  ],
+  "parameterTrace": [
+    {
+      "nodeId": "$model",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "asset_workload_binding",
+        "asset": {
+          "assetId": "example:model:shared-state",
+          "revision": 1,
+          "kind": "model"
+        },
+        "phase": "decode"
+      }
+    },
+    {
+      "nodeId": "layer[0]",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "node_override",
+        "nodeId": "layer[0]"
+      }
+    },
+    {
+      "nodeId": "layer[1]",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "node_override",
+        "nodeId": "layer[1]"
+      }
+    }
+  ],
+  "quantizationApplications": [],
+  "nodes": [
+    {
+      "nodeId": "layer[0]/read",
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[0]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer[1]/read",
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[1]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "modules": [
+    {
+      "nodeId": "layer[0]",
+      "leafNodeIds": [
+        "layer[0]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[0]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer[1]",
+      "leafNodeIds": [
+        "layer[1]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[1]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer",
+      "leafNodeIds": [
+        "layer[0]/read",
+        "layer[1]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 3.84,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:state-reference",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "total": {
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "compute": [],
+    "logicalReadBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 384,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:hardware:state-reference",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "logicalWriteBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 0,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:hardware:state-reference",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "hbmBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 384,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:hardware:state-reference",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "communications": [],
+    "seconds": {
+      "status": "available",
+      "quantity": {
+        "value": 3.84,
+        "unit": "second"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:hardware:state-reference",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    }
+  },
+  "memory": [
+    {
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "categoryBreakdown": [
+        {
+          "category": "weight",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "state",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "activation",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "workspace",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "communication",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "graph",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "runtime",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "reserve",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "peakBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 192,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:state-reference",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:shared-state",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:shared-state",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:B",
+              "source": "asset_workload_binding"
+            },
+            {
+              "parameterKey": "layer[0]:B",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "layer[1]:B",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "peakPoint": {
+        "kind": "time",
+        "seconds": 0,
+        "nodeId": "layer[0]/read"
+      },
+      "capacityBytes": 4096,
+      "capacityStatus": {
+        "kind": "point_only",
+        "description": "Canonical allocation lifetimes under the selected serial order; no capacity search has run."
+      }
+    }
+  ],
+  "schedule": [
+    {
+      "nodeId": "layer[0]/read",
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "streamId": "serial",
+      "startSeconds": 0,
+      "endSeconds": 1.92
+    },
+    {
+      "nodeId": "layer[1]/read",
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "streamId": "serial",
+      "startSeconds": 1.92,
+      "endSeconds": 3.84
+    }
+  ],
+  "roofline": [],
+  "diagnostics": []
+}

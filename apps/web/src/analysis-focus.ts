@@ -1,0 +1,22 @@
+import { MetricTarget,type AnalysisResult,type CostResult,type ResolvedGraph,type SingleStepAnalysisResult } from '@model-analyser/contracts';
+export type AnalysisFocus={key:string;label:string;target?:MetricTarget|undefined;reason?:string|undefined};
+export const targetId=(target:MetricTarget)=>target.kind==='model'?'model':target.kind+':'+target.nodeId;
+export function parseTarget(id:string):MetricTarget|undefined{const value=id==='model'?{kind:'model'}:id.startsWith('module:')?{kind:'module',nodeId:id.slice(7)}:id.startsWith('node:')?{kind:'node',nodeId:id.slice(5)}:undefined;const parsed=MetricTarget.safeParse(value);return parsed.success?parsed.data:undefined;}
+export const focusIdentity=(focus:AnalysisFocus|undefined)=>focus?JSON.stringify([focus.key,focus.target,focus.reason]):'standalone';
+export function canvasAnalysisFocus(resolved:ResolvedGraph|undefined,scope:string,selected:string[],key:string):AnalysisFocus{
+  const identity=JSON.stringify([key,scope,selected]);if(selected.length>1){const members=new Set(selected.flatMap(id=>resolved?.containers.find(c=>c.nodeId===id)?.leafNodeIds??[id])),group=resolved?.fusionApplications.find(f=>f.memberNodeIds.length===members.size&&f.memberNodeIds.every(id=>members.has(id)));return group?{key:identity,label:'融合组 '+group.groupId,target:{kind:'node',nodeId:group.nodeId}}:{key:identity,label:selected.length+' 个选中节点',reason:'当前选择包含多个节点，请选择一个模块、算子或完整融合组查看对应结果。'};}
+  const id=selected[0]??scope;if(id==='$model')return {key:identity,label:'整个模型',target:{kind:'model'}};
+  const container=resolved?.containers.find(c=>c.nodeId===id),leaf=resolved?.graph.nodes.find(n=>n.nodeId===id),target=MetricTarget.safeParse({kind:container?'module':'node',nodeId:id});
+  return target.success?{key:identity,label:container?.name??leaf?.name??id,target:target.data,...(!resolved?{reason:'模型结构尚未就绪，等待当前输入的解析结果。'}:{})}:{key:identity,label:id,reason:'选中目标的稳定路径无效。'};
+}
+export function targetCost(report:SingleStepAnalysisResult,target:MetricTarget):CostResult|undefined{return target.kind==='model'?report.total:target.kind==='module'?report.modules.find(m=>m.nodeId===target.nodeId)?.cost:report.nodes.find(n=>n.nodeId===target.nodeId)?.cost??report.fusions?.find(f=>f.evaluation.application.nodeId===target.nodeId)?.cost;}
+export function sourceTargetId(report:SingleStepAnalysisResult,target:MetricTarget){return target.kind==='node'&&report.fusions?.some(f=>f.evaluation.application.nodeId===target.nodeId)?'fusion:'+target.nodeId:targetId(target);}
+export function targetProblem(report:AnalysisResult,target:MetricTarget,measurement=false):string|undefined{
+  if(!targetCost(report,target))return '当前结果没有此目标，请选择当前结果中的范围；不会自动改成整个模型。';if(!measurement)return;
+  if(report.decode?.unmeasurableTargetIds.includes(targetId(target)))return '此目标在序列中没有可独立测量的完整区间。';
+  if(target.kind==='node'&&report.fusions?.some(f=>f.evaluation.application.memberNodeIds.includes(target.nodeId)))return '融合内部数学步骤没有独立测量区间，请明确选择完整融合组。';
+  if(target.kind==='module'){const module=report.modules.find(m=>m.nodeId===target.nodeId);if(module&&report.fusions?.some(f=>f.evaluation.application.memberNodeIds.some(id=>module.leafNodeIds.includes(id))&&!f.evaluation.application.memberNodeIds.every(id=>module.leafNodeIds.includes(id))))return '此模块只覆盖融合组的一部分，没有独立测量区间。';}
+}
+export function resultTargets(report:AnalysisResult){return [{id:'model',label:'模型总计'},...report.modules.map(m=>({id:'module:'+m.nodeId,label:'模块 '+m.nodeId})),...report.nodes.map(n=>({id:'node:'+n.nodeId,label:'节点 '+n.nodeId})),...(report.fusions??[]).map(f=>({id:'node:'+f.evaluation.application.nodeId,label:'融合组 '+f.evaluation.application.groupId}))];}
+export function measurementTargets(report:AnalysisResult,currentId:string){const blocked=new Set(report.decode?.unmeasurableTargetIds??[]);for(const f of report.fusions??[])for(const id of f.evaluation.application.memberNodeIds)blocked.add('node:'+id);for(const m of report.modules)if(report.fusions?.some(f=>f.evaluation.application.memberNodeIds.some(id=>m.leafNodeIds.includes(id))&&!f.evaluation.application.memberNodeIds.every(id=>m.leafNodeIds.includes(id))))blocked.add('module:'+m.nodeId);return resultTargets(report).filter(t=>t.id===currentId||!blocked.has(t.id));}
+export function measurementFrame(result:AnalysisResult,hash:string|undefined){const step=hash?result.decode?.steps.find(s=>s.result.inputHash===hash):undefined;return step?{result:step.result,scenario:step.scenario,index:step.index}:undefined;}

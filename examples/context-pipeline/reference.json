@@ -1,0 +1,1969 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "source": {
+    "checkedOn": "2026-11-15",
+    "repository": "https://github.com/vllm-project/vllm-ascend",
+    "commit": "4b3bd7ebe51094f3afa5288bb7a3316d12d3154e",
+    "sources": [
+      {
+        "name": "context-parallel",
+        "path": "docs/source/developer_guide/Design_Documents/context_parallel.md",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/developer_guide/Design_Documents/context_parallel.md",
+        "sha256": "99ac6f2fa0cc0ec340c6230c4e95b9523b2da0fd510de6ba53e305c4defc5bd1"
+      },
+      {
+        "name": "pipeline-parallel",
+        "path": "docs/source/user_guide/feature_guide/pipeline_parallel.md",
+        "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/user_guide/feature_guide/pipeline_parallel.md",
+        "sha256": "0353e6b8ddef7751e1cd75fe9d20880392f5ed812698abb9673e8d3a7e74bd51"
+      }
+    ],
+    "scope": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model."
+  },
+  "assets": {
+    "publishedAssets": 79,
+    "totalAssetHeads": 589,
+    "totalJsonFiles": 593
+  },
+  "stableMergeWitness": {
+    "maxima": [
+      10000,
+      9997
+    ],
+    "denominators": [
+      1.5032147244080551,
+      0.06810270725659812
+    ],
+    "numerators": [
+      [
+        2.2771000152893355,
+        4.636882296471573
+      ],
+      [
+        0.3588291751717248,
+        1.904039709191029
+      ]
+    ],
+    "output": [
+      1.6775281285262378,
+      4.162699320870609
+    ]
+  },
+  "rows": [
+    {
+      "kind": "pcp2",
+      "case": "default",
+      "inputHash": "0088f1a4f683e47eb819d3a188d94d8f8e918a10a63c621f7934279fce8ea826",
+      "seconds": 7.394,
+      "peaks": [
+        320,
+        320
+      ],
+      "oracles": [
+        {
+          "kind": "pcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 4,
+          "C": 0,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "queryStart": 0,
+              "pairs": 3,
+              "matrixUseful": 240,
+              "matrixExecuted": 320,
+              "vectorUseful": 30,
+              "vectorExecuted": 80,
+              "hbm": 736
+            },
+            {
+              "queryStart": 2,
+              "pairs": 7,
+              "matrixUseful": 304,
+              "matrixExecuted": 320,
+              "vectorUseful": 70,
+              "vectorExecuted": 80,
+              "hbm": 736
+            }
+          ],
+          "seconds": 7.394,
+          "networkSeconds": 0.034,
+          "peakPerDevice": 320,
+          "logicalMatrix": 544,
+          "logicalVector": 100
+        }
+      ],
+      "communicationCountPerCall": 2,
+      "communicationCount": 2,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "0088f1a4f683e47eb819d3a188d94d8f8e918a10a63c621f7934279fce8ea826",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 464,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 464,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "0088f1a4f683e47eb819d3a188d94d8f8e918a10a63c621f7934279fce8ea826",
+          "rows": [
+            {
+              "nodeId": "gather-K",
+              "operation": "all_gather",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "Knew",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "axes": [
+                    {
+                      "tensorAxisId": "q",
+                      "meshAxisId": "bound:rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 32,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 32,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.017
+            },
+            {
+              "nodeId": "gather-V",
+              "operation": "all_gather",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "Vnew",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "axes": [
+                    {
+                      "tensorAxisId": "q",
+                      "meshAxisId": "bound:rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 32,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 32,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.017
+            }
+          ]
+        }
+      ],
+      "defaultWorkloadCapacity": {
+        "maximumBatchInCheckedRange": 17,
+        "searchRange": {
+          "min": 16,
+          "max": 18
+        },
+        "proofFile": "pcp2-batch-capacity.json"
+      }
+    },
+    {
+      "kind": "pcp2",
+      "case": "history",
+      "inputHash": "b4990cb62dae12dae4ccd6592047e8d8ccffb1e0c3ffcba395eb32f62f5aad28",
+      "seconds": 30.497999999999998,
+      "peaks": [
+        1312,
+        1312
+      ],
+      "oracles": [
+        {
+          "kind": "pcp",
+          "degree": 2,
+          "B": 2,
+          "Q": 6,
+          "C": 2,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 256,
+          "ranks": [
+            {
+              "queryStart": 0,
+              "pairs": 12,
+              "matrixUseful": 960,
+              "matrixExecuted": 1344,
+              "vectorUseful": 240,
+              "vectorExecuted": 480,
+              "hbm": 3040
+            },
+            {
+              "queryStart": 3,
+              "pairs": 21,
+              "matrixUseful": 1248,
+              "matrixExecuted": 1344,
+              "vectorUseful": 420,
+              "vectorExecuted": 480,
+              "hbm": 3040
+            }
+          ],
+          "seconds": 30.497999999999998,
+          "networkSeconds": 0.098,
+          "peakPerDevice": 1312,
+          "logicalMatrix": 2208,
+          "logicalVector": 660
+        }
+      ],
+      "communicationCountPerCall": 2,
+      "communicationCount": 2,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "b4990cb62dae12dae4ccd6592047e8d8ccffb1e0c3ffcba395eb32f62f5aad28",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 1744,
+              "weightBytes": 96,
+              "stateBytes": 256
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 1744,
+              "weightBytes": 96,
+              "stateBytes": 256
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "b4990cb62dae12dae4ccd6592047e8d8ccffb1e0c3ffcba395eb32f62f5aad28",
+          "rows": [
+            {
+              "nodeId": "gather-K",
+              "operation": "all_gather",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "Knew",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "axes": [
+                    {
+                      "tensorAxisId": "q",
+                      "meshAxisId": "bound:rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 48,
+                  "receiveBytes": 96,
+                  "remoteBytes": 48
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 48,
+                  "receiveBytes": 96,
+                  "remoteBytes": 48
+                }
+              ],
+              "seconds": 0.049
+            },
+            {
+              "nodeId": "gather-V",
+              "operation": "all_gather",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "Vnew",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "axes": [
+                    {
+                      "tensorAxisId": "q",
+                      "meshAxisId": "bound:rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 48,
+                  "receiveBytes": 96,
+                  "remoteBytes": 48
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 48,
+                  "receiveBytes": 96,
+                  "remoteBytes": 48
+                }
+              ],
+              "seconds": 0.049
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "dcp2",
+      "case": "default",
+      "inputHash": "42321f2f98ab413a82ccab2b5af350b9facf75d2a6e323f74a49b38b35e1984c",
+      "seconds": 4.757999999999999,
+      "peaks": [
+        216,
+        216
+      ],
+      "oracles": [
+        {
+          "kind": "dcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 1,
+          "C": 5,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "start": 0,
+              "end": 4,
+              "valid": 4,
+              "ownedWrites": 0,
+              "matrixUseful": 160,
+              "matrixExecuted": 160,
+              "vectorUseful": 40,
+              "vectorExecuted": 40,
+              "hbm": 456
+            },
+            {
+              "start": 4,
+              "end": 8,
+              "valid": 2,
+              "ownedWrites": 16,
+              "matrixUseful": 128,
+              "matrixExecuted": 160,
+              "vectorUseful": 20,
+              "vectorExecuted": 32,
+              "hbm": 472
+            }
+          ],
+          "seconds": 4.758,
+          "networkSeconds": 0.038,
+          "peakPerDevice": 216,
+          "logicalMatrix": 192,
+          "logicalVector": 60
+        }
+      ],
+      "communicationCountPerCall": 3,
+      "communicationCount": 3,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "42321f2f98ab413a82ccab2b5af350b9facf75d2a6e323f74a49b38b35e1984c",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "42321f2f98ab413a82ccab2b5af350b9facf75d2a6e323f74a49b38b35e1984c",
+          "rows": [
+            {
+              "nodeId": "reduce-max",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localMax",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "max"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-denom",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localDenom",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-numerator",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localNumerator",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.018000000000000002
+            }
+          ]
+        }
+      ],
+      "defaultWorkloadCapacity": {
+        "maximumBatchInCheckedRange": 33,
+        "searchRange": {
+          "min": 32,
+          "max": 34
+        },
+        "proofFile": "dcp2-batch-capacity.json"
+      }
+    },
+    {
+      "kind": "dcp2",
+      "case": "empty",
+      "inputHash": "2172f571e5e0409db32a893654bdcc10fd4bb0b7db55d57d90e58bf44b913e9b",
+      "seconds": 4.757999999999999,
+      "peaks": [
+        216,
+        216
+      ],
+      "oracles": [
+        {
+          "kind": "dcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 1,
+          "C": 0,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "start": 0,
+              "end": 4,
+              "valid": 1,
+              "ownedWrites": 16,
+              "matrixUseful": 112,
+              "matrixExecuted": 160,
+              "vectorUseful": 10,
+              "vectorExecuted": 28,
+              "hbm": 472
+            },
+            {
+              "start": 4,
+              "end": 8,
+              "valid": 0,
+              "ownedWrites": 0,
+              "matrixUseful": 96,
+              "matrixExecuted": 160,
+              "vectorUseful": 4,
+              "vectorExecuted": 28,
+              "hbm": 456
+            }
+          ],
+          "seconds": 4.758,
+          "networkSeconds": 0.038,
+          "peakPerDevice": 216,
+          "logicalMatrix": 112,
+          "logicalVector": 10
+        }
+      ],
+      "communicationCountPerCall": 3,
+      "communicationCount": 3,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "2172f571e5e0409db32a893654bdcc10fd4bb0b7db55d57d90e58bf44b913e9b",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "2172f571e5e0409db32a893654bdcc10fd4bb0b7db55d57d90e58bf44b913e9b",
+          "rows": [
+            {
+              "nodeId": "reduce-max",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localMax",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "max"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-denom",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localDenom",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-numerator",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localNumerator",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.018000000000000002
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "dcp2",
+      "case": "growing",
+      "inputHash": "b55efaa88ebe38124da03a7af7fc472e63dc3a8d0476475cf188d16f0f8fb4c1",
+      "seconds": 14.273999999999997,
+      "peaks": [
+        216,
+        216
+      ],
+      "oracles": [
+        {
+          "kind": "dcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 1,
+          "C": 3,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "start": 0,
+              "end": 4,
+              "valid": 4,
+              "ownedWrites": 16,
+              "matrixUseful": 160,
+              "matrixExecuted": 160,
+              "vectorUseful": 40,
+              "vectorExecuted": 40,
+              "hbm": 472
+            },
+            {
+              "start": 4,
+              "end": 8,
+              "valid": 0,
+              "ownedWrites": 0,
+              "matrixUseful": 96,
+              "matrixExecuted": 160,
+              "vectorUseful": 4,
+              "vectorExecuted": 28,
+              "hbm": 456
+            }
+          ],
+          "seconds": 4.758,
+          "networkSeconds": 0.038,
+          "peakPerDevice": 216,
+          "logicalMatrix": 160,
+          "logicalVector": 40
+        },
+        {
+          "kind": "dcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 1,
+          "C": 4,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "start": 0,
+              "end": 4,
+              "valid": 4,
+              "ownedWrites": 0,
+              "matrixUseful": 160,
+              "matrixExecuted": 160,
+              "vectorUseful": 40,
+              "vectorExecuted": 40,
+              "hbm": 456
+            },
+            {
+              "start": 4,
+              "end": 8,
+              "valid": 1,
+              "ownedWrites": 16,
+              "matrixUseful": 112,
+              "matrixExecuted": 160,
+              "vectorUseful": 10,
+              "vectorExecuted": 28,
+              "hbm": 472
+            }
+          ],
+          "seconds": 4.758,
+          "networkSeconds": 0.038,
+          "peakPerDevice": 216,
+          "logicalMatrix": 176,
+          "logicalVector": 50
+        },
+        {
+          "kind": "dcp",
+          "degree": 2,
+          "B": 1,
+          "Q": 1,
+          "C": 5,
+          "H": 2,
+          "D": 2,
+          "M": 8,
+          "weightPerDevice": 96,
+          "statePerDevice": 64,
+          "ranks": [
+            {
+              "start": 0,
+              "end": 4,
+              "valid": 4,
+              "ownedWrites": 0,
+              "matrixUseful": 160,
+              "matrixExecuted": 160,
+              "vectorUseful": 40,
+              "vectorExecuted": 40,
+              "hbm": 456
+            },
+            {
+              "start": 4,
+              "end": 8,
+              "valid": 2,
+              "ownedWrites": 16,
+              "matrixUseful": 128,
+              "matrixExecuted": 160,
+              "vectorUseful": 20,
+              "vectorExecuted": 32,
+              "hbm": 472
+            }
+          ],
+          "seconds": 4.758,
+          "networkSeconds": 0.038,
+          "peakPerDevice": 216,
+          "logicalMatrix": 192,
+          "logicalVector": 60
+        }
+      ],
+      "communicationCountPerCall": 3,
+      "communicationCount": 9,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "83390650dbc2ce69a57e82b1fd6fa9097a7de8a72a5827e17fc4385fd89e429a",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "inputHash": "bc915900b0cd7e9704e1ca49bf6e3c295cbf168ebc4980d8e9872ca4299f8c15",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "inputHash": "a566f9730d0e56d53f35b1b63a6b4b141b0f8f742d538673c076f3891e2bf71c",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 320,
+              "weightBytes": 96,
+              "stateBytes": 64
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "83390650dbc2ce69a57e82b1fd6fa9097a7de8a72a5827e17fc4385fd89e429a",
+          "rows": [
+            {
+              "nodeId": "reduce-max",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localMax",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "max"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-denom",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localDenom",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-numerator",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localNumerator",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.018000000000000002
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "inputHash": "bc915900b0cd7e9704e1ca49bf6e3c295cbf168ebc4980d8e9872ca4299f8c15",
+          "rows": [
+            {
+              "nodeId": "reduce-max",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localMax",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "max"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-denom",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localDenom",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-numerator",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localNumerator",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.018000000000000002
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "inputHash": "a566f9730d0e56d53f35b1b63a6b4b141b0f8f742d538673c076f3891e2bf71c",
+          "rows": [
+            {
+              "nodeId": "reduce-max",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localMax",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "max"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-denom",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localDenom",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 8,
+                  "receiveBytes": 8,
+                  "remoteBytes": 8
+                }
+              ],
+              "seconds": 0.01
+            },
+            {
+              "nodeId": "reduce-numerator",
+              "operation": "all_reduce",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "source": {
+                "tensorId": "localNumerator",
+                "distribution": {
+                  "kind": "partial",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "reduceOperation": "sum"
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 16,
+                  "receiveBytes": 16,
+                  "remoteBytes": 16
+                }
+              ],
+              "seconds": 0.018000000000000002
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "pp2",
+      "case": "default",
+      "inputHash": "4c877c2a27e7c14795bd364bef08a43131f138fc6b0d3a94bf6915f480640da9",
+      "seconds": 16.977000000000004,
+      "peaks": [
+        544,
+        544
+      ],
+      "oracles": [
+        {
+          "B": 1,
+          "Q": 1,
+          "C": 2,
+          "H": 8,
+          "NH": 4,
+          "NK": 2,
+          "D": 2,
+          "stageSeconds": 8.48,
+          "seconds": 16.977,
+          "payload": 16,
+          "networkSeconds": 0.017,
+          "weightPerDevice": 384,
+          "statePerDevice": 48,
+          "hbmPerDevice": 848,
+          "peakPerDevice": 544,
+          "matrixPerDevice": 480,
+          "matrixExecutedPerDevice": 480,
+          "vectorPerDevice": 68,
+          "vectorExecutedPerDevice": 68
+        }
+      ],
+      "communicationCountPerCall": 1,
+      "communicationCount": 1,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "4c877c2a27e7c14795bd364bef08a43131f138fc6b0d3a94bf6915f480640da9",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 624,
+              "weightBytes": 384,
+              "stateBytes": 48
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 624,
+              "weightBytes": 384,
+              "stateBytes": 48
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "4c877c2a27e7c14795bd364bef08a43131f138fc6b0d3a94bf6915f480640da9",
+          "rows": [
+            {
+              "nodeId": "send-activation",
+              "operation": "send_recv",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "B0",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "members": [
+                    {
+                      "deviceId": "rack-A/device-1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "rack-A/device-2",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 0,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 0,
+                  "receiveBytes": 16,
+                  "remoteBytes": 0
+                }
+              ],
+              "seconds": 0.017
+            }
+          ]
+        }
+      ],
+      "defaultWorkloadCapacity": {
+        "maximumBatchInCheckedRange": 4,
+        "searchRange": {
+          "min": 3,
+          "max": 5
+        },
+        "proofFile": "pp2-batch-capacity.json"
+      }
+    },
+    {
+      "kind": "pp2",
+      "case": "prefill",
+      "inputHash": "c417616d4c7b7af51e73be650331df227c93b657a53ad70c4d54c16f910a0450",
+      "seconds": 67.937,
+      "peaks": [
+        1376,
+        1376
+      ],
+      "oracles": [
+        {
+          "B": 2,
+          "Q": 3,
+          "C": 1,
+          "H": 8,
+          "NH": 4,
+          "NK": 2,
+          "D": 2,
+          "stageSeconds": 33.92,
+          "seconds": 67.93700000000001,
+          "payload": 96,
+          "networkSeconds": 0.097,
+          "weightPerDevice": 384,
+          "statePerDevice": 128,
+          "hbmPerDevice": 3392,
+          "peakPerDevice": 1376,
+          "matrixPerDevice": 2880,
+          "matrixExecutedPerDevice": 3072,
+          "vectorPerDevice": 408,
+          "vectorExecutedPerDevice": 528
+        }
+      ],
+      "communicationCountPerCall": 1,
+      "communicationCount": 1,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "c417616d4c7b7af51e73be650331df227c93b657a53ad70c4d54c16f910a0450",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 1856,
+              "weightBytes": 384,
+              "stateBytes": 128
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 1856,
+              "weightBytes": 384,
+              "stateBytes": 128
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "c417616d4c7b7af51e73be650331df227c93b657a53ad70c4d54c16f910a0450",
+          "rows": [
+            {
+              "nodeId": "send-activation",
+              "operation": "send_recv",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "B0",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "members": [
+                    {
+                      "deviceId": "rack-A/device-1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 2,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 3,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "rack-A/device-2",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 2,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 96,
+                  "receiveBytes": 0,
+                  "remoteBytes": 96
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 0,
+                  "receiveBytes": 96,
+                  "remoteBytes": 0
+                }
+              ],
+              "seconds": 0.097
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "pp2",
+      "case": "growing",
+      "inputHash": "e31b709e9ec7756ebf17cbe19a94bd4d30a2a920ff38deff713b8a05ca70b7d5",
+      "seconds": 35.554,
+      "peaks": [
+        592,
+        592
+      ],
+      "oracles": [
+        {
+          "B": 1,
+          "Q": 1,
+          "C": 2,
+          "H": 8,
+          "NH": 4,
+          "NK": 2,
+          "D": 2,
+          "stageSeconds": 8.48,
+          "seconds": 16.977,
+          "payload": 16,
+          "networkSeconds": 0.017,
+          "weightPerDevice": 384,
+          "statePerDevice": 48,
+          "hbmPerDevice": 848,
+          "peakPerDevice": 544,
+          "matrixPerDevice": 480,
+          "matrixExecutedPerDevice": 480,
+          "vectorPerDevice": 68,
+          "vectorExecutedPerDevice": 68
+        },
+        {
+          "B": 1,
+          "Q": 1,
+          "C": 3,
+          "H": 8,
+          "NH": 4,
+          "NK": 2,
+          "D": 2,
+          "stageSeconds": 9.28,
+          "seconds": 18.576999999999998,
+          "payload": 16,
+          "networkSeconds": 0.017,
+          "weightPerDevice": 384,
+          "statePerDevice": 64,
+          "hbmPerDevice": 928,
+          "peakPerDevice": 592,
+          "matrixPerDevice": 512,
+          "matrixExecutedPerDevice": 512,
+          "vectorPerDevice": 88,
+          "vectorExecutedPerDevice": 88
+        }
+      ],
+      "communicationCountPerCall": 1,
+      "communicationCount": 2,
+      "physicalDevices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "allocationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "a74889aa6f59d52c6176fa02b67226c7ed002077fcf276521eb7fdb08926b308",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 624,
+              "weightBytes": 384,
+              "stateBytes": 48
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 624,
+              "weightBytes": 384,
+              "stateBytes": 48
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "inputHash": "ef42cf40453ec575b591a905e17f0f013177ddc890ad8ab6f971426a4339d897",
+          "rows": [
+            {
+              "deviceId": "rack-A/device-1",
+              "totalBytes": 672,
+              "weightBytes": 384,
+              "stateBytes": 64
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "totalBytes": 672,
+              "weightBytes": 384,
+              "stateBytes": 64
+            }
+          ]
+        }
+      ],
+      "communicationsByStep": [
+        {
+          "index": 0,
+          "inputHash": "a74889aa6f59d52c6176fa02b67226c7ed002077fcf276521eb7fdb08926b308",
+          "rows": [
+            {
+              "nodeId": "send-activation",
+              "operation": "send_recv",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "B0",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "members": [
+                    {
+                      "deviceId": "rack-A/device-1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "rack-A/device-2",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 0,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 0,
+                  "receiveBytes": 16,
+                  "remoteBytes": 0
+                }
+              ],
+              "seconds": 0.017
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "inputHash": "ef42cf40453ec575b591a905e17f0f013177ddc890ad8ab6f971426a4339d897",
+          "rows": [
+            {
+              "nodeId": "send-activation",
+              "operation": "send_recv",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "source": {
+                "tensorId": "B0",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+                  "members": [
+                    {
+                      "deviceId": "rack-A/device-1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "rack-A/device-2",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 1,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 8,
+                              "unit": "count"
+                            }
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "perDevice": [
+                {
+                  "deviceId": "rack-A/device-1",
+                  "sendBytes": 16,
+                  "receiveBytes": 0,
+                  "remoteBytes": 16
+                },
+                {
+                  "deviceId": "rack-A/device-2",
+                  "sendBytes": 0,
+                  "receiveBytes": 16,
+                  "remoteBytes": 0
+                }
+              ],
+              "seconds": 0.017
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "Explicit reference values: B1 Q4 int64 tokens=32B; Qwen gathered bf16 embedding4*1024*2=8192B plus hidden write8192B. C01 GEMM useful2*4*8*16=1024 operations. Outside two bf16 weight elements=4B. No performance claim; three exact leaf sources, not all engine paths.",
+  "cases": [
+    {
+      "name": "qwen-embedding",
+      "inputHash": "da06b0d9d9e510e2858e196ba4236b2c1de9adb7183a64b613b8a8ccea1bee03",
+      "nodeId": "embedding",
+      "field": "hbmBytes",
+      "expected": 16416,
+      "actual": 16416,
+      "contributions": [
+        {
+          "field": "memoryAccess[\"read-tokens\"].logicalBytes.passes",
+          "value": 32
+        },
+        {
+          "field": "memoryAccess[\"read-embedding\"].logicalBytes",
+          "value": 8192
+        },
+        {
+          "field": "memoryAccess[\"write-hidden\"].logicalBytes.passes",
+          "value": 8192
+        }
+      ],
+      "portableProject": "examples/leaf-cost-sources/qwen-embedding-project.json",
+      "fixedSource": "examples/leaf-cost-sources/qwen-embedding-source.json",
+      "offlineVerified": true
+    },
+    {
+      "name": "c01-work",
+      "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+      "nodeId": "module/op",
+      "field": "usefulOperations",
+      "expected": 1024,
+      "actual": 1024,
+      "contributions": [
+        {
+          "field": "compute[\"matmul\"].usefulOperations",
+          "value": 1024
+        }
+      ],
+      "portableProject": "examples/leaf-cost-sources/c01-work-project.json",
+      "fixedSource": "examples/leaf-cost-sources/c01-work-source.json",
+      "offlineVerified": true
+    },
+    {
+      "name": "nested-outside",
+      "inputHash": "cb8264f041458c0819cabe389354a97cc15bacab68cb09ab57f9d826345d74f4",
+      "nodeId": "outside",
+      "field": "hbmBytes",
+      "expected": 4,
+      "actual": 4,
+      "contributions": [
+        {
+          "field": "memoryAccess[\"read-wo\"].logicalBytes.passes",
+          "value": 4
+        }
+      ],
+      "portableProject": "examples/leaf-cost-sources/nested-outside-project.json",
+      "fixedSource": "examples/leaf-cost-sources/nested-outside-source.json",
+      "offlineVerified": true
+    }
+  ]
+}

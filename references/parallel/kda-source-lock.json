@@ -1,0 +1,33 @@
+{
+  "checkedOn":"2026-11-15",
+  "modelRepository":"https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct",
+  "modelCommit":"e1df551a447157d4658b573f9a695d57658590e9",
+  "url":"https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+  "kernelRepository":"https://github.com/fla-org/flash-linear-attention",
+  "kernelTag":"v0.4.0",
+  "kernelCommit":"2e0f6c31f9db50f010cb157c712c048b8a3a89d2",
+  "files":[
+    {"repository":"model","path":"config.json","local":"config.json","sha256":"a6ac3c2c4b5aa72370f9727f49ffa4432715d20061889acdb37c688be853096e"},
+    {"repository":"model","path":"configuration_kimi.py","local":"configuration_kimi.py","sha256":"79422aca3ee6c89d201e0c15c4c9a6db517ba83d87ecdc4e41fa0f71297238d9"},
+    {"repository":"model","path":"modeling_kimi.py","local":"modeling_kimi.py","sha256":"d79b365e37378881b9f1585007a56e236ca27a414920943cb85d1dacb75dda99"},
+    {"repository":"kernel","path":"fla/ops/kda/fused_recurrent.py","local":"fused_recurrent.py","sha256":"5c976b9b43e172a781c60faef5b93a08dc097dd6098a3cbc7e9f931377258e60"},
+    {"repository":"kernel","path":"fla/ops/gated_delta_rule/fused_recurrent.py","local":"gated_delta_recurrent.py","sha256":"5dc380064ab3a15a6e549a3c58ee0b925cf4554a0c82d01d3ceb65228e8afd33"},
+    {"repository":"kernel","path":"fla/ops/kda/gate.py","local":"gate.py","sha256":"1069bb1893eeb8293c0b54a9922e7574c82c9864f8a4c0d0c9a2abda357d9936"},
+    {"repository":"kernel","path":"fla/modules/convolution.py","local":"convolution.py","sha256":"72c2230daea713fb9110354b7f1aadd59ac5619a63421621d0c66b169e7ce098"},
+    {"repository":"kernel","path":"fla/modules/fused_norm_gate.py","local":"fused_norm_gate.py","sha256":"beea77b18f7fd8e1002fa59dcb29170713236fd23b44db9d62d36bd7734595b7"}
+  ],
+  "verifiedSemantics":[
+    "Fixed config first four one-based layers are KDA/KDA/KDA/MLA; all 27 layers have explicit lists, not an exactly repeated 3:1 pattern at the final group. KDA short convolution width is four, head dimension 128 and head count 32.",
+    "KDA projects Q/K/V separately, maintains three in-place BF16 short-convolution caches, computes a per-key-channel decay from two projections plus A_log/dt_bias, head-wise beta, L2-normalized Q/K, an FP32 matrix recurrent state, low-rank output gate, sigmoid-gated RMSNorm and output projection.",
+    "Pinned FLA recurrent kernel decays matrix rows by exp(g), computes beta*(v-H_decayed^T*k), adds k outer residual, and emits H_updated^T*q with q scaled by inverse sqrt(key dimension). Output follows v dtype; final state is a newly allocated FP32 tensor. The short-convolution cache stores a full kernel-width buffer and is updated in place.",
+    "Reference Kimi MLA has q_lora_rank=None and uses direct Q projection, latent normalization and per-head K/V expansion. Its NoPE path applies no rotary transform. DynamicCache stores expanded K/V and concatenates old/current entries at every update, rather than retaining only latent KV or silently appending to a preallocated buffer."
+  ],
+  "authoredAssumptions":[
+    "Four attention-plus-input-norm/residual fragments from the first KDA/KDA/KDA/MLA group, omitting all interleaved FFN/MoE, embeddings and full-model costs. All-MLA and all-KDA are four-fragment counterfactuals, not output/accuracy-equivalent models. Decode Q=1 only; B=1,C=15,H=8, heads N=2, KDA key/value D=4, conv W=4, MLA latent R=4, key nonpositional/extra dimensions D/P=4/2 and value D=4.",
+    "Projection, convolution and normalization weights are declared BF16; A_log/dt_bias are explicit FP32. Gate and beta are FP32; three convolution buffers are BF16 and matrix state is FP32. Nonlinear operations use stated FP32-vector proxies. Recurrent useful arithmetic is B*N*(7*D*D+8*D+2), with explicit input/output conversion execution-only work. No instruction-level throughput, tensor-core, training or chunk-prefill claim.",
+    "source allocation records newly allocated recurrent state with an extra FP32 state-sized temporary. K/V concatenation is grouped as one atomic leaf, conservatively retaining both old/new tuple buffers with an old-prefix-sized temporary; Python assigns key/value list entries sequentially and can release one old tensor earlier. Semantic state traffic counts old inputs/new outputs once; allocation-only temporaries are not charged a second copy. Labels track logical carried allocation, not physical pointers or Python allocator simulation.",
+    "inplace is a separate theoretical implementation with no extra recurrent allocation and preallocated expanded K/V. It writes only new K/V rows and does not copy history; it is not claimed to be the released Python path. Both variants retain full per-layer independent states and do not share recurrent matrices across layers.",
+    "Inputs include initialized warm convolution/matrix/KV state, including explicit zero-initialized buffers if C=0. Allocation/initialization/weight-loading startup and source tensor views or allocator slack are not simulated. Materialized graph intermediates use last-read liveness; norm/gate/recurrent internal arithmetic workspace is on chip apart from the declared new-state allocation.",
+    "Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:formula:ulysses-local:qk:05e95dc1fba9d711",
+  "revision": 1,
+  "name": "2 * lb * lh * ls * ls * ld [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/deepspeedai/DeepSpeed/blob/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Pinned Ulysses core layout roles; 49d730cb416643bfd73eeae3217027ae00778ce604b58ea19be34588248e543b"
+    },
+    {
+      "kind": "note",
+      "text": "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model. Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed. Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds. Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown. All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks. Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "lb": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "ld": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "lh": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "ls": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "2 * lb * lh * ls * ls * ld",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

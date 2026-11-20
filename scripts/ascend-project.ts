@@ -1,0 +1,5 @@
+import { type QuantizedStorageSpec } from '@model-analyser/contracts';
+import { makeQwenProject } from './model-project.js';
+/** Small declared target and explicit author-provided auxiliary layout; not producer dtype/shape metadata. */
+export const explicitQwenSpecification:QuantizedStorageSpec={payloadBits:8,packingUnitElements:1,alignmentBytes:1,auxiliaries:[['weight_scale',32,'channel'],['weight_offset',32,'channel'],['input_scale',32,'tensor'],['input_offset',32,'tensor'],['quant_bias',32,'channel'],['deq_scale',64,'channel']].map(([name,bits,kind])=>({name:String(name),dtype:{category: name==='quant_bias'?'int':'float',bits:Number(bits),format:name==='quant_bias'?'int32':'authored-'+bits},count:kind==='channel'?{kind:'channel',axisId:'out'}:{kind:'tensor'}}))};
+export function smallQwenImportProject(){const p=makeQwenProject();p.scenarios[0]!.bindings=Object.entries({L:2,H:4,I:6,NH:2,NK:1,D:2,V:10}).map(([parameterKey,value])=>({parameterKey,value:{kind:'integer',value}}));return p;}

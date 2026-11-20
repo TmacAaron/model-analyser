@@ -1,0 +1,355 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:module:gemm-serial-gather",
+  "revision": 1,
+  "name": "C01 GEMM module",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "N",
+      "name": "N",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        },
+        {
+          "portId": "w",
+          "tensorId": "W"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Y"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "op",
+          "name": "op",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "w",
+              "tensorId": "W"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Y"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "operator",
+            "asset": {
+              "assetId": "example:operator:gemm-serial-gather",
+              "revision": 1,
+              "kind": "operator"
+            },
+            "bindings": [
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "x",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "op",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "w",
+          "from": {
+            "kind": "graph_input",
+            "portId": "w"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "op",
+            "portId": "w"
+          },
+          "tensorId": "W"
+        },
+        {
+          "edgeId": "y",
+          "from": {
+            "kind": "node",
+            "nodeId": "op",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "Y"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sX"
+        },
+        {
+          "tensorId": "W",
+          "name": "W",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sW"
+        },
+        {
+          "tensorId": "Y",
+          "name": "Y",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sY"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "sX",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sW",
+          "name": "W",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sY",
+          "name": "Y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    }
+  }
+}

@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "kind": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "revision": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "name": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "user"
+            ]
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "yaml"
+            ]
+          },
+          "family": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "configModelTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          }
+        },
+        "required": [
+          "assetId",
+          "kind",
+          "revision",
+          "name",
+          "origin",
+          "archived",
+          "format"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "drafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "const": "asset_draft"
+          },
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "draftId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "assetId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "assetKind": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "baseRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draftGeneration": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "storageFormat": {
+            "type": "string",
+            "enum": [
+              "json",
+              "yaml"
+            ]
+          },
+          "importIntent": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/__schema4"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "preserve",
+                  "next"
+                ]
+              }
+            },
+            "required": [
+              "source",
+              "mode"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "documentType",
+          "schemaVersion",
+          "draftId",
+          "assetId",
+          "assetKind",
+          "baseRevision",
+          "draftGeneration",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "projectRevision": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "name": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "scenarioId": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema0"
+                },
+                "model": {
+                  "$ref": "#/$defs/__schema4"
+                }
+              },
+              "required": [
+                "scenarioId",
+                "name",
+                "model"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "assetSnapshotCount": {
+            "$ref": "#/$defs/__schema3"
+          }
+        },
+        "required": [
+          "projectId",
+          "projectRevision",
+          "name",
+          "scenarios",
+          "assetSnapshotCount"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "projectDrafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "const": "project_draft"
+          },
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "draftId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "projectId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "baseProjectRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draftGeneration": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "editorFormat": {
+            "type": "string",
+            "enum": [
+              "json",
+              "yaml"
+            ]
+          }
+        },
+        "required": [
+          "documentType",
+          "schemaVersion",
+          "draftId",
+          "projectId",
+          "baseProjectRevision",
+          "draftGeneration",
+          "updatedAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "validation",
+              "unsupported_version",
+              "io",
+              "reference",
+              "conflict",
+              "orphan_revision"
+            ]
+          },
+          "message": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "required": [
+          "file",
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "recoveries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "revision": {
+            "$ref": "#/$defs/__schema2"
+          },
+          "name": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "expectedRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/__schema2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "assetId",
+          "revision",
+          "name",
+          "expectedRevision"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "assets",
+    "drafts",
+    "projects",
+    "projectDrafts",
+    "issues",
+    "recoveries"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "string",
+      "enum": [
+        "model",
+        "module",
+        "operator",
+        "formula",
+        "parallel",
+        "quantization",
+        "hardware"
+      ]
+    },
+    "__schema2": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema3"
+    },
+    "__schema3": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "revision": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "kind": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "assetId",
+        "revision",
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

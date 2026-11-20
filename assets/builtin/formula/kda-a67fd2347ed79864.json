@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:kda:formula:80b01973d3c23abe",
+  "revision": 1,
+  "name": "2 * B * N * D * W [byte]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Four attention-plus-input-norm/residual fragments from the first KDA/KDA/KDA/MLA group, omitting all interleaved FFN/MoE, embeddings and full-model costs. All-MLA and all-KDA are four-fragment counterfactuals, not output/accuracy-equivalent models. Decode Q=1 only; B=1,C=15,H=8, heads N=2, KDA key/value D=4, conv W=4, MLA latent R=4, key nonpositional/extra dimensions D/P=4/2 and value D=4. Projection, convolution and normalization weights are declared BF16; A_log/dt_bias are explicit FP32. Gate and beta are FP32; three convolution buffers are BF16 and matrix state is FP32. Nonlinear operations use stated FP32-vector proxies. Recurrent useful arithmetic is B*N*(7*D*D+8*D+2), with explicit input/output conversion execution-only work. No instruction-level throughput, tensor-core, training or chunk-prefill claim. source allocation records newly allocated recurrent state with an extra FP32 state-sized temporary. K/V concatenation is grouped as one atomic leaf, conservatively retaining both old/new tuple buffers with an old-prefix-sized temporary; Python assigns key/value list entries sequentially and can release one old tensor earlier. Semantic state traffic counts old inputs/new outputs once; allocation-only temporaries are not charged a second copy. Labels track logical carried allocation, not physical pointers or Python allocator simulation. inplace is a separate theoretical implementation with no extra recurrent allocation and preallocated expanded K/V. It writes only new K/V rows and does not copy history; it is not claimed to be the released Python path. Both variants retain full per-layer independent states and do not share recurrent matrices across layers. Inputs include initialized warm convolution/matrix/KV state, including explicit zero-initialized buffers if C=0. Allocation/initialization/weight-loading startup and source tensor views or allocator slack are not simulated. Materialized graph intermediates use last-read liveness; norm/gate/recurrent internal arithmetic workspace is on chip apart from the declared new-state allocation. Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 4
+        },
+        "N": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "W": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 4
+        }
+      },
+      "expression": "2 * B * N * D * W",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

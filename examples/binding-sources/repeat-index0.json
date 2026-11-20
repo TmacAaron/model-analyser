@@ -1,0 +1,1052 @@
+{
+  "schemaVersion": 2,
+  "kind": "leaf_cost_source",
+  "inputHash": "b5988fc66310d323423d46f67af02d14468cf106d609ee80c188978dd8dca8c5",
+  "engineVersion": "0.1.0-execution.20",
+  "selector": {
+    "nodeId": "block[0]",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "node",
+        "nodeId": "block[0]"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "field": "executedOperations",
+    "computeClass": {
+      "arithmetic": "float",
+      "inputDtypes": [
+        {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        }
+      ],
+      "multiplyDtype": {
+        "category": "float",
+        "bits": 16,
+        "format": "bf16"
+      },
+      "accumulateDtype": {
+        "category": "float",
+        "bits": 32,
+        "format": "fp32"
+      },
+      "resource": "matrix"
+    }
+  },
+  "asset": {
+    "assetId": "echo-op",
+    "revision": 1,
+    "kind": "operator"
+  },
+  "metric": {
+    "status": "available",
+    "quantity": {
+      "value": 10,
+      "unit": "operation"
+    },
+    "basis": "theoretical",
+    "provenance": {
+      "assetRefs": [
+        {
+          "assetId": "binding:index-work",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "echo-model",
+          "revision": 1,
+          "kind": "model"
+        },
+        {
+          "assetId": "echo-op",
+          "revision": 1,
+          "kind": "operator"
+        },
+        {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      ],
+      "formulaRefs": [
+        {
+          "assetId": "binding:index-work",
+          "revision": 1,
+          "kind": "formula"
+        }
+      ],
+      "parameterSources": [
+        {
+          "parameterKey": "block[0]:P",
+          "source": "node_override"
+        }
+      ],
+      "assumptions": [
+        "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+        "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+        "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+        "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+        "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+        "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+      ]
+    },
+    "diagnosticIds": []
+  },
+  "operation": "sum",
+  "componentCount": 1,
+  "page": 0,
+  "pageSize": 20,
+  "complete": true,
+  "items": [
+    {
+      "quantity": {
+        "value": 10,
+        "unit": "operation"
+      },
+      "proof": {
+        "kind": "symbol",
+        "symbol": "P",
+        "quantity": {
+          "value": 10,
+          "unit": "operation"
+        }
+      },
+      "truncated": false,
+      "field": "compute[\"work\"].executedOperations",
+      "operation": "expression",
+      "contribution": {
+        "value": 10,
+        "unit": "operation"
+      }
+    }
+  ],
+  "symbols": [
+    {
+      "name": "P",
+      "quantity": {
+        "value": 10,
+        "unit": "operation"
+      }
+    }
+  ],
+  "request": {
+    "scenario": {
+      "scenarioId": "example:scenario:c01",
+      "name": "C01",
+      "model": {
+        "assetId": "echo-model",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "assets": [
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "echo-op",
+        "revision": 1,
+        "name": "Echo",
+        "tags": [],
+        "parameters": [
+          {
+            "key": "P",
+            "name": "P",
+            "type": "integer",
+            "unit": "operation",
+            "min": 0,
+            "default": {
+              "kind": "integer",
+              "value": 1
+            }
+          }
+        ],
+        "sources": [],
+        "definition": {
+          "kind": "operator",
+          "operator": {
+            "category": "custom",
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "X"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "y",
+                "tensorId": "Y"
+              }
+            ],
+            "tensors": [
+              {
+                "tensorId": "X",
+                "name": "X",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sX"
+              },
+              {
+                "tensorId": "Y",
+                "name": "Y",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sY"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "sX",
+                "name": "X",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sY",
+                "name": "Y",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": [],
+            "phases": [
+              "prefill",
+              "decode"
+            ],
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "work",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "symbol",
+                    "name": "P"
+                  },
+                  "executedOperations": {
+                    "kind": "symbol",
+                    "name": "P"
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read",
+                  "storageId": "sX",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 8,
+                      "unit": "byte"
+                    }
+                  }
+                },
+                {
+                  "accessId": "write",
+                  "storageId": "sY",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 8,
+                      "unit": "byte"
+                    }
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "fixed",
+                "seconds": 1,
+                "description": "Explicit synthetic leaf"
+              }
+            }
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "echo-model",
+        "revision": 1,
+        "name": "Echo model",
+        "tags": [],
+        "parameters": [],
+        "sources": [],
+        "definition": {
+          "kind": "model",
+          "family": "synthetic",
+          "variant": "echo",
+          "graph": {
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "X"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "y",
+                "tensorId": "Y"
+              }
+            ],
+            "nodes": [
+              {
+                "nodeId": "block",
+                "name": "Block",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "x",
+                    "tensorId": "X"
+                  },
+                  {
+                    "portId": "y",
+                    "tensorId": "Y"
+                  }
+                ],
+                "stateBindings": [],
+                "repeat": {
+                  "axis": "layer",
+                  "count": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 3,
+                      "unit": "count"
+                    }
+                  },
+                  "wiring": "chain",
+                  "carry": [
+                    {
+                      "outputPortId": "y",
+                      "inputPortId": "x"
+                    }
+                  ]
+                },
+                "body": {
+                  "kind": "operator",
+                  "asset": {
+                    "assetId": "echo-op",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  "bindings": [
+                    {
+                      "parameterKey": "P",
+                      "value": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "binding:index-work",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "i": {
+                              "kind": "symbol",
+                              "name": "layer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "edges": [
+              {
+                "edgeId": "in",
+                "from": {
+                  "kind": "graph_input",
+                  "portId": "x"
+                },
+                "to": {
+                  "kind": "node",
+                  "nodeId": "block",
+                  "portId": "x"
+                },
+                "tensorId": "X"
+              },
+              {
+                "edgeId": "out",
+                "from": {
+                  "kind": "node",
+                  "nodeId": "block",
+                  "portId": "y"
+                },
+                "to": {
+                  "kind": "graph_output",
+                  "portId": "y"
+                },
+                "tensorId": "Y"
+              }
+            ],
+            "dependencies": [],
+            "tensors": [
+              {
+                "tensorId": "X",
+                "name": "X",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sX"
+              },
+              {
+                "tensorId": "Y",
+                "name": "Y",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sY"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "sX",
+                "name": "X",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sY",
+                "name": "Y",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:hardware:c01",
+        "revision": 1,
+        "name": "C01 人工硬件",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "hardware",
+          "hardware": {
+            "capacityBytes": 4096,
+            "computeCapabilities": [
+              {
+                "computeClass": {
+                  "arithmetic": "float",
+                  "inputDtypes": [
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    }
+                  ],
+                  "multiplyDtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  "accumulateDtype": {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  },
+                  "resource": "matrix"
+                },
+                "kind": "peak",
+                "operationsPerSecond": 1000
+              }
+            ],
+            "memoryCapabilities": [
+              {
+                "key": "hbm",
+                "kind": "peak",
+                "bytesPerSecond": 100
+              }
+            ],
+            "communicationDefaults": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "binding:index-work",
+        "revision": 1,
+        "name": "实例索引工作量",
+        "tags": [],
+        "parameters": [],
+        "sources": [],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "i": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              }
+            },
+            "expression": "10 + i",
+            "output": {
+              "unit": "operation",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Actual repeated-call binding algorithm"
+          }
+        }
+      }
+    ],
+    "inputHash": "b5988fc66310d323423d46f67af02d14468cf106d609ee80c188978dd8dca8c5",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "block[0]",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "node",
+          "nodeId": "block[0]"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "executedOperations",
+      "computeClass": {
+        "arithmetic": "float",
+        "inputDtypes": [
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          }
+        ],
+        "multiplyDtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "accumulateDtype": {
+          "category": "float",
+          "bits": 32,
+          "format": "fp32"
+        },
+        "resource": "matrix"
+      }
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 10,
+        "unit": "operation"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "binding:index-work",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "echo-model",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "echo-op",
+            "revision": 1,
+            "kind": "operator"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "binding:index-work",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "block[0]:P",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "proofVersion": 2,
+    "bindingBudget": 256
+  },
+  "parameterBindings": {
+    "schemaVersion": 1,
+    "scope": "actual_call_and_storage_parameter_context",
+    "nodes": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "operation",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "echo-op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"repeat\\\",\\\"block[0]\\\",\\\"layer\\\"]\",\"layer\"]",
+        "kind": "repeat_index",
+        "inputs": [],
+        "value": {
+          "kind": "number",
+          "value": 0
+        },
+        "unit": "count",
+        "frameId": "[\"repeat\",\"block[0]\",\"layer\"]",
+        "name": "layer"
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"[\\\\\\\\\\\\\\\"asset\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"block[0]\\\\\\\\\\\\\\\"]\\\\\\\",\\\\\\\"P\\\\\\\",\\\\\\\"candidate\\\\\\\",1]\\\",\\\"expression\\\"]\",\"argument\",\"i\"]",
+        "value": {
+          "kind": "number",
+          "value": 0
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "layer",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"repeat\\\",\\\"block[0]\\\",\\\"layer\\\"]\",\"layer\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"block[0]\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 10
+        },
+        "unit": "operation",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "实例索引工作量",
+        "kind": "formula",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"[\\\\\\\\\\\\\\\"asset\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"block[0]\\\\\\\\\\\\\\\"]\\\\\\\",\\\\\\\"P\\\\\\\",\\\\\\\"candidate\\\\\\\",1]\\\",\\\"expression\\\"]\",\"argument\",\"i\"]"
+        ],
+        "formula": {
+          "assetId": "binding:index-work",
+          "revision": 1,
+          "kind": "formula"
+        },
+        "proof": {
+          "kind": "formula",
+          "formula": {
+            "assetId": "binding:index-work",
+            "revision": 1,
+            "kind": "formula"
+          },
+          "name": "实例索引工作量",
+          "definition": {
+            "inputs": {
+              "i": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              }
+            },
+            "expression": "10 + i",
+            "output": {
+              "unit": "operation",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Actual repeated-call binding algorithm"
+          },
+          "bindings": [
+            {
+              "name": "i",
+              "quantity": {
+                "value": 0,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "layer",
+                "quantity": {
+                  "value": 0,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "kind": "symbol",
+              "name": "i",
+              "value": 0,
+              "local": false
+            },
+            {
+              "kind": "operation",
+              "operator": "+",
+              "operands": [
+                10,
+                0
+              ],
+              "value": 10
+            }
+          ],
+          "quantity": {
+            "value": 10,
+            "unit": "operation"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"block[0]\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 10
+        },
+        "unit": "operation",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "block[0]"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 10
+        },
+        "unit": "operation",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "block[0]"
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "parameterKey": "P",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "echo-op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "parameterKey": "P",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "block[0]"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\",\"candidate\",1]"
+      }
+    ],
+    "roots": [
+      {
+        "role": "call",
+        "target": "block[0]",
+        "frameId": "[\"asset\",\"block[0]\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"block[0]\\\"]\",\"P\"]"
+      }
+    ],
+    "complete": true,
+    "truncated": false,
+    "boundaries": [],
+    "frameCount": 4
+  }
+}

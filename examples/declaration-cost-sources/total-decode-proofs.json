@@ -1,0 +1,569 @@
+[
+  {
+    "quantity": {
+      "value": 200,
+      "unit": "byte"
+    },
+    "proof": {
+      "kind": "formula",
+      "formula": {
+        "assetId": "example:formula:declaration-nested",
+        "revision": 1,
+        "kind": "formula"
+      },
+      "name": "Nested explicit branch budget",
+      "definition": {
+        "inputs": {
+          "bytes": {
+            "unit": "byte",
+            "integerRequired": true,
+            "min": 0
+          },
+          "flag": {
+            "unit": "count",
+            "integerRequired": true,
+            "min": 0
+          }
+        },
+        "expression": "if(flag > 0, bytes, sum(i, 1, 2, bytes))",
+        "output": {
+          "unit": "byte",
+          "integerRequired": true,
+          "nonNegative": true
+        },
+        "description": "Nested binding evaluated eagerly; only the selected expression branch is evaluated"
+      },
+      "bindings": [
+        {
+          "name": "bytes",
+          "quantity": {
+            "value": 200,
+            "unit": "byte"
+          },
+          "proof": {
+            "kind": "formula",
+            "formula": {
+              "assetId": "example:formula:declaration-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            "name": "Actual bound scalar ×100 bytes",
+            "definition": {
+              "inputs": {
+                "x": {
+                  "unit": "count",
+                  "integerRequired": true,
+                  "min": 0
+                }
+              },
+              "expression": "100 * x",
+              "output": {
+                "unit": "byte",
+                "integerRequired": true,
+                "nonNegative": true
+              },
+              "description": "Actual input scalar times100 bytes"
+            },
+            "bindings": [
+              {
+                "name": "x",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                },
+                "proof": {
+                  "kind": "symbol",
+                  "symbol": "C",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "events": [
+              {
+                "kind": "symbol",
+                "name": "x",
+                "value": 2,
+                "local": false
+              },
+              {
+                "kind": "operation",
+                "operator": "*",
+                "operands": [
+                  100,
+                  2
+                ],
+                "value": 200
+              }
+            ],
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            }
+          }
+        },
+        {
+          "name": "flag",
+          "quantity": {
+            "value": 1,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": "symbol",
+          "name": "flag",
+          "value": 1,
+          "local": false
+        },
+        {
+          "kind": "operation",
+          "operator": ">",
+          "operands": [
+            1,
+            0
+          ],
+          "value": 1
+        },
+        {
+          "kind": "branch",
+          "condition": 1,
+          "taken": "then"
+        },
+        {
+          "kind": "symbol",
+          "name": "bytes",
+          "value": 200,
+          "local": false
+        }
+      ],
+      "quantity": {
+        "value": 200,
+        "unit": "byte"
+      }
+    },
+    "truncated": false,
+    "inputHash": "36b30713507b6677638970aec628d08057d3db93bd9a03cd49bc2a22da741984",
+    "nodeId": "$model",
+    "symbols": [
+      {
+        "name": "C",
+        "assignments": [
+          {
+            "name": "C",
+            "quantity": {
+              "value": 2,
+              "unit": "count"
+            },
+            "source": {
+              "kind": "parameter",
+              "parameter": {
+                "nodeId": "$model",
+                "parameterKey": "C",
+                "value": {
+                  "kind": "integer",
+                  "value": 2
+                },
+                "unit": "count",
+                "source": {
+                  "kind": "scenario_override",
+                  "scenarioId": "example:scenario:decode-state"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "verifiedInputHash": "36b30713507b6677638970aec628d08057d3db93bd9a03cd49bc2a22da741984",
+    "engineVersion": "0.1.0-execution.20"
+  },
+  {
+    "quantity": {
+      "value": 300,
+      "unit": "byte"
+    },
+    "proof": {
+      "kind": "formula",
+      "formula": {
+        "assetId": "example:formula:declaration-nested",
+        "revision": 1,
+        "kind": "formula"
+      },
+      "name": "Nested explicit branch budget",
+      "definition": {
+        "inputs": {
+          "bytes": {
+            "unit": "byte",
+            "integerRequired": true,
+            "min": 0
+          },
+          "flag": {
+            "unit": "count",
+            "integerRequired": true,
+            "min": 0
+          }
+        },
+        "expression": "if(flag > 0, bytes, sum(i, 1, 2, bytes))",
+        "output": {
+          "unit": "byte",
+          "integerRequired": true,
+          "nonNegative": true
+        },
+        "description": "Nested binding evaluated eagerly; only the selected expression branch is evaluated"
+      },
+      "bindings": [
+        {
+          "name": "bytes",
+          "quantity": {
+            "value": 300,
+            "unit": "byte"
+          },
+          "proof": {
+            "kind": "formula",
+            "formula": {
+              "assetId": "example:formula:declaration-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            "name": "Actual bound scalar ×100 bytes",
+            "definition": {
+              "inputs": {
+                "x": {
+                  "unit": "count",
+                  "integerRequired": true,
+                  "min": 0
+                }
+              },
+              "expression": "100 * x",
+              "output": {
+                "unit": "byte",
+                "integerRequired": true,
+                "nonNegative": true
+              },
+              "description": "Actual input scalar times100 bytes"
+            },
+            "bindings": [
+              {
+                "name": "x",
+                "quantity": {
+                  "value": 3,
+                  "unit": "count"
+                },
+                "proof": {
+                  "kind": "symbol",
+                  "symbol": "C",
+                  "quantity": {
+                    "value": 3,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "events": [
+              {
+                "kind": "symbol",
+                "name": "x",
+                "value": 3,
+                "local": false
+              },
+              {
+                "kind": "operation",
+                "operator": "*",
+                "operands": [
+                  100,
+                  3
+                ],
+                "value": 300
+              }
+            ],
+            "quantity": {
+              "value": 300,
+              "unit": "byte"
+            }
+          }
+        },
+        {
+          "name": "flag",
+          "quantity": {
+            "value": 1,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": "symbol",
+          "name": "flag",
+          "value": 1,
+          "local": false
+        },
+        {
+          "kind": "operation",
+          "operator": ">",
+          "operands": [
+            1,
+            0
+          ],
+          "value": 1
+        },
+        {
+          "kind": "branch",
+          "condition": 1,
+          "taken": "then"
+        },
+        {
+          "kind": "symbol",
+          "name": "bytes",
+          "value": 300,
+          "local": false
+        }
+      ],
+      "quantity": {
+        "value": 300,
+        "unit": "byte"
+      }
+    },
+    "truncated": false,
+    "inputHash": "ea74cb5dc1f3a0c2a9b604c4a2ce97266677e78733cad43c0c78e3562b9702ef",
+    "nodeId": "$model",
+    "symbols": [
+      {
+        "name": "C",
+        "assignments": [
+          {
+            "name": "C",
+            "quantity": {
+              "value": 3,
+              "unit": "count"
+            },
+            "source": {
+              "kind": "parameter",
+              "parameter": {
+                "nodeId": "$model",
+                "parameterKey": "C",
+                "value": {
+                  "kind": "integer",
+                  "value": 3
+                },
+                "unit": "count",
+                "source": {
+                  "kind": "scenario_override",
+                  "scenarioId": "example:scenario:decode-state"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "verifiedInputHash": "ea74cb5dc1f3a0c2a9b604c4a2ce97266677e78733cad43c0c78e3562b9702ef",
+    "engineVersion": "0.1.0-execution.20"
+  },
+  {
+    "quantity": {
+      "value": 400,
+      "unit": "byte"
+    },
+    "proof": {
+      "kind": "formula",
+      "formula": {
+        "assetId": "example:formula:declaration-nested",
+        "revision": 1,
+        "kind": "formula"
+      },
+      "name": "Nested explicit branch budget",
+      "definition": {
+        "inputs": {
+          "bytes": {
+            "unit": "byte",
+            "integerRequired": true,
+            "min": 0
+          },
+          "flag": {
+            "unit": "count",
+            "integerRequired": true,
+            "min": 0
+          }
+        },
+        "expression": "if(flag > 0, bytes, sum(i, 1, 2, bytes))",
+        "output": {
+          "unit": "byte",
+          "integerRequired": true,
+          "nonNegative": true
+        },
+        "description": "Nested binding evaluated eagerly; only the selected expression branch is evaluated"
+      },
+      "bindings": [
+        {
+          "name": "bytes",
+          "quantity": {
+            "value": 400,
+            "unit": "byte"
+          },
+          "proof": {
+            "kind": "formula",
+            "formula": {
+              "assetId": "example:formula:declaration-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            "name": "Actual bound scalar ×100 bytes",
+            "definition": {
+              "inputs": {
+                "x": {
+                  "unit": "count",
+                  "integerRequired": true,
+                  "min": 0
+                }
+              },
+              "expression": "100 * x",
+              "output": {
+                "unit": "byte",
+                "integerRequired": true,
+                "nonNegative": true
+              },
+              "description": "Actual input scalar times100 bytes"
+            },
+            "bindings": [
+              {
+                "name": "x",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                },
+                "proof": {
+                  "kind": "symbol",
+                  "symbol": "C",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "events": [
+              {
+                "kind": "symbol",
+                "name": "x",
+                "value": 4,
+                "local": false
+              },
+              {
+                "kind": "operation",
+                "operator": "*",
+                "operands": [
+                  100,
+                  4
+                ],
+                "value": 400
+              }
+            ],
+            "quantity": {
+              "value": 400,
+              "unit": "byte"
+            }
+          }
+        },
+        {
+          "name": "flag",
+          "quantity": {
+            "value": 1,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            }
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": "symbol",
+          "name": "flag",
+          "value": 1,
+          "local": false
+        },
+        {
+          "kind": "operation",
+          "operator": ">",
+          "operands": [
+            1,
+            0
+          ],
+          "value": 1
+        },
+        {
+          "kind": "branch",
+          "condition": 1,
+          "taken": "then"
+        },
+        {
+          "kind": "symbol",
+          "name": "bytes",
+          "value": 400,
+          "local": false
+        }
+      ],
+      "quantity": {
+        "value": 400,
+        "unit": "byte"
+      }
+    },
+    "truncated": false,
+    "inputHash": "68c64c3a4a3d5087ecd934d77ae419713407c93b89c3e9200f47c5ff4711466f",
+    "nodeId": "$model",
+    "symbols": [
+      {
+        "name": "C",
+        "assignments": [
+          {
+            "name": "C",
+            "quantity": {
+              "value": 4,
+              "unit": "count"
+            },
+            "source": {
+              "kind": "parameter",
+              "parameter": {
+                "nodeId": "$model",
+                "parameterKey": "C",
+                "value": {
+                  "kind": "integer",
+                  "value": 4
+                },
+                "unit": "count",
+                "source": {
+                  "kind": "scenario_override",
+                  "scenarioId": "example:scenario:decode-state"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "verifiedInputHash": "68c64c3a4a3d5087ecd934d77ae419713407c93b89c3e9200f47c5ff4711466f",
+    "engineVersion": "0.1.0-execution.20"
+  }
+]

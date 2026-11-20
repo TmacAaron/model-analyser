@@ -1,0 +1,49 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:quantization:w4-g32",
+  "revision": 1,
+  "name": "Weight 4 bit · group32 FP16 scale",
+  "tags": [
+    "p6-expansion"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Authored modeling assumptions; editable fixed revision. Not a measurement."
+    },
+    {
+      "kind": "note",
+      "text": "Contiguous weight payload: ceil(elements*bits/8) bytes; one FP16 scale per ceil(elements/32). Packing unit/alignment 1, no zero-point; internal arithmetic remains explicitly declared. Not an accuracy or real file-format guarantee."
+    }
+  ],
+  "definition": {
+    "kind": "quantization",
+    "quantization": {
+      "selector": {
+        "kind": "subtree",
+        "rootNodeId": "$model"
+      },
+      "weight": {
+        "payloadBits": 4,
+        "packingUnitElements": 1,
+        "alignmentBytes": 1,
+        "auxiliaries": [
+          {
+            "name": "scale",
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "fp16"
+            },
+            "count": {
+              "kind": "group",
+              "groupSize": 32
+            }
+          }
+        ]
+      }
+    }
+  }
+}

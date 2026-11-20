@@ -1,0 +1,113 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "scope": "Complete synthetic GQA attention/residual block; no norm/RoPE/MLP/embedding/head and no full language-model or real hardware claim.",
+  "parameters": {
+    "B": 1,
+    "Q": 1,
+    "C": 2,
+    "H": 8,
+    "NH": 4,
+    "NK": 2,
+    "D": 2
+  },
+  "independent": {
+    "parameterElements": 192,
+    "weightBytes": 384,
+    "cacheBytes": 48,
+    "matrixOperations": 480,
+    "vectorProxyOperations": 68,
+    "logicalHBMBytes": 848,
+    "singleDevicePeakBytes": 544,
+    "ringPayloadBytes": 16,
+    "ringTimeSeconds": 0.018
+  },
+  "sources": [
+    {
+      "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/usage/collectives.html",
+      "checkedOn": "2026-11-14",
+      "use": "AllReduce sum and ReduceScatter/AllGather semantics; no claim of reproducing the library runtime."
+    },
+    {
+      "url": "https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md",
+      "checkedOn": "2026-11-14",
+      "use": "Full-message AllReduce payload factor 2(P-1)/P. Ring startup rounds and rates are declared analytical inputs, not a benchmark."
+    },
+    {
+      "url": "https://github.com/NVIDIA/nccl/blob/v2.23.4-1/src/device/all_reduce.h",
+      "checkedOn": "2026-11-14",
+      "use": "Tagged ring schedule reference; modeled 2(P-1) neighbor stages, not NCCL kernel/topology/protocol performance."
+    }
+  ],
+  "rows": [
+    {
+      "preset": "tp-heads",
+      "weight": 192,
+      "state": 24,
+      "peak": 280,
+      "matrix": 480,
+      "seconds": 4.818,
+      "batch": 1,
+      "communicationCount": 1,
+      "inputHash": "5758a0e2d027fc25f57eb18d3bf1b80063168591c3f5a1ca8d570459c6bacd9c",
+      "logicalMatrixOperations": 480,
+      "capacities": [
+        {
+          "field": "batchSize",
+          "maximum": 9
+        },
+        {
+          "field": "contextTokensPerRequest",
+          "maximum": 33
+        }
+      ]
+    },
+    {
+      "preset": "tp-kv-replicated",
+      "weight": 256,
+      "state": 48,
+      "peak": 368,
+      "matrix": 608,
+      "seconds": 5.938,
+      "batch": 1,
+      "communicationCount": 1,
+      "inputHash": "399105e9aa8c522e0d1ea9be0d70237edcaf8c256183ee36d93363982988c619",
+      "logicalMatrixOperations": 480,
+      "capacities": [
+        {
+          "field": "batchSize",
+          "maximum": 6
+        },
+        {
+          "field": "contextTokensPerRequest",
+          "maximum": 22
+        }
+      ]
+    },
+    {
+      "preset": "replicated",
+      "weight": 384,
+      "state": 48,
+      "peak": 544,
+      "matrix": 960,
+      "seconds": 8.48,
+      "batch": 1,
+      "communicationCount": 0,
+      "inputHash": "e5c8ac5283f250a7272329350c82399d3a848ade49d6023290f6d77e7bc31267",
+      "logicalMatrixOperations": 480,
+      "capacities": []
+    },
+    {
+      "preset": "dp-batch",
+      "weight": 384,
+      "state": 48,
+      "peak": 544,
+      "matrix": 960,
+      "seconds": 8.48,
+      "batch": 2,
+      "communicationCount": 0,
+      "inputHash": "3e4aa5313d82819f7a6f7b3346ffe14fba458489ef90fdb5c6009b74582d7d0f",
+      "logicalMatrixOperations": 960,
+      "capacities": []
+    }
+  ]
+}

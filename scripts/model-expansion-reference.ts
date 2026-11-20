@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { readFile,writeFile,mkdir,readdir } from 'node:fs/promises';
+import { AssetDocument,type ProjectDocument,type MetricValue } from '@model-analyser/contracts';
+import { analyzeScenario,ENGINE_VERSION } from '@model-analyser/core';
+import { canonical,validateAssets,validateProject } from '../packages/contracts/src/validation.js';
+import { validateResult } from '../packages/contracts/src/result-validation.js';
+import { makeGlmAssets,makeQwen17Assets,makeGlmProject,makeQwen17Project } from './model-expansion.js';
+import { makeQwenAssets } from './qwen-model.js';
+import { glmOracle,glmSmall,glmDefaults,type GlmDimensions } from './glm-oracle.js';
+import { verifyExpandedModelSources } from './model-expansion-sources.js';
+const value=(m:MetricValue|undefined)=>{if(m?.status!=='available')throw Error('Unavailable reference metric');return m.quantity.value;};
+const inventory=await verifyExpandedModelSources(),assets=[...new Map([...makeQwen17Assets(),...makeGlmAssets()].map(a=>[a.assetId,a])).values()];assert.deepEqual(validateAssets(assets),[]);let added=0,reused=0;
+for(const asset of assets){const dir='assets/builtin/'+asset.definition.kind,file=dir+'/'+asset.assetId.split(':').slice(2).join('-')+'.json';await mkdir(dir,{recursive:true});let old:AssetDocument|undefined;try{old=AssetDocument.parse(JSON.parse(await readFile(file,'utf8')) as unknown);}catch(e){if(!(e instanceof Error&&'code'in e&&e.code==='ENOENT'))throw e;}if(old){assert.equal(canonical(old),canonical(asset),'Fixed asset identity must never change: '+asset.assetId);reused++;}else{await writeFile(file,JSON.stringify(asset,null,2)+'\n');added++;}}
+function tiny(LAST:number){const d={...glmSmall,LAST},p=makeGlmProject({kind:'prefill',batchSize:d.B,pastTokensPerRequest:d.C,queryTokensPerRequest:d.Q});p.scenarios[0]!.numericOverrides=Object.entries(d).filter(([k])=>!['B','Q','C'].includes(k)).map(([parameterKey,value])=>({target:{kind:'scenario',scenarioId:p.scenarios[0]!.scenarioId},field:'parameter',parameterKey,value:{value,unit:'count'}}));return p;}
+const projects:{file:string;p:ProjectDocument;dimensions?:GlmDimensions}[]=[
+  {file:'qwen3-1.7b-decode',p:makeQwen17Project({kind:'decode',batchSize:1,contextTokensPerRequest:2,queryTokensPerRequest:1,steps:2})},
+  {file:'qwen3-1.7b-prefill',p:makeQwen17Project({kind:'prefill',batchSize:2,pastTokensPerRequest:3,queryTokensPerRequest:4})},
+  {file:'glm-4-9b-decode',p:makeGlmProject(),dimensions:glmDefaults},
+  {file:'glm-4-9b-prefill',p:makeGlmProject({kind:'prefill',batchSize:2,pastTokensPerRequest:1,queryTokensPerRequest:3}),dimensions:{...glmDefaults,B:2,Q:3,C:1}},
+  ...[0,1].map(LAST=>({file:'glm-4-small-'+(LAST?'last':'full'),p:tiny(LAST),dimensions:{...glmSmall,LAST}}))
+];
+await mkdir('examples/expanded-models',{recursive:true});const rows=[];
+for(const {file,p,dimensions}of projects){p.projectId+=':'+file;p.name+=' · '+file;assert.deepEqual(validateProject(p),[]);const a=await analyzeScenario(p.scenarios[0]!,p.assetSnapshots);assert(a.status==='available',a.status==='unavailable'?JSON.stringify(a.diagnostics):'');assert.deepEqual(validateResult(a.result),[]);const r=a.result,o=dimensions?glmOracle(dimensions):undefined;
+  if(o){assert.equal(value(r.total.hbmBytes),o.hbmBytes);assert.equal(value(r.memory[0]?.peakBytes),o.peakBytes);assert(Math.abs(value(r.total.seconds)-o.seconds)<1e-12);for(const [resource,useful,executed]of [['matrix',o.matrixUseful,o.matrixExecuted],['vector',o.vectorUseful,o.vectorExecuted]] as const){const c=r.total.compute.find(c=>c.computeClass.resource===resource);assert.equal(value(c?.usefulOperations),useful);assert.equal(value(c?.executedOperations),executed);}assert.equal(value(r.memory[0]?.categoryBreakdown.find(c=>c.category==='weight')?.bytes),o.weightBytes);}
+  await writeFile('examples/expanded-models/'+file+'.json',JSON.stringify(p,null,2)+'\n');rows.push({file,dimensions,inputHash:r.inputHash,nodes:r.nodes.length,compute:r.total.compute.map(c=>({resource:c.computeClass.resource,usefulOperations:value(c.usefulOperations),executedOperations:value(c.executedOperations)})),hbmBytes:value(r.total.hbmBytes),seconds:value(r.total.seconds),peakBytes:value(r.memory[0]?.peakBytes),peakCategories:r.memory[0]?.categoryBreakdown.map(c=>({category:c.category,bytes:value(c.bytes)})),oracle:o?{parameters:o.parameters,weightBytes:o.weightBytes,stateBytes:o.stateBytes,reserveBytes:o.reserveBytes,peakNode:o.peakNode}:undefined});
+}
+const files=(await readdir('assets/builtin',{recursive:true})).filter(p=>p.endsWith('.json')),common=new Set(makeQwenAssets().map(a=>a.assetId)),shared=assets.filter(a=>common.has(a.assetId)).length;await writeFile('examples/expanded-models/reference.json',JSON.stringify({engineVersion:ENGINE_VERSION,description:'Fixed specific model metadata/code, no weights or inference. GLM BASE 8K authored mathematical SDPA attention, half-head rotary and preallocated group KV; explicit materializations, NOT real SDPA allocator. Independent scalar work/HBM/liveness/roofline ledger. Qwen1.7 reuses original Qwen decoder/formula revisions. Synthetic hardware only.',inventory,assets:{newReferences:assets.length-shared,reusedQwenReferences:shared,totalInExpansion:assets.length,builtinJsonFiles:files.length},rows},null,2)+'\n');console.log(JSON.stringify({sources:inventory.files,assetsAdded:added,assetsReused:reused,builtinJsonFiles:files.length,projects:rows.length,rows:rows.map(r=>({file:r.file,nodes:r.nodes,peakBytes:r.peakBytes,hbmBytes:r.hbmBytes}))}));

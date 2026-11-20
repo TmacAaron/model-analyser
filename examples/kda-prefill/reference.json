@@ -1,0 +1,4372 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "source": {
+    "checkedOn": "2026-11-15",
+    "baseLock": "references/parallel/kda-source-lock.json",
+    "kernelCommit": "2e0f6c31f9db50f010cb157c712c048b8a3a89d2",
+    "url": "https://github.com/fla-org/flash-linear-attention/blob/2e0f6c31f9db50f010cb157c712c048b8a3a89d2/fla/ops/kda/chunk.py",
+    "files": [
+      {
+        "path": "fla/ops/kda/chunk.py",
+        "local": "prefill-kda-chunk.py",
+        "sha256": "c25f6ee700a85a4b8083544fc2477e74c9c3ce8b7bda95d8f9b97e8c14fdcebe"
+      },
+      {
+        "path": "fla/ops/kda/naive.py",
+        "local": "prefill-naive.py",
+        "sha256": "f87c860626af6ecb5a4a7025b18d41d4c95e511810c5c3683ef1a9ff1255da27"
+      },
+      {
+        "path": "fla/ops/kda/chunk_intra.py",
+        "local": "prefill-chunk_intra.py",
+        "sha256": "d72df1203639b38b46e2d7ed6c57eebf8716362d36dbb3432f02145b63fd009f"
+      },
+      {
+        "path": "fla/ops/kda/wy_fast.py",
+        "local": "prefill-wy_fast.py",
+        "sha256": "bd9dbf28304de78fc80d89e28bd7b06dc1efec52ea1f1477afc29f1d08279c57"
+      },
+      {
+        "path": "fla/ops/common/chunk_delta_h.py",
+        "local": "prefill-chunk_delta_h.py",
+        "sha256": "316d2b0efff33224fcbd819f0ae19c7f42327950f2937a36296c7862d240b72b"
+      },
+      {
+        "path": "fla/ops/gla/chunk.py",
+        "local": "prefill-gla-chunk.py",
+        "sha256": "0debf55a948ca3c220fec696c7b171a30b4f6551884ffdd2bebeec023eb56486"
+      },
+      {
+        "path": "fla/modules/l2norm.py",
+        "local": "prefill-l2norm.py",
+        "sha256": "1e5426938323832bc36116a9f7378084d87ee3be2f7d59c33a044d1ef3cd4fbc"
+      }
+    ],
+    "verifiedSemantics": [
+      "The fixed model selects fused_recurrent at Q<=64 and chunk at Q>64. ShortConvolution uses the in-place step only for one token; multi-token forward emits a new final W-slot buffer.",
+      "Recurrent prefill carries FP32 state on chip through the whole query sequence, loading/storing one initial/final matrix. Chunk uses size 64, local gate prefix sums, intra Aqk/Akk, a triangular solve, WY preparation, inter-chunk states/new values and final output.",
+      "Aqk and raw Akk allocate B*Q*N*64 FP32 entries, solved Akk is BF16, W/U/KG and new values are BF16, chunk-state history has ceil(Q/64) BF16 matrices, final state is FP32. Chunk matrix dots cast operands to BF16 with FP32 accumulation, while gate/intra/solve work uses FP32 arithmetic.",
+      "Full attention prefill computes dense Q-by-Q scores with a causal mask and FP32 softmax followed by BF16 probabilities; it cannot reuse the one-query decode formula."
+    ],
+    "authoredAssumptions": [
+      "Cold prefill with explicit initialized zero buffers and C=0, Q=2..64 for short or 65..256 for chunk. Q=1 remains the fixed decode preset. Four attention/input-norm/residual fragments; no FFN/MoE or full-model weight loading, startup/zero-fill, varlen, backward or full-model inference execution. Declared projection/norm weights remain included in cost and allocation. Miniature H=8,N=2,D=4,W=4,R=4,P=2 follows the separate decode study's declared precision.",
+      "Each weight is read once per batched leaf. Convolution uses declared direct-stencil logical HBM reads, including final-tail copy; no unstated cache reuse or per-Triton-block weight replay. Causal zero-padding contributes execution but not useful dot work. Its old/new three-buffer coexistence is conservatively retained over the whole KDA module using allocation-only workspace, rather than simulating Python pointers.",
+      "Short recurrence loads/stores the FP32 matrix once. Chunk uses a mathematical stage ledger, not a CUDA instruction counter: valid causal pairs define useful work; fixed 64-token tiles define executed intra/solve/dot work. Channel tiling, launch tuning and actual Tensor Core tile padding are not inferred from the artificial D=4 shape. Exponential/normalization/triangular-solve operations use stated scalar proxies.",
+      "Chunk tensors preserve source logical dtypes and row storage Q*64, not ceil(Q/64)*64*64. Last-use materialization releases raw Akk after solve and WY matrices after inter-state processing. Allocation-only new final matrix and old convolution tuple are not charged extra HBM copies. Projection/norm/gate proxies retain their declared on-chip internal workspace and explicit execution-only conversions.",
+      "One shared BF16 causal mask is created for models containing MLA and retained until its last reader. Dense future score/AV work and storage remain executed; useful work counts causal pairs. FP32 probability materialization and BF16 output conversion are separate nodes. Expanded K/V contains all Q rows and is not a latent cache.",
+      "Artificial 262144-byte prefill device with BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial last-use liveness, no implicit networking/fusion or real-kernel speed/accuracy claim. Existing decode asset identities and contents are preserved."
+    ]
+  },
+  "rows": [
+    {
+      "name": "hybrid-short",
+      "oracle": {
+        "profile": "hybrid",
+        "route": "short",
+        "B": 1,
+        "Q": 8,
+        "H": 8,
+        "N": 2,
+        "chunks": 1,
+        "lastChunkRows": 8,
+        "causalPairs": 36,
+        "weights": 3736,
+        "state": 1280,
+        "activation": 1216,
+        "workspace": 320,
+        "peak": 6552,
+        "peakNode": "l0/rnn",
+        "seconds": 302.9599999999999,
+        "hbm": 30296,
+        "matrixUseful": 24992,
+        "matrix": 26112,
+        "vectorUseful": 17904,
+        "vector": 25616,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 128,
+            "seconds": 1.28,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 320,
+            "seconds": 3.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 200,
+            "seconds": 2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 448,
+            "seconds": 4.48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 608,
+            "seconds": 6.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "b566a62bd47a87dbfa9e0abb3600ccae7589bda5c4f9c7b48bdc920ed594a226"
+    },
+    {
+      "name": "hybrid-64",
+      "oracle": {
+        "profile": "hybrid",
+        "route": "short",
+        "B": 1,
+        "Q": 64,
+        "H": 8,
+        "N": 2,
+        "chunks": 1,
+        "lastChunkRows": 64,
+        "causalPairs": 2080,
+        "weights": 3736,
+        "state": 3520,
+        "activation": 50176,
+        "workspace": 0,
+        "peak": 57432,
+        "peakNode": "l3/soft",
+        "seconds": 3604.7200000000003,
+        "hbm": 360472,
+        "matrixUseful": 271616,
+        "matrix": 352256,
+        "vectorUseful": 177952,
+        "vector": 273024,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 2064,
+            "seconds": 20.64,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 1312,
+            "seconds": 13.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 3112,
+            "seconds": 31.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/rnn",
+            "hbm": 6912,
+            "seconds": 69.12,
+            "workspace": 320
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 3080,
+            "seconds": 30.8,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 3072,
+            "seconds": 30.72,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 2064,
+            "seconds": 20.64,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 1312,
+            "seconds": 13.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 3112,
+            "seconds": 31.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/rnn",
+            "hbm": 6912,
+            "seconds": 69.12,
+            "workspace": 320
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 3080,
+            "seconds": 30.8,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 3072,
+            "seconds": 30.72,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 2064,
+            "seconds": 20.64,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 1312,
+            "seconds": 13.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 1600,
+            "seconds": 16,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 3112,
+            "seconds": 31.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/rnn",
+            "hbm": 6912,
+            "seconds": 69.12,
+            "workspace": 320
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 3080,
+            "seconds": 30.8,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 3072,
+            "seconds": 30.72,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 2064,
+            "seconds": 20.64,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 2752,
+            "seconds": 27.52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 1888,
+            "seconds": 18.88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 1544,
+            "seconds": 15.44,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 2688,
+            "seconds": 26.88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 4864,
+            "seconds": 48.64,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 19456,
+            "seconds": 194.56,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 40960,
+            "seconds": 409.6,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 49152,
+            "seconds": 491.52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 49152,
+            "seconds": 491.52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 18432,
+            "seconds": 184.32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 2176,
+            "seconds": 21.76,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 3072,
+            "seconds": 30.72,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "297911e0b8a0c1785266ab1e38b347e433e1d948ac33586fb6bdb8c04f7d12fb"
+    },
+    {
+      "name": "hybrid-chunk",
+      "oracle": {
+        "profile": "hybrid",
+        "route": "chunk",
+        "B": 1,
+        "Q": 65,
+        "H": 8,
+        "N": 2,
+        "chunks": 2,
+        "lastChunkRows": 1,
+        "causalPairs": 2081,
+        "weights": 3736,
+        "state": 3560,
+        "activation": 99450,
+        "workspace": 192,
+        "peak": 106938,
+        "peakNode": "l0/solve",
+        "seconds": 9452.839999999997,
+        "hbm": 945284,
+        "matrixUseful": 614264,
+        "matrix": 1033128,
+        "vectorUseful": 1208196,
+        "vector": 2449589,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 8450,
+            "seconds": 84.5,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l0/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l0/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l0/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l0/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l1/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l1/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l1/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l1/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l2/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l2/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l2/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l2/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 2792,
+            "seconds": 27.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 1916,
+            "seconds": 19.16,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 1568,
+            "seconds": 15.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 2728,
+            "seconds": 27.28,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 4940,
+            "seconds": 49.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 20020,
+            "seconds": 200.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 42250,
+            "seconds": 422.5,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 18980,
+            "seconds": 189.8,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "a0c3db1061d24b28f797187a049aa6f9e074e53f9304e43960547ea06e0f0b3d"
+    },
+    {
+      "name": "hybrid-128",
+      "oracle": {
+        "profile": "hybrid",
+        "route": "chunk",
+        "B": 1,
+        "Q": 128,
+        "H": 8,
+        "N": 2,
+        "chunks": 2,
+        "lastChunkRows": 64,
+        "causalPairs": 4160,
+        "weights": 3736,
+        "state": 6080,
+        "activation": 211968,
+        "workspace": 192,
+        "peak": 221976,
+        "peakNode": "l0/solve",
+        "seconds": 22100.72,
+        "hbm": 2210072,
+        "matrixUseful": 1379840,
+        "matrix": 2285568,
+        "vectorUseful": 2476512,
+        "vector": 3944768,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 32768,
+            "seconds": 327.68,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 4112,
+            "seconds": 41.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 2592,
+            "seconds": 25.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 1536,
+            "seconds": 15.36,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qknorm",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 6184,
+            "seconds": 61.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/prefix",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/intra",
+            "hbm": 140288,
+            "seconds": 1402.88,
+            "workspace": 192
+          },
+          {
+            "id": "l0/solve",
+            "hbm": 98304,
+            "seconds": 983.04,
+            "workspace": 192
+          },
+          {
+            "id": "l0/wy",
+            "hbm": 48128,
+            "seconds": 481.28,
+            "workspace": 192
+          },
+          {
+            "id": "l0/inter",
+            "hbm": 12672,
+            "seconds": 126.72,
+            "workspace": 320
+          },
+          {
+            "id": "l0/chunkout",
+            "hbm": 75904,
+            "seconds": 759.04,
+            "workspace": 192
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 6152,
+            "seconds": 61.52,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 6144,
+            "seconds": 61.44,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 4112,
+            "seconds": 41.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 2592,
+            "seconds": 25.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 1536,
+            "seconds": 15.36,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qknorm",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 6184,
+            "seconds": 61.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/prefix",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/intra",
+            "hbm": 140288,
+            "seconds": 1402.88,
+            "workspace": 192
+          },
+          {
+            "id": "l1/solve",
+            "hbm": 98304,
+            "seconds": 983.04,
+            "workspace": 192
+          },
+          {
+            "id": "l1/wy",
+            "hbm": 48128,
+            "seconds": 481.28,
+            "workspace": 192
+          },
+          {
+            "id": "l1/inter",
+            "hbm": 12672,
+            "seconds": 126.72,
+            "workspace": 320
+          },
+          {
+            "id": "l1/chunkout",
+            "hbm": 75904,
+            "seconds": 759.04,
+            "workspace": 192
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 6152,
+            "seconds": 61.52,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 6144,
+            "seconds": 61.44,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 4112,
+            "seconds": 41.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 2592,
+            "seconds": 25.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 10432,
+            "seconds": 104.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 3136,
+            "seconds": 31.36,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 1536,
+            "seconds": 15.36,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qknorm",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 6184,
+            "seconds": 61.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/prefix",
+            "hbm": 8192,
+            "seconds": 81.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/intra",
+            "hbm": 140288,
+            "seconds": 1402.88,
+            "workspace": 192
+          },
+          {
+            "id": "l2/solve",
+            "hbm": 98304,
+            "seconds": 983.04,
+            "workspace": 192
+          },
+          {
+            "id": "l2/wy",
+            "hbm": 48128,
+            "seconds": 481.28,
+            "workspace": 192
+          },
+          {
+            "id": "l2/inter",
+            "hbm": 12672,
+            "seconds": 126.72,
+            "workspace": 320
+          },
+          {
+            "id": "l2/chunkout",
+            "hbm": 75904,
+            "seconds": 759.04,
+            "workspace": 192
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 6152,
+            "seconds": 61.52,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 6144,
+            "seconds": 61.44,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 4112,
+            "seconds": 41.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 5312,
+            "seconds": 53.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 3680,
+            "seconds": 36.8,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 3080,
+            "seconds": 30.8,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 5248,
+            "seconds": 52.48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 9728,
+            "seconds": 97.28,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 71680,
+            "seconds": 716.8,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 163840,
+            "seconds": 1638.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 196608,
+            "seconds": 1966.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 196608,
+            "seconds": 1966.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 69632,
+            "seconds": 696.32,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 4224,
+            "seconds": 42.24,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 6144,
+            "seconds": 61.44,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "5dc2a6554181e9c10f043bfbe3e60e1721c6dbde2b7201a30e4c1f1fe29fd137"
+    },
+    {
+      "name": "hybrid-129",
+      "oracle": {
+        "profile": "hybrid",
+        "route": "chunk",
+        "B": 1,
+        "Q": 129,
+        "H": 8,
+        "N": 2,
+        "chunks": 3,
+        "lastChunkRows": 1,
+        "causalPairs": 4161,
+        "weights": 3736,
+        "state": 6120,
+        "activation": 213882,
+        "workspace": 192,
+        "peak": 223930,
+        "peakNode": "l0/solve",
+        "seconds": 22333.48,
+        "hbm": 2233348,
+        "matrixUseful": 1388664,
+        "matrix": 2344872,
+        "vectorUseful": 2480676,
+        "vector": 4502229,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 33282,
+            "seconds": 332.82,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 4144,
+            "seconds": 41.44,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 2612,
+            "seconds": 26.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 1548,
+            "seconds": 15.48,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qknorm",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 6232,
+            "seconds": 62.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/prefix",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/intra",
+            "hbm": 141384,
+            "seconds": 1413.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/solve",
+            "hbm": 99072,
+            "seconds": 990.72,
+            "workspace": 192
+          },
+          {
+            "id": "l0/wy",
+            "hbm": 48504,
+            "seconds": 485.04,
+            "workspace": 192
+          },
+          {
+            "id": "l0/inter",
+            "hbm": 12832,
+            "seconds": 128.32,
+            "workspace": 320
+          },
+          {
+            "id": "l0/chunkout",
+            "hbm": 76560,
+            "seconds": 765.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 6200,
+            "seconds": 62,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 6192,
+            "seconds": 61.92,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 4144,
+            "seconds": 41.44,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 2612,
+            "seconds": 26.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 1548,
+            "seconds": 15.48,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qknorm",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 6232,
+            "seconds": 62.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/prefix",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/intra",
+            "hbm": 141384,
+            "seconds": 1413.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/solve",
+            "hbm": 99072,
+            "seconds": 990.72,
+            "workspace": 192
+          },
+          {
+            "id": "l1/wy",
+            "hbm": 48504,
+            "seconds": 485.04,
+            "workspace": 192
+          },
+          {
+            "id": "l1/inter",
+            "hbm": 12832,
+            "seconds": 128.32,
+            "workspace": 320
+          },
+          {
+            "id": "l1/chunkout",
+            "hbm": 76560,
+            "seconds": 765.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 6200,
+            "seconds": 62,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 6192,
+            "seconds": 61.92,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 4144,
+            "seconds": 41.44,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 2612,
+            "seconds": 26.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 10512,
+            "seconds": 105.12,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 1548,
+            "seconds": 15.48,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qknorm",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 6232,
+            "seconds": 62.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/prefix",
+            "hbm": 8256,
+            "seconds": 82.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/intra",
+            "hbm": 141384,
+            "seconds": 1413.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/solve",
+            "hbm": 99072,
+            "seconds": 990.72,
+            "workspace": 192
+          },
+          {
+            "id": "l2/wy",
+            "hbm": 48504,
+            "seconds": 485.04,
+            "workspace": 192
+          },
+          {
+            "id": "l2/inter",
+            "hbm": 12832,
+            "seconds": 128.32,
+            "workspace": 320
+          },
+          {
+            "id": "l2/chunkout",
+            "hbm": 76560,
+            "seconds": 765.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 6200,
+            "seconds": 62,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 6192,
+            "seconds": 61.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 4144,
+            "seconds": 41.44,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 5352,
+            "seconds": 53.52,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 3708,
+            "seconds": 37.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 3104,
+            "seconds": 31.04,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 5288,
+            "seconds": 52.88,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 9804,
+            "seconds": 98.04,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 72756,
+            "seconds": 727.56,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 166410,
+            "seconds": 1664.1,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 199692,
+            "seconds": 1996.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 199692,
+            "seconds": 1996.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 70692,
+            "seconds": 706.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 4256,
+            "seconds": 42.56,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 6192,
+            "seconds": 61.92,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "171bc04c99cbe04ca2cdb40da1143373ea83d09ef824132dd86ae9639fe0a678"
+    },
+    {
+      "name": "all-kda-short",
+      "oracle": {
+        "profile": "all-kda",
+        "route": "short",
+        "B": 1,
+        "Q": 8,
+        "H": 8,
+        "N": 2,
+        "chunks": 1,
+        "lastChunkRows": 8,
+        "causalPairs": 36,
+        "weights": 4224,
+        "state": 1280,
+        "activation": 1088,
+        "workspace": 320,
+        "peak": 6912,
+        "peakNode": "l0/rnn",
+        "seconds": 316.15999999999997,
+        "hbm": 31616,
+        "matrixUseful": 25600,
+        "matrix": 25600,
+        "vectorUseful": 22400,
+        "vector": 31808,
+        "events": [
+          {
+            "id": "l0/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 192
+          },
+          {
+            "id": "l3/qp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l3/kp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l3/vp",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l3/fa",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l3/ga",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l3/betap",
+            "hbm": 192,
+            "seconds": 1.92,
+            "workspace": 192
+          },
+          {
+            "id": "l3/qc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l3/kc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l3/vc",
+            "hbm": 832,
+            "seconds": 8.32,
+            "workspace": 192
+          },
+          {
+            "id": "l3/fb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l3/gb",
+            "hbm": 256,
+            "seconds": 2.56,
+            "workspace": 192
+          },
+          {
+            "id": "l3/beta",
+            "hbm": 96,
+            "seconds": 0.96,
+            "workspace": 192
+          },
+          {
+            "id": "l3/decay",
+            "hbm": 424,
+            "seconds": 4.24,
+            "workspace": 192
+          },
+          {
+            "id": "l3/rnn",
+            "hbm": 1088,
+            "seconds": 10.88,
+            "workspace": 320
+          },
+          {
+            "id": "l3/onorm",
+            "hbm": 392,
+            "seconds": 3.92,
+            "workspace": 192
+          },
+          {
+            "id": "l3/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 192
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "df690557de054b1f6e0b21fc0a875ca129e9a6e9566522a92b4a3a6f9b90e5a9"
+    },
+    {
+      "name": "all-kda-chunk",
+      "oracle": {
+        "profile": "all-kda",
+        "route": "chunk",
+        "B": 1,
+        "Q": 65,
+        "H": 8,
+        "N": 2,
+        "chunks": 2,
+        "lastChunkRows": 1,
+        "causalPairs": 2081,
+        "weights": 4224,
+        "state": 1280,
+        "activation": 91000,
+        "workspace": 192,
+        "peak": 96696,
+        "peakNode": "l0/solve",
+        "seconds": 9770.88,
+        "hbm": 977088,
+        "matrixUseful": 657472,
+        "matrix": 1105024,
+        "vectorUseful": 1559448,
+        "vector": 3153192,
+        "events": [
+          {
+            "id": "l0/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l0/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l0/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l0/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l0/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l0/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l0/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l0/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l0/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l0/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l1/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l1/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l1/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l1/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l1/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l1/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l1/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l1/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l1/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l2/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l2/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l2/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l2/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l2/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l2/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l2/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l2/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l2/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 192
+          },
+          {
+            "id": "l3/qp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l3/kp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l3/vp",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l3/fa",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l3/ga",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l3/betap",
+            "hbm": 1332,
+            "seconds": 13.32,
+            "workspace": 192
+          },
+          {
+            "id": "l3/qc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l3/kc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l3/vc",
+            "hbm": 5392,
+            "seconds": 53.92,
+            "workspace": 192
+          },
+          {
+            "id": "l3/fb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l3/gb",
+            "hbm": 1624,
+            "seconds": 16.24,
+            "workspace": 192
+          },
+          {
+            "id": "l3/beta",
+            "hbm": 780,
+            "seconds": 7.8,
+            "workspace": 192
+          },
+          {
+            "id": "l3/qknorm",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l3/decay",
+            "hbm": 3160,
+            "seconds": 31.6,
+            "workspace": 192
+          },
+          {
+            "id": "l3/prefix",
+            "hbm": 4160,
+            "seconds": 41.6,
+            "workspace": 192
+          },
+          {
+            "id": "l3/intra",
+            "hbm": 71240,
+            "seconds": 712.4,
+            "workspace": 192
+          },
+          {
+            "id": "l3/solve",
+            "hbm": 49920,
+            "seconds": 499.2,
+            "workspace": 192
+          },
+          {
+            "id": "l3/wy",
+            "hbm": 24440,
+            "seconds": 244.4,
+            "workspace": 192
+          },
+          {
+            "id": "l3/inter",
+            "hbm": 6624,
+            "seconds": 66.24,
+            "workspace": 320
+          },
+          {
+            "id": "l3/chunkout",
+            "hbm": 38608,
+            "seconds": 386.08,
+            "workspace": 192
+          },
+          {
+            "id": "l3/onorm",
+            "hbm": 3128,
+            "seconds": 31.28,
+            "workspace": 192
+          },
+          {
+            "id": "l3/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 192
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "b531e8c74cf83ae62cbfabc34a2189dc2fea1a941dbd73766609c20fc6b90f3a"
+    },
+    {
+      "name": "all-mla",
+      "oracle": {
+        "profile": "all-mla",
+        "route": "short",
+        "B": 1,
+        "Q": 8,
+        "H": 8,
+        "N": 2,
+        "chunks": 1,
+        "lastChunkRows": 8,
+        "causalPairs": 36,
+        "weights": 2272,
+        "state": 1280,
+        "activation": 1024,
+        "workspace": 0,
+        "peak": 4576,
+        "peakNode": "l0/soft",
+        "seconds": 259.5200000000001,
+        "hbm": 25952,
+        "matrixUseful": 23168,
+        "matrix": 27648,
+        "vectorUseful": 4416,
+        "vector": 6848,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 128,
+            "seconds": 1.28,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 0
+          },
+          {
+            "id": "l0/q",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ka",
+            "hbm": 320,
+            "seconds": 3.2,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kn",
+            "hbm": 200,
+            "seconds": 2,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kb",
+            "hbm": 448,
+            "seconds": 4.48,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cache",
+            "hbm": 608,
+            "seconds": 6.08,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qk",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l0/apply",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l0/soft",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cast",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l0/av",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 0
+          },
+          {
+            "id": "l1/q",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ka",
+            "hbm": 320,
+            "seconds": 3.2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kn",
+            "hbm": 200,
+            "seconds": 2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kb",
+            "hbm": 448,
+            "seconds": 4.48,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cache",
+            "hbm": 608,
+            "seconds": 6.08,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qk",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l1/apply",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l1/soft",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cast",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l1/av",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 0
+          },
+          {
+            "id": "l2/q",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ka",
+            "hbm": 320,
+            "seconds": 3.2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kn",
+            "hbm": 200,
+            "seconds": 2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kb",
+            "hbm": 448,
+            "seconds": 4.48,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cache",
+            "hbm": 608,
+            "seconds": 6.08,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qk",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l2/apply",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l2/soft",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cast",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l2/av",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 272,
+            "seconds": 2.72,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 320,
+            "seconds": 3.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 200,
+            "seconds": 2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 448,
+            "seconds": 4.48,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 608,
+            "seconds": 6.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 640,
+            "seconds": 6.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 768,
+            "seconds": 7.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 512,
+            "seconds": 5.12,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 384,
+            "seconds": 3.84,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "8239668b037e8101e527df292e0a8e7b7dc9c289f0d8451070a952ac39b241d8"
+    },
+    {
+      "name": "all-mla-65",
+      "oracle": {
+        "profile": "all-mla",
+        "route": "short",
+        "B": 1,
+        "Q": 65,
+        "H": 8,
+        "N": 2,
+        "chunks": 2,
+        "lastChunkRows": 1,
+        "causalPairs": 2081,
+        "weights": 2272,
+        "state": 10400,
+        "activation": 60190,
+        "workspace": 0,
+        "peak": 72862,
+        "peakNode": "l0/soft",
+        "seconds": 8245.22,
+        "hbm": 824522,
+        "matrixUseful": 484640,
+        "matrix": 817440,
+        "vectorUseful": 154440,
+        "vector": 326105,
+        "events": [
+          {
+            "id": "mask",
+            "hbm": 8450,
+            "seconds": 84.5,
+            "workspace": 0
+          },
+          {
+            "id": "l0/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 0
+          },
+          {
+            "id": "l0/q",
+            "hbm": 2792,
+            "seconds": 27.92,
+            "workspace": 0
+          },
+          {
+            "id": "l0/ka",
+            "hbm": 1916,
+            "seconds": 19.16,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kn",
+            "hbm": 1568,
+            "seconds": 15.68,
+            "workspace": 0
+          },
+          {
+            "id": "l0/kb",
+            "hbm": 2728,
+            "seconds": 27.28,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cache",
+            "hbm": 4940,
+            "seconds": 49.4,
+            "workspace": 0
+          },
+          {
+            "id": "l0/qk",
+            "hbm": 20020,
+            "seconds": 200.2,
+            "workspace": 0
+          },
+          {
+            "id": "l0/apply",
+            "hbm": 42250,
+            "seconds": 422.5,
+            "workspace": 0
+          },
+          {
+            "id": "l0/soft",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l0/cast",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l0/av",
+            "hbm": 18980,
+            "seconds": 189.8,
+            "workspace": 0
+          },
+          {
+            "id": "l0/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 0
+          },
+          {
+            "id": "l0/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 0
+          },
+          {
+            "id": "l1/q",
+            "hbm": 2792,
+            "seconds": 27.92,
+            "workspace": 0
+          },
+          {
+            "id": "l1/ka",
+            "hbm": 1916,
+            "seconds": 19.16,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kn",
+            "hbm": 1568,
+            "seconds": 15.68,
+            "workspace": 0
+          },
+          {
+            "id": "l1/kb",
+            "hbm": 2728,
+            "seconds": 27.28,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cache",
+            "hbm": 4940,
+            "seconds": 49.4,
+            "workspace": 0
+          },
+          {
+            "id": "l1/qk",
+            "hbm": 20020,
+            "seconds": 200.2,
+            "workspace": 0
+          },
+          {
+            "id": "l1/apply",
+            "hbm": 42250,
+            "seconds": 422.5,
+            "workspace": 0
+          },
+          {
+            "id": "l1/soft",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l1/cast",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l1/av",
+            "hbm": 18980,
+            "seconds": 189.8,
+            "workspace": 0
+          },
+          {
+            "id": "l1/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 0
+          },
+          {
+            "id": "l1/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 0
+          },
+          {
+            "id": "l2/q",
+            "hbm": 2792,
+            "seconds": 27.92,
+            "workspace": 0
+          },
+          {
+            "id": "l2/ka",
+            "hbm": 1916,
+            "seconds": 19.16,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kn",
+            "hbm": 1568,
+            "seconds": 15.68,
+            "workspace": 0
+          },
+          {
+            "id": "l2/kb",
+            "hbm": 2728,
+            "seconds": 27.28,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cache",
+            "hbm": 4940,
+            "seconds": 49.4,
+            "workspace": 0
+          },
+          {
+            "id": "l2/qk",
+            "hbm": 20020,
+            "seconds": 200.2,
+            "workspace": 0
+          },
+          {
+            "id": "l2/apply",
+            "hbm": 42250,
+            "seconds": 422.5,
+            "workspace": 0
+          },
+          {
+            "id": "l2/soft",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l2/cast",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l2/av",
+            "hbm": 18980,
+            "seconds": 189.8,
+            "workspace": 0
+          },
+          {
+            "id": "l2/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 0
+          },
+          {
+            "id": "l2/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/norm",
+            "hbm": 2096,
+            "seconds": 20.96,
+            "workspace": 0
+          },
+          {
+            "id": "l3/q",
+            "hbm": 2792,
+            "seconds": 27.92,
+            "workspace": 0
+          },
+          {
+            "id": "l3/ka",
+            "hbm": 1916,
+            "seconds": 19.16,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kn",
+            "hbm": 1568,
+            "seconds": 15.68,
+            "workspace": 0
+          },
+          {
+            "id": "l3/kb",
+            "hbm": 2728,
+            "seconds": 27.28,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cache",
+            "hbm": 4940,
+            "seconds": 49.4,
+            "workspace": 0
+          },
+          {
+            "id": "l3/qk",
+            "hbm": 20020,
+            "seconds": 200.2,
+            "workspace": 0
+          },
+          {
+            "id": "l3/apply",
+            "hbm": 42250,
+            "seconds": 422.5,
+            "workspace": 0
+          },
+          {
+            "id": "l3/soft",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l3/cast",
+            "hbm": 50700,
+            "seconds": 507,
+            "workspace": 0
+          },
+          {
+            "id": "l3/av",
+            "hbm": 18980,
+            "seconds": 189.8,
+            "workspace": 0
+          },
+          {
+            "id": "l3/out",
+            "hbm": 2208,
+            "seconds": 22.08,
+            "workspace": 0
+          },
+          {
+            "id": "l3/residual",
+            "hbm": 3120,
+            "seconds": 31.2,
+            "workspace": 0
+          }
+        ]
+      },
+      "inputHash": "8da77393e2d699ff67858c6c25a2ce8e047f118437341314a56ae2040f3a4ef2"
+    }
+  ],
+  "capacities": [
+    {
+      "profile": "hybrid",
+      "range": [
+        142,
+        146
+      ],
+      "maximum": 144
+    },
+    {
+      "profile": "all-kda",
+      "range": [
+        181,
+        185
+      ],
+      "maximum": 183
+    },
+    {
+      "profile": "all-mla",
+      "range": [
+        128,
+        132
+      ],
+      "maximum": 130
+    }
+  ],
+  "numericFixture": {
+    "count": 65,
+    "chunkSize": 64,
+    "maxError": 5.551115123125783e-16,
+    "finalState": [
+      [
+        -0.2912573461426098,
+        0.624109428438513
+      ],
+      [
+        -0.2765848807340616,
+        0.5459399105269792
+      ]
+    ]
+  }
+}

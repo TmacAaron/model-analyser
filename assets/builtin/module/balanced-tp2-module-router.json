@@ -1,0 +1,1683 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:moe:balanced:tp2:module:router",
+  "revision": 1,
+  "name": "MoE router · balanced EP2 TP2",
+  "tags": [
+    "research",
+    "moe",
+    "synthetic"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "I",
+      "name": "I",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "A",
+      "name": "Touched experts per owner in this fixed routing profile",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/NVIDIA/Megatron-LM/blob/76cf2e2d64bbfa466d50de64d036db23395dc5af/megatron/core/transformer/moe/token_dispatcher.py",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Forward-only synthetic E=4, top-k=2 gated MoE subgraph, with EP=2 and TP=1 or 2; all experts remain resident. Every global token routes to one expert in each owner. The balanced profile touches both experts per owner; the concentrated profile touches one, with the same number of token assignments. Route packets carry BF16 activations, int64 expert indices and FP32 probabilities: 2H+12 bytes per assignment. Token order is known from the declared fixed routing map. One TP×EP dispatch and two separate owner combine collectives are declared; these are not a claim to reproduce a fused production dispatcher. Owner preparation/unpacking and repacking use distinct buffers with explicit HBM traffic. Transport workspace=0 is an ideal-buffer assumption; communication local HBM and reduction arithmetic remain unknown. Artificial matrix/vector ceilings 1000 operations/s, HBM 100 byte/s, network 1000 byte/s, per-round latency 0.001 seconds, and 4096-byte devices are arithmetic references only."
+    },
+    {
+      "kind": "note",
+      "text": "Routing balanced: token order and expert choices are author declarations, not inferred from FLOPs or executed router scores. Vector proxies: top-k 3TE, SiLU+product 5RI, weighted combine 3TH."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "packet",
+          "tensorId": "Packet"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "logits",
+          "name": "Router logits",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "WR",
+              "tensorId": "WR"
+            },
+            {
+              "portId": "Logits",
+              "tensorId": "Logits"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:moe:balanced:tp2:formula:869e4c0521f3baf2",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:moe:balanced:tp2:formula:869e4c0521f3baf2",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WR",
+                  "storageId": "WR",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Logits",
+                  "storageId": "Logits",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "X"
+              },
+              "bindings": [
+                {
+                  "symbol": "lt",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "t",
+                    "basis": "logical"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:moe:balanced:tp2:local:logits:a72b3ab3878f92d2",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "lt": {
+                            "kind": "symbol",
+                            "name": "lt"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:moe:balanced:tp2:local:logits:a72b3ab3878f92d2",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "lt": {
+                            "kind": "symbol",
+                            "name": "lt"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-WR",
+                    "storageId": "WR",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Logits",
+                    "storageId": "Logits",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact local shapes and explicit packet copy traffic. All expert weights remain resident; A counts only touched weight reads, not allocation."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "WR",
+                "tensorId": "WR"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Logits",
+                "tensorId": "Logits"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "topk",
+          "name": "Declared top-2 pattern and proxy cost",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Logits",
+              "tensorId": "Logits"
+            },
+            {
+              "portId": "P",
+              "tensorId": "P"
+            },
+            {
+              "portId": "Indices",
+              "tensorId": "Indices"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:moe:balanced:tp2:formula:49956351f06ebd80",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:moe:balanced:tp2:formula:49956351f06ebd80",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Logits",
+                  "storageId": "Logits",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-P",
+                  "storageId": "P",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Indices",
+                  "storageId": "Indices",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Logits"
+              },
+              "bindings": [
+                {
+                  "symbol": "lt",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Logits",
+                    "axisId": "t",
+                    "basis": "logical"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "vector"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:moe:balanced:tp2:local:topk:c0192113160c3028",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lt": {
+                            "kind": "symbol",
+                            "name": "lt"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:moe:balanced:tp2:local:topk:c0192113160c3028",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "lt": {
+                            "kind": "symbol",
+                            "name": "lt"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Logits",
+                    "storageId": "Logits",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-P",
+                    "storageId": "P",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Indices",
+                    "storageId": "Indices",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact local shapes and explicit packet copy traffic. All expert weights remain resident; A counts only touched weight reads, not allocation."
+            },
+            "inputs": [
+              {
+                "portId": "Logits",
+                "tensorId": "Logits"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "P",
+                "tensorId": "P"
+              },
+              {
+                "portId": "Indices",
+                "tensorId": "Indices"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "pack",
+          "name": "Pack activations, expert indices and probabilities",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "P",
+              "tensorId": "P"
+            },
+            {
+              "portId": "Indices",
+              "tensorId": "Indices"
+            },
+            {
+              "portId": "Packet",
+              "tensorId": "Packet"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-P",
+                  "storageId": "P",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Indices",
+                  "storageId": "Indices",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Packet",
+                  "storageId": "Packet",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "X"
+              },
+              "bindings": [],
+              "cost": {
+                "compute": [],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-P",
+                    "storageId": "P",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-Indices",
+                    "storageId": "Indices",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Packet",
+                    "storageId": "Packet",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Exact local shapes and explicit packet copy traffic. All expert weights remain resident; A counts only touched weight reads, not allocation."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "P",
+                "tensorId": "P"
+              },
+              {
+                "portId": "Indices",
+                "tensorId": "Indices"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Packet",
+                "tensorId": "Packet"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "logits-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "logits",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "topk-in-Logits",
+          "from": {
+            "kind": "node",
+            "nodeId": "logits",
+            "portId": "Logits"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "topk",
+            "portId": "Logits"
+          },
+          "tensorId": "Logits"
+        },
+        {
+          "edgeId": "pack-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pack",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "pack-in-P",
+          "from": {
+            "kind": "node",
+            "nodeId": "topk",
+            "portId": "P"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pack",
+            "portId": "P"
+          },
+          "tensorId": "P"
+        },
+        {
+          "edgeId": "pack-in-Indices",
+          "from": {
+            "kind": "node",
+            "nodeId": "topk",
+            "portId": "Indices"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pack",
+            "portId": "Indices"
+          },
+          "tensorId": "Indices"
+        },
+        {
+          "edgeId": "out-packet",
+          "from": {
+            "kind": "node",
+            "nodeId": "pack",
+            "portId": "Packet"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "packet"
+          },
+          "tensorId": "Packet"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "WR",
+          "name": "WR",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "e",
+              "semantic": "expert",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WR"
+        },
+        {
+          "tensorId": "Logits",
+          "name": "Logits",
+          "shape": [
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "e",
+              "semantic": "expert",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "Logits"
+        },
+        {
+          "tensorId": "P",
+          "name": "P",
+          "shape": [
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "o",
+              "semantic": "expert",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "P"
+        },
+        {
+          "tensorId": "Indices",
+          "name": "Indices",
+          "shape": [
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "o",
+              "semantic": "expert",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "int",
+            "bits": 64,
+            "format": "int64"
+          },
+          "storageId": "Indices"
+        },
+        {
+          "tensorId": "Packet",
+          "name": "Packet",
+          "shape": [
+            {
+              "axisId": "t",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "o",
+              "semantic": "expert",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "w",
+              "semantic": "custom",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:moe:balanced:tp2:formula:cfaae7b115ea98df",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "uint",
+            "bits": 8,
+            "format": "moe-route-packet-u8"
+          },
+          "storageId": "Packet"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WR",
+          "name": "WR",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "e",
+                "semantic": "expert",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Logits",
+          "name": "Logits",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "e",
+                "semantic": "expert",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "P",
+          "name": "P",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "o",
+                "semantic": "expert",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "Indices",
+          "name": "Indices",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "o",
+                "semantic": "expert",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "int",
+              "bits": 64,
+              "format": "int64"
+            }
+          }
+        },
+        {
+          "storageId": "Packet",
+          "name": "Packet",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "t",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:2ef36c45691a1be4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "o",
+                "semantic": "expert",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "w",
+                "semantic": "custom",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:moe:balanced:tp2:formula:cfaae7b115ea98df",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "H": {
+                        "kind": "symbol",
+                        "name": "H"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "uint",
+              "bits": 8,
+              "format": "moe-route-packet-u8"
+            }
+          }
+        }
+      ],
+      "states": []
+    }
+  }
+}

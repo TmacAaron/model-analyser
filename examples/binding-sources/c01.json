@@ -1,0 +1,2786 @@
+{
+  "schemaVersion": 2,
+  "kind": "leaf_cost_source",
+  "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+  "engineVersion": "0.1.0-execution.20",
+  "selector": {
+    "nodeId": "module/op",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "node",
+        "nodeId": "module/op"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "field": "executedOperations",
+    "computeClass": {
+      "arithmetic": "float",
+      "inputDtypes": [
+        {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        }
+      ],
+      "multiplyDtype": {
+        "category": "float",
+        "bits": 16,
+        "format": "bf16"
+      },
+      "accumulateDtype": {
+        "category": "float",
+        "bits": 32,
+        "format": "fp32"
+      },
+      "resource": "matrix"
+    }
+  },
+  "asset": {
+    "assetId": "example:operator:gemm",
+    "revision": 1,
+    "kind": "operator"
+  },
+  "metric": {
+    "status": "available",
+    "quantity": {
+      "value": 1024,
+      "unit": "operation"
+    },
+    "basis": "theoretical",
+    "provenance": {
+      "assetRefs": [
+        {
+          "assetId": "builtin:formula:gemm-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:matrix-bytes",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        },
+        {
+          "assetId": "example:model:gemm",
+          "revision": 1,
+          "kind": "model"
+        },
+        {
+          "assetId": "example:module:gemm",
+          "revision": 1,
+          "kind": "module"
+        },
+        {
+          "assetId": "example:operator:gemm",
+          "revision": 1,
+          "kind": "operator"
+        }
+      ],
+      "formulaRefs": [
+        {
+          "assetId": "builtin:formula:gemm-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:matrix-bytes",
+          "revision": 1,
+          "kind": "formula"
+        }
+      ],
+      "parameterSources": [
+        {
+          "parameterKey": "$model:M",
+          "source": "asset_default"
+        },
+        {
+          "parameterKey": "$model:N",
+          "source": "asset_default"
+        },
+        {
+          "parameterKey": "$model:K",
+          "source": "asset_default"
+        },
+        {
+          "parameterKey": "module:M",
+          "source": "node_override"
+        },
+        {
+          "parameterKey": "module:N",
+          "source": "node_override"
+        },
+        {
+          "parameterKey": "module:K",
+          "source": "node_override"
+        },
+        {
+          "parameterKey": "module/op:M",
+          "source": "node_override"
+        },
+        {
+          "parameterKey": "module/op:N",
+          "source": "node_override"
+        },
+        {
+          "parameterKey": "module/op:K",
+          "source": "node_override"
+        }
+      ],
+      "assumptions": [
+        "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+        "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+        "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+        "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+        "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+        "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+      ]
+    },
+    "diagnosticIds": []
+  },
+  "operation": "sum",
+  "componentCount": 1,
+  "page": 0,
+  "pageSize": 20,
+  "complete": true,
+  "items": [
+    {
+      "quantity": {
+        "value": 1024,
+        "unit": "operation"
+      },
+      "proof": {
+        "kind": "formula",
+        "formula": {
+          "assetId": "builtin:formula:gemm-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        "name": "GEMM 运算量",
+        "definition": {
+          "inputs": {
+            "M": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "N": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "K": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "2 * M * N * K",
+          "output": {
+            "unit": "operation",
+            "integerRequired": false,
+            "nonNegative": true
+          },
+          "description": "数学运算次数，与存储位宽分开计量"
+        },
+        "bindings": [
+          {
+            "name": "M",
+            "quantity": {
+              "value": 4,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "M",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "name": "N",
+            "quantity": {
+              "value": 8,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "N",
+              "quantity": {
+                "value": 8,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "name": "K",
+            "quantity": {
+              "value": 16,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "K",
+              "quantity": {
+                "value": 16,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "events": [
+          {
+            "kind": "symbol",
+            "name": "M",
+            "value": 4,
+            "local": false
+          },
+          {
+            "kind": "operation",
+            "operator": "*",
+            "operands": [
+              2,
+              4
+            ],
+            "value": 8
+          },
+          {
+            "kind": "symbol",
+            "name": "N",
+            "value": 8,
+            "local": false
+          },
+          {
+            "kind": "operation",
+            "operator": "*",
+            "operands": [
+              8,
+              8
+            ],
+            "value": 64
+          },
+          {
+            "kind": "symbol",
+            "name": "K",
+            "value": 16,
+            "local": false
+          },
+          {
+            "kind": "operation",
+            "operator": "*",
+            "operands": [
+              64,
+              16
+            ],
+            "value": 1024
+          }
+        ],
+        "quantity": {
+          "value": 1024,
+          "unit": "operation"
+        }
+      },
+      "truncated": false,
+      "field": "compute[\"matmul\"].executedOperations",
+      "operation": "expression",
+      "contribution": {
+        "value": 1024,
+        "unit": "operation"
+      }
+    }
+  ],
+  "symbols": [
+    {
+      "name": "M",
+      "quantity": {
+        "value": 4,
+        "unit": "count"
+      }
+    },
+    {
+      "name": "N",
+      "quantity": {
+        "value": 8,
+        "unit": "count"
+      }
+    },
+    {
+      "name": "K",
+      "quantity": {
+        "value": 16,
+        "unit": "count"
+      }
+    }
+  ],
+  "request": {
+    "scenario": {
+      "scenarioId": "example:scenario:c01",
+      "name": "C01",
+      "model": {
+        "assetId": "example:model:gemm",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "assets": [
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "builtin:formula:gemm-operations",
+        "revision": 1,
+        "name": "GEMM 运算量",
+        "tags": [
+          "gemm"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "一次乘加计两次运算；C01 手算基线"
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "M": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "N": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "K": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "2 * M * N * K",
+            "output": {
+              "unit": "operation",
+              "integerRequired": false,
+              "nonNegative": true
+            },
+            "description": "数学运算次数，与存储位宽分开计量"
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:formula:matrix-bytes",
+        "revision": 1,
+        "name": "BF16 矩阵 bytes",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "rows": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "cols": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "rows * cols * 2",
+            "output": {
+              "unit": "byte",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "C01 BF16 matrix storage bytes"
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:operator:gemm",
+        "revision": 1,
+        "name": "C01 GEMM",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [
+          {
+            "key": "M",
+            "name": "M",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 4
+            }
+          },
+          {
+            "key": "N",
+            "name": "N",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 8
+            }
+          },
+          {
+            "key": "K",
+            "name": "K",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 16
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "operator",
+          "operator": {
+            "category": "linear",
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "X"
+              },
+              {
+                "portId": "w",
+                "tensorId": "W"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "y",
+                "tensorId": "Y"
+              }
+            ],
+            "tensors": [
+              {
+                "tensorId": "X",
+                "name": "X",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sX"
+              },
+              {
+                "tensorId": "W",
+                "name": "W",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sW"
+              },
+              {
+                "tensorId": "Y",
+                "name": "Y",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sY"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "sX",
+                "name": "X",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sW",
+                "name": "W",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sY",
+                "name": "Y",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": [],
+            "phases": [
+              "prefill",
+              "decode"
+            ],
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "matmul",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "M": {
+                          "kind": "symbol",
+                          "name": "M"
+                        },
+                        "N": {
+                          "kind": "symbol",
+                          "name": "N"
+                        },
+                        "K": {
+                          "kind": "symbol",
+                          "name": "K"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "M": {
+                          "kind": "symbol",
+                          "name": "M"
+                        },
+                        "N": {
+                          "kind": "symbol",
+                          "name": "N"
+                        },
+                        "K": {
+                          "kind": "symbol",
+                          "name": "K"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "accessX",
+                  "storageId": "sX",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "rows": {
+                          "kind": "symbol",
+                          "name": "M"
+                        },
+                        "cols": {
+                          "kind": "symbol",
+                          "name": "K"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "accessW",
+                  "storageId": "sW",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "rows": {
+                          "kind": "symbol",
+                          "name": "K"
+                        },
+                        "cols": {
+                          "kind": "symbol",
+                          "name": "N"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "accessY",
+                  "storageId": "sY",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "rows": {
+                          "kind": "symbol",
+                          "name": "M"
+                        },
+                        "cols": {
+                          "kind": "symbol",
+                          "name": "N"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:module:gemm",
+        "revision": 1,
+        "name": "C01 GEMM module",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [
+          {
+            "key": "M",
+            "name": "M",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 4
+            }
+          },
+          {
+            "key": "N",
+            "name": "N",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 8
+            }
+          },
+          {
+            "key": "K",
+            "name": "K",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 16
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "module",
+          "graph": {
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "X"
+              },
+              {
+                "portId": "w",
+                "tensorId": "W"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "y",
+                "tensorId": "Y"
+              }
+            ],
+            "nodes": [
+              {
+                "nodeId": "op",
+                "name": "op",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "x",
+                    "tensorId": "X"
+                  },
+                  {
+                    "portId": "w",
+                    "tensorId": "W"
+                  },
+                  {
+                    "portId": "y",
+                    "tensorId": "Y"
+                  }
+                ],
+                "stateBindings": [],
+                "body": {
+                  "kind": "operator",
+                  "asset": {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  "bindings": [
+                    {
+                      "parameterKey": "M",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "parameterKey": "N",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    },
+                    {
+                      "parameterKey": "K",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "edges": [
+              {
+                "edgeId": "x",
+                "from": {
+                  "kind": "graph_input",
+                  "portId": "x"
+                },
+                "to": {
+                  "kind": "node",
+                  "nodeId": "op",
+                  "portId": "x"
+                },
+                "tensorId": "X"
+              },
+              {
+                "edgeId": "w",
+                "from": {
+                  "kind": "graph_input",
+                  "portId": "w"
+                },
+                "to": {
+                  "kind": "node",
+                  "nodeId": "op",
+                  "portId": "w"
+                },
+                "tensorId": "W"
+              },
+              {
+                "edgeId": "y",
+                "from": {
+                  "kind": "node",
+                  "nodeId": "op",
+                  "portId": "y"
+                },
+                "to": {
+                  "kind": "graph_output",
+                  "portId": "y"
+                },
+                "tensorId": "Y"
+              }
+            ],
+            "dependencies": [],
+            "tensors": [
+              {
+                "tensorId": "X",
+                "name": "X",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sX"
+              },
+              {
+                "tensorId": "W",
+                "name": "W",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sW"
+              },
+              {
+                "tensorId": "Y",
+                "name": "Y",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sY"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "sX",
+                "name": "X",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sW",
+                "name": "W",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sY",
+                "name": "Y",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:model:gemm",
+        "revision": 1,
+        "name": "C01 GEMM model",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [
+          {
+            "key": "M",
+            "name": "M",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 4
+            }
+          },
+          {
+            "key": "N",
+            "name": "N",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 8
+            }
+          },
+          {
+            "key": "K",
+            "name": "K",
+            "type": "integer",
+            "unit": "count",
+            "min": 1,
+            "default": {
+              "kind": "integer",
+              "value": 16
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "model",
+          "family": "synthetic",
+          "variant": "C01",
+          "graph": {
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "X"
+              },
+              {
+                "portId": "w",
+                "tensorId": "W"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "y",
+                "tensorId": "Y"
+              }
+            ],
+            "nodes": [
+              {
+                "nodeId": "module",
+                "name": "module",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "x",
+                    "tensorId": "X"
+                  },
+                  {
+                    "portId": "w",
+                    "tensorId": "W"
+                  },
+                  {
+                    "portId": "y",
+                    "tensorId": "Y"
+                  }
+                ],
+                "stateBindings": [],
+                "body": {
+                  "kind": "module",
+                  "asset": {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  "bindings": [
+                    {
+                      "parameterKey": "M",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "parameterKey": "N",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    },
+                    {
+                      "parameterKey": "K",
+                      "value": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "edges": [
+              {
+                "edgeId": "x",
+                "from": {
+                  "kind": "graph_input",
+                  "portId": "x"
+                },
+                "to": {
+                  "kind": "node",
+                  "nodeId": "module",
+                  "portId": "x"
+                },
+                "tensorId": "X"
+              },
+              {
+                "edgeId": "w",
+                "from": {
+                  "kind": "graph_input",
+                  "portId": "w"
+                },
+                "to": {
+                  "kind": "node",
+                  "nodeId": "module",
+                  "portId": "w"
+                },
+                "tensorId": "W"
+              },
+              {
+                "edgeId": "y",
+                "from": {
+                  "kind": "node",
+                  "nodeId": "module",
+                  "portId": "y"
+                },
+                "to": {
+                  "kind": "graph_output",
+                  "portId": "y"
+                },
+                "tensorId": "Y"
+              }
+            ],
+            "dependencies": [],
+            "tensors": [
+              {
+                "tensorId": "X",
+                "name": "X",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sX"
+              },
+              {
+                "tensorId": "W",
+                "name": "W",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "K"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sW"
+              },
+              {
+                "tensorId": "Y",
+                "name": "Y",
+                "shape": [
+                  {
+                    "axisId": "row",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "M"
+                    }
+                  },
+                  {
+                    "axisId": "col",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "N"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "sY"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "sX",
+                "name": "X",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sW",
+                "name": "W",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "K"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "sY",
+                "name": "Y",
+                "category": "activation",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "row",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "M"
+                      }
+                    },
+                    {
+                      "axisId": "col",
+                      "semantic": "custom",
+                      "size": {
+                        "kind": "symbol",
+                        "name": "N"
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:hardware:c01",
+        "revision": 1,
+        "name": "C01 人工硬件",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "hardware",
+          "hardware": {
+            "capacityBytes": 4096,
+            "computeCapabilities": [
+              {
+                "computeClass": {
+                  "arithmetic": "float",
+                  "inputDtypes": [
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    }
+                  ],
+                  "multiplyDtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  "accumulateDtype": {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  },
+                  "resource": "matrix"
+                },
+                "kind": "peak",
+                "operationsPerSecond": 1000
+              }
+            ],
+            "memoryCapabilities": [
+              {
+                "key": "hbm",
+                "kind": "peak",
+                "bytesPerSecond": 100
+              }
+            ],
+            "communicationDefaults": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:parallel:replicated",
+        "revision": 1,
+        "name": "复制布局样例",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "parallel",
+          "plan": {
+            "assignments": [
+              {
+                "selector": {
+                  "kind": "nodes",
+                  "nodeIds": [
+                    "module/op"
+                  ]
+                },
+                "phases": [
+                  "decode"
+                ],
+                "tensorDistributions": [
+                  {
+                    "tensorId": "X",
+                    "distribution": {
+                      "kind": "replicated",
+                      "groupId": "tp"
+                    }
+                  }
+                ],
+                "storageDistributions": []
+              }
+            ],
+            "communications": [],
+            "assumptions": [
+              "Example selector and group are bound by the consuming scenario."
+            ]
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization:w4",
+        "revision": 1,
+        "name": "C02 W4 group32",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "quantization",
+          "quantization": {
+            "selector": {
+              "kind": "nodes",
+              "nodeIds": [
+                "module/op"
+              ]
+            },
+            "weight": {
+              "payloadBits": 4,
+              "packingUnitElements": 1,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "scale",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "fp16"
+                  },
+                  "count": {
+                    "kind": "group",
+                    "groupSize": 32
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "inputHash": "a81842e0663e90f9b29196387bf361d178aff09087796ed23c11ed9d55d1a5d5",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "module/op",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "node",
+          "nodeId": "module/op"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "executedOperations",
+      "computeClass": {
+        "arithmetic": "float",
+        "inputDtypes": [
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          }
+        ],
+        "multiplyDtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "accumulateDtype": {
+          "category": "float",
+          "bits": 32,
+          "format": "fp32"
+        },
+        "resource": "matrix"
+      }
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 1024,
+        "unit": "operation"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "$model:K",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "module:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module:K",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:M",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:N",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "module/op:K",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "proofVersion": 2,
+    "bindingBudget": 256
+  },
+  "parameterBindings": {
+    "schemaVersion": 1,
+    "scope": "actual_call_and_storage_parameter_context",
+    "nodes": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "M",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "M",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "M",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\",\"candidate\",0]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "M",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"M\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "M",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"M\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "M",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"M\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "M",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"M\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "M",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"M\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"M\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "M",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "M",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "N",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "N",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "N",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\",\"candidate\",0]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "N",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"N\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "N",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"N\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "N",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"N\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "N",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"N\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "N",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"N\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"N\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "N",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "N",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "K",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "K",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "K",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\",\"candidate\",0]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "K",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"K\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "K",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module\\\\\\\"]\\\",\\\"K\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "K",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"K\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module\"]",
+        "name": "K",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"K\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "K",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"asset\\\",\\\"module\\\"]\",\"K\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"module/op\\\\\\\"]\\\",\\\"K\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "K",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "K",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "M",
+        "kind": "default",
+        "status": "winning",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "M",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "M",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"M\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "M",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "M",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "N",
+        "kind": "default",
+        "status": "winning",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "N",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "N",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"N\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "N",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "N",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "K",
+        "kind": "default",
+        "status": "winning",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "K",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module\"]",
+        "parameterKey": "K",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module\\\"]\",\"K\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "K",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "parameterKey": "K",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\",\"candidate\",1]"
+      }
+    ],
+    "roots": [
+      {
+        "role": "call",
+        "target": "module/op",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "M",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"M\"]"
+      },
+      {
+        "role": "call",
+        "target": "module/op",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "N",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"N\"]"
+      },
+      {
+        "role": "call",
+        "target": "module/op",
+        "frameId": "[\"asset\",\"module/op\"]",
+        "name": "K",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"module/op\\\"]\",\"K\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sX",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "M",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sX",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "N",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sX",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "K",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sW",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "M",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sW",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "N",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sW",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "K",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sY",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "M",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"M\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sY",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "N",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"N\"]"
+      },
+      {
+        "role": "storage",
+        "target": "sY",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "K",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"K\"]"
+      }
+    ],
+    "complete": true,
+    "truncated": false,
+    "boundaries": [],
+    "frameCount": 4
+  }
+}

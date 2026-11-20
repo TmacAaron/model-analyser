@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "file": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "code": {
+      "type": "string",
+      "enum": [
+        "validation",
+        "unsupported_version",
+        "io",
+        "reference",
+        "conflict",
+        "orphan_revision"
+      ]
+    },
+    "message": {
+      "$ref": "#/$defs/__schema0"
+    }
+  },
+  "required": [
+    "file",
+    "code",
+    "message"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

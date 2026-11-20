@@ -1,0 +1,110 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "editing:module",
+  "revision": 1,
+  "name": "Repeated work and dependent tail",
+  "tags": [
+    "structure-editing",
+    "synthetic"
+  ],
+  "parameters": [
+    {
+      "key": "P",
+      "name": "Repeat count",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Independent reference: P repeated two-second leaves, followed by one three-second tail. P=3 -> 9 seconds."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [],
+      "outputs": [],
+      "nodes": [
+        {
+          "nodeId": "repeated",
+          "name": "Repeated two seconds",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "symbol",
+              "name": "P"
+            },
+            "wiring": "independent",
+            "carry": []
+          },
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "fixed",
+                "seconds": 2,
+                "description": "Explicit synthetic seconds for structure editing reference"
+              }
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        },
+        {
+          "nodeId": "tail",
+          "name": "Three-second tail",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "fixed",
+                "seconds": 3,
+                "description": "Explicit synthetic seconds for structure editing reference"
+              }
+            },
+            "inputs": [],
+            "outputs": []
+          }
+        }
+      ],
+      "edges": [],
+      "dependencies": [
+        {
+          "edgeId": "after-repeats",
+          "fromNodeId": "repeated",
+          "toNodeId": "tail",
+          "kind": "control"
+        }
+      ],
+      "tensors": [],
+      "storages": [],
+      "states": []
+    }
+  }
+}

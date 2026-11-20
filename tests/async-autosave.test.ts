@@ -1,0 +1,23 @@
+import {it,expect} from 'vitest';
+import {SerializedAutosaver,type AutosaveTransport,type SaveState} from '../apps/web/src/serialized-autosave.js';
+type Draft={draftGeneration:number;candidate:unknown;base:number|null};
+function deferred<T>(){let resolve:(value:T)=>void=()=>{throw Error('Not initialized');};const promise=new Promise<T>(done=>{resolve=done;});return {promise,resolve};}
+function harness(validate:AutosaveTransport<string,Draft>['validate'],commit?:AutosaveTransport<string,Draft>['commitDraft'],write?:AutosaveTransport<string,Draft>['writeDraft']){
+ const states:SaveState[]=[],writes:{draft:Draft;id:string}[]=[],commits:{draft:Draft;id:string}[]=[],published:{document:string;draft:Draft}[]=[];
+ const saver=new SerializedAutosaver<string,Draft>(0,1,{parseCandidate:text=>text,createDraft:(candidate,base,draftGeneration)=>({candidate,base,draftGeneration}),writeDraft:async(draft,id)=>{writes.push({draft,id});await write?.(draft,id);},validate,commitDraft:async(draft,id)=>{commits.push({draft,id});return commit?commit(draft,id):{document:String(draft.candidate),revision:2};}},state=>states.push(state),(document,draft)=>published.push({document,draft}));return {saver,states,writes,commits,published};
+}
+it('saves the raw draft first, aborts an obsolete asynchronous validation and only commits the new generation',async()=>{
+ const entered=deferred<void>(),h=harness(async(candidate,signal)=>{if(candidate==='old'){entered.resolve();await new Promise<void>((_resolve,reject)=>signal.addEventListener('abort',()=>reject(Error('canceled')),{once:true}));}return undefined;}),first=h.saver.edit('old'),saving=h.saver.save('old',first);await entered.promise;expect(h.writes).toHaveLength(1);expect(h.commits).toHaveLength(0);const second=h.saver.edit('new'),next=h.saver.save('new',second);await Promise.all([saving,next]);expect(h.commits.map(c=>c.draft.candidate)).toEqual(['new']);expect(h.published.map(p=>p.document)).toEqual(['new']);expect(h.states.at(-1)?.status).toBe('committed');
+});
+it('does not validate or publish a superseded draft when the newer edit arrived during its disk write',async()=>{
+ const entered=deferred<void>(),release=deferred<void>(),validated:unknown[]=[],h=harness(candidate=>{validated.push(candidate);return undefined;},undefined,async draft=>{if(draft.candidate==='old'){entered.resolve();await release.promise;}}),first=h.saver.edit('old'),saving=h.saver.save('old',first);await entered.promise;const second=h.saver.edit('new'),next=h.saver.save('new',second);release.resolve();await Promise.all([saving,next]);expect(validated).toEqual(['new']);expect(h.commits.map(c=>c.draft.candidate)).toEqual(['new']);
+});
+it('retries a failed validation without rewriting a persisted draft or changing its prepared commit identity',async()=>{
+ let failed=false;const h=harness(async()=>{if(!failed){failed=true;throw Error('worker unavailable');}return undefined;}),generation=h.saver.edit('raw');await h.saver.save('raw',generation);expect(h.states.at(-1)?.status).toBe('save_failed');expect(h.writes).toHaveLength(1);expect(h.commits).toHaveLength(0);await h.saver.save('raw',generation);expect(h.writes).toHaveLength(1);expect(h.commits).toHaveLength(1);expect(h.published[0]?.draft.candidate).toBe('raw');
+});
+it('reconciles a lost earlier commit with its exact request before validating/saving a newer generation against the resulting revision',async()=>{
+ const validated:unknown[]=[],h=harness(candidate=>{validated.push(candidate);return undefined;},async(draft)=>{if(draft.candidate==='old'&&h.commits.length===1)throw Error('lost response');return {document:String(draft.candidate),revision:draft.candidate==='old'?2:3};}),first=h.saver.edit('old');await h.saver.save('old',first);const original=h.commits[0];if(!original)throw Error();const second=h.saver.edit('new');await h.saver.save('new',second);expect(validated).toEqual(['old','new']);expect(h.commits.map(c=>c.draft.candidate)).toEqual(['old','old','new']);expect(h.commits[1]?.id).toBe(original.id);expect(h.commits[2]?.id).not.toBe(original.id);expect(h.commits[2]?.draft.base).toBe(2);expect(h.published.map(p=>p.document)).toEqual(['old','new']);expect(h.states.at(-1)?.message).toContain('3');
+});
+it('keeps synchronous invalid definitions as persisted drafts and preserves the original synchronous transport contract',async()=>{
+ const h=harness(candidate=>candidate==='invalid'?'invalid definition':undefined);let generation=h.saver.edit('invalid');await h.saver.save('invalid',generation);expect(h.states.at(-1)?.status).toBe('draft_saved');expect(h.commits).toHaveLength(0);generation=h.saver.edit('valid');await h.saver.save('valid',generation);expect(h.published.map(p=>p.document)).toEqual(['valid']);
+});

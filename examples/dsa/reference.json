@@ -1,0 +1,1607 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "source": {
+    "checkedOn": "2026-11-15",
+    "repository": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp",
+    "commit": "194c67e12b1b0d6df0ef373ddcf215bc84027409",
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp/blob/194c67e12b1b0d6df0ef373ddcf215bc84027409/inference/model.py",
+    "files": [
+      {
+        "path": "inference/model.py",
+        "sha256": "bfe5b89186b579910b6d59fa7e0cf1f7a75ceb4ec5d0f5b54f0ccbe77cdb6a63"
+      },
+      {
+        "path": "inference/kernel.py",
+        "sha256": "92abc46cb6457b8cbe105be66f26f9a119aeb86c872e4521d853d5177d181868"
+      },
+      {
+        "path": "inference/config_671B_v3.2.json",
+        "sha256": "f9fe074cdef8fdcc0feabbe635ff7c072a65d273a42a6bc207fe425439dff835"
+      },
+      {
+        "path": "config.json",
+        "sha256": "c7fa8b191e9936d8e6a57d864baab82b792fae16a116416cdd3a75ba76bc5af1"
+      }
+    ],
+    "verifiedSemantics": [
+      "Indexer reads normalized query low rank, independently projects an index key from x, applies LayerNorm/rotary/Hadamard and FP8 activation quantization. Its cache has distinct FP8 payload and FP32 scale tensors; scale_fmt rounding does not make the scale storage one byte.",
+      "FP8 index scans every prefix key. Its kernel rectifies each head dot product, multiplies query weights, reduces heads, applies the key scale and writes one FP32 score per query/key. Top-K uses min(index_topk,end_pos); indices are forward-local, not a carried decode state.",
+      "The released MLA decode demo computes full-prefix latent/rotary QK and full-prefix AV, then uses a dense index mask around softmax. Top-K selection alone does not reduce those einsum costs.",
+      "The decode demo keeps normalized/fake-FP8-rounded latent KV in BF16 plus a separate rotary key cache. Query absorption and output expansion use disjoint key/value slices of wkv_b. RMSNorm weights and index LayerNorm weight/bias are FP32. Index weights_proj is FP32 in this implementation.",
+      "The fixed inference config uses 128 attention heads, 64 index heads, index dimension 128 and K=2048, with FP8 checkpoint matrices. Buffers use maximum batch/sequence allocation."
+    ],
+    "authoredAssumptions": [
+      "Decode-only single-query MLA attention fragment, without block input norm/residual, FFN, embeddings or full language-model costs. Artificial H=8, attention heads=2, query rank=4, latent rank=8, nonrotary/rotary/value dimensions=4/2/4, index heads=2 and index dimension/block=8/8. This reduced block is not source-kernel compatible.",
+      "All ordinary projection weights and arithmetic use BF16 rather than the fixed FP8 checkpoint matrices. Index weights_proj stays FP32; index dots use FP8 E4M3 inputs with FP32 accumulation. BF16 main scores/probabilities follow the demo. Norm/rotary/Hadamard/selection use explicit FP32 vector proxies with on-chip internal workspace; BF16/FP32 and FP8 conversions add execution-only work.",
+      "source-mask follows full-prefix demo arithmetic, with materialized BF16 score components and dense FP32 index mask. sparse-gather is a separately authored theoretical kernel path with explicit shared BF16 selected-KV/PE staging and selected QK/AV; it is not a claim that the released demo executes such kernels. dense is a no-indexer counterfactual, not output-equivalent attention.",
+      "FP8 index kernel intermediates stay on chip; one full-prefix FP32 score tensor is materialized. Per-head rectification, weighting, reduction and key-scale multiplication remain explicit arithmetic in the same leaf. Top-K proxy costs L*(min(K,L)+2) per request. Debug clone/broadcast/equality checks and network are omitted on this single-device fragment.",
+      "Dynamic buffers reserve call-end C+1 rows; provisioned buffers reserve M rows, reject C+1>M, and separately report active context. Index payload uses one byte per channel and each scale occupies four bytes. Two disjoint BF16 key/value weight slices sum to the original wkv_b size; no duplicate persistent dequantized weights. Warm history is initialized; no allocator slack or implicit migration cost.",
+      "Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+    ]
+  },
+  "rows": [
+    {
+      "name": "source-mask",
+      "oracle": {
+        "profile": "source-mask",
+        "policy": "serial",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 32,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 408,
+        "peak": 2568,
+        "seconds": 53.519999999999996,
+        "hbm": 5352,
+        "matrix16": 3264,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 1186,
+        "vector": 1258,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 4.92,
+            "end": 5.24,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 7.96,
+            "end": 9.24,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 11.6,
+            "end": 12.08,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 5.24,
+            "end": 5.96,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 10.92,
+            "end": 11.32,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 12.72,
+            "end": 14.48,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 9.24,
+            "end": 10.92,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 12.08,
+            "end": 12.72,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 17.12,
+            "end": 17.68,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 2.84,
+            "end": 4.4399999999999995,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 5.96,
+            "end": 6.92,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 11.32,
+            "end": 11.6,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 4.4399999999999995,
+            "end": 4.92,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 6.92,
+            "end": 7.96,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 24.4,
+            "end": 24.639999999999997,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 28.479999999999997,
+            "end": 33.839999999999996,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 33.839999999999996,
+            "end": 35.44,
+            "hbm": 160
+          },
+          {
+            "id": "qkk",
+            "start": 17.68,
+            "end": 24.4,
+            "hbm": 672
+          },
+          {
+            "id": "qkp",
+            "start": 14.48,
+            "end": 17.12,
+            "hbm": 264
+          },
+          {
+            "id": "sum",
+            "start": 24.639999999999997,
+            "end": 28.479999999999997,
+            "hbm": 384
+          },
+          {
+            "id": "mask",
+            "start": 35.44,
+            "end": 37.04,
+            "hbm": 160
+          },
+          {
+            "id": "apply",
+            "start": 37.04,
+            "end": 40.879999999999995,
+            "hbm": 384
+          },
+          {
+            "id": "softmax",
+            "start": 40.879999999999995,
+            "end": 43.44,
+            "hbm": 256
+          },
+          {
+            "id": "av",
+            "start": 43.44,
+            "end": 50.16,
+            "hbm": 672
+          },
+          {
+            "id": "expand",
+            "start": 50.16,
+            "end": 51.919999999999995,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 51.919999999999995,
+            "end": 53.519999999999996,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "fe73560befc72ad21b1b01b9c6569ee1fd59c291def0b1077d12e1a6111d8ce1"
+    },
+    {
+      "name": "source-overlap",
+      "oracle": {
+        "profile": "source-mask",
+        "policy": "ideal",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 32,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 512,
+        "peak": 2672,
+        "seconds": 37.48,
+        "hbm": 5352,
+        "matrix16": 3264,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 1186,
+        "vector": 1258,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 2.84,
+            "end": 3.1599999999999997,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 3.88,
+            "end": 5.16,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 5.5600000000000005,
+            "end": 6.040000000000001,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 3.1599999999999997,
+            "end": 3.88,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 5.16,
+            "end": 5.5600000000000005,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 6.040000000000001,
+            "end": 7.800000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 4.08,
+            "end": 5.76,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 6.04,
+            "end": 6.68,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 6.68,
+            "end": 7.24,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 0,
+            "end": 1.6,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 2.08,
+            "end": 3.04,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 5.76,
+            "end": 6.04,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 1.6,
+            "end": 2.08,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 3.04,
+            "end": 4.08,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 7.24,
+            "end": 7.48,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 7.48,
+            "end": 12.84,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 12.84,
+            "end": 14.44,
+            "hbm": 160
+          },
+          {
+            "id": "qkk",
+            "start": 10.440000000000001,
+            "end": 17.16,
+            "hbm": 672
+          },
+          {
+            "id": "qkp",
+            "start": 7.800000000000001,
+            "end": 10.440000000000001,
+            "hbm": 264
+          },
+          {
+            "id": "sum",
+            "start": 17.16,
+            "end": 21,
+            "hbm": 384
+          },
+          {
+            "id": "mask",
+            "start": 14.44,
+            "end": 16.04,
+            "hbm": 160
+          },
+          {
+            "id": "apply",
+            "start": 21,
+            "end": 24.84,
+            "hbm": 384
+          },
+          {
+            "id": "softmax",
+            "start": 24.84,
+            "end": 27.4,
+            "hbm": 256
+          },
+          {
+            "id": "av",
+            "start": 27.4,
+            "end": 34.12,
+            "hbm": 672
+          },
+          {
+            "id": "expand",
+            "start": 34.12,
+            "end": 35.879999999999995,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 35.879999999999995,
+            "end": 37.48,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "44c0f553bb92a594b11220b37ba3e22978cb0bb7fc8ab5c06ca5e4a74d2f2b29"
+    },
+    {
+      "name": "source-bandwidth",
+      "oracle": {
+        "profile": "source-mask",
+        "policy": "shared_bandwidth",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 32,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 512,
+        "peak": 2672,
+        "seconds": 53.52000000000001,
+        "hbm": 5352,
+        "matrix16": 3264,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 1186,
+        "vector": 1258,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 1.76,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 5.68,
+            "end": 6.32,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 7.76,
+            "end": 10.32,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 11.120000000000001,
+            "end": 12.080000000000002,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 1.76,
+            "end": 5.68,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 6.32,
+            "end": 7.76,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 10.32,
+            "end": 11.120000000000001,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 12.080000000000002,
+            "end": 15.600000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 8.16,
+            "end": 11.520000000000001,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 12.080000000000002,
+            "end": 13.360000000000001,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 13.360000000000001,
+            "end": 14.48,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 0,
+            "end": 3.2,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 4.16,
+            "end": 6.08,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 11.520000000000001,
+            "end": 12.080000000000002,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 3.2,
+            "end": 4.16,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 6.08,
+            "end": 8.16,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 14.48,
+            "end": 14.96,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 14.96,
+            "end": 25.680000000000003,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 25.680000000000003,
+            "end": 28.880000000000003,
+            "hbm": 160
+          },
+          {
+            "id": "qkk",
+            "start": 20.880000000000003,
+            "end": 33.2,
+            "hbm": 672
+          },
+          {
+            "id": "qkp",
+            "start": 15.600000000000001,
+            "end": 20.880000000000003,
+            "hbm": 264
+          },
+          {
+            "id": "sum",
+            "start": 33.2,
+            "end": 37.040000000000006,
+            "hbm": 384
+          },
+          {
+            "id": "mask",
+            "start": 28.880000000000003,
+            "end": 32.080000000000005,
+            "hbm": 160
+          },
+          {
+            "id": "apply",
+            "start": 37.040000000000006,
+            "end": 40.88000000000001,
+            "hbm": 384
+          },
+          {
+            "id": "softmax",
+            "start": 40.88000000000001,
+            "end": 43.44000000000001,
+            "hbm": 256
+          },
+          {
+            "id": "av",
+            "start": 43.44000000000001,
+            "end": 50.16000000000001,
+            "hbm": 672
+          },
+          {
+            "id": "expand",
+            "start": 50.16000000000001,
+            "end": 51.92000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 51.92000000000001,
+            "end": 53.52000000000001,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "92f0310331bc42b92d6a9a259b9622a2c47b54181af6b04b8035c72028321882"
+    },
+    {
+      "name": "sparse",
+      "oracle": {
+        "profile": "sparse-gather",
+        "policy": "serial",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 4,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 200,
+        "peak": 2360,
+        "seconds": 30.960000000000008,
+        "hbm": 3096,
+        "matrix16": 1248,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 694,
+        "vector": 766,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 4.92,
+            "end": 5.24,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 7.96,
+            "end": 9.24,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 11.6,
+            "end": 12.08,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 5.24,
+            "end": 5.96,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 10.92,
+            "end": 11.32,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 12.72,
+            "end": 14.48,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 9.24,
+            "end": 10.92,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 12.08,
+            "end": 12.72,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 14.48,
+            "end": 15.040000000000001,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 2.84,
+            "end": 4.4399999999999995,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 5.96,
+            "end": 6.92,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 11.32,
+            "end": 11.6,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 4.4399999999999995,
+            "end": 4.92,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 6.92,
+            "end": 7.96,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 15.040000000000001,
+            "end": 15.280000000000001,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 15.280000000000001,
+            "end": 20.64,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 20.64,
+            "end": 22.240000000000002,
+            "hbm": 160
+          },
+          {
+            "id": "gather",
+            "start": 22.240000000000002,
+            "end": 24.160000000000004,
+            "hbm": 192
+          },
+          {
+            "id": "qkk",
+            "start": 24.160000000000004,
+            "end": 25.280000000000005,
+            "hbm": 112
+          },
+          {
+            "id": "qkp",
+            "start": 25.280000000000005,
+            "end": 25.680000000000003,
+            "hbm": 40
+          },
+          {
+            "id": "sum",
+            "start": 25.680000000000003,
+            "end": 26.160000000000004,
+            "hbm": 48
+          },
+          {
+            "id": "softmax",
+            "start": 26.160000000000004,
+            "end": 26.480000000000004,
+            "hbm": 32
+          },
+          {
+            "id": "av",
+            "start": 26.480000000000004,
+            "end": 27.600000000000005,
+            "hbm": 112
+          },
+          {
+            "id": "expand",
+            "start": 27.600000000000005,
+            "end": 29.360000000000007,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 29.360000000000007,
+            "end": 30.960000000000008,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "f9cec07724c1584cac6a1039789db270ff45c34952834e5ec5be4d48c1ec2373"
+    },
+    {
+      "name": "sparse-overlap",
+      "oracle": {
+        "profile": "sparse-gather",
+        "policy": "ideal",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 4,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 208,
+        "peak": 2368,
+        "seconds": 23.160000000000004,
+        "hbm": 3096,
+        "matrix16": 1248,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 694,
+        "vector": 766,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 2.84,
+            "end": 3.1599999999999997,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 3.88,
+            "end": 5.16,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 5.5600000000000005,
+            "end": 6.040000000000001,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 3.1599999999999997,
+            "end": 3.88,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 5.16,
+            "end": 5.5600000000000005,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 6.040000000000001,
+            "end": 7.800000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 4.08,
+            "end": 5.76,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 6.04,
+            "end": 6.68,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 6.68,
+            "end": 7.24,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 0,
+            "end": 1.6,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 2.08,
+            "end": 3.04,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 5.76,
+            "end": 6.04,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 1.6,
+            "end": 2.08,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 3.04,
+            "end": 4.08,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 7.24,
+            "end": 7.48,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 7.48,
+            "end": 12.84,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 12.84,
+            "end": 14.44,
+            "hbm": 160
+          },
+          {
+            "id": "gather",
+            "start": 14.44,
+            "end": 16.36,
+            "hbm": 192
+          },
+          {
+            "id": "qkk",
+            "start": 16.36,
+            "end": 17.48,
+            "hbm": 112
+          },
+          {
+            "id": "qkp",
+            "start": 17.48,
+            "end": 17.88,
+            "hbm": 40
+          },
+          {
+            "id": "sum",
+            "start": 17.88,
+            "end": 18.36,
+            "hbm": 48
+          },
+          {
+            "id": "softmax",
+            "start": 18.36,
+            "end": 18.68,
+            "hbm": 32
+          },
+          {
+            "id": "av",
+            "start": 18.68,
+            "end": 19.8,
+            "hbm": 112
+          },
+          {
+            "id": "expand",
+            "start": 19.8,
+            "end": 21.560000000000002,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 21.560000000000002,
+            "end": 23.160000000000004,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "a13d3cec3e9f4d867b03e66b3fa2d9742f87a112d7d84e317484ab0723073f22"
+    },
+    {
+      "name": "sparse-bandwidth",
+      "oracle": {
+        "profile": "sparse-gather",
+        "policy": "shared_bandwidth",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 4,
+        "weights": 1136,
+        "state": 1024,
+        "activation": 208,
+        "peak": 2368,
+        "seconds": 30.960000000000008,
+        "hbm": 3096,
+        "matrix16": 1248,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 694,
+        "vector": 766,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 1.76,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 5.68,
+            "end": 6.32,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 7.76,
+            "end": 10.32,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 11.120000000000001,
+            "end": 12.080000000000002,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 1.76,
+            "end": 5.68,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 6.32,
+            "end": 7.76,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 10.32,
+            "end": 11.120000000000001,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 12.080000000000002,
+            "end": 15.600000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 8.16,
+            "end": 11.520000000000001,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 12.080000000000002,
+            "end": 13.360000000000001,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 13.360000000000001,
+            "end": 14.48,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 0,
+            "end": 3.2,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 4.16,
+            "end": 6.08,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 11.520000000000001,
+            "end": 12.080000000000002,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 3.2,
+            "end": 4.16,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 6.08,
+            "end": 8.16,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 14.48,
+            "end": 14.96,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 14.96,
+            "end": 20.64,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 20.64,
+            "end": 22.240000000000002,
+            "hbm": 160
+          },
+          {
+            "id": "gather",
+            "start": 22.240000000000002,
+            "end": 24.160000000000004,
+            "hbm": 192
+          },
+          {
+            "id": "qkk",
+            "start": 24.160000000000004,
+            "end": 25.280000000000005,
+            "hbm": 112
+          },
+          {
+            "id": "qkp",
+            "start": 25.280000000000005,
+            "end": 25.680000000000003,
+            "hbm": 40
+          },
+          {
+            "id": "sum",
+            "start": 25.680000000000003,
+            "end": 26.160000000000004,
+            "hbm": 48
+          },
+          {
+            "id": "softmax",
+            "start": 26.160000000000004,
+            "end": 26.480000000000004,
+            "hbm": 32
+          },
+          {
+            "id": "av",
+            "start": 26.480000000000004,
+            "end": 27.600000000000005,
+            "hbm": 112
+          },
+          {
+            "id": "expand",
+            "start": 27.600000000000005,
+            "end": 29.360000000000007,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 29.360000000000007,
+            "end": 30.960000000000008,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "870b06ac28471f617c23d11a65b626a41e3aacfdbcc97f18ae7797ef3d10b415"
+    },
+    {
+      "name": "dense",
+      "oracle": {
+        "profile": "dense",
+        "policy": "serial",
+        "allocation": "dynamic",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 32,
+        "selected": 4,
+        "attentionPositions": 32,
+        "weights": 752,
+        "state": 640,
+        "activation": 384,
+        "peak": 1776,
+        "seconds": 33.64,
+        "hbm": 3364,
+        "matrix16": 3008,
+        "matrix8": 0,
+        "matrix32": 0,
+        "vectorUseful": 526,
+        "vector": 542,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 2.84,
+            "end": 3.1599999999999997,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 3.88,
+            "end": 5.16,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 5.5600000000000005,
+            "end": 6.040000000000001,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 3.1599999999999997,
+            "end": 3.88,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 5.16,
+            "end": 5.5600000000000005,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 6.040000000000001,
+            "end": 7.800000000000001,
+            "hbm": 176
+          },
+          {
+            "id": "qkk",
+            "start": 10.440000000000001,
+            "end": 17.16,
+            "hbm": 672
+          },
+          {
+            "id": "qkp",
+            "start": 7.800000000000001,
+            "end": 10.440000000000001,
+            "hbm": 264
+          },
+          {
+            "id": "sum",
+            "start": 17.16,
+            "end": 21,
+            "hbm": 384
+          },
+          {
+            "id": "softmax",
+            "start": 21,
+            "end": 23.56,
+            "hbm": 256
+          },
+          {
+            "id": "av",
+            "start": 23.56,
+            "end": 30.279999999999998,
+            "hbm": 672
+          },
+          {
+            "id": "expand",
+            "start": 30.279999999999998,
+            "end": 32.04,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 32.04,
+            "end": 33.64,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "95a19e05d9e9cf0f2f3a85acf3916ee7f48a570e7dee6f10e0f0cc6959040c07"
+    },
+    {
+      "name": "source-provisioned",
+      "oracle": {
+        "profile": "source-mask",
+        "policy": "serial",
+        "allocation": "provisioned",
+        "B": 1,
+        "C": 31,
+        "H": 8,
+        "A": 2,
+        "I": 2,
+        "K": 4,
+        "M": 128,
+        "activeRows": 32,
+        "reservedRows": 128,
+        "selected": 4,
+        "attentionPositions": 32,
+        "weights": 1136,
+        "state": 4096,
+        "activation": 408,
+        "peak": 5640,
+        "seconds": 53.519999999999996,
+        "hbm": 5352,
+        "matrix16": 3264,
+        "matrix8": 1024,
+        "matrix32": 32,
+        "vectorUseful": 1186,
+        "vector": 1258,
+        "allMemoryBound": true,
+        "events": [
+          {
+            "id": "qa",
+            "start": 0,
+            "end": 0.88,
+            "hbm": 88
+          },
+          {
+            "id": "qn",
+            "start": 4.92,
+            "end": 5.24,
+            "hbm": 32
+          },
+          {
+            "id": "qb",
+            "start": 7.96,
+            "end": 9.24,
+            "hbm": 128
+          },
+          {
+            "id": "qr",
+            "start": 11.6,
+            "end": 12.08,
+            "hbm": 48
+          },
+          {
+            "id": "ka",
+            "start": 0.88,
+            "end": 2.84,
+            "hbm": 196
+          },
+          {
+            "id": "kn",
+            "start": 5.24,
+            "end": 5.96,
+            "hbm": 72
+          },
+          {
+            "id": "cache",
+            "start": 10.92,
+            "end": 11.32,
+            "hbm": 40
+          },
+          {
+            "id": "absorb",
+            "start": 12.72,
+            "end": 14.48,
+            "hbm": 176
+          },
+          {
+            "id": "iq",
+            "start": 9.24,
+            "end": 10.92,
+            "hbm": 168
+          },
+          {
+            "id": "iqrot",
+            "start": 12.08,
+            "end": 12.72,
+            "hbm": 64
+          },
+          {
+            "id": "iqquant",
+            "start": 17.12,
+            "end": 17.68,
+            "hbm": 56
+          },
+          {
+            "id": "ik",
+            "start": 2.84,
+            "end": 4.4399999999999995,
+            "hbm": 160
+          },
+          {
+            "id": "iknorm",
+            "start": 5.96,
+            "end": 6.92,
+            "hbm": 96
+          },
+          {
+            "id": "ikquant",
+            "start": 11.32,
+            "end": 11.6,
+            "hbm": 28
+          },
+          {
+            "id": "cast",
+            "start": 4.4399999999999995,
+            "end": 4.92,
+            "hbm": 48
+          },
+          {
+            "id": "iw",
+            "start": 6.92,
+            "end": 7.96,
+            "hbm": 104
+          },
+          {
+            "id": "iws",
+            "start": 24.4,
+            "end": 24.639999999999997,
+            "hbm": 24
+          },
+          {
+            "id": "scan",
+            "start": 28.479999999999997,
+            "end": 33.839999999999996,
+            "hbm": 536
+          },
+          {
+            "id": "top",
+            "start": 33.839999999999996,
+            "end": 35.44,
+            "hbm": 160
+          },
+          {
+            "id": "qkk",
+            "start": 17.68,
+            "end": 24.4,
+            "hbm": 672
+          },
+          {
+            "id": "qkp",
+            "start": 14.48,
+            "end": 17.12,
+            "hbm": 264
+          },
+          {
+            "id": "sum",
+            "start": 24.639999999999997,
+            "end": 28.479999999999997,
+            "hbm": 384
+          },
+          {
+            "id": "mask",
+            "start": 35.44,
+            "end": 37.04,
+            "hbm": 160
+          },
+          {
+            "id": "apply",
+            "start": 37.04,
+            "end": 40.879999999999995,
+            "hbm": 384
+          },
+          {
+            "id": "softmax",
+            "start": 40.879999999999995,
+            "end": 43.44,
+            "hbm": 256
+          },
+          {
+            "id": "av",
+            "start": 43.44,
+            "end": 50.16,
+            "hbm": 672
+          },
+          {
+            "id": "expand",
+            "start": 50.16,
+            "end": 51.919999999999995,
+            "hbm": 176
+          },
+          {
+            "id": "out",
+            "start": 51.919999999999995,
+            "end": 53.519999999999996,
+            "hbm": 160
+          }
+        ]
+      },
+      "inputHash": "30ac50bf4594dfc254765880d6db834e8f29b7e327bfb820b692606dbbe06416"
+    }
+  ],
+  "capacities": [
+    {
+      "profile": "source-mask",
+      "range": [
+        63,
+        67
+      ],
+      "maximum": 65
+    },
+    {
+      "profile": "sparse-gather",
+      "range": [
+        77,
+        81
+      ],
+      "maximum": 79
+    },
+    {
+      "profile": "dense",
+      "range": [
+        101,
+        105
+      ],
+      "maximum": 103
+    }
+  ],
+  "sequence": [
+    {
+      "context": 31,
+      "seconds": 30.960000000000008,
+      "peak": 2360
+    },
+    {
+      "context": 32,
+      "seconds": 31.160000000000004,
+      "peak": 2396
+    },
+    {
+      "context": 33,
+      "seconds": 31.360000000000007,
+      "peak": 2432
+    }
+  ]
+}

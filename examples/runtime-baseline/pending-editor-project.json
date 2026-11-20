@@ -1,0 +1,427 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "c985c4ee-7850-4194-aeb3-11bf32fc14a0",
+  "projectRevision": 2,
+  "name": "Software runtime · chain-9999",
+  "scenarios": [
+    {
+      "scenarioId": "runtime:scenario:chain-9999",
+      "name": "chain-9999",
+      "model": {
+        "assetId": "runtime:model:chain:9999",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "ascendQuantizationImports": [
+        {
+          "importId": "05e72b6e-8f02-430e-abc6-c9a18f59859c",
+          "sourceId": "ascend:67efa99f70c8169e236263c952c49ec12e6902f2c14af6a3ba11ea5830d7d6e9",
+          "draft": {
+            "sourceKey": "",
+            "storageId": "",
+            "specificationText": "",
+            "note": ""
+          },
+          "mappings": [],
+          "appliedMappings": [],
+          "confirmationNote": ""
+        }
+      ],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "runtime:model:chain:9999",
+      "revision": 1,
+      "name": "Synthetic chain × 9999",
+      "tags": [
+        "software-runtime-fixture"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic software-scaling input. No real model, kernel or hardware performance claim."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "software-scaling",
+        "graph": {
+          "inputs": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            }
+          ],
+          "outputs": [
+            {
+              "portId": "y",
+              "tensorId": "Y"
+            }
+          ],
+          "nodes": [
+            {
+              "nodeId": "leaves",
+              "name": "Synthetic leaf",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "x",
+                  "tensorId": "X"
+                },
+                {
+                  "portId": "y",
+                  "tensorId": "Y"
+                }
+              ],
+              "stateBindings": [],
+              "repeat": {
+                "axis": "i",
+                "count": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 9999,
+                    "unit": "count"
+                  }
+                },
+                "wiring": "chain",
+                "carry": [
+                  {
+                    "outputPortId": "y",
+                    "inputPortId": "x"
+                  }
+                ]
+              },
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read",
+                      "storageId": "sX",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 8,
+                          "unit": "byte"
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "bytes",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 8,
+                            "unit": "byte"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "accessId": "write",
+                      "storageId": "sY",
+                      "mode": "write",
+                      "logicalBytes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 8,
+                          "unit": "byte"
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "bytes",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 8,
+                            "unit": "byte"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.000001,
+                    "description": "Authored synthetic one-microsecond leaf, not a device measurement"
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "x",
+                    "tensorId": "X"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "portId": "y",
+                    "tensorId": "Y"
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "input",
+              "from": {
+                "kind": "graph_input",
+                "portId": "x"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "leaves",
+                "portId": "x"
+              },
+              "tensorId": "X"
+            },
+            {
+              "edgeId": "output",
+              "from": {
+                "kind": "node",
+                "nodeId": "leaves",
+                "portId": "y"
+              },
+              "to": {
+                "kind": "graph_output",
+                "portId": "y"
+              },
+              "tensorId": "Y"
+            }
+          ],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "X",
+              "name": "X",
+              "shape": [
+                {
+                  "axisId": "d",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "sX"
+            },
+            {
+              "tensorId": "Y",
+              "name": "Y",
+              "shape": [
+                {
+                  "axisId": "d",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "sY"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "sX",
+              "name": "X",
+              "category": "activation",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "sY",
+              "name": "Y",
+              "category": "activation",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:c01",
+      "revision": 1,
+      "name": "C01 人工硬件",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    }
+  ],
+  "quantizationSources": [
+    {
+      "sourceId": "ascend:67efa99f70c8169e236263c952c49ec12e6902f2c14af6a3ba11ea5830d7d6e9",
+      "sourceName": "pending-source.json",
+      "format": "ascend-description.1",
+      "text": "{\"unknown.weight\":\"FLOAT\"}",
+      "sha256": "67efa99f70c8169e236263c952c49ec12e6902f2c14af6a3ba11ea5830d7d6e9"
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

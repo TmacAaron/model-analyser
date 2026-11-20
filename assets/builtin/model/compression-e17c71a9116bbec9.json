@@ -1,0 +1,974 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:compression:r1:decode:dynamic:packed:model",
+  "revision": 1,
+  "name": "Compression/cache preparation R1 decode dynamic packed",
+  "tags": [
+    "research",
+    "compression",
+    "component",
+    "decode"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 255
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 128,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8192,
+      "default": {
+        "kind": "integer",
+        "value": 512
+      }
+    },
+    {
+      "key": "W",
+      "name": "W",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 32,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 16,
+      "max": 16,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Compressor plus independent window/cache preparation components only, not full attention, an indexer, or a complete language model. Two modules export new pre-rotary latents, full cache/ring capacity buffers and current-window KV. Active entries and partial occupancy are reported separately; unfilled capacity is not an attention-valid token. Artificial H=4, D=16 and W=2. Each ratio is a fixed asset identity with matching precision; prefill starts at C=0, decode uses Q=1. Initialized warm history includes the declared pending slots. Version numbers denote call snapshots, not the number of completed groups. Materialized FP32 softmax, elementwise product and reduction buffers; explicit BF16/FP32 casts. Window weights/projection use BF16, and ratio-greater-than-one value/gate weights and arithmetic use FP32. Normalization, rotary and quantization use declared vector proxies and on-chip internal workspace. Conversions add execution only, not model-useful arithmetic. Declared last-use liveness is not Python local-variable or allocator lifetime. The packed theoretical cache uses FP4 main rows with one E4M3 byte per 16 channels and FP8 window rows with one E8M0 byte per 32 channels. Partial metadata blocks use ceil; this is not a source-kernel shape/accuracy claim. BF16-cache comparison retains fake-quant work. Dynamic cache reserves floor((C+Q)/R) rows at call start; provisioned cache reserves floor(M/R) rows as a separate variant. Both keep two full FP32 partial-group buffers and a full W-row window ring. Demo max-batch/max-sequence preallocation is not silently equated with current active length. Artificial 4096-byte device with BF16 matrix, FP32 matrix and FP32 vector ceilings of 1000 operations/s and HBM 100 bytes/s. Serial, ideal two-stream and declared-HBM sharing policies use the existing engine. No implicit communication, allocator slack, fusion or omitted attention costs."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "deepseek-v41-compression-fragment",
+    "variant": "r1-decode-dynamic-packed",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "compress-cache",
+          "tensorId": "Cache"
+        },
+        {
+          "portId": "compress-new-latent",
+          "tensorId": "Latent"
+        },
+        {
+          "portId": "window-cache",
+          "tensorId": "Window"
+        },
+        {
+          "portId": "window-current",
+          "tensorId": "WindowCurrent"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "compress",
+          "name": "Complete-group compressor R1 decode dynamic packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "cache",
+              "tensorId": "Cache"
+            },
+            {
+              "portId": "new-latent",
+              "tensorId": "Latent"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:compression:r1:decode:dynamic:packed:module",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "window",
+          "name": "Independent fixed window preparation decode packed",
+          "phases": [
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "cache",
+              "tensorId": "Window"
+            },
+            {
+              "portId": "current",
+              "tensorId": "WindowCurrent"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:compression:window:decode:packed",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "input-compress",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "compress",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "output-compress-cache",
+          "from": {
+            "kind": "node",
+            "nodeId": "compress",
+            "portId": "cache"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "compress-cache"
+          },
+          "tensorId": "Cache"
+        },
+        {
+          "edgeId": "output-compress-new-latent",
+          "from": {
+            "kind": "node",
+            "nodeId": "compress",
+            "portId": "new-latent"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "compress-new-latent"
+          },
+          "tensorId": "Latent"
+        },
+        {
+          "edgeId": "input-window",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "window",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "output-window-cache",
+          "from": {
+            "kind": "node",
+            "nodeId": "window",
+            "portId": "cache"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "window-cache"
+          },
+          "tensorId": "Window"
+        },
+        {
+          "edgeId": "output-window-current",
+          "from": {
+            "kind": "node",
+            "nodeId": "window",
+            "portId": "current"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "window-current"
+          },
+          "tensorId": "WindowCurrent"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "Cache",
+          "name": "Cache",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:2a74da521828db8a",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Cache"
+        },
+        {
+          "tensorId": "Latent",
+          "name": "Latent",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "g",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:compression:formula:69f1af31369e4efd",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    },
+                    "R": {
+                      "kind": "symbol",
+                      "name": "R"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Latent"
+        },
+        {
+          "tensorId": "WindowCurrent",
+          "name": "WindowCurrent",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WindowCurrent"
+        },
+        {
+          "tensorId": "Window",
+          "name": "Window",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "W"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Window"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Cache",
+          "name": "Cache",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:2a74da521828db8a",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "quantization": {
+              "payloadBits": 4,
+              "packingUnitElements": 2,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "row-scales",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 8,
+                    "format": "e4m3"
+                  },
+                  "count": {
+                    "kind": "block",
+                    "axes": [
+                      {
+                        "axisId": "d",
+                        "blockSize": 16
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "storageId": "Latent",
+          "name": "Latent",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "g",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:compression:formula:69f1af31369e4efd",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      },
+                      "R": {
+                        "kind": "symbol",
+                        "name": "R"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WindowCurrent",
+          "name": "WindowCurrent",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Window",
+          "name": "Window",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "quantization": {
+              "payloadBits": 8,
+              "packingUnitElements": 1,
+              "alignmentBytes": 1,
+              "auxiliaries": [
+                {
+                  "name": "row-scales",
+                  "dtype": {
+                    "category": "float",
+                    "bits": 8,
+                    "format": "e8m0"
+                  },
+                  "count": {
+                    "kind": "block",
+                    "axes": [
+                      {
+                        "axisId": "d",
+                        "blockSize": 32
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "Compressor plus independent window/cache preparation components only, not full attention, an indexer, or a complete language model. Two modules export new pre-rotary latents, full cache/ring capacity buffers and current-window KV. Active entries and partial occupancy are reported separately; unfilled capacity is not an attention-valid token.",
+      "Artificial H=4, D=16 and W=2. Each ratio is a fixed asset identity with matching precision; prefill starts at C=0, decode uses Q=1. Initialized warm history includes the declared pending slots. Version numbers denote call snapshots, not the number of completed groups.",
+      "Materialized FP32 softmax, elementwise product and reduction buffers; explicit BF16/FP32 casts. Window weights/projection use BF16, and ratio-greater-than-one value/gate weights and arithmetic use FP32. Normalization, rotary and quantization use declared vector proxies and on-chip internal workspace. Conversions add execution only, not model-useful arithmetic. Declared last-use liveness is not Python local-variable or allocator lifetime.",
+      "The packed theoretical cache uses FP4 main rows with one E4M3 byte per 16 channels and FP8 window rows with one E8M0 byte per 32 channels. Partial metadata blocks use ceil; this is not a source-kernel shape/accuracy claim. BF16-cache comparison retains fake-quant work.",
+      "Dynamic cache reserves floor((C+Q)/R) rows at call start; provisioned cache reserves floor(M/R) rows as a separate variant. Both keep two full FP32 partial-group buffers and a full W-row window ring. Demo max-batch/max-sequence preallocation is not silently equated with current active length.",
+      "Artificial 4096-byte device with BF16 matrix, FP32 matrix and FP32 vector ceilings of 1000 operations/s and HBM 100 bytes/s. Serial, ideal two-stream and declared-HBM sharing policies use the existing engine. No implicit communication, allocator slack, fusion or omitted attention costs."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "extensions": {
+    "compression": {
+      "version": "compression-research.1",
+      "ratio": 1,
+      "phase": "decode",
+      "allocation": "dynamic",
+      "storage": "packed",
+      "completed": "floor((C+Q)/R)",
+      "newGroups": "floor((C + Q) / R) - floor(C / R)",
+      "pending": "C + Q - floor((C + Q) / R) * R",
+      "partialCapacityRows": 0,
+      "sourceRatio": "ratio-one code path",
+      "scope": "Compression and window/cache preparation; no attention or indexer."
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "scenarioIds": {
+      "minItems": 2,
+      "maxItems": 4,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "scan": {
+      "type": "object",
+      "properties": {
+        "variable": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "workload"
+                },
+                "field": {
+                  "type": "string",
+                  "enum": [
+                    "batchSize",
+                    "queryTokensPerRequest",
+                    "pastTokensPerRequest",
+                    "contextTokensPerRequest"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "field"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "parameter"
+                },
+                "parameterKey": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "kind",
+                "parameterKey"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "searchRange": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "max": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "variable",
+        "searchRange"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "scenarioIds"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

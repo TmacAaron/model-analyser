@@ -1,0 +1,507 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:c05",
+  "projectRevision": 1,
+  "name": "C05 多流与显存参考",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:c05",
+      "name": "C05 stream overlap",
+      "model": {
+        "assetId": "example:model:c05-streams",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "main",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "streams",
+        "assignments": [
+          {
+            "nodeId": "A/work",
+            "groupId": "main",
+            "streamId": "left"
+          },
+          {
+            "nodeId": "B/work",
+            "groupId": "main",
+            "streamId": "right"
+          }
+        ],
+        "extraDependencies": [],
+        "resourcePolicy": {
+          "kind": "ideal"
+        }
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "modulePeakOverrides": [
+        {
+          "overrideId": "private-A",
+          "nodeId": "A",
+          "phases": [
+            "decode"
+          ],
+          "peakBytes": {
+            "kind": "formula",
+            "call": {
+              "formula": {
+                "assetId": "reference:module-private-budget",
+                "revision": 1,
+                "kind": "formula"
+              },
+              "bindings": {
+                "B": {
+                  "kind": "symbol",
+                  "name": "batchSize"
+                }
+              }
+            }
+          },
+          "description": "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+        },
+        {
+          "overrideId": "private-B",
+          "nodeId": "B",
+          "phases": [
+            "decode"
+          ],
+          "peakBytes": {
+            "kind": "literal",
+            "quantity": {
+              "value": 200,
+              "unit": "byte"
+            }
+          },
+          "description": "Independent authored private-call budget; persistent and boundary/shared objects excluded"
+        }
+      ],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:c05-streams",
+      "revision": 1,
+      "name": "C05 independent branches",
+      "tags": [
+        "synthetic-stream-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "C05: prepare 1ms, A 2ms with 2GiB scratch, B 5ms with 3GiB scratch, join .5ms. Fixed isolated times; no real kernel claim."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "c05",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "prepare",
+              "name": "prepare",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.001,
+                    "description": "C05 isolated fixed duration"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            },
+            {
+              "nodeId": "A",
+              "name": "A",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": []
+              }
+            },
+            {
+              "nodeId": "B",
+              "name": "B",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": []
+              }
+            },
+            {
+              "nodeId": "join",
+              "name": "join",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.0005,
+                    "description": "C05 isolated fixed duration"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [
+            {
+              "edgeId": "d0",
+              "fromNodeId": "prepare",
+              "toNodeId": "A",
+              "kind": "control"
+            },
+            {
+              "edgeId": "d1",
+              "fromNodeId": "prepare",
+              "toNodeId": "B",
+              "kind": "control"
+            },
+            {
+              "edgeId": "d2",
+              "fromNodeId": "A",
+              "toNodeId": "join",
+              "kind": "control"
+            },
+            {
+              "edgeId": "d3",
+              "fromNodeId": "B",
+              "toNodeId": "join",
+              "kind": "control"
+            }
+          ],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:c05",
+      "revision": 1,
+      "name": "C01 人工硬件",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 450,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100000
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "private-A",
+      "revision": 1,
+      "name": "Module A",
+      "tags": [
+        "synthetic-stream-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "C05: prepare 1ms, A 2ms with 2GiB scratch, B 5ms with 3GiB scratch, join .5ms. Fixed isolated times; no real kernel claim."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "work",
+              "name": "A",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [
+                    "scratchA"
+                  ],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.002,
+                    "description": "C05 isolated fixed duration"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [
+            {
+              "storageId": "scratchA",
+              "name": "Branch scratch",
+              "category": "workspace",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2147483648,
+                    "unit": "byte"
+                  }
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "private-B",
+      "revision": 1,
+      "name": "Module B",
+      "tags": [
+        "synthetic-stream-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "C05: prepare 1ms, A 2ms with 2GiB scratch, B 5ms with 3GiB scratch, join .5ms. Fixed isolated times; no real kernel claim."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "work",
+              "name": "B",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [
+                    "scratchB"
+                  ],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.005,
+                    "description": "C05 isolated fixed duration"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [
+            {
+              "storageId": "scratchB",
+              "name": "Branch scratch",
+              "category": "workspace",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 3221225472,
+                    "unit": "byte"
+                  }
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "reference:module-private-budget",
+      "revision": 1,
+      "name": "Private budget per batch",
+      "tags": [],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Authored budget 100B per batch, independent integer reference; not a hardware benchmark."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "100 * B",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "100 bytes per batch"
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "scope": "Two isolated local stores, one authoritative file per ID/revision in each. YAML serialization changes neither mathematical identity nor fixed snapshots. The two JSON projects are versioned snapshots, not duplicate standalone asset authorities.",
+  "independentArithmetic": {
+    "originalOperations": "2*4*8*16=1024",
+    "updatedOperations": "20*4*8*16=10240",
+    "hbmBytes": "(4*16+16*8+4*8)*2=448",
+    "seconds": "max(1024/1000,448/100)=4.48; max(10240/1000,448/100)=10.24"
+  },
+  "cases": [
+    {
+      "importSetting": "convert_to_json",
+      "sourceFormat": "yaml",
+      "storedFormat": "json",
+      "formalRevisionFiles": [
+        "59d8adc299720cffd1c853143f0345f1dcab477974212e59d1db67ce6da25ee1/1.json",
+        "59d8adc299720cffd1c853143f0345f1dcab477974212e59d1db67ce6da25ee1/2.json",
+        "66f7f55037f9f5d0bc75888719fdd3a6eeea847d7faf59ad0a15b1bdf0674775/1.json",
+        "9c63e27bad5dc592e2f29398eec58e2453088a20ff1b31ba1979996bf6abaa40/1.json",
+        "9c63e27bad5dc592e2f29398eec58e2453088a20ff1b31ba1979996bf6abaa40/2.json",
+        "bad8fac475453ae926f94bb63de6f9956da3d913dc4c7643d2eae79af9e3ac54/1.json",
+        "d1b80551f1fa17a767b8a85873db67fffea6bb71416d00b2dc5d3d26ce4553e5/1.json",
+        "d1b80551f1fa17a767b8a85873db67fffea6bb71416d00b2dc5d3d26ce4553e5/2.json",
+        "dacf903624638ee5aff21ac745c732919c77c61420ba661d38cecb612c34e212/1.json",
+        "dacf903624638ee5aff21ac745c732919c77c61420ba661d38cecb612c34e212/2.json"
+      ],
+      "beforeInputHash": "0b2abd022ab52d508f15cc8c7cce9ee656ea5af5a08d509761139bdb76144f9b",
+      "afterInputHash": "68bd6afa110de6ddd57b286b75a92ad818b73e5b42de6215e82cddbce6b9ea80",
+      "beforeSeconds": 4.48,
+      "afterSeconds": 10.24,
+      "hbmBytes": 448,
+      "oldProjectStillFixed": true
+    },
+    {
+      "importSetting": "keep_yaml",
+      "sourceFormat": "yaml",
+      "storedFormat": "yaml",
+      "formalRevisionFiles": [
+        "59d8adc299720cffd1c853143f0345f1dcab477974212e59d1db67ce6da25ee1/1.yaml",
+        "59d8adc299720cffd1c853143f0345f1dcab477974212e59d1db67ce6da25ee1/2.yaml",
+        "66f7f55037f9f5d0bc75888719fdd3a6eeea847d7faf59ad0a15b1bdf0674775/1.yaml",
+        "9c63e27bad5dc592e2f29398eec58e2453088a20ff1b31ba1979996bf6abaa40/1.yaml",
+        "9c63e27bad5dc592e2f29398eec58e2453088a20ff1b31ba1979996bf6abaa40/2.yaml",
+        "bad8fac475453ae926f94bb63de6f9956da3d913dc4c7643d2eae79af9e3ac54/1.yaml",
+        "d1b80551f1fa17a767b8a85873db67fffea6bb71416d00b2dc5d3d26ce4553e5/1.yaml",
+        "d1b80551f1fa17a767b8a85873db67fffea6bb71416d00b2dc5d3d26ce4553e5/2.yaml",
+        "dacf903624638ee5aff21ac745c732919c77c61420ba661d38cecb612c34e212/1.yaml",
+        "dacf903624638ee5aff21ac745c732919c77c61420ba661d38cecb612c34e212/2.yaml"
+      ],
+      "beforeInputHash": "0b2abd022ab52d508f15cc8c7cce9ee656ea5af5a08d509761139bdb76144f9b",
+      "afterInputHash": "68bd6afa110de6ddd57b286b75a92ad818b73e5b42de6215e82cddbce6b9ea80",
+      "beforeSeconds": 4.48,
+      "afterSeconds": 10.24,
+      "hbmBytes": 448,
+      "oldProjectStillFixed": true
+    }
+  ]
+}

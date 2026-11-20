@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "available"
+        },
+        "ridgeOperationsPerByte": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "computeSeconds": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "memorySeconds": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "side": {
+          "type": "string",
+          "enum": [
+            "compute",
+            "memory",
+            "balanced"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "ridgeOperationsPerByte",
+        "computeSeconds",
+        "memorySeconds",
+        "side"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unavailable"
+        },
+        "diagnosticIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "diagnosticIds"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

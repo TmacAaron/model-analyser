@@ -1,0 +1,2799 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:model:glm-4-9b",
+  "revision": 1,
+  "name": "GLM-4-9B BASE 8K · materialized BF16 reference",
+  "tags": [
+    "glm4",
+    "dense",
+    "gqa",
+    "bf16",
+    "analytical-reference"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4096
+      }
+    },
+    {
+      "key": "I",
+      "name": "I",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 13696
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 32
+      }
+    },
+    {
+      "key": "NK",
+      "name": "NK",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "V",
+      "name": "V",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 151552
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8192
+      }
+    },
+    {
+      "key": "L",
+      "name": "L",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 40
+      }
+    },
+    {
+      "key": "LAST",
+      "name": "LAST",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/config.json",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/modeling_chatglm.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/model.safetensors.index.json",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "GLM-4-9B BASE 8K, not chat/128K/all GLM. Independent BF16 mathematical/materialized attention reference of the SDPA-selected structure; NOT a literal SDPA/Python allocation or measured kernel. No Q/K norm, biased fused QKV represented by three materialized split buffers, interleaved half-head RoPE, group-head preallocated K/V state (NOT source cat/repack allocation), explicit full-head K/V activation expansion. Full-M RoPE construction proxy, shared bool mask, FP32 score/probability and BF16 cast are authored materialization choices; SDPA backend could fuse them. No eager per-layer QK scaling (the selected SDPA override bypasses it), dropout/training, padding, runtime/network or actual kernel precision claim. FP32 vector proxies: RMSNorm5/element, SiLU6/element, rotary3/rotated element; BF16 matrix separately. LAST=0 full logits (forward default), LAST=1 last position (generation uses it). Per-buffer HBM read/write factor1, each weight read once per leaf. See references/models/expansion-source-lock.json; no Python execution or model weights."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "glm4",
+    "variant": "9b-base-materialized-sdpa-math",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "tokens",
+          "tensorId": "tokens"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "logits",
+          "tensorId": "logits"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "embedding",
+          "name": "Independent token embedding",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "tokens",
+              "tensorId": "tokens"
+            },
+            {
+              "portId": "embedding",
+              "tensorId": "embedding"
+            },
+            {
+              "portId": "hidden",
+              "tensorId": "hidden"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-tokens",
+                  "storageId": "tokens",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-embedding",
+                  "storageId": "embedding",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:qwen3:7523a848555242bb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-hidden",
+                  "storageId": "hidden",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "tokens",
+                "tensorId": "tokens"
+              },
+              {
+                "portId": "embedding",
+                "tensorId": "embedding"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "hidden",
+                "tensorId": "hidden"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "rope-build",
+          "name": "Full-M frequency/outer/trig FP32 proxy",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "rope-fp32",
+              "tensorId": "rope-fp32"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:040dbbdbb1cb53cf",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "M": {
+                          "kind": "symbol",
+                          "name": "M"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:040dbbdbb1cb53cf",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "M": {
+                          "kind": "symbol",
+                          "name": "M"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "write-rope-fp32",
+                  "storageId": "rope-fp32",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-scratch-theta",
+                  "storageId": "theta",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scratch-theta",
+                  "storageId": "theta",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-scratch-positions",
+                  "storageId": "positions",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scratch-positions",
+                  "storageId": "positions",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-scratch-angles",
+                  "storageId": "angles",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scratch-angles",
+                  "storageId": "angles",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [
+                "theta",
+                "positions",
+                "angles"
+              ],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [],
+            "outputs": [
+              {
+                "portId": "rope-fp32",
+                "tensorId": "rope-fp32"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "rope-cast",
+          "name": "Full rotary table cast to BF16",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "rope-fp32",
+              "tensorId": "rope-fp32"
+            },
+            {
+              "portId": "rope-table",
+              "tensorId": "rope-table"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 0,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:f49f7f59328e9c1c",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "M": {
+                          "kind": "symbol",
+                          "name": "M"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-rope-fp32",
+                  "storageId": "rope-fp32",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-rope-table",
+                  "storageId": "rope-table",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "rope-fp32",
+                "tensorId": "rope-fp32"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "rope-table",
+                "tensorId": "rope-table"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "mask-build",
+          "name": "Shared explicit mathematical causal mask",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "mask",
+              "tensorId": "mask"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 0,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:449a6b91ceb5fc17",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "write-mask",
+                  "storageId": "mask",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [],
+            "outputs": [
+              {
+                "portId": "mask",
+                "tensorId": "mask"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "decoder",
+          "name": "Repeated GLM-4 layers",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "hidden"
+            },
+            {
+              "portId": "y",
+              "tensorId": "decoder-output"
+            },
+            {
+              "portId": "rope",
+              "tensorId": "rope-table"
+            },
+            {
+              "portId": "mask",
+              "tensorId": "mask"
+            }
+          ],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "symbol",
+              "name": "L"
+            },
+            "wiring": "chain",
+            "carry": [
+              {
+                "outputPortId": "y",
+                "inputPortId": "x"
+              }
+            ]
+          },
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:glm4-decoder",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "NK",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "final-norm",
+          "name": "Final RMSNorm",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "decoder-output",
+              "tensorId": "decoder-output"
+            },
+            {
+              "portId": "final-norm-weight",
+              "tensorId": "final-norm-weight"
+            },
+            {
+              "portId": "normalized",
+              "tensorId": "normalized"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:qwen3:bb87c340653cc787",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-decoder-output",
+                  "storageId": "decoder-output",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-final-norm-weight",
+                  "storageId": "final-norm-weight",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-normalized",
+                  "storageId": "normalized",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "decoder-output",
+                "tensorId": "decoder-output"
+              },
+              {
+                "portId": "final-norm-weight",
+                "tensorId": "final-norm-weight"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "normalized",
+                "tensorId": "normalized"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "lm-head",
+          "name": "Independent output head, full/last position",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "normalized",
+              "tensorId": "normalized"
+            },
+            {
+              "portId": "lm-head-weight",
+              "tensorId": "lm-head-weight"
+            },
+            {
+              "portId": "logits",
+              "tensorId": "logits"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:2ae956115da0af0a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "LAST": {
+                          "kind": "symbol",
+                          "name": "LAST"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "V": {
+                          "kind": "symbol",
+                          "name": "V"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:2ae956115da0af0a",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "LAST": {
+                          "kind": "symbol",
+                          "name": "LAST"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "V": {
+                          "kind": "symbol",
+                          "name": "V"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-normalized",
+                  "storageId": "normalized",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:glm4:ff4c3a98cf576647",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "LAST": {
+                          "kind": "symbol",
+                          "name": "LAST"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-lm-head-weight",
+                  "storageId": "lm-head-weight",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-logits",
+                  "storageId": "logits",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "inputs": [
+              {
+                "portId": "normalized",
+                "tensorId": "normalized"
+              },
+              {
+                "portId": "lm-head-weight",
+                "tensorId": "lm-head-weight"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "logits",
+                "tensorId": "logits"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "embedding-in-tokens",
+          "from": {
+            "kind": "graph_input",
+            "portId": "tokens"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "embedding",
+            "portId": "tokens"
+          },
+          "tensorId": "tokens"
+        },
+        {
+          "edgeId": "rope-cast-in-rope-fp32",
+          "from": {
+            "kind": "node",
+            "nodeId": "rope-build",
+            "portId": "rope-fp32"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "rope-cast",
+            "portId": "rope-fp32"
+          },
+          "tensorId": "rope-fp32"
+        },
+        {
+          "edgeId": "decoder-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "embedding",
+            "portId": "hidden"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "decoder",
+            "portId": "x"
+          },
+          "tensorId": "hidden"
+        },
+        {
+          "edgeId": "rope-shared",
+          "from": {
+            "kind": "node",
+            "nodeId": "rope-cast",
+            "portId": "rope-table"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "decoder",
+            "portId": "rope"
+          },
+          "tensorId": "rope-table"
+        },
+        {
+          "edgeId": "mask-shared",
+          "from": {
+            "kind": "node",
+            "nodeId": "mask-build",
+            "portId": "mask"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "decoder",
+            "portId": "mask"
+          },
+          "tensorId": "mask"
+        },
+        {
+          "edgeId": "final-norm-in-decoder-output",
+          "from": {
+            "kind": "node",
+            "nodeId": "decoder",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "final-norm",
+            "portId": "decoder-output"
+          },
+          "tensorId": "decoder-output"
+        },
+        {
+          "edgeId": "lm-head-in-normalized",
+          "from": {
+            "kind": "node",
+            "nodeId": "final-norm",
+            "portId": "normalized"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "lm-head",
+            "portId": "normalized"
+          },
+          "tensorId": "normalized"
+        },
+        {
+          "edgeId": "out-logits",
+          "from": {
+            "kind": "node",
+            "nodeId": "lm-head",
+            "portId": "logits"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "logits"
+          },
+          "tensorId": "logits"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "tokens",
+          "name": "tokens",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "int",
+            "bits": 64,
+            "format": "int64"
+          },
+          "storageId": "tokens"
+        },
+        {
+          "tensorId": "embedding",
+          "name": "embedding",
+          "shape": [
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "embedding"
+        },
+        {
+          "tensorId": "hidden",
+          "name": "hidden",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "hidden"
+        },
+        {
+          "tensorId": "inv-freq",
+          "name": "inv-freq",
+          "shape": [
+            {
+              "axisId": "r",
+              "semantic": "hidden",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:972d7ab022fa67f4",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "inv-freq"
+        },
+        {
+          "tensorId": "theta",
+          "name": "theta",
+          "shape": [
+            {
+              "axisId": "r",
+              "semantic": "hidden",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:037f3b2daf509a80",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "theta"
+        },
+        {
+          "tensorId": "positions",
+          "name": "positions",
+          "shape": [
+            {
+              "axisId": "m",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "positions"
+        },
+        {
+          "tensorId": "angles",
+          "name": "angles",
+          "shape": [
+            {
+              "axisId": "m",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "hidden",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:037f3b2daf509a80",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "angles"
+        },
+        {
+          "tensorId": "rope-fp32",
+          "name": "rope-fp32",
+          "shape": [
+            {
+              "axisId": "m",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "hidden",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:79cbf40ddd4243d0",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "rope-fp32"
+        },
+        {
+          "tensorId": "rope-table",
+          "name": "rope-table",
+          "shape": [
+            {
+              "axisId": "m",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "r",
+              "semantic": "hidden",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:79cbf40ddd4243d0",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "rope-table"
+        },
+        {
+          "tensorId": "mask",
+          "name": "mask",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "uint",
+            "bits": 8,
+            "format": "bool8"
+          },
+          "storageId": "mask"
+        },
+        {
+          "tensorId": "decoder-output",
+          "name": "decoder-output",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "decoder-output"
+        },
+        {
+          "tensorId": "final-norm-weight",
+          "name": "final-norm-weight",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "final-norm-weight"
+        },
+        {
+          "tensorId": "normalized",
+          "name": "normalized",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "normalized"
+        },
+        {
+          "tensorId": "lm-head-weight",
+          "name": "lm-head-weight",
+          "shape": [
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "lm-head-weight"
+        },
+        {
+          "tensorId": "logits",
+          "name": "logits",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "p",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:glm4:4894bf71708c686b",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "LAST": {
+                      "kind": "symbol",
+                      "name": "LAST"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "logits"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "tokens",
+          "name": "tokens",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "int",
+              "bits": 64,
+              "format": "int64"
+            }
+          }
+        },
+        {
+          "storageId": "embedding",
+          "name": "embedding",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "hidden",
+          "name": "hidden",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "inv-freq",
+          "name": "inv-freq",
+          "category": "reserve",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "r",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:972d7ab022fa67f4",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "D": {
+                        "kind": "symbol",
+                        "name": "D"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "theta",
+          "name": "theta",
+          "category": "workspace",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "r",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:037f3b2daf509a80",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "D": {
+                        "kind": "symbol",
+                        "name": "D"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "positions",
+          "name": "positions",
+          "category": "workspace",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "m",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "angles",
+          "name": "angles",
+          "category": "workspace",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "m",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:037f3b2daf509a80",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "D": {
+                        "kind": "symbol",
+                        "name": "D"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "rope-fp32",
+          "name": "rope-fp32",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "m",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:79cbf40ddd4243d0",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "D": {
+                        "kind": "symbol",
+                        "name": "D"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "rope-table",
+          "name": "rope-table",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "m",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "r",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:79cbf40ddd4243d0",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "D": {
+                        "kind": "symbol",
+                        "name": "D"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "mask",
+          "name": "mask",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:qwen3:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "uint",
+              "bits": 8,
+              "format": "bool8"
+            }
+          }
+        },
+        {
+          "storageId": "decoder-output",
+          "name": "decoder-output",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "final-norm-weight",
+          "name": "final-norm-weight",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "normalized",
+          "name": "normalized",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "lm-head-weight",
+          "name": "lm-head-weight",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "logits",
+          "name": "logits",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "p",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:glm4:4894bf71708c686b",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "LAST": {
+                        "kind": "symbol",
+                        "name": "LAST"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "GLM-4-9B BASE 8K, not chat/128K/all GLM. Independent BF16 mathematical/materialized attention reference of the SDPA-selected structure; NOT a literal SDPA/Python allocation or measured kernel. No Q/K norm, biased fused QKV represented by three materialized split buffers, interleaved half-head RoPE, group-head preallocated K/V state (NOT source cat/repack allocation), explicit full-head K/V activation expansion. Full-M RoPE construction proxy, shared bool mask, FP32 score/probability and BF16 cast are authored materialization choices; SDPA backend could fuse them. No eager per-layer QK scaling (the selected SDPA override bypasses it), dropout/training, padding, runtime/network or actual kernel precision claim. FP32 vector proxies: RMSNorm5/element, SiLU6/element, rotary3/rotated element; BF16 matrix separately. LAST=0 full logits (forward default), LAST=1 last position (generation uses it). Per-buffer HBM read/write factor1, each weight read once per leaf. See references/models/expansion-source-lock.json; no Python execution or model weights."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "prefill",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "pastTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "configMapping": {
+    "profileId": "glm4-base-9b-sdpa-math-v1",
+    "modelTypes": [
+      "chatglm"
+    ],
+    "description": "固定 GLM-4-9B BASE 8K 的 biased QKV / half-RoPE / GQA 数学参考；chatglm 类型本身不保证结构兼容，需逐项核对。",
+    "parameters": [
+      {
+        "field": "/num_layers",
+        "parameterKey": "L",
+        "required": true
+      },
+      {
+        "field": "/hidden_size",
+        "parameterKey": "H",
+        "required": true
+      },
+      {
+        "field": "/ffn_hidden_size",
+        "parameterKey": "I",
+        "required": true
+      },
+      {
+        "field": "/kv_channels",
+        "parameterKey": "D",
+        "required": true
+      },
+      {
+        "field": "/num_attention_heads",
+        "parameterKey": "NH",
+        "required": true
+      },
+      {
+        "field": "/multi_query_group_num",
+        "parameterKey": "NK",
+        "required": true
+      },
+      {
+        "field": "/padded_vocab_size",
+        "parameterKey": "V",
+        "required": true
+      },
+      {
+        "field": "/seq_length",
+        "parameterKey": "M",
+        "required": true
+      }
+    ],
+    "constraints": [
+      {
+        "field": "/add_bias_linear",
+        "expected": false,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/add_qkv_bias",
+        "expected": true,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/apply_residual_connection_post_layernorm",
+        "expected": false,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/attention_dropout",
+        "expected": 0,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/hidden_dropout",
+        "expected": 0,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/attn_implementation",
+        "expected": "sdpa",
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/fp32_residual_connection",
+        "expected": false,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/multi_query_attention",
+        "expected": true,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/original_rope",
+        "expected": true,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/post_layer_norm",
+        "expected": true,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/rmsnorm",
+        "expected": true,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/torch_dtype",
+        "expected": "bfloat16",
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/tie_word_embeddings",
+        "expected": false,
+        "required": true,
+        "description": "当前固定结构及精度范围；不同配置需要核对并修改模板。"
+      },
+      {
+        "field": "/rope_ratio",
+        "expected": 1,
+        "required": false,
+        "description": "当前只支持未扩展 RoPE 表；缺省值为 1。"
+      }
+    ],
+    "ignoredFields": [
+      {
+        "field": "/_name_or_path",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/architectures",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/auto_map",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/transformers_version",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/use_cache",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/eos_token_id",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/pad_token_id",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/layernorm_epsilon",
+        "reason": "保留固定来源；不执行 Python/远程模型代码，不改变当前解析成本。"
+      },
+      {
+        "field": "/apply_query_key_layer_scaling",
+        "reason": "所选 SdpaAttention 覆盖 eager forward，不执行 eager 的逐层 QK 缩放。"
+      },
+      {
+        "field": "/attention_softmax_in_fp32",
+        "reason": "本模板显式采用 FP32 向量代理；不据此声称真实 SDPA 后端精度。"
+      },
+      {
+        "field": "/bias_dropout_fusion",
+        "reason": "推理 dropout 为零；不推断内核融合。"
+      }
+    ],
+    "assumptions": [
+      "独立 embedding/head；没有 Q/K norm；旋转 D/2 维，D 必须可被 4 整除，NH 必须可被 NK 整除。",
+      "作者显式物化 mask、FP32 score/prob、BF16 probability、全头 KV 和完整 M 的 RoPE 表；不是实际 SDPA 后端分配。",
+      "缓存采用每层预分配 NK 组头 K/V；不模拟源 Python 的 cat/pack 旧新双份分配。",
+      "B/Q/C 由工作负载绑定，LAST 是显式输出策略：0=全部 query logits，1=最后位置；config 不自动决定它。",
+      "量化字段保留核对，不自动推断存储或内核精度。"
+    ]
+  }
+}

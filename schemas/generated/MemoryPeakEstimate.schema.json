@@ -1,0 +1,997 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "deviceScope": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "categoryBreakdown": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "peakBytes": {
+      "$ref": "#/$defs/__schema9"
+    },
+    "peakPoint": {
+      "$ref": "#/$defs/__schema10"
+    },
+    "capacityBytes": {
+      "$ref": "#/$defs/__schema7"
+    },
+    "capacityStatus": {
+      "$ref": "#/$defs/__schema11"
+    },
+    "moduleOverrides": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "type": "string",
+          "const": "private_budget_reserved_for_call_span"
+        },
+        "axis": {
+          "type": "string",
+          "enum": [
+            "order",
+            "second"
+          ]
+        },
+        "theoretical": {
+          "type": "object",
+          "properties": {
+            "deviceScope": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "categoryBreakdown": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "peakBytes": {
+              "$ref": "#/$defs/__schema9"
+            },
+            "peakPoint": {
+              "$ref": "#/$defs/__schema10"
+            },
+            "capacityBytes": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "capacityStatus": {
+              "$ref": "#/$defs/__schema11"
+            }
+          },
+          "required": [
+            "deviceScope",
+            "categoryBreakdown",
+            "peakBytes",
+            "peakPoint",
+            "capacityBytes",
+            "capacityStatus"
+          ],
+          "additionalProperties": false
+        },
+        "applications": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema13"
+          }
+        },
+        "allocations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "storageId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "category": {
+                "$ref": "#/$defs/__schema3"
+              },
+              "bytes": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "const": "available"
+                      },
+                      "quantity": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "$ref": "#/$defs/__schema4"
+                          },
+                          "unit": {
+                            "type": "string",
+                            "const": "byte"
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "basis": {
+                        "type": "string",
+                        "enum": [
+                          "theoretical",
+                          "estimated",
+                          "measured"
+                        ]
+                      },
+                      "provenance": {
+                        "$ref": "#/$defs/__schema5"
+                      },
+                      "diagnosticIds": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema1"
+                        }
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "quantity",
+                      "basis",
+                      "provenance",
+                      "diagnosticIds"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "$ref": "#/$defs/__schema8"
+                  }
+                ]
+              },
+              "intervals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "$ref": "#/$defs/__schema4"
+                    },
+                    "end": {
+                      "$ref": "#/$defs/__schema4"
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "storageId",
+              "category",
+              "bytes",
+              "intervals"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "uses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "executionNodeId": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "reads": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "writes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              },
+              "temporary": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/__schema1"
+                }
+              }
+            },
+            "required": [
+              "nodeId",
+              "executionNodeId",
+              "reads",
+              "writes",
+              "temporary"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "initialStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "outputStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "carriedStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "peakCoordinate": {
+          "$ref": "#/$defs/__schema4"
+        }
+      },
+      "required": [
+        "policy",
+        "axis",
+        "theoretical",
+        "applications",
+        "allocations",
+        "uses",
+        "initialStorageIds",
+        "outputStorageIds",
+        "carriedStorageIds",
+        "peakCoordinate"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "deviceScope",
+    "categoryBreakdown",
+    "peakBytes",
+    "peakPoint",
+    "capacityBytes",
+    "capacityStatus"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "per_device"
+            },
+            "deviceId": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "deviceId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "equivalence_class"
+            },
+            "classId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "deviceIds": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "classId",
+            "deviceIds"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema2": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/$defs/__schema3"
+          },
+          "bytes": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "const": "available"
+                  },
+                  "quantity": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "$ref": "#/$defs/__schema4"
+                      },
+                      "unit": {
+                        "type": "string",
+                        "const": "byte"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "unit"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "basis": {
+                    "type": "string",
+                    "enum": [
+                      "theoretical",
+                      "estimated",
+                      "measured"
+                    ]
+                  },
+                  "provenance": {
+                    "$ref": "#/$defs/__schema5"
+                  },
+                  "diagnosticIds": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  }
+                },
+                "required": [
+                  "status",
+                  "quantity",
+                  "basis",
+                  "provenance",
+                  "diagnosticIds"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "$ref": "#/$defs/__schema8"
+              }
+            ]
+          }
+        },
+        "required": [
+          "category",
+          "bytes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "__schema3": {
+      "type": "string",
+      "enum": [
+        "weight",
+        "state",
+        "activation",
+        "workspace",
+        "communication",
+        "graph",
+        "runtime",
+        "reserve"
+      ]
+    },
+    "__schema4": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema5": {
+      "type": "object",
+      "properties": {
+        "assetRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema6"
+          }
+        },
+        "formulaRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema6"
+          }
+        },
+        "parameterSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "parameterKey": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "source": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "parameterKey",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "assetRefs",
+        "formulaRefs",
+        "parameterSources",
+        "assumptions"
+      ],
+      "additionalProperties": false
+    },
+    "__schema6": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "revision": {
+          "minimum": 1,
+          "$ref": "#/$defs/__schema7"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "model",
+            "module",
+            "operator",
+            "formula",
+            "parallel",
+            "quantization",
+            "hardware"
+          ]
+        }
+      },
+      "required": [
+        "assetId",
+        "revision",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "__schema7": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unavailable"
+        },
+        "diagnosticIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "diagnosticIds"
+      ],
+      "additionalProperties": false
+    },
+    "__schema9": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "const": "available"
+            },
+            "quantity": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "unit": {
+                  "type": "string",
+                  "const": "byte"
+                }
+              },
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            },
+            "basis": {
+              "type": "string",
+              "enum": [
+                "theoretical",
+                "estimated",
+                "measured"
+              ]
+            },
+            "provenance": {
+              "$ref": "#/$defs/__schema5"
+            },
+            "diagnosticIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "status",
+            "quantity",
+            "basis",
+            "provenance",
+            "diagnosticIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/__schema8"
+        }
+      ]
+    },
+    "__schema10": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "time"
+            },
+            "seconds": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "nodeId": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "seconds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "order"
+            },
+            "index": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "nodeId": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "index"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema11": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "solved"
+            },
+            "fixedVariables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "parameterKey": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "integer"
+                              },
+                              "value": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "number"
+                              },
+                              "value": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "boolean"
+                              },
+                              "value": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "enum"
+                              },
+                              "value": {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      {
+                        "$ref": "#/$defs/__schema12"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "parameterKey",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "solveVariable": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "maximum": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "searchRange": {
+              "type": "object",
+              "properties": {
+                "min": {
+                  "$ref": "#/$defs/__schema7"
+                },
+                "max": {
+                  "$ref": "#/$defs/__schema7"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "additionalProperties": false
+            },
+            "limitingDeviceIds": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "fixedVariables",
+            "solveVariable",
+            "maximum",
+            "searchRange",
+            "limitingDeviceIds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point_only"
+            },
+            "description": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "unavailable"
+            },
+            "diagnosticIds": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "diagnosticIds"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema12": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "quantity": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "scalar",
+                    "count",
+                    "ratio",
+                    "byte",
+                    "second",
+                    "operation",
+                    "operation_per_second",
+                    "byte_per_second"
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "symbol"
+            },
+            "name": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "formula"
+            },
+            "call": {
+              "type": "object",
+              "properties": {
+                "formula": {
+                  "$ref": "#/$defs/__schema6"
+                },
+                "bindings": {
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema12"
+                  }
+                }
+              },
+              "required": [
+                "formula",
+                "bindings"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "call"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema13": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "object",
+          "properties": {
+            "overrideId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "nodeId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "phases": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema14"
+              }
+            },
+            "peakBytes": {
+              "$ref": "#/$defs/__schema12"
+            },
+            "description": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "overrideId",
+            "nodeId",
+            "phases",
+            "peakBytes",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        "evaluatedBytes": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "memberNodeIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "extraNodeIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "executionNodeIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "privateStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "retainedStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "boundaryStorageIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "start": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "end": {
+          "$ref": "#/$defs/__schema4"
+        }
+      },
+      "required": [
+        "rule",
+        "evaluatedBytes",
+        "memberNodeIds",
+        "extraNodeIds",
+        "executionNodeIds",
+        "privateStorageIds",
+        "retainedStorageIds",
+        "boundaryStorageIds",
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "__schema14": {
+      "type": "string",
+      "enum": [
+        "prefill",
+        "decode"
+      ]
+    }
+  }
+}

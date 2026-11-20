@@ -1,0 +1,1164 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.20",
+    "baseInputHash": "d344398eebd2e21af9a4cb98b9252c4400b862a57b8ac2fb7218b69c1d8548af",
+    "baseScenario": {
+      "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+      "name": "量化辅助公式 · capacity",
+      "model": {
+        "assetId": "example:quantization-scope:capacity:model",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:quantization-scope:capacity:hardware",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": [
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [
+        {
+          "selector": {
+            "kind": "subtree",
+            "rootNodeId": "$model"
+          },
+          "weight": {
+            "payloadBits": 16,
+            "packingUnitElements": 1,
+            "alignmentBytes": 1,
+            "auxiliaries": [
+              {
+                "name": "local-scales",
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "count": {
+                  "kind": "formula",
+                  "value": {
+                    "kind": "symbol",
+                    "name": "P"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "request": {
+      "variable": {
+        "kind": "parameter",
+        "parameterKey": "Z"
+      },
+      "searchRange": {
+        "min": 2,
+        "max": 4
+      }
+    },
+    "method": "exhaustive_integer",
+    "completion": "complete",
+    "points": [
+      {
+        "status": "available",
+        "value": 2,
+        "inputHash": "57abd389651500257f478e663d0b75c094e56ca970b527705be398879050c12f",
+        "fit": "fits",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 24,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 28
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "prefill",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 24,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 0.24,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "quantization-0",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::left · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-1",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::right · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-2",
+            "severity": "warning",
+            "code": "quantization_compute_unchanged",
+            "message": "量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 3,
+        "inputHash": "01dae8d5a358cd5d494cce0590e0f9c2f7bff51dae7ec4aa6ff88a1b7cda572d",
+        "fit": "fits",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 28,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 28
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "prefill",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 28,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 0.28,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "quantization-0",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::left · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-1",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::right · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-2",
+            "severity": "warning",
+            "code": "quantization_compute_unchanged",
+            "message": "量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 4,
+        "inputHash": "18781a3ddd6525d05bd71ab49f8d2c132103ba1028ba0ebca25149c0ca6b29ad",
+        "fit": "exceeds",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 32,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 28
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:quantization-scope:capacity:hardware",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:model",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:quantization-scope:capacity:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:P",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:Z",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "x:P",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "One device; no inferred parallelism, fusion or measured kernel efficiency."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "prefill",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 32,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 0.32,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:quantization-scope:capacity:hardware",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:model",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:quantization-scope:capacity:op",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:P",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:Z",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "x:P",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "One device; no inferred parallelism, fusion or measured kernel efficiency."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "quantization-0",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::left · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-1",
+            "severity": "info",
+            "code": "quantization_applied",
+            "message": "x::right · 16 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "quantization-2",
+            "severity": "warning",
+            "code": "quantization_compute_unchanged",
+            "message": "量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model",
+              "fieldPath": "quantizationOverrides"
+            }
+          },
+          {
+            "diagnosticId": "analysis-4",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前点显存 32 byte 超过设备容量 28 byte",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:example:quantization-scope:capacity:model"
+            }
+          }
+        ]
+      }
+    ],
+    "capacityStatus": {
+      "kind": "solved",
+      "fixedVariables": [
+        {
+          "parameterKey": "workload.batchSize",
+          "value": {
+            "kind": "integer",
+            "value": 1
+          }
+        },
+        {
+          "parameterKey": "workload.queryTokensPerRequest",
+          "value": {
+            "kind": "integer",
+            "value": 1
+          }
+        },
+        {
+          "parameterKey": "workload.pastTokensPerRequest",
+          "value": {
+            "kind": "integer",
+            "value": 0
+          }
+        }
+      ],
+      "solveVariable": "parameter.Z",
+      "maximum": 3,
+      "searchRange": {
+        "min": 2,
+        "max": 4
+      },
+      "limitingDeviceIds": [
+        "gpu0"
+      ]
+    },
+    "diagnostics": []
+  }
+}

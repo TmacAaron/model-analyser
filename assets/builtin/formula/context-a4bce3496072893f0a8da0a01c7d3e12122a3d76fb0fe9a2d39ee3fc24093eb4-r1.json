@@ -1,0 +1,76 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:dcp:2:local:weighted-values:dab3e14484f650e1",
+  "revision": 1,
+  "name": "2 * b * h * q * min(s, max(0, C + Q - start)) * D [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/developer_guide/Design_Documents/context_parallel.md",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model. DCP: fixed-capacity contiguous KV slots M/2 per rank; active prefix C+1 is masked. Slots never change owner across decode steps. One query token per call; Q and weights replicated, projections are charged on every rank. All rates are artificial. Dense rectangular executed work and causal/valid useful work are separate. Network-only collectives do not invent local HBM, staging or reduction arithmetic. Softmax/exp vector costs are explicitly authored proxies, not a runtime kernel prediction."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "C": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "b": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "h": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "s": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "start": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "2 * b * h * q * min(s, max(0, C + Q - start)) * D",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { ProjectDocument,AssetDocument } from '@model-analyser/contracts';
+/** C06 with a numeric result: 2MKN -> 20MKN changes 4.48 s to 10.24 s. */
+export function makeUpgradeProject(){const p=ProjectDocument.parse(JSON.parse(readFileSync('examples/contracts/project.json','utf8')) as unknown),ids=new Map(p.assetSnapshots.map(a=>[a.assetId,'upgrade:'+a.assetId]));
+  function rename(v:unknown):unknown{if(v===null||typeof v!=='object')return v;if(Array.isArray(v))return v.map(rename);return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='assetId'&&typeof x==='string'?(ids.get(x as AssetDocument['assetId'])??x):rename(x)]));}
+  const out=ProjectDocument.parse(rename(p));out.projectId='example:project:dependency-upgrade';out.name='C06 numeric dependency upgrade';out.measurements=[];out.assetSnapshots=out.assetSnapshots.filter(a=>a.definition.kind!=='parallel'&&a.definition.kind!=='quantization');const formula=out.assetSnapshots.find(a=>a.definition.kind==='formula'&&a.definition.formula.output.unit==='operation');if(!formula)throw Error();const updated=AssetDocument.parse({...formula,revision:2,definition:{kind:'formula',formula:{...(formula.definition.kind==='formula'?formula.definition.formula:{}),expression:'20 * M * N * K'}}});return {project:out,formula,updated};}

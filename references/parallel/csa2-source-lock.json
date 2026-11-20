@@ -1,0 +1,24 @@
+{
+  "checkedOn": "2026-11-15",
+  "repository": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+  "commit": "314113f8a7dadb388215396ba5fbee2c610a04d6",
+  "files": [
+    {"path":"inference/model.py","sha256":"e5decd76fe70fd56ef2f10124d245c6f64fb6a0003cc9068a1d3182a168b8d2d"},
+    {"path":"inference/config.json","sha256":"2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809"}
+  ],
+  "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+  "verifiedSemantics": [
+    "Decoder source layer 20 produces global main KV and indexer K; layers 21,24,25 use that source. Index sources 20 and 24 produce independent Top-K results; layers 21 and 25 respectively reuse them.",
+    "Each attention layer owns a separate sliding-window KV buffer. Ratio 1 projects each token without pooling or partial-group buffers.",
+    "The first decoder index source publishes a candidate mask. Later index sources use that mask; the demo computes the full index-score matrix before masking, so this materialized variant does not claim bounded index-score work.",
+    "Main KV fake quantization uses FP4 with an E4M3 scale per 16 channels, indexer FP4 uses blocks of 32, and window FP8 uses blocks of 32. The demo buffers remain floating tensors; packed storage below is a separately declared theoretical variant."
+  ],
+  "authoredAssumptions": [
+    "Four ordered decoder attention fragments corresponding to layers 20,21,24,25, omitting intervening layers and all non-attention network components. This is not the complete model or a benchmark prediction.",
+    "One query per decode call. Artificial H=4, query/output ranks=2, one attention/index head, D=16, index D=8, window=2, Top-K=2, one candidate block of width 2. Existing cache is initialized and append/window updates reserve the call-end capacity in place.",
+    "Profiles are counterfactual all-Full, main/indexer-K sharing with four index computations, and source-pattern Full/Reuse/Reindex/Reuse. Each counterfactual is explicit graph data, not an inferred reuse ratio.",
+    "BF16 weights and matrix arithmetic, explicit FP32 vector proxies for normalization, rotary transform, packing, selection and unpacking. Cache payload/metadata accesses and independent staging buffers are declared separately. In the packed variant, indexer K unpack is an explicit vector segment inside the score leaf, using registers with no additional HBM backing. Gather and index-key unpack increase executed operations only; cache representation does not increase model-useful arithmetic.",
+    "The packed theoretical variant uses row-local FP4 main/index and FP8 window payloads with one-byte scale metadata; the BF16 cache variant keeps uncompressed allocation. Neither claims bitwise numerical equivalence to the inference demo.",
+    "Artificial 4096-byte device, matrix/vector 1000 operations/s and HBM 100 bytes/s. Ideal streams ignore contention; shared_bandwidth is the existing declared-HBM resource model. No kernel fusion, communication, allocator slack or omitted model components are inferred."
+  ]
+}

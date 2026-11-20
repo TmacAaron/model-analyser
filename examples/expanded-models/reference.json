@@ -1,0 +1,436 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "Fixed specific model metadata/code, no weights or inference. GLM BASE 8K authored mathematical SDPA attention, half-head rotary and preallocated group KV; explicit materializations, NOT real SDPA allocator. Independent scalar work/HBM/liveness/roofline ledger. Qwen1.7 reuses original Qwen decoder/formula revisions. Synthetic hardware only.",
+  "inventory": {
+    "files": 11,
+    "glm": {
+      "uniqueParameters": 9399951360,
+      "bf16WeightBytes": 18799902720,
+      "nonParameterRotaryBytes": 64,
+      "checkpointBytes": 18799902784,
+      "kvBytesPerToken": 40960
+    },
+    "qwen17": {
+      "uniqueParameters": 1720574976,
+      "bf16WeightBytes": 3441149952,
+      "serializedBytes": 4063479808,
+      "kvBytesPerToken": 114688
+    }
+  },
+  "assets": {
+    "newReferences": 28,
+    "reusedQwenReferences": 22,
+    "totalInExpansion": 50,
+    "builtinJsonFiles": 593
+  },
+  "rows": [
+    {
+      "file": "qwen3-1.7b-decode",
+      "inputHash": "c2d64ddc78924649a69d1a7f10719ee0f3568323dc10c2bb26b4abd21cd9a121",
+      "nodes": 395,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 4853056,
+          "executedOperations": 4853056
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 6883409920,
+          "executedOperations": 6883409920
+        }
+      ],
+      "hbmBytes": 6893435408,
+      "seconds": 0.00689442638399998,
+      "peakBytes": 3441916672,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 3441149952
+        },
+        {
+          "category": "state",
+          "bytes": 458752
+        },
+        {
+          "category": "activation",
+          "bytes": 307968
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "file": "qwen3-1.7b-prefill",
+      "inputHash": "12e7d6ea84d68d52ca3d44a58b1cc38e8ff13dab92e2e9c393bff76880e0ffad",
+      "nodes": 395,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 19448064,
+          "executedOperations": 19474944
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 27537309696,
+          "executedOperations": 27540062208
+        }
+      ],
+      "hbmBytes": 3484287040,
+      "seconds": 0.02756620089599989,
+      "peakBytes": 3445219328,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 3441149952
+        },
+        {
+          "category": "state",
+          "bytes": 1605632
+        },
+        {
+          "category": "activation",
+          "bytes": 2463744
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "file": "glm-4-9b-decode",
+      "dimensions": {
+        "B": 1,
+        "Q": 1,
+        "C": 2,
+        "H": 4096,
+        "I": 13696,
+        "D": 128,
+        "NH": 32,
+        "NK": 2,
+        "V": 151552,
+        "M": 8192,
+        "L": 40,
+        "LAST": 0
+      },
+      "inputHash": "bf81a60dacb3fb1c722103347ea305a46f273f38c955381bc3153a3525a3d4c6",
+      "nodes": 686,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 6532448,
+          "executedOperations": 7064419
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 17559322624,
+          "executedOperations": 17559322624
+        }
+      ],
+      "hbmBytes": 17583582595,
+      "seconds": 0.01758358259500003,
+      "peakBytes": 18803212480,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 18799902720
+        },
+        {
+          "category": "state",
+          "bytes": 122880
+        },
+        {
+          "category": "activation",
+          "bytes": 2105344
+        },
+        {
+          "category": "workspace",
+          "bytes": 1081472
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 64
+        }
+      ],
+      "oracle": {
+        "parameters": 9399951360,
+        "weightBytes": 18799902720,
+        "stateBytes": 122880,
+        "reserveBytes": 64,
+        "peakNode": "rope-build"
+      }
+    },
+    {
+      "file": "glm-4-9b-prefill",
+      "dimensions": {
+        "B": 2,
+        "Q": 3,
+        "C": 1,
+        "H": 4096,
+        "I": 13696,
+        "D": 128,
+        "NH": 32,
+        "NK": 2,
+        "V": 151552,
+        "M": 8192,
+        "L": 40,
+        "LAST": 0
+      },
+      "inputHash": "902da38df9ada12603e74e49d0ab0eb1f274953f60e8a1b9ce53eb3f0b3e3893",
+      "nodes": 686,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 35262048,
+          "executedOperations": 35901560
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 105355935744,
+          "executedOperations": 105359867904
+        }
+      ],
+      "hbmBytes": 17659190536,
+      "seconds": 0.10542083610399978,
+      "peakBytes": 18803474520,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 18799902720
+        },
+        {
+          "category": "state",
+          "bytes": 327680
+        },
+        {
+          "category": "activation",
+          "bytes": 3244056
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 64
+        }
+      ],
+      "oracle": {
+        "parameters": 9399951360,
+        "weightBytes": 18799902720,
+        "stateBytes": 327680,
+        "reserveBytes": 64,
+        "peakNode": "rope-cast"
+      }
+    },
+    {
+      "file": "glm-4-small-full",
+      "dimensions": {
+        "B": 2,
+        "Q": 3,
+        "C": 1,
+        "H": 4,
+        "I": 6,
+        "D": 4,
+        "NH": 2,
+        "NK": 1,
+        "V": 10,
+        "M": 8,
+        "L": 2,
+        "LAST": 0
+      },
+      "inputHash": "c2e12f40e434308ccc6ca0bced8378c0bf16167396a8d7a46fec6b2cc6ceb8b2",
+      "nodes": 40,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 2067,
+          "executedOperations": 2467
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 5664,
+          "executedOperations": 6048
+        }
+      ],
+      "hbmBytes": 9392,
+      "seconds": 1.2056000000000002e-8,
+      "peakBytes": 1810,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 936
+        },
+        {
+          "category": "state",
+          "bytes": 256
+        },
+        {
+          "category": "activation",
+          "bytes": 616
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 2
+        }
+      ],
+      "oracle": {
+        "parameters": 468,
+        "weightBytes": 936,
+        "stateBytes": 256,
+        "reserveBytes": 2,
+        "peakNode": "decoder[0]/mask-softmax"
+      }
+    },
+    {
+      "file": "glm-4-small-last",
+      "dimensions": {
+        "B": 2,
+        "Q": 3,
+        "C": 1,
+        "H": 4,
+        "I": 6,
+        "D": 4,
+        "NH": 2,
+        "NK": 1,
+        "V": 10,
+        "M": 8,
+        "L": 2,
+        "LAST": 1
+      },
+      "inputHash": "b2416d0365024b30b55733ba75228cb8dbbc79c2a6d3d597da7d61666c262d55",
+      "nodes": 40,
+      "compute": [
+        {
+          "resource": "vector",
+          "usefulOperations": 2067,
+          "executedOperations": 2467
+        },
+        {
+          "resource": "matrix",
+          "usefulOperations": 5344,
+          "executedOperations": 5728
+        }
+      ],
+      "hbmBytes": 9280,
+      "seconds": 1.1736000000000002e-8,
+      "peakBytes": 1810,
+      "peakCategories": [
+        {
+          "category": "weight",
+          "bytes": 936
+        },
+        {
+          "category": "state",
+          "bytes": 256
+        },
+        {
+          "category": "activation",
+          "bytes": 616
+        },
+        {
+          "category": "workspace",
+          "bytes": 0
+        },
+        {
+          "category": "communication",
+          "bytes": 0
+        },
+        {
+          "category": "graph",
+          "bytes": 0
+        },
+        {
+          "category": "runtime",
+          "bytes": 0
+        },
+        {
+          "category": "reserve",
+          "bytes": 2
+        }
+      ],
+      "oracle": {
+        "parameters": 468,
+        "weightBytes": 936,
+        "stateBytes": 256,
+        "reserveBytes": 2,
+        "peakNode": "decoder[0]/mask-softmax"
+      }
+    }
+  ]
+}

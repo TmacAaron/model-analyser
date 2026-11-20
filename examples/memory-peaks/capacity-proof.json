@@ -1,0 +1,2549 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "baseInputHash": "63dba334f7b5edc017c7f7f4acaf8463bf01e88383bf79c2eb2387add8d245af",
+  "baseScenario": {
+    "scenarioId": "example:scenario:peak-decode-formula",
+    "name": "Three-step growing decode",
+    "model": {
+      "assetId": "example:model:decode-state",
+      "revision": 1,
+      "kind": "model"
+    },
+    "bindings": [
+      {
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      },
+      {
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      }
+    ],
+    "workload": {
+      "kind": "decode",
+      "batchSize": 1,
+      "contextTokensPerRequest": 2,
+      "queryTokensPerRequest": 1,
+      "steps": 3
+    },
+    "deviceTopology": {
+      "devices": [
+        {
+          "deviceId": "gpu0",
+          "hardware": {
+            "assetId": "example:hardware:decode-state",
+            "revision": 1,
+            "kind": "hardware"
+          }
+        }
+      ],
+      "groups": []
+    },
+    "parallelPlan": {
+      "assignments": [],
+      "communications": [],
+      "assumptions": []
+    },
+    "executionPlan": {
+      "kind": "serial"
+    },
+    "quantizationOverrides": [],
+    "numericOverrides": [],
+    "memoryPeakOverrides": [
+      {
+        "overrideId": "user-total",
+        "phases": [
+          "prefill",
+          "decode"
+        ],
+        "target": {
+          "kind": "device",
+          "deviceId": "gpu0"
+        },
+        "peakBytes": {
+          "kind": "formula",
+          "call": {
+            "formula": {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            "bindings": {
+              "B": {
+                "kind": "symbol",
+                "name": "batchSize"
+              },
+              "C": {
+                "kind": "symbol",
+                "name": "contextTokensPerRequest"
+              }
+            }
+          }
+        },
+        "description": "Explicit synthetic total budget per actual device; categories and peak location unknown"
+      }
+    ],
+    "fusionGroups": []
+  },
+  "request": {
+    "variable": {
+      "kind": "workload",
+      "field": "batchSize"
+    },
+    "searchRange": {
+      "min": 1,
+      "max": 5
+    }
+  },
+  "method": "exhaustive_integer",
+  "completion": "complete",
+  "points": [
+    {
+      "status": "available",
+      "value": 1,
+      "inputHash": "63dba334f7b5edc017c7f7f4acaf8463bf01e88383bf79c2eb2387add8d245af",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 24,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "B",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "C",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "Q",
+                  "source": "scenario_override"
+                }
+              ],
+              "assumptions": [
+                "User total-peak override per physical device. This replaces the entire peak, including weights, state and shared objects; it does not change their theoretical allocations.",
+                "Category decomposition and peak location are unknown. A group value is per member, never the group sum. A device rule takes priority over group rules.",
+                "Explicit synthetic total budget per actual device; categories and peak location unknown"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 40
+        }
+      ],
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 12,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 12,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 24,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.24000000000000002,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": []
+    },
+    {
+      "status": "available",
+      "value": 2,
+      "inputHash": "566220159f2291f801507c8a2815748eedab497854837f970403c3f07586b28b",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 24,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "B",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "C",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "Q",
+                  "source": "scenario_override"
+                }
+              ],
+              "assumptions": [
+                "User total-peak override per physical device. This replaces the entire peak, including weights, state and shared objects; it does not change their theoretical allocations.",
+                "Category decomposition and peak location are unknown. A group value is per member, never the group sum. A device rule takes priority over group rules.",
+                "Explicit synthetic total budget per actual device; categories and peak location unknown"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 40
+        }
+      ],
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 24,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 24,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 48,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.48000000000000004,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": []
+    },
+    {
+      "status": "available",
+      "value": 3,
+      "inputHash": "f10d7179a8b72f45ede9875111da8b25e0353360e1798c9972cd0c60eac8966e",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 40,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "B",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "C",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "Q",
+                  "source": "scenario_override"
+                }
+              ],
+              "assumptions": [
+                "User total-peak override per physical device. This replaces the entire peak, including weights, state and shared objects; it does not change their theoretical allocations.",
+                "Category decomposition and peak location are unknown. A group value is per member, never the group sum. A device rule takes priority over group rules.",
+                "Explicit synthetic total budget per actual device; categories and peak location unknown"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 40
+        }
+      ],
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 36,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 36,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 72,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.72,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": []
+    },
+    {
+      "status": "available",
+      "value": 4,
+      "inputHash": "ef3c4bc7c5912cf951fa0f84200ef49734ea9f7a7f56483ed774752c6dc280ee",
+      "fit": "fits",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 40,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "B",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "C",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "Q",
+                  "source": "scenario_override"
+                }
+              ],
+              "assumptions": [
+                "User total-peak override per physical device. This replaces the entire peak, including weights, state and shared objects; it does not change their theoretical allocations.",
+                "Category decomposition and peak location are unknown. A group value is per member, never the group sum. A device rule takes priority over group rules.",
+                "Explicit synthetic total budget per actual device; categories and peak location unknown"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 40
+        }
+      ],
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 48,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 48,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 96,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.9600000000000001,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "decode-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "decode 第 2 步含状态预留峰值超过容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        }
+      ]
+    },
+    {
+      "status": "available",
+      "value": 5,
+      "inputHash": "343c5b79ec87d074ace5f501d5a2162cd36cad6245bf99e115c8f7ade65a1478",
+      "fit": "exceeds",
+      "memory": [
+        {
+          "deviceId": "gpu0",
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 56,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "B",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "C",
+                  "source": "scenario_override"
+                },
+                {
+                  "parameterKey": "Q",
+                  "source": "scenario_override"
+                }
+              ],
+              "assumptions": [
+                "User total-peak override per physical device. This replaces the entire peak, including weights, state and shared objects; it does not change their theoretical allocations.",
+                "Category decomposition and peak location are unknown. A group value is per member, never the group sum. A device rule takes priority over group rules.",
+                "Explicit synthetic total budget per actual device; categories and peak location unknown"
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "capacityBytes": 40
+        }
+      ],
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 60,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 60,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:total-peak-budget",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 120,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 1.2,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:total-peak-budget",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [],
+          "assumptions": [
+            "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+            "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+            "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+            "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "diagnostics": [
+        {
+          "diagnosticId": "decode-step-0::peak-override-gpu0-1",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-2",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "decode-step-1::peak-override-gpu0-1",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "decode-4",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "decode 第 1 步含状态预留峰值超过容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-5",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "decode-step-2::analysis-1",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "当前点显存 48 byte 超过设备容量 40 byte",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "decode-step-2::peak-override-gpu0-2",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "decode-8",
+          "severity": "error",
+          "code": "capacity_exceeded",
+          "message": "decode 第 2 步含状态预留峰值超过容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        },
+        {
+          "diagnosticId": "peak-override-gpu0-9",
+          "severity": "error",
+          "code": "override_capacity_exceeded",
+          "message": "用户总峰值覆盖超过物理设备容量",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "example:scenario:peak-decode-formula"
+          }
+        }
+      ]
+    }
+  ],
+  "capacityStatus": {
+    "kind": "solved",
+    "fixedVariables": [
+      {
+        "parameterKey": "workload.contextTokensPerRequest",
+        "value": {
+          "kind": "integer",
+          "value": 2
+        }
+      },
+      {
+        "parameterKey": "workload.queryTokensPerRequest",
+        "value": {
+          "kind": "integer",
+          "value": 1
+        }
+      },
+      {
+        "parameterKey": "workload.steps",
+        "value": {
+          "kind": "integer",
+          "value": 3
+        }
+      },
+      {
+        "parameterKey": "binding.B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "parameterKey": "binding.C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      },
+      {
+        "parameterKey": "binding.Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      }
+    ],
+    "solveVariable": "workload.batchSize",
+    "maximum": 4,
+    "searchRange": {
+      "min": 1,
+      "max": 5
+    },
+    "limitingDeviceIds": [
+      "gpu0"
+    ]
+  },
+  "diagnostics": []
+}

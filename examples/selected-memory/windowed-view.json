@@ -1,0 +1,404 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "9aff79ce94e1be4efb38a67ff263013514e6d5716be569f30924e730737b4b87",
+  "target": {
+    "kind": "node",
+    "nodeId": "update"
+  },
+  "step": 2,
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": false,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:decode-elements-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-operations-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:decode-state-window",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:decode-operations-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-state-bytes-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-write-bytes-window",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:decode-elements-window",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:B",
+              "source": "scenario_override"
+            },
+            {
+              "parameterKey": "$model:C",
+              "source": "scenario_override"
+            },
+            {
+              "parameterKey": "$model:Q",
+              "source": "scenario_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "update",
+          "executionNodeId": "update"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "cache",
+        "name": "BF16 cache",
+        "allocationKind": "bytes",
+        "category": "state",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": true,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 6,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 6,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 6,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 0
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "update",
+          "executionNodeId": "update",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "update",
+          "executionNodeId": "update",
+          "reads": true,
+          "writes": true,
+          "temporary": false
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": true,
+      "input": false,
+      "output": false,
+      "private": false,
+      "replacedBy": [],
+      "reservation": {
+        "before": {
+          "status": "available",
+          "quantity": {
+            "value": 6,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:decode-state-window",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+              "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+              "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+              "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "after": {
+          "status": "available",
+          "quantity": {
+            "value": 6,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:decode-state-window",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+              "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+              "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+              "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "reserved": {
+          "status": "available",
+          "quantity": {
+            "value": 6,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:decode-state-window",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:decode-elements-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes-window",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+              "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+              "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+              "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ]
+}

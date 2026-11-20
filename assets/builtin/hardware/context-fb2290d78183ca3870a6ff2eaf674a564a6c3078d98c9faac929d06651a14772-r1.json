@@ -1,0 +1,84 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:hardware:gqa-hand-reference",
+  "revision": 1,
+  "name": "Synthetic 1024 B · 1000 ops/s · 100 B/s",
+  "tags": [
+    "synthetic",
+    "gqa-reference"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Invented rates and capacity for independent arithmetic; not a real device or performance forecast."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 1024,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "vector"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

@@ -1,0 +1,1498 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:recurrent-state:recurrent-sequence",
+  "projectRevision": 1,
+  "name": "Two-stage recurrent hidden update · recurrent-sequence",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:recurrent-state",
+      "name": "Two-stage recurrent hidden update",
+      "model": {
+        "assetId": "example:model:recurrent-state",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 2,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 3
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:state-reference",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "main",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:recurrent-state",
+      "revision": 1,
+      "name": "Two-stage recurrent hidden update",
+      "tags": [
+        "paper-reference",
+        "state",
+        "recurrent"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "batch",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        },
+        {
+          "key": "H",
+          "name": "hidden",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 4
+          }
+        },
+        {
+          "key": "Q",
+          "name": "query",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "max": 1,
+          "default": {
+            "kind": "integer",
+            "value": 1
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic single-layer recurrent update: h_next=tanh(Wx*x + Wh*h_previous), one query per call. Two BF16 matrices, explicit projection buffer and FP32 vector approximation of two operations/element for add+tanh. Hidden state replaces its previous logical version in place; no inference or numerical accuracy claim."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "recurrent",
+        "graph": {
+          "inputs": [
+            {
+              "portId": "x",
+              "tensorId": "x"
+            }
+          ],
+          "outputs": [
+            {
+              "portId": "next",
+              "tensorId": "after"
+            }
+          ],
+          "nodes": [
+            {
+              "nodeId": "layer",
+              "name": "Recurrent update module",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "state",
+                  "tensorId": "before"
+                },
+                {
+                  "portId": "x",
+                  "tensorId": "x"
+                },
+                {
+                  "portId": "next",
+                  "tensorId": "after"
+                }
+              ],
+              "stateBindings": [
+                {
+                  "localStateId": "local-state",
+                  "parentStateId": "persistent"
+                }
+              ],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "example:module:recurrent-state",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "B",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "parameterKey": "H",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  },
+                  {
+                    "parameterKey": "Q",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "x",
+              "from": {
+                "kind": "graph_input",
+                "portId": "x"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "layer",
+                "portId": "x"
+              },
+              "tensorId": "x"
+            },
+            {
+              "edgeId": "next",
+              "from": {
+                "kind": "node",
+                "nodeId": "layer",
+                "portId": "next"
+              },
+              "to": {
+                "kind": "graph_output",
+                "portId": "next"
+              },
+              "tensorId": "after"
+            }
+          ],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "before",
+              "name": "before",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            },
+            {
+              "tensorId": "x",
+              "name": "x",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "x"
+            },
+            {
+              "tensorId": "after",
+              "name": "after",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "state",
+              "name": "before",
+              "category": "state",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "x",
+              "name": "x",
+              "category": "activation",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": [
+            {
+              "stateId": "persistent",
+              "name": "One parent-owned persistent state",
+              "stateKind": "recurrent",
+              "allocationBasis": "step_end",
+              "storageIds": [
+                "state"
+              ],
+              "creator": {
+                "kind": "initialized"
+              },
+              "readers": [],
+              "writers": [],
+              "updatePolicy": {
+                "kind": "replace"
+              }
+            }
+          ]
+        },
+        "assumptions": [
+          "Synthetic single-layer recurrent update: h_next=tanh(Wx*x + Wh*h_previous), one query per call. Two BF16 matrices, explicit projection buffer and FP32 vector approximation of two operations/element for add+tanh. Hidden state replaces its previous logical version in place; no inference or numerical accuracy claim."
+        ],
+        "workloadBindings": [
+          {
+            "phase": "prefill",
+            "parameterKey": "B",
+            "value": {
+              "kind": "symbol",
+              "name": "batchSize"
+            }
+          },
+          {
+            "phase": "prefill",
+            "parameterKey": "Q",
+            "value": {
+              "kind": "symbol",
+              "name": "queryTokensPerRequest"
+            }
+          },
+          {
+            "phase": "decode",
+            "parameterKey": "B",
+            "value": {
+              "kind": "symbol",
+              "name": "batchSize"
+            }
+          },
+          {
+            "phase": "decode",
+            "parameterKey": "Q",
+            "value": {
+              "kind": "symbol",
+              "name": "queryTokensPerRequest"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:module:recurrent-state",
+      "revision": 1,
+      "name": "Recurrent update module",
+      "tags": [
+        "paper-reference",
+        "state",
+        "recurrent"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "batch",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        },
+        {
+          "key": "H",
+          "name": "hidden",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 4
+          }
+        },
+        {
+          "key": "Q",
+          "name": "query",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "max": 1,
+          "default": {
+            "kind": "integer",
+            "value": 1
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic single-layer recurrent update: h_next=tanh(Wx*x + Wh*h_previous), one query per call. Two BF16 matrices, explicit projection buffer and FP32 vector approximation of two operations/element for add+tanh. Hidden state replaces its previous logical version in place; no inference or numerical accuracy claim."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [
+            {
+              "portId": "state",
+              "tensorId": "before"
+            },
+            {
+              "portId": "x",
+              "tensorId": "x"
+            }
+          ],
+          "outputs": [
+            {
+              "portId": "next",
+              "tensorId": "after"
+            }
+          ],
+          "nodes": [
+            {
+              "nodeId": "matmul",
+              "name": "Input and previous-hidden projections",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "x",
+                  "tensorId": "x"
+                },
+                {
+                  "portId": "before",
+                  "tensorId": "before"
+                },
+                {
+                  "portId": "wx",
+                  "tensorId": "wx"
+                },
+                {
+                  "portId": "wh",
+                  "tensorId": "wh"
+                },
+                {
+                  "portId": "projected",
+                  "tensorId": "projected"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "matrix"
+                      },
+                      "usefulOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:recurrent-state:c212e4b941fbecaa",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "H": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:recurrent-state:c212e4b941fbecaa",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "H": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-x",
+                      "storageId": "x",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "read-before",
+                      "storageId": "state",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "read-wx",
+                      "storageId": "wx",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "read-wh",
+                      "storageId": "wh",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "write-projected",
+                      "storageId": "projected",
+                      "mode": "write",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "roofline_bound",
+                    "computeEfficiency": 1,
+                    "memoryEfficiency": 1,
+                    "computeMemoryOverlap": "ideal",
+                    "launchSeconds": 0
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "x",
+                    "tensorId": "x"
+                  },
+                  {
+                    "portId": "before",
+                    "tensorId": "before"
+                  },
+                  {
+                    "portId": "wx",
+                    "tensorId": "wx"
+                  },
+                  {
+                    "portId": "wh",
+                    "tensorId": "wh"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "portId": "projected",
+                    "tensorId": "projected"
+                  }
+                ]
+              }
+            },
+            {
+              "nodeId": "update",
+              "name": "Add projections and tanh (explicit vector approximation)",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "projected",
+                  "tensorId": "projected"
+                },
+                {
+                  "portId": "after",
+                  "tensorId": "after"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 32,
+                            "format": "fp32"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "vector"
+                      },
+                      "usefulOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:recurrent-state:59428f847919a0ef",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "H": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:recurrent-state:59428f847919a0ef",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "H": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-projected",
+                      "storageId": "projected",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "write-after",
+                      "storageId": "state",
+                      "mode": "write",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "roofline_bound",
+                    "computeEfficiency": 1,
+                    "memoryEfficiency": 1,
+                    "computeMemoryOverlap": "ideal",
+                    "launchSeconds": 0
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "projected",
+                    "tensorId": "projected"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "portId": "after",
+                    "tensorId": "after"
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "matmul-in-x",
+              "from": {
+                "kind": "graph_input",
+                "portId": "x"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "matmul",
+                "portId": "x"
+              },
+              "tensorId": "x"
+            },
+            {
+              "edgeId": "matmul-in-before",
+              "from": {
+                "kind": "graph_input",
+                "portId": "state"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "matmul",
+                "portId": "before"
+              },
+              "tensorId": "before"
+            },
+            {
+              "edgeId": "update-in-projected",
+              "from": {
+                "kind": "node",
+                "nodeId": "matmul",
+                "portId": "projected"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "update",
+                "portId": "projected"
+              },
+              "tensorId": "projected"
+            },
+            {
+              "edgeId": "out-next",
+              "from": {
+                "kind": "node",
+                "nodeId": "update",
+                "portId": "after"
+              },
+              "to": {
+                "kind": "graph_output",
+                "portId": "next"
+              },
+              "tensorId": "after"
+            }
+          ],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "before",
+              "name": "before",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            },
+            {
+              "tensorId": "x",
+              "name": "x",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "x"
+            },
+            {
+              "tensorId": "wx",
+              "name": "wx",
+              "shape": [
+                {
+                  "axisId": "out",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                },
+                {
+                  "axisId": "in",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "wx"
+            },
+            {
+              "tensorId": "wh",
+              "name": "wh",
+              "shape": [
+                {
+                  "axisId": "out",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                },
+                {
+                  "axisId": "in",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "wh"
+            },
+            {
+              "tensorId": "projected",
+              "name": "projected",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "projection",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 2,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "projected"
+            },
+            {
+              "tensorId": "after",
+              "name": "after",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "H"
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "state",
+              "name": "before",
+              "category": "state",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "x",
+              "name": "x",
+              "category": "activation",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "wx",
+              "name": "wx",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "out",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  },
+                  {
+                    "axisId": "in",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "wh",
+              "name": "wh",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "out",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  },
+                  {
+                    "axisId": "in",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "projected",
+              "name": "projected",
+              "category": "activation",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "projection",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 2,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "H"
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": [
+            {
+              "stateId": "local-state",
+              "name": "Module state",
+              "stateKind": "recurrent",
+              "allocationBasis": "step_end",
+              "storageIds": [
+                "state"
+              ],
+              "creator": {
+                "kind": "initialized"
+              },
+              "readers": [
+                {
+                  "kind": "node",
+                  "nodeId": "matmul",
+                  "portId": "before"
+                }
+              ],
+              "writers": [
+                {
+                  "kind": "node",
+                  "nodeId": "update",
+                  "portId": "after"
+                }
+              ],
+              "updatePolicy": {
+                "kind": "replace"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:recurrent-state:c212e4b941fbecaa",
+      "revision": 1,
+      "name": "4 * B * H * H [operation]",
+      "tags": [
+        "transformer-equation"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic single-layer recurrent update: h_next=tanh(Wx*x + Wh*h_previous), one query per call. Two BF16 matrices, explicit projection buffer and FP32 vector approximation of two operations/element for add+tanh. Hidden state replaces its previous logical version in place; no inference or numerical accuracy claim."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "H": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "4 * B * H * H",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:recurrent-state:59428f847919a0ef",
+      "revision": 1,
+      "name": "2 * B * H [operation]",
+      "tags": [
+        "transformer-equation"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic single-layer recurrent update: h_next=tanh(Wx*x + Wh*h_previous), one query per call. Two BF16 matrices, explicit projection buffer and FP32 vector approximation of two operations/element for add+tanh. Hidden state replaces its previous logical version in place; no inference or numerical accuracy claim."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "H": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "2 * B * H",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:state-reference",
+      "revision": 1,
+      "name": "Synthetic 4096 B / 1000 op/s / 100 B/s",
+      "tags": [
+        "synthetic"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Explicit arithmetic reference rates and capacity, not a real device."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            },
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "vector"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

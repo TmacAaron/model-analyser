@@ -1,0 +1,66 @@
+[
+  {
+    "key": "template-scope",
+    "field": "template",
+    "code": "template_scope",
+    "message": "Qwen3 Dense/GQA、tied embedding/head、BF16 物化 attention 理论模板；不代表家族全系或实测内核。；Q/K norm 与 RoPE、RMSNorm、SiLU/softmax 使用既有向量代理计数；未生成 rotary 表/三角函数或 runtime 开销。；B/Q/C 保留工作负载绑定；config 不规定本次请求 batch/长度。；不自动从 dtype/quantization_config 推断量化分配或内核精度；需单独配置并核对。",
+    "severity": "review",
+    "resolved": false
+  },
+  {
+    "key": "model-type",
+    "field": "/model_type",
+    "code": "unmatched_model_type",
+    "message": "未精确匹配 model_type；按用户所选相近模板建立草稿，不能认定结构已适配。",
+    "severity": "review",
+    "resolved": false
+  },
+  {
+    "key": "mapping:H",
+    "field": "/hidden_size",
+    "code": "invalid_field",
+    "message": "/hidden_size → H 类型/范围不合法；请手工补充，不沿用模板默认值。",
+    "severity": "error",
+    "resolved": false
+  },
+  {
+    "key": "mapping:D",
+    "field": "/head_dim",
+    "code": "missing_field",
+    "message": "/head_dim → D 缺失；请手工补充，不沿用模板默认值。",
+    "severity": "error",
+    "resolved": false
+  },
+  {
+    "key": "quant:/quantization_config/quant_method",
+    "field": "/quantization_config/quant_method",
+    "code": "quantization_unapplied",
+    "message": "已识别量化元数据 \"gptq\"；尚未应用到存储位宽、辅助项或 ComputeClass，请显式配置量化或记录未采用的原因。",
+    "severity": "review",
+    "resolved": false
+  },
+  {
+    "key": "quant:/quantization_config/bits",
+    "field": "/quantization_config/bits",
+    "code": "quantization_unapplied",
+    "message": "已识别量化元数据 4；尚未应用到存储位宽、辅助项或 ComputeClass，请显式配置量化或记录未采用的原因。",
+    "severity": "review",
+    "resolved": false
+  },
+  {
+    "key": "quant:/quantization_config/group_size",
+    "field": "/quantization_config/group_size",
+    "code": "quantization_unapplied",
+    "message": "已识别量化元数据 128；尚未应用到存储位宽、辅助项或 ComputeClass，请显式配置量化或记录未采用的原因。",
+    "severity": "review",
+    "resolved": false
+  },
+  {
+    "key": "unknown:/custom_state/description",
+    "field": "/custom_state/description",
+    "code": "unknown_field",
+    "message": "未自动映射字段；原值保留在来源中，不能当作已支持。",
+    "severity": "review",
+    "resolved": false
+  }
+]

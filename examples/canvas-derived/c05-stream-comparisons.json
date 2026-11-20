@@ -1,0 +1,114 @@
+[
+  {
+    "kind": "item",
+    "index": 0,
+    "id": "c05-stream-0",
+    "attempt": {
+      "status": "available",
+      "comparison": {
+        "measurementId": "c05-stream-0",
+        "inputHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+        "measurementHash": "ca1ab9045988dbf99931809c6afcbb3fec1cc0c44d9d9a2883feab71315237d0",
+        "engineVersion": "0.1.0-execution.20",
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "mfuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "mbuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "executedUtilization": {
+          "version": "executed-utilization.1",
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "model"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "group_total"
+          },
+          "compute": []
+        },
+        "normalizedTime": {
+          "kind": "single",
+          "count": 1,
+          "intervalSeconds": 5,
+          "perCallEquivalentSeconds": 5
+        },
+        "mfu": [],
+        "mbu": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:c05-streams",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "Measurement c05-stream-0, input 7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b; time kind=single, count=1.",
+              "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "mbuBasis": "estimated_hbm",
+        "diagnostics": [
+          {
+            "diagnosticId": "temporal-memory-gpu0-1",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前多流峰值超过设备容量",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:c05"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "kind": "complete",
+    "count": 1
+  }
+]

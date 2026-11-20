@@ -1,0 +1,6100 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:module:parallel-pp2-attention-stage",
+  "revision": 1,
+  "name": "PP attention/residual stage · local weights/state",
+  "tags": [
+    "synthetic",
+    "pipeline-stage"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "NK",
+      "name": "NK",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic explicit GQA attention/residual block: separate Q/K/V projections, append cache, causal useful versus rectangular executed attention, vector softmax proxy, row-parallel output and residual. BF16 tensors/matrix, FP32 vector proxy. No norm, RoPE, MLP, embedding/head, inference, measured kernel or full language-model claim."
+    },
+    {
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/user_guide/feature_guide/pipeline_parallel.md",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model. Two consecutive synthetic GQA attention/residual blocks on distinct physical stage devices. Each stage owns its full weights and K/V state; a single microbatch traverses both stages serially. No claim of steady-state pipeline overlap or a full language model. The original GQA local equations and materialized buffers remain explicit. BF16 intermediate activation is sent once, without dividing payload by PP size. Network HBM/reduction arithmetic are unknown, not zero."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "X",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "Z",
+          "tensorId": "Z"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "q-proj",
+          "name": "Q projection",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "WQ",
+              "tensorId": "WQ"
+            },
+            {
+              "portId": "Qh",
+              "tensorId": "Qh"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:24eaf92fee13adc4",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:24eaf92fee13adc4",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WQ",
+                  "storageId": "WQ",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Qh",
+                  "storageId": "Qh",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "storage_layout",
+                "storageId": "WQ"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "h_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "h_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "n_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WQ",
+                    "axisId": "qh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "n_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WQ",
+                    "axisId": "qh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WQ",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WQ",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "X",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "WQ",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Qh",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:q-proj:d4d1f9e3b2d5ae8a",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "h_l": {
+                            "kind": "symbol",
+                            "name": "h_l"
+                          },
+                          "n_l": {
+                            "kind": "symbol",
+                            "name": "n_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:q-proj:05017e660d916324",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "h_a": {
+                            "kind": "symbol",
+                            "name": "h_a"
+                          },
+                          "n_a": {
+                            "kind": "symbol",
+                            "name": "n_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-WQ",
+                    "storageId": "WQ",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Qh",
+                    "storageId": "Qh",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "WQ",
+                "tensorId": "WQ"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Qh",
+                "tensorId": "Qh"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "k-proj",
+          "name": "K projection",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "WK",
+              "tensorId": "WK"
+            },
+            {
+              "portId": "Knew",
+              "tensorId": "Knew"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:1a2b6d9f095e4440",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:1a2b6d9f095e4440",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WK",
+                  "storageId": "WK",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Knew",
+                  "storageId": "Knew",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "storage_layout",
+                "storageId": "WK"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "h_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "h_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "k_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WK",
+                    "axisId": "kh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "k_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WK",
+                    "axisId": "kh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WK",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WK",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "X",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "WK",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Knew",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:k-proj:d56d02eba567dfc5",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "h_l": {
+                            "kind": "symbol",
+                            "name": "h_l"
+                          },
+                          "k_l": {
+                            "kind": "symbol",
+                            "name": "k_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:k-proj:1d355eb412ebcb1c",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "h_a": {
+                            "kind": "symbol",
+                            "name": "h_a"
+                          },
+                          "k_a": {
+                            "kind": "symbol",
+                            "name": "k_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-WK",
+                    "storageId": "WK",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Knew",
+                    "storageId": "Knew",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "WK",
+                "tensorId": "WK"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Knew",
+                "tensorId": "Knew"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "v-proj",
+          "name": "V projection",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "WV",
+              "tensorId": "WV"
+            },
+            {
+              "portId": "Vnew",
+              "tensorId": "Vnew"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:1a2b6d9f095e4440",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:1a2b6d9f095e4440",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WV",
+                  "storageId": "WV",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Vnew",
+                  "storageId": "Vnew",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "storage_layout",
+                "storageId": "WV"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "h_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "h_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "k_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WV",
+                    "axisId": "kh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "k_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WV",
+                    "axisId": "kh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WV",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WV",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "X",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "WV",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Vnew",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:v-proj:d56d02eba567dfc5",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "h_l": {
+                            "kind": "symbol",
+                            "name": "h_l"
+                          },
+                          "k_l": {
+                            "kind": "symbol",
+                            "name": "k_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:v-proj:1d355eb412ebcb1c",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "h_a": {
+                            "kind": "symbol",
+                            "name": "h_a"
+                          },
+                          "k_a": {
+                            "kind": "symbol",
+                            "name": "k_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-WV",
+                    "storageId": "WV",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Vnew",
+                    "storageId": "Vnew",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "WV",
+                "tensorId": "WV"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Vnew",
+                "tensorId": "Vnew"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "cache-update",
+          "name": "In-place append of current K/V",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Knew",
+              "tensorId": "Knew"
+            },
+            {
+              "portId": "Vnew",
+              "tensorId": "Vnew"
+            },
+            {
+              "portId": "cacheK",
+              "tensorId": "cacheK"
+            },
+            {
+              "portId": "cacheV",
+              "tensorId": "cacheV"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Knew",
+                  "storageId": "Knew",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Vnew",
+                  "storageId": "Vnew",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-cacheK",
+                  "storageId": "cacheK",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:b7252a03e5b5eea4",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-cacheV",
+                  "storageId": "cacheV",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:b7252a03e5b5eea4",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NK": {
+                          "kind": "symbol",
+                          "name": "NK"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Knew"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "k_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "kh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "k_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "kh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Knew",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Knew",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Vnew",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "cacheK",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes3",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "cacheV",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Knew",
+                    "storageId": "Knew",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-Vnew",
+                    "storageId": "Vnew",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-cacheK",
+                    "storageId": "cacheK",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:cache-update:fece1e94dfb449a4",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "k_l": {
+                            "kind": "symbol",
+                            "name": "k_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-cacheV",
+                    "storageId": "cacheV",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:cache-update:fece1e94dfb449a4",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "k_l": {
+                            "kind": "symbol",
+                            "name": "k_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "Knew",
+                "tensorId": "Knew"
+              },
+              {
+                "portId": "Vnew",
+                "tensorId": "Vnew"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "cacheK",
+                "tensorId": "cacheK"
+              },
+              {
+                "portId": "cacheV",
+                "tensorId": "cacheV"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "qk",
+          "name": "GQA QKᵀ",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "Qh",
+              "tensorId": "Qh"
+            },
+            {
+              "portId": "cacheK",
+              "tensorId": "cacheK"
+            },
+            {
+              "portId": "scores",
+              "tensorId": "scores"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:8aa36434d47cd1bb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:57179c25015b99df",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-Qh",
+                  "storageId": "Qh",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-cacheK",
+                  "storageId": "cacheK",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scores",
+                  "storageId": "scores",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Qh"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "n_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "qh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "n_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "qh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "Qh",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "s_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "cacheK",
+                    "axisId": "s",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "s_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "cacheK",
+                    "axisId": "s",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Qh",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "cacheK",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "scores",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:qk:8913911971542d5f",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "C": {
+                            "kind": "symbol",
+                            "name": "C"
+                          },
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "n_l": {
+                            "kind": "symbol",
+                            "name": "n_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:qk:5fa7eb762cfb2851",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "n_a": {
+                            "kind": "symbol",
+                            "name": "n_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          },
+                          "s_a": {
+                            "kind": "symbol",
+                            "name": "s_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-Qh",
+                    "storageId": "Qh",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-cacheK",
+                    "storageId": "cacheK",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-scores",
+                    "storageId": "scores",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "Qh",
+                "tensorId": "Qh"
+              },
+              {
+                "portId": "cacheK",
+                "tensorId": "cacheK"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "scores",
+                "tensorId": "scores"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "softmax",
+          "name": "Causal softmax proxy with FP32 scratch",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "scores",
+              "tensorId": "scores"
+            },
+            {
+              "portId": "probs",
+              "tensorId": "probs"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:02f922dbddc03786",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:6e7ccfeb6cb11cdb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-scores",
+                  "storageId": "scores",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-probs",
+                  "storageId": "probs",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-scratch-softmaxScratch",
+                  "storageId": "softmaxScratch",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-scratch-softmaxScratch",
+                  "storageId": "softmaxScratch",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [
+                "softmaxScratch"
+              ],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "scores"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "n_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "qh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "n_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "qh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "s_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "s",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "s_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "scores",
+                    "axisId": "s",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "scores",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "probs",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "softmaxScratch",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "scratchElements",
+                  "source": {
+                    "kind": "tensor_elements",
+                    "tensorId": "softmaxScratch",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "vector"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:softmax:5583c3fb8b37df1c",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "C": {
+                            "kind": "symbol",
+                            "name": "C"
+                          },
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "n_l": {
+                            "kind": "symbol",
+                            "name": "n_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:softmax:b5bd166fab1ce93e",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "n_a": {
+                            "kind": "symbol",
+                            "name": "n_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          },
+                          "s_a": {
+                            "kind": "symbol",
+                            "name": "s_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-scores",
+                    "storageId": "scores",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-probs",
+                    "storageId": "probs",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-scratch-softmaxScratch",
+                    "storageId": "softmaxScratch",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-scratch-softmaxScratch",
+                    "storageId": "softmaxScratch",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [
+                  "softmaxScratch"
+                ],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "scores",
+                "tensorId": "scores"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "probs",
+                "tensorId": "probs"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "av",
+          "name": "GQA attention-weighted values",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "probs",
+              "tensorId": "probs"
+            },
+            {
+              "portId": "cacheV",
+              "tensorId": "cacheV"
+            },
+            {
+              "portId": "attended",
+              "tensorId": "attended"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:8aa36434d47cd1bb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:57179c25015b99df",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-probs",
+                  "storageId": "probs",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-cacheV",
+                  "storageId": "cacheV",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-attended",
+                  "storageId": "attended",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "probs"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "n_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "qh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "n_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "qh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "s_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "s",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "s_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "probs",
+                    "axisId": "s",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "probs",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "cacheV",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "attended",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:av:8913911971542d5f",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "C": {
+                            "kind": "symbol",
+                            "name": "C"
+                          },
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "n_l": {
+                            "kind": "symbol",
+                            "name": "n_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:av:5fa7eb762cfb2851",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "n_a": {
+                            "kind": "symbol",
+                            "name": "n_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          },
+                          "s_a": {
+                            "kind": "symbol",
+                            "name": "s_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-probs",
+                    "storageId": "probs",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-cacheV",
+                    "storageId": "cacheV",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-attended",
+                    "storageId": "attended",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "probs",
+                "tensorId": "probs"
+              },
+              {
+                "portId": "cacheV",
+                "tensorId": "cacheV"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "attended",
+                "tensorId": "attended"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "o-proj",
+          "name": "Output projection before optional TP reduction",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "attended",
+              "tensorId": "attended"
+            },
+            {
+              "portId": "WO",
+              "tensorId": "WO"
+            },
+            {
+              "portId": "Y",
+              "tensorId": "Y"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:0973cd21fec14dc9",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:0973cd21fec14dc9",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "D": {
+                          "kind": "symbol",
+                          "name": "D"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "NH": {
+                          "kind": "symbol",
+                          "name": "NH"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-attended",
+                  "storageId": "attended",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-WO",
+                  "storageId": "WO",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Y",
+                  "storageId": "Y",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:7523a848555242bb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "attended"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "n_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "qh",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "n_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "qh",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "d_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "d",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "d_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "attended",
+                    "axisId": "d",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "h_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WO",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "h_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "WO",
+                    "axisId": "h",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "attended",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "WO",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Y",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:o-proj:26e28b07b5a51422",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "d_l": {
+                            "kind": "symbol",
+                            "name": "d_l"
+                          },
+                          "h_l": {
+                            "kind": "symbol",
+                            "name": "h_l"
+                          },
+                          "n_l": {
+                            "kind": "symbol",
+                            "name": "n_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:o-proj:c5672c9079c73c93",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "d_a": {
+                            "kind": "symbol",
+                            "name": "d_a"
+                          },
+                          "h_a": {
+                            "kind": "symbol",
+                            "name": "h_a"
+                          },
+                          "n_a": {
+                            "kind": "symbol",
+                            "name": "n_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-attended",
+                    "storageId": "attended",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-WO",
+                    "storageId": "WO",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Y",
+                    "storageId": "Y",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "attended",
+                "tensorId": "attended"
+              },
+              {
+                "portId": "WO",
+                "tensorId": "WO"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Y",
+                "tensorId": "Y"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "residual",
+          "name": "Residual add after a complete output",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "Y",
+              "tensorId": "Y"
+            },
+            {
+              "portId": "Z",
+              "tensorId": "Z"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:397644c572a414e5",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:gqa-reference:397644c572a414e5",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-X",
+                  "storageId": "X",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-Y",
+                  "storageId": "Y",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-Z",
+                  "storageId": "Z",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "Y"
+              },
+              "bindings": [
+                {
+                  "symbol": "b_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "b_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "q_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "q_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "q",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "h_l",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "h_a",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "X",
+                    "axisId": "h",
+                    "basis": "allocated"
+                  }
+                },
+                {
+                  "symbol": "bytes0",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "X",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes1",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Y",
+                    "basis": "all_copies"
+                  }
+                },
+                {
+                  "symbol": "bytes2",
+                  "source": {
+                    "kind": "storage_bytes",
+                    "storageId": "Z",
+                    "basis": "all_copies"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "vector"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:residual:f69ad4b9c5163a43",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_l": {
+                            "kind": "symbol",
+                            "name": "b_l"
+                          },
+                          "h_l": {
+                            "kind": "symbol",
+                            "name": "h_l"
+                          },
+                          "q_l": {
+                            "kind": "symbol",
+                            "name": "q_l"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:gqa-local:residual:3e8e00541b542463",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "b_a": {
+                            "kind": "symbol",
+                            "name": "b_a"
+                          },
+                          "h_a": {
+                            "kind": "symbol",
+                            "name": "h_a"
+                          },
+                          "q_a": {
+                            "kind": "symbol",
+                            "name": "q_a"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-X",
+                    "storageId": "X",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes0"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-Y",
+                    "storageId": "Y",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes1"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-Z",
+                    "storageId": "Z",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "symbol",
+                      "name": "bytes2"
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit local logical/allocated axes and physical storage bytes. BF16 append writes only the new K/V tile; other buffers read/written once including declared quantization auxiliaries. Replicated K/V may duplicate projection work and read the complete local cache pool. No automatic conversion or network HBM arithmetic."
+            },
+            "inputs": [
+              {
+                "portId": "X",
+                "tensorId": "X"
+              },
+              {
+                "portId": "Y",
+                "tensorId": "Y"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "Z",
+                "tensorId": "Z"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "q-proj-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "X"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "q-proj",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "k-proj-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "X"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "k-proj",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "v-proj-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "X"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "v-proj",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "cache-update-in-Knew",
+          "from": {
+            "kind": "node",
+            "nodeId": "k-proj",
+            "portId": "Knew"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cache-update",
+            "portId": "Knew"
+          },
+          "tensorId": "Knew"
+        },
+        {
+          "edgeId": "cache-update-in-Vnew",
+          "from": {
+            "kind": "node",
+            "nodeId": "v-proj",
+            "portId": "Vnew"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cache-update",
+            "portId": "Vnew"
+          },
+          "tensorId": "Vnew"
+        },
+        {
+          "edgeId": "qk-in-Qh",
+          "from": {
+            "kind": "node",
+            "nodeId": "q-proj",
+            "portId": "Qh"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "Qh"
+          },
+          "tensorId": "Qh"
+        },
+        {
+          "edgeId": "qk-in-cacheK",
+          "from": {
+            "kind": "node",
+            "nodeId": "cache-update",
+            "portId": "cacheK"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "cacheK"
+          },
+          "tensorId": "cacheK"
+        },
+        {
+          "edgeId": "softmax-in-scores",
+          "from": {
+            "kind": "node",
+            "nodeId": "qk",
+            "portId": "scores"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "softmax",
+            "portId": "scores"
+          },
+          "tensorId": "scores"
+        },
+        {
+          "edgeId": "av-in-probs",
+          "from": {
+            "kind": "node",
+            "nodeId": "softmax",
+            "portId": "probs"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "probs"
+          },
+          "tensorId": "probs"
+        },
+        {
+          "edgeId": "av-in-cacheV",
+          "from": {
+            "kind": "node",
+            "nodeId": "cache-update",
+            "portId": "cacheV"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "cacheV"
+          },
+          "tensorId": "cacheV"
+        },
+        {
+          "edgeId": "o-proj-in-attended",
+          "from": {
+            "kind": "node",
+            "nodeId": "av",
+            "portId": "attended"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "o-proj",
+            "portId": "attended"
+          },
+          "tensorId": "attended"
+        },
+        {
+          "edgeId": "residual-in-X",
+          "from": {
+            "kind": "graph_input",
+            "portId": "X"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "residual",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "residual-in-Y",
+          "from": {
+            "kind": "node",
+            "nodeId": "o-proj",
+            "portId": "Y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "residual",
+            "portId": "Y"
+          },
+          "tensorId": "Y"
+        },
+        {
+          "edgeId": "out-Z",
+          "from": {
+            "kind": "node",
+            "nodeId": "residual",
+            "portId": "Z"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "Z"
+          },
+          "tensorId": "Z"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "WQ",
+          "name": "WQ",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WQ"
+        },
+        {
+          "tensorId": "WK",
+          "name": "WK",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WK"
+        },
+        {
+          "tensorId": "WV",
+          "name": "WV",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WV"
+        },
+        {
+          "tensorId": "Qh",
+          "name": "Qh",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Qh"
+        },
+        {
+          "tensorId": "Knew",
+          "name": "Knew",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Knew"
+        },
+        {
+          "tensorId": "Vnew",
+          "name": "Vnew",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Vnew"
+        },
+        {
+          "tensorId": "cacheK",
+          "name": "cacheK",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "cacheK"
+        },
+        {
+          "tensorId": "cacheV",
+          "name": "cacheV",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "kh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NK"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "cacheV"
+        },
+        {
+          "tensorId": "scores",
+          "name": "scores",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "NK": {
+                      "kind": "symbol",
+                      "name": "NK"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "scores"
+        },
+        {
+          "tensorId": "probs",
+          "name": "probs",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "NK": {
+                      "kind": "symbol",
+                      "name": "NK"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "probs"
+        },
+        {
+          "tensorId": "softmaxScratch",
+          "name": "softmaxScratch",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "NK": {
+                      "kind": "symbol",
+                      "name": "NK"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "C": {
+                      "kind": "symbol",
+                      "name": "C"
+                    },
+                    "M": {
+                      "kind": "symbol",
+                      "name": "M"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "softmaxScratch"
+        },
+        {
+          "tensorId": "attended",
+          "name": "attended",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "attended"
+        },
+        {
+          "tensorId": "WO",
+          "name": "WO",
+          "shape": [
+            {
+              "axisId": "qh",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "WO"
+        },
+        {
+          "tensorId": "Y",
+          "name": "Y",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Y"
+        },
+        {
+          "tensorId": "Z",
+          "name": "Z",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WQ",
+          "name": "WQ",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WK",
+          "name": "WK",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WV",
+          "name": "WV",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Qh",
+          "name": "Qh",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Knew",
+          "name": "Knew",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Vnew",
+          "name": "Vnew",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "cacheK",
+          "name": "cacheK",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "cacheV",
+          "name": "cacheV",
+          "category": "state",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "kh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "scores",
+          "name": "scores",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "NH": {
+                        "kind": "symbol",
+                        "name": "NH"
+                      },
+                      "NK": {
+                        "kind": "symbol",
+                        "name": "NK"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "probs",
+          "name": "probs",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "NH": {
+                        "kind": "symbol",
+                        "name": "NH"
+                      },
+                      "NK": {
+                        "kind": "symbol",
+                        "name": "NK"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "softmaxScratch",
+          "name": "softmaxScratch",
+          "category": "workspace",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:64ac84d46136ef30",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "NH": {
+                        "kind": "symbol",
+                        "name": "NH"
+                      },
+                      "NK": {
+                        "kind": "symbol",
+                        "name": "NK"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:gqa-reference:f2ab25e0fe1ce6c5",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "M": {
+                        "kind": "symbol",
+                        "name": "M"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        },
+        {
+          "storageId": "attended",
+          "name": "attended",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "WO",
+          "name": "WO",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "qh",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Y",
+          "name": "Y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z",
+          "name": "Z",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": [
+        {
+          "stateId": "kv",
+          "name": "Per-request GQA K/V",
+          "stateKind": "kv",
+          "allocationBasis": "step_end",
+          "storageIds": [
+            "cacheK",
+            "cacheV"
+          ],
+          "creator": {
+            "kind": "initialized"
+          },
+          "readers": [
+            {
+              "kind": "node",
+              "nodeId": "qk",
+              "portId": "cacheK"
+            },
+            {
+              "kind": "node",
+              "nodeId": "av",
+              "portId": "cacheV"
+            }
+          ],
+          "writers": [
+            {
+              "kind": "node",
+              "nodeId": "cache-update",
+              "portId": "cacheK"
+            },
+            {
+              "kind": "node",
+              "nodeId": "cache-update",
+              "portId": "cacheV"
+            }
+          ],
+          "updatePolicy": {
+            "kind": "append"
+          }
+        }
+      ]
+    }
+  }
+}

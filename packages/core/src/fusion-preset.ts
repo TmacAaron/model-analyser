@@ -1,0 +1,14 @@
+import { FusionGroup,NodeId,StorageId,TensorId,type AssetDocument,type AssetRef,type Scenario,type ResolvedGraph,type FusionPresetTemplate } from '@model-analyser/contracts';
+import { instantiateModel } from './instantiate.js';
+import { FormulaError } from './formula.js';
+
+export type FusionPresetChoice={key:string;source:AssetRef;scopeNodeId:string;preset:FusionPresetTemplate};
+/** Only the fixed assets actually instantiated at this call site supply recipes. */
+export function fusionPresetChoices(resolved:ResolvedGraph,assets:AssetDocument[]):FusionPresetChoice[]{return resolved.containers.filter(c=>resolved.objectBindings.some(b=>b.nodeId===c.nodeId)).flatMap(c=>{const source=assets.find(a=>a.assetId===c.asset.assetId&&a.revision===c.asset.revision);return (source?.fusionPresets??[]).filter(p=>p.phases.includes(resolved.phase)).map(p=>({key:JSON.stringify([c.asset.assetId,c.asset.revision,c.nodeId,p.presetId]),source:c.asset,scopeNodeId:c.nodeId,preset:p}));});}
+export function prepareFusionPreset(scenario:Scenario,assets:AssetDocument[],key:string):FusionGroup{
+  const attempt=instantiateModel(scenario,assets);if(attempt.status!=='available')throw new FormulaError('invalid_fusion_preset','当前配置无法展开');const resolved=attempt.resolved,choice=fusionPresetChoices(resolved,assets).find(c=>c.key===key);if(!choice)throw new FormulaError('stale_fusion_preset','预设或实际调用已变化，请重新选择');
+  const {preset,scopeNodeId,source}=choice,objects=resolved.objectBindings.find(b=>b.nodeId===scopeNodeId);if(!objects)throw new FormulaError('invalid_fusion_preset','调用缺少对象绑定');const prefix=scopeNodeId==='$model'?'':scopeNodeId+'/';
+  const node=(id:string)=>NodeId.parse(prefix+encodeURIComponent(id)),storage=(id:string)=>{const bound=objects.storages.find(s=>s.localStorageId===id);if(!bound)throw new FormulaError('invalid_fusion_preset','调用缺少存储 '+id);return StorageId.parse(bound.storageId);},tensor=(id:string)=>{const bound=objects.tensors.find(t=>t.localTensorId===id);if(!bound)throw new FormulaError('invalid_fusion_preset','调用缺少张量 '+id);return TensorId.parse(bound.tensorId);};
+  const group=FusionGroup.parse(preset.group);group.memberNodeIds=preset.group.memberNodeIds.map(node);group.eliminatedTensorIds=preset.group.eliminatedTensorIds.map(tensor);group.extraCost.memoryAccess=group.extraCost.memoryAccess.map(a=>({...a,storageId:storage(a.storageId)}));group.extraCost.temporaryStorageIds=group.extraCost.temporaryStorageIds.map(storage);let suffix=1;while(scenario.fusionGroups.some(g=>g.groupId===group.groupId))group.groupId=preset.group.groupId+'-'+suffix++;
+  group.origin={asset:source,presetId:preset.presetId,scopeNodeId:NodeId.parse(scopeNodeId)};const check=instantiateModel({...scenario,fusionGroups:[...scenario.fusionGroups,group]},assets);if(check.status!=='available')throw new FormulaError('invalid_fusion_preset',check.diagnostics.map(d=>d.message).join('; '));return group;
+}

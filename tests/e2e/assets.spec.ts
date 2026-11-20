@@ -1,0 +1,44 @@
+import { test,expect } from '@playwright/test';
+import { stringify } from 'yaml';
+import { randomUUID } from 'node:crypto';
+import { fixture } from '../fixtures.js';
+test('create, autosave, reload and restore an invalid formula edit',async({page})=>{
+  await page.goto('/?legacy=1');await expect(page.getByRole('heading',{name:'构建你的分析基础'})).toBeVisible();
+  await page.getByRole('button',{name:'＋ 新建公式'}).click();await expect(page.locator('.save-state')).toContainText('已保存 · 修订 1');
+  const editor=page.getByRole('textbox',{name:'资产定义 JSON'});const initial=JSON.parse(await editor.inputValue()) as {assetId:string;name:string;definition:{formula:{expression:string}}};
+  const unique='回归公式 '+Date.now();initial.name=unique;await editor.fill(JSON.stringify(initial,null,2));await expect(page.locator('.save-state')).toContainText('已保存 · 修订 2');
+  await page.reload();await page.getByRole('button',{name:new RegExp(unique)}).click();await expect(editor).toHaveValue(new RegExp(unique));
+  await page.getByRole('spinbutton',{name:'参数 x'}).fill('512');await expect(page.locator('output')).toContainText('1,024 operation');
+  initial.definition.formula.expression='1 /';await editor.fill(JSON.stringify(initial,null,2));await expect(page.locator('.save-state')).toContainText('意外结束');
+  await page.reload();await page.getByRole('button',{name:new RegExp(initial.assetId.slice(0,12))}).click();await expect(editor).toHaveValue(/1 \//);
+  initial.definition.formula.expression='2 * x';await editor.fill(JSON.stringify(initial,null,2));await expect(page.locator('.save-state')).toContainText('已保存');
+  await page.screenshot({path:'test-results/asset-workbench.png',fullPage:true});
+});
+test('YAML import, explicit revision conflict, copy, archive and restore',async({page})=>{
+  const id=randomUUID(),asset={...fixture(),assetId:id,name:'YAML 资产 '+id.slice(0,8)};
+  await page.goto('/?legacy=1');
+  const upload=page.getByLabel('导入资产文件');
+  await upload.setInputFiles({name:'formula.yaml',mimeType:'application/yaml',buffer:Buffer.from(stringify(asset))});
+  await expect(page.locator('.save-state')).toContainText('已保存 · 修订 1');
+  await upload.setInputFiles({name:'formula.yaml',mimeType:'application/yaml',buffer:Buffer.from(stringify({...asset,name:asset.name+' 新版本'}))});
+  const dialog=page.getByRole('dialog',{name:'导入冲突'});await expect(dialog).toBeVisible();
+  await dialog.getByRole('button',{name:'作为新修订提交'}).click();await expect(page.locator('.save-state')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button',{name:'复制为新资产'}).click();await expect(page.locator('.save-state')).toContainText('已保存 · 修订 1');
+  await expect(page.getByRole('textbox',{name:'资产定义 JSON'})).toHaveValue(/副本/);
+  const copyName=asset.name+' 新版本（副本）';
+  await page.getByRole('button',{name:'归档资产',exact:true}).click();
+  await expect(page.locator('.asset-list')).not.toContainText(copyName);
+  await page.getByRole('checkbox',{name:'显示已归档'}).check();await expect(page.locator('.asset-list')).toContainText(copyName);
+  await page.getByRole('button',{name:'取消归档',exact:true}).click();await expect(page.getByRole('button',{name:new RegExp(copyName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})).not.toContainText('已归档');
+  await upload.setInputFiles({name:'future.yaml',mimeType:'application/yaml',buffer:Buffer.from(stringify({...asset,schemaVersion:99}))});
+  await expect(page.getByRole('alert')).toContainText('不支持 schemaVersion=99');
+});
+test('lost commit response retries the same request without making a second revision',async({page})=>{
+  let dropped=false;
+  await page.route('**/api/v1/commit',async route=>{const response=await route.fetch();if(!dropped){dropped=true;await route.abort('failed');}else await route.fulfill({response});});
+  await page.goto('/?legacy=1');await page.getByRole('button',{name:'＋ 新建公式'}).click();
+  await expect(page.getByRole('button',{name:'重试保存'})).toBeVisible();
+  await page.getByRole('button',{name:'重试保存'}).click();await expect(page.locator('.save-state')).toContainText('已保存 · 修订 1');
+  const asset=JSON.parse(await page.getByRole('textbox',{name:'资产定义 JSON'}).inputValue()) as {assetId:string};
+  const response=await page.request.get('/api/v1/asset?id='+asset.assetId);expect(await response.json()).toMatchObject({ok:true,data:{revision:1}});
+});

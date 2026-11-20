@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "edgeId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "fromNodeId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "toNodeId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "control",
+        "synchronization"
+      ]
+    }
+  },
+  "required": [
+    "edgeId",
+    "fromNodeId",
+    "toNodeId",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

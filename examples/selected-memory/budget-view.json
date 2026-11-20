@@ -1,0 +1,167 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "60f6f1f4a9ba184f7f0c4f0b552d8fdd6fab011ae715250ce82bf9868c36e22e",
+  "target": {
+    "kind": "module",
+    "nodeId": "A"
+  },
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": false,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "second",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "private-A",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "private-B",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "batchSize",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "contextTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "queryTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "steps",
+              "source": "evaluation_context"
+            }
+          ],
+          "assumptions": [
+            "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "prepare",
+          "executionNodeId": "prepare"
+        },
+        {
+          "nodeId": "A/work",
+          "executionNodeId": "A/work"
+        },
+        {
+          "nodeId": "B/work",
+          "executionNodeId": "B/work"
+        },
+        {
+          "nodeId": "join",
+          "executionNodeId": "join"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "A::scratchA",
+        "name": "Branch scratch",
+        "allocationKind": "bytes",
+        "category": "workspace",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 2147483648,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2147483648,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2147483648,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0.001,
+            "end": 0.003
+          }
+        ]
+      },
+      "axis": "second",
+      "accessors": [
+        {
+          "nodeId": "A/work",
+          "executionNodeId": "A/work",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "A/work",
+          "executionNodeId": "A/work",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": false,
+      "private": true,
+      "replacedBy": [
+        "budget-A"
+      ]
+    }
+  ]
+}

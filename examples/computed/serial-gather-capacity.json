@@ -1,0 +1,3822 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.19",
+    "baseInputHash": "be0dd6ba3dc025355cd5054cfbfa8db3ee539af2c6d384083c8791bccfd55954",
+    "baseScenario": {
+      "scenarioId": "example:scenario:serial-gather",
+      "name": "GEMM then AllGather, declared serial-barrier timing",
+      "model": {
+        "assetId": "example:model:gemm-serial-gather",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          },
+          {
+            "deviceId": "gpu1",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "tp",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [
+          {
+            "selector": {
+              "kind": "subtree",
+              "rootNodeId": "$model"
+            },
+            "phases": [
+              "decode"
+            ],
+            "tensorDistributions": [
+              {
+                "tensorId": "X",
+                "distribution": {
+                  "kind": "replicated",
+                  "groupId": "tp"
+                }
+              },
+              {
+                "tensorId": "W",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "tp",
+                  "axes": [
+                    {
+                      "tensorAxisId": "col",
+                      "meshAxisId": "tp"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              {
+                "tensorId": "Y",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "tp",
+                  "axes": [
+                    {
+                      "tensorAxisId": "col",
+                      "meshAxisId": "tp"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              }
+            ],
+            "storageDistributions": [
+              {
+                "storageId": "sY",
+                "distribution": {
+                  "kind": "replicated",
+                  "groupId": "tp"
+                }
+              },
+              {
+                "storageId": "commScratch",
+                "distribution": {
+                  "kind": "replicated",
+                  "groupId": "tp"
+                }
+              }
+            ]
+          }
+        ],
+        "communications": [
+          {
+            "operation": "all_gather",
+            "groupId": "tp",
+            "source": {
+              "tensorId": "Y",
+              "distribution": {
+                "kind": "sharded",
+                "groupId": "tp",
+                "axes": [
+                  {
+                    "tensorAxisId": "col",
+                    "meshAxisId": "tp"
+                  }
+                ],
+                "policy": {
+                  "kind": "even"
+                }
+              }
+            },
+            "destination": {
+              "tensorId": "Y",
+              "distribution": {
+                "kind": "replicated",
+                "groupId": "tp"
+              }
+            },
+            "payloadDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "sendBytesPerMember": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "example:formula:two-card-gather-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "rows": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "cols": {
+                    "kind": "symbol",
+                    "name": "N"
+                  }
+                }
+              }
+            },
+            "receiveBytesPerMember": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "example:formula:two-card-gather-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "rows": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "cols": {
+                    "kind": "symbol",
+                    "name": "N"
+                  }
+                }
+              }
+            },
+            "algorithm": {
+              "name": "Synthetic two-member gather, one transfer/startup",
+              "trafficFactor": 1,
+              "startupRounds": 1
+            },
+            "timing": {
+              "kind": "bandwidth_latency",
+              "bytePerSecond": 1000,
+              "latencySeconds": 0.001
+            },
+            "placement": {
+              "nodeId": "gather-Y",
+              "phases": [
+                "decode"
+              ],
+              "afterNodeIds": [],
+              "beforeNodeIds": []
+            },
+            "temporaryStorageIds": [
+              "commScratch"
+            ]
+          }
+        ],
+        "assumptions": [
+          "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+        ]
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "request": {
+      "variable": {
+        "kind": "parameter",
+        "parameterKey": "M"
+      },
+      "searchRange": {
+        "min": 80,
+        "max": 84
+      }
+    },
+    "method": "exhaustive_integer",
+    "completion": "complete",
+    "points": [
+      {
+        "status": "available",
+        "value": 80,
+        "inputHash": "6574167e6ed0a413204b5e1d9d09c1b6baf00958729c4a701e41045b1dade3ea",
+        "fit": "fits",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 3968,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          },
+          {
+            "deviceId": "gpu1",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 3968,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20480,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20480,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1"
+          ],
+          "aggregation": "group_total"
+        },
+        "modelUsefulCompute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20480,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20480,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-tp-gather-Y-1"
+          ]
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 33.921,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:gemm-serial-gather",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-serial-gather",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-serial-gather",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+              "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+              "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+              "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+              "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "communication-tp-gather-Y-1",
+            "severity": "error",
+            "code": "missing_communication_memory",
+            "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "communication"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 81,
+        "inputHash": "100c28a2a514d9e129e8c08300271712c9da648b655c7ebc77d023c66b9d950f",
+        "fit": "fits",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4016,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          },
+          {
+            "deviceId": "gpu1",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4016,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20736,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20736,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1"
+          ],
+          "aggregation": "group_total"
+        },
+        "modelUsefulCompute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20736,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20736,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-tp-gather-Y-1"
+          ]
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 34.329,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:gemm-serial-gather",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-serial-gather",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-serial-gather",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+              "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+              "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+              "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+              "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "communication-tp-gather-Y-1",
+            "severity": "error",
+            "code": "missing_communication_memory",
+            "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "communication"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 82,
+        "inputHash": "ee0b457c84516947483cf5cee43d05c63586616a5916b393982793e11f27e58e",
+        "fit": "fits",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4064,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          },
+          {
+            "deviceId": "gpu1",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4064,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20992,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20992,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1"
+          ],
+          "aggregation": "group_total"
+        },
+        "modelUsefulCompute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20992,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 20992,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-tp-gather-Y-1"
+          ]
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 34.736999999999995,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:gemm-serial-gather",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-serial-gather",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-serial-gather",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+              "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+              "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+              "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+              "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "communication-tp-gather-Y-1",
+            "severity": "error",
+            "code": "missing_communication_memory",
+            "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "communication"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 83,
+        "inputHash": "bed9895faf859bb900c68315ccdf592c6e95419d22ced59cec2d029371239d4b",
+        "fit": "exceeds",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4112,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          },
+          {
+            "deviceId": "gpu1",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4112,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21248,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21248,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1"
+          ],
+          "aggregation": "group_total"
+        },
+        "modelUsefulCompute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21248,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21248,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-tp-gather-Y-1"
+          ]
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 35.144999999999996,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:gemm-serial-gather",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-serial-gather",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-serial-gather",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+              "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+              "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+              "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+              "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "communication-tp-gather-Y-1",
+            "severity": "error",
+            "code": "missing_communication_memory",
+            "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "communication"
+            }
+          },
+          {
+            "diagnosticId": "distributed-memory-gpu0-2",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前点显存 4112 byte 超过设备容量 4096 byte",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:serial-gather"
+            }
+          },
+          {
+            "diagnosticId": "distributed-memory-gpu1-3",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前点显存 4112 byte 超过设备容量 4096 byte",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:serial-gather"
+            }
+          }
+        ]
+      },
+      {
+        "status": "available",
+        "value": 84,
+        "inputHash": "fa270ece4966ea1d0718c7e5ea41d6722668ed6c620e6fbed5d7669115b72ec1",
+        "fit": "exceeds",
+        "memory": [
+          {
+            "deviceId": "gpu0",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4160,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          },
+          {
+            "deviceId": "gpu1",
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4160,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "capacityBytes": 4096
+          }
+        ],
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21504,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21504,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1"
+          ],
+          "aggregation": "group_total"
+        },
+        "modelUsefulCompute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21504,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 21504,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-serial-gather",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-tp-gather-Y-1"
+          ]
+        },
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 35.553000000000004,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:gemm-serial-gather",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-serial-gather",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-serial-gather",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:local-gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [],
+            "assumptions": [
+              "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+              "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+              "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+              "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+              "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "diagnostics": [
+          {
+            "diagnosticId": "communication-tp-gather-Y-1",
+            "severity": "error",
+            "code": "missing_communication_memory",
+            "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "communication"
+            }
+          },
+          {
+            "diagnosticId": "distributed-memory-gpu0-2",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前点显存 4160 byte 超过设备容量 4096 byte",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:serial-gather"
+            }
+          },
+          {
+            "diagnosticId": "distributed-memory-gpu1-3",
+            "severity": "error",
+            "code": "capacity_exceeded",
+            "message": "当前点显存 4160 byte 超过设备容量 4096 byte",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:serial-gather"
+            }
+          }
+        ]
+      }
+    ],
+    "capacityStatus": {
+      "kind": "solved",
+      "fixedVariables": [
+        {
+          "parameterKey": "workload.batchSize",
+          "value": {
+            "kind": "integer",
+            "value": 1
+          }
+        },
+        {
+          "parameterKey": "workload.contextTokensPerRequest",
+          "value": {
+            "kind": "integer",
+            "value": 0
+          }
+        },
+        {
+          "parameterKey": "workload.queryTokensPerRequest",
+          "value": {
+            "kind": "integer",
+            "value": 1
+          }
+        },
+        {
+          "parameterKey": "workload.steps",
+          "value": {
+            "kind": "integer",
+            "value": 1
+          }
+        }
+      ],
+      "solveVariable": "parameter.M",
+      "maximum": 82,
+      "searchRange": {
+        "min": 80,
+        "max": 84
+      },
+      "limitingDeviceIds": [
+        "gpu0",
+        "gpu1"
+      ]
+    },
+    "diagnostics": []
+  }
+}

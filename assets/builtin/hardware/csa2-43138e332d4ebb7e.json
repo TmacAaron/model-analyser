@@ -1,0 +1,83 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:hardware:csa2-research",
+  "revision": 1,
+  "name": "Artificial CSA2 arithmetic device",
+  "tags": [
+    "synthetic"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Artificial 4096-byte device, matrix/vector 1000 operations/s and HBM 100 bytes/s. Ideal streams ignore contention; shared_bandwidth is the existing declared-HBM resource model. No kernel fusion, communication, allocator slack or omitted model components are inferred."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 4096,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "vector"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

@@ -1,0 +1,423 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c",
+  "target": {
+    "kind": "node",
+    "nodeId": "A"
+  },
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": true,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "batchSize",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "contextTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "queryTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "steps",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "N",
+              "source": "evaluation_context"
+            }
+          ],
+          "assumptions": [
+            "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+          ]
+        },
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Validated fusion elides this canonical physical allocation. Partition shape remains logical; no allocation or auxiliary storage is materialized."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair"
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair"
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sX",
+        "name": "X",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 2,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 2
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": true,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": true,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": true,
+      "input": true,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sT",
+        "name": "T",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [
+          "pair"
+        ],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 1
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 1
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 1
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 2
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": true,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": true,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": true,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": true,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": true,
+      "input": false,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    },
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "sY",
+        "name": "Y",
+        "allocationKind": "tensor",
+        "category": "activation",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 2,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 2
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": true,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "A",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": true,
+          "temporary": true
+        },
+        {
+          "nodeId": "$fusion:pair/extra",
+          "executionNodeId": "$fusion:pair",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": true,
+      "private": false,
+      "replacedBy": []
+    }
+  ]
+}

@@ -1,0 +1,1349 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.20",
+    "inputHash": "3357e7969a8a916d4a1b82de2601168fff8a9b9a2aa0d6177da2d15a0859fbc1",
+    "scenarioId": "example:scenario:c05",
+    "phase": "decode",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "memoryEvidence": [
+      {
+        "version": "canonical-memory.1",
+        "deviceId": "gpu0",
+        "axis": "order",
+        "provenancePool": [
+          {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:c05",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:c05-streams",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          }
+        ],
+        "interfaces": [
+          {
+            "nodeId": "prepare",
+            "storageIds": []
+          },
+          {
+            "nodeId": "A",
+            "storageIds": []
+          },
+          {
+            "nodeId": "B",
+            "storageIds": []
+          },
+          {
+            "nodeId": "join",
+            "storageIds": []
+          },
+          {
+            "nodeId": "$model",
+            "storageIds": []
+          }
+        ],
+        "initialStorageIds": [],
+        "outputStorageIds": [],
+        "carriedStorageIds": [],
+        "allocations": [
+          {
+            "storageId": "scratchA",
+            "name": "Branch scratch",
+            "allocationKind": "bytes",
+            "category": "workspace",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 2147483648,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2147483648,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2147483648,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": []
+            },
+            "intervals": [
+              {
+                "start": 1,
+                "end": 1
+              }
+            ]
+          },
+          {
+            "storageId": "scratchB",
+            "name": "Branch scratch",
+            "allocationKind": "bytes",
+            "category": "workspace",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 3221225472,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 3221225472,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 3221225472,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": []
+            },
+            "intervals": [
+              {
+                "start": 2,
+                "end": 2
+              }
+            ]
+          }
+        ],
+        "uses": [
+          {
+            "nodeId": "prepare",
+            "executionNodeId": "prepare",
+            "reads": [],
+            "writes": [],
+            "temporary": []
+          },
+          {
+            "nodeId": "A",
+            "executionNodeId": "A",
+            "reads": [],
+            "writes": [],
+            "temporary": [
+              "scratchA"
+            ]
+          },
+          {
+            "nodeId": "B",
+            "executionNodeId": "B",
+            "reads": [],
+            "writes": [],
+            "temporary": [
+              "scratchB"
+            ]
+          },
+          {
+            "nodeId": "join",
+            "executionNodeId": "join",
+            "reads": [],
+            "writes": [],
+            "temporary": []
+          }
+        ]
+      }
+    ],
+    "parameterTrace": [],
+    "quantizationApplications": [],
+    "nodes": [
+      {
+        "nodeId": "prepare",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "prepare"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 0.001,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      },
+      {
+        "nodeId": "A",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "A"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 0.002,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      },
+      {
+        "nodeId": "B",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "B"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 0.005,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      },
+      {
+        "nodeId": "join",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "join"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 0.0005,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:c05",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      }
+    ],
+    "modules": [],
+    "total": {
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [],
+      "logicalReadBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "logicalWriteBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "communications": [],
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 0.0085,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      }
+    },
+    "memory": [
+      {
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "categoryBreakdown": [
+          {
+            "category": "weight",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "state",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "activation",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "workspace",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 3221225472,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "communication",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "graph",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "runtime",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "reserve",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:hardware:c05",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:c05-streams",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "peakBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 3221225472,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:hardware:c05",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:c05-streams",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "peakPoint": {
+          "kind": "time",
+          "seconds": 0.003,
+          "nodeId": "B"
+        },
+        "capacityBytes": 4294967296,
+        "capacityStatus": {
+          "kind": "point_only",
+          "description": "Canonical allocation lifetimes under the selected serial order; no capacity search has run."
+        }
+      }
+    ],
+    "schedule": [
+      {
+        "nodeId": "prepare",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0,
+        "endSeconds": 0.001
+      },
+      {
+        "nodeId": "A",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0.001,
+        "endSeconds": 0.003
+      },
+      {
+        "nodeId": "B",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0.003,
+        "endSeconds": 0.008
+      },
+      {
+        "nodeId": "join",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0.008,
+        "endSeconds": 0.0085
+      }
+    ],
+    "roofline": [],
+    "diagnostics": []
+  }
+}

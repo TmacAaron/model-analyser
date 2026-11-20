@@ -1,0 +1,20 @@
+import { memoryInterfaces } from './memory-interfaces.js';
+import type { MemoryEvidence,ResolvedGraph,DeviceId,StorageId,MetricValue,Provenance,AssetDocument } from '@model-analyser/contracts';
+export type EvidenceAllocation={storageId:StorageId;category:MemoryEvidence['allocations'][number]['category'];bytes:MetricValue;aliasIds?:StorageId[];intervals?:{start:number;end:number}[];perCopyAllocation?:{copies:number;payloadBytes:MetricValue;totalBytes:MetricValue;auxiliaryBytes:{name:string;bytes:MetricValue}[]}};
+/** Captures already evaluated values. The optional shared source is the exact context passed to the single-device allocator. */
+export function captureMemoryEvidence(resolved:ResolvedGraph,deviceId:DeviceId,axis:MemoryEvidence['axis'],allocations:EvidenceAllocation[],uses:MemoryEvidence['uses'],initialStorageIds:StorageId[],outputStorageIds:StorageId[],carriedStorageIds:StorageId[],sharedProvenance?:Provenance,assets:AssetDocument[]=[]):MemoryEvidence{
+  const storages=new Map(resolved.graph.storages.map(s=>[s.storageId,s])),aliases=new Map<StorageId,StorageId[]>(),canonicalIds=new Map<StorageId,StorageId>();
+  for(const s of storages.values()){
+    let id=s.storageId;const path:StorageId[]=[],seen=new Set<StorageId>();let canonical:StorageId|undefined;
+    while(!seen.has(id)){seen.add(id);path.push(id);const cached=canonicalIds.get(id);if(cached){canonical=cached;break;}const row=storages.get(id);if(!row)break;if(row.allocation.kind!=='alias'){canonical=id;break;}id=row.allocation.targetStorageId;}
+    if(canonical){for(const id of path)canonicalIds.set(id,canonical);if(s.storageId!==canonical)aliases.set(canonical,[...(aliases.get(canonical)??[]),s.storageId]);}
+  }
+  const provenancePool:Provenance[]=sharedProvenance?[sharedProvenance]:[],sources=new Map<string,number>();
+  function source(provenance:Provenance){if(sharedProvenance)return 0;const key=JSON.stringify(provenance),found=sources.get(key);if(found!==undefined)return found;const index=provenancePool.length;provenancePool.push(provenance);sources.set(key,index);return index;}
+  function metric(value:MetricValue):MemoryEvidence['allocations'][number]['bytes']{if(value.status==='unavailable')return value;if(value.quantity.unit!=='byte')throw Error('Memory evidence requires byte allocation');return {status:'available',quantity:{value:value.quantity.value,unit:'byte'},basis:value.basis,diagnosticIds:value.diagnosticIds,provenanceIndex:source(value.provenance)};}
+  const eliminated=new Map<StorageId,string[]>();for(const f of resolved.fusionApplications)for(const id of f.eliminatedStorageIds)eliminated.set(id,[...(eliminated.get(id)??[]),f.groupId]);
+  const allocated=new Set(allocations.map(a=>a.storageId));
+  return {version:'canonical-memory.1',deviceId,axis,provenancePool,interfaces:memoryInterfaces(resolved,assets,canonicalIds,allocated),initialStorageIds:[...new Set(initialStorageIds)].filter(id=>allocated.has(id)),outputStorageIds:[...new Set(outputStorageIds)].filter(id=>allocated.has(id)),carriedStorageIds:[...new Set(carriedStorageIds)].filter(id=>allocated.has(id)),uses:uses.map(u=>({nodeId:u.nodeId,executionNodeId:u.executionNodeId,reads:[...new Set(u.reads)],writes:[...new Set(u.writes)],temporary:[...new Set(u.temporary)]})),allocations:allocations.map(a=>{
+    const s=storages.get(a.storageId),{perCopyAllocation,...base}=a;return {...base,bytes:metric(a.bytes),...(s?{name:s.name,sharingDomain:s.sharingDomain}:{}),...(s&&s.allocation.kind!=='alias'?{allocationKind:s.allocation.kind}:{}),aliasIds:[...new Set([...(aliases.get(a.storageId)??[]),...(a.aliasIds??[])])].filter(id=>id!==a.storageId),eliminatedBy:eliminated.get(a.storageId)??[],resident:['weight','state','graph','runtime','reserve'].includes(a.category),...(perCopyAllocation?{perCopyAllocation:{copies:perCopyAllocation.copies,payloadBytes:metric(perCopyAllocation.payloadBytes),totalBytes:metric(perCopyAllocation.totalBytes),auxiliaryBytes:perCopyAllocation.auxiliaryBytes.map(v=>({name:v.name,bytes:metric(v.bytes)}))}}:{})};
+  })};
+}

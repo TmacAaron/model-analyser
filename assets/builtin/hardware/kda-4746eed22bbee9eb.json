@@ -1,0 +1,83 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:hardware:kda-research",
+  "revision": 1,
+  "name": "Artificial BF16 matrix / FP32 recurrent arithmetic device",
+  "tags": [
+    "synthetic"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 8192,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 2000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "vector"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

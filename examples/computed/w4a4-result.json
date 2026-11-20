@@ -1,0 +1,4134 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.20",
+    "inputHash": "c3ee2d726f420873aec536fad04a41d544aae710cc9f59d259d03e631619c11c",
+    "scenarioId": "example:scenario:w4a4",
+    "phase": "decode",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "memoryEvidence": [
+      {
+        "version": "canonical-memory.1",
+        "deviceId": "gpu0",
+        "axis": "order",
+        "provenancePool": [
+          {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          }
+        ],
+        "interfaces": [
+          {
+            "nodeId": "module/op",
+            "storageIds": [
+              "sX",
+              "sW",
+              "sY"
+            ]
+          },
+          {
+            "nodeId": "module",
+            "storageIds": [
+              "sX",
+              "sW",
+              "sY"
+            ]
+          },
+          {
+            "nodeId": "$model",
+            "storageIds": [
+              "sX",
+              "sW",
+              "sY"
+            ]
+          }
+        ],
+        "initialStorageIds": [
+          "sX",
+          "sW"
+        ],
+        "outputStorageIds": [
+          "sY"
+        ],
+        "carriedStorageIds": [],
+        "allocations": [
+          {
+            "storageId": "sX",
+            "name": "X",
+            "allocationKind": "tensor",
+            "category": "activation",
+            "sharingDomain": "request",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 34,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 32,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 34,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": [
+                {
+                  "name": "activation-scale",
+                  "bytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 2,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "diagnosticIds": [],
+                    "provenanceIndex": 0
+                  }
+                }
+              ]
+            },
+            "intervals": [
+              {
+                "start": 0,
+                "end": 0
+              }
+            ]
+          },
+          {
+            "storageId": "sW",
+            "name": "W",
+            "allocationKind": "tensor",
+            "category": "weight",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": true,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 72,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 64,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 72,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": [
+                {
+                  "name": "scale",
+                  "bytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 8,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "diagnosticIds": [],
+                    "provenanceIndex": 0
+                  }
+                }
+              ]
+            },
+            "intervals": [
+              {
+                "start": 0,
+                "end": 0
+              }
+            ]
+          },
+          {
+            "storageId": "sY",
+            "name": "Y",
+            "allocationKind": "tensor",
+            "category": "activation",
+            "sharingDomain": "request",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 18,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 16,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 18,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": [
+                {
+                  "name": "activation-scale",
+                  "bytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 2,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "diagnosticIds": [],
+                    "provenanceIndex": 0
+                  }
+                }
+              ]
+            },
+            "intervals": [
+              {
+                "start": 0,
+                "end": 0
+              }
+            ]
+          }
+        ],
+        "uses": [
+          {
+            "nodeId": "module/op",
+            "executionNodeId": "module/op",
+            "reads": [
+              "sX",
+              "sW"
+            ],
+            "writes": [
+              "sY"
+            ],
+            "temporary": []
+          }
+        ]
+      }
+    ],
+    "parameterTrace": [
+      {
+        "nodeId": "$model",
+        "parameterKey": "M",
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm-quantized",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "nodeId": "$model",
+        "parameterKey": "N",
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm-quantized",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "nodeId": "$model",
+        "parameterKey": "K",
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:gemm-quantized",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "nodeId": "module",
+        "parameterKey": "M",
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "nodeId": "module",
+        "parameterKey": "N",
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "nodeId": "module",
+        "parameterKey": "K",
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module"
+        }
+      },
+      {
+        "nodeId": "module/op",
+        "parameterKey": "M",
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "nodeId": "module/op",
+        "parameterKey": "N",
+        "value": {
+          "kind": "integer",
+          "value": 8
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      },
+      {
+        "nodeId": "module/op",
+        "parameterKey": "K",
+        "value": {
+          "kind": "integer",
+          "value": 16
+        },
+        "unit": "count",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "module/op"
+        }
+      }
+    ],
+    "quantizationApplications": [
+      {
+        "storageId": "sX",
+        "category": "activation",
+        "nodeIds": [
+          "module/op"
+        ],
+        "assignmentIndices": [
+          0
+        ],
+        "overriddenIndices": [],
+        "shape": [
+          {
+            "axisId": "row",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "col",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 16,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "dtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "beforeBytes": 128,
+        "afterBytes": 34,
+        "specification": {
+          "payloadBits": 4,
+          "packingUnitElements": 1,
+          "alignmentBytes": 1,
+          "auxiliaries": [
+            {
+              "name": "activation-scale",
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              },
+              "count": {
+                "kind": "tensor"
+              }
+            }
+          ]
+        },
+        "allocationOverridden": false
+      },
+      {
+        "storageId": "sW",
+        "category": "weight",
+        "nodeIds": [
+          "module/op"
+        ],
+        "assignmentIndices": [
+          0
+        ],
+        "overriddenIndices": [],
+        "shape": [
+          {
+            "axisId": "row",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 16,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "col",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 8,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "dtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "beforeBytes": 256,
+        "afterBytes": 72,
+        "specification": {
+          "payloadBits": 4,
+          "packingUnitElements": 1,
+          "alignmentBytes": 1,
+          "auxiliaries": [
+            {
+              "name": "scale",
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              },
+              "count": {
+                "kind": "group",
+                "groupSize": 32
+              }
+            }
+          ]
+        },
+        "allocationOverridden": false
+      },
+      {
+        "storageId": "sY",
+        "category": "activation",
+        "nodeIds": [
+          "module/op"
+        ],
+        "assignmentIndices": [
+          0
+        ],
+        "overriddenIndices": [],
+        "shape": [
+          {
+            "axisId": "row",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "col",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 8,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "dtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "beforeBytes": 64,
+        "afterBytes": 18,
+        "specification": {
+          "payloadBits": 4,
+          "packingUnitElements": 1,
+          "alignmentBytes": 1,
+          "auxiliaries": [
+            {
+              "name": "activation-scale",
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              },
+              "count": {
+                "kind": "tensor"
+              }
+            }
+          ]
+        },
+        "allocationOverridden": false
+      }
+    ],
+    "nodes": [
+      {
+        "nodeId": "module/op",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "module/op"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "usefulOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 1024,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm-quantized",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm-quantized",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm-quantized",
+                      "revision": 1,
+                      "kind": "operator"
+                    },
+                    {
+                      "assetId": "example:quantization:w4a4-bf16-compute",
+                      "revision": 1,
+                      "kind": "quantization"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:M",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:K",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "module:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:K",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:K",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "executedOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 1024,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm-quantized",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm-quantized",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm-quantized",
+                      "revision": 1,
+                      "kind": "operator"
+                    },
+                    {
+                      "assetId": "example:quantization:w4a4-bf16-compute",
+                      "revision": 1,
+                      "kind": "quantization"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:M",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:K",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "module:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:K",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:K",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 106,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 18,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 124,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 1.24,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      }
+    ],
+    "modules": [
+      {
+        "nodeId": "module",
+        "leafNodeIds": [
+          "module/op"
+        ],
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "module",
+              "nodeId": "module"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "usefulOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 1024,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm-quantized",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm-quantized",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm-quantized",
+                      "revision": 1,
+                      "kind": "operator"
+                    },
+                    {
+                      "assetId": "example:quantization:w4a4-bf16-compute",
+                      "revision": 1,
+                      "kind": "quantization"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:M",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:K",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "module:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:K",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:K",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "executedOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 1024,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm-quantized",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm-quantized",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm-quantized",
+                      "revision": 1,
+                      "kind": "operator"
+                    },
+                    {
+                      "assetId": "example:quantization:w4a4-bf16-compute",
+                      "revision": 1,
+                      "kind": "quantization"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:M",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "$model:K",
+                      "source": "asset_default"
+                    },
+                    {
+                      "parameterKey": "module:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module:K",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:M",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:N",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "module/op:K",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 106,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 18,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 124,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 1.24,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      }
+    ],
+    "total": {
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm-quantized",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-quantized",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-quantized",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:quantization:w4a4-bf16-compute",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "logicalReadBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 106,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-quantized",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-quantized",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-quantized",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:quantization:w4a4-bf16-compute",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:K",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "module:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:K",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:K",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "logicalWriteBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 18,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-quantized",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-quantized",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-quantized",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:quantization:w4a4-bf16-compute",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:K",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "module:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:K",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:K",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 124,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-quantized",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-quantized",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-quantized",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:quantization:w4a4-bf16-compute",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:K",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "module:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:K",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:K",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "communications": [],
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 1.24,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:gemm-quantized",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:gemm-quantized",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:operator:gemm-quantized",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:quantization:w4a4-bf16-compute",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "$model:K",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "module:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module:K",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:M",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:N",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "module/op:K",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      }
+    },
+    "memory": [
+      {
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "categoryBreakdown": [
+          {
+            "category": "weight",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 72,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "state",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "activation",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 52,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "workspace",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "communication",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "graph",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "runtime",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "reserve",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm-quantized",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm-quantized",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm-quantized",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:quantization:w4a4-bf16-compute",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "peakBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 124,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "peakPoint": {
+          "kind": "time",
+          "seconds": 0,
+          "nodeId": "module/op"
+        },
+        "capacityBytes": 4096,
+        "capacityStatus": {
+          "kind": "point_only",
+          "description": "Canonical allocation lifetimes under the selected serial order; no capacity search has run."
+        }
+      }
+    ],
+    "schedule": [
+      {
+        "nodeId": "module/op",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0,
+        "endSeconds": 1.24
+      }
+    ],
+    "roofline": [
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "module/op"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "operations": {
+          "status": "available",
+          "quantity": {
+            "value": 1024,
+            "unit": "operation"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 124,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "arithmeticIntensity": {
+          "status": "available",
+          "operationsPerByte": 8.258064516129032
+        },
+        "computeCeiling": {
+          "status": "available",
+          "quantity": {
+            "value": 1000,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "memoryBandwidth": {
+          "status": "available",
+          "quantity": {
+            "value": 100,
+            "unit": "byte_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "roofPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 825.8064516129032,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "actualOrPredictedPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 825.8064516129033,
+            "unit": "operation_per_second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm-quantized",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm-quantized",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm-quantized",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:quantization:w4a4-bf16-compute",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBasis": "estimated_hbm"
+      }
+    ],
+    "diagnostics": [
+      {
+        "diagnosticId": "quantization-0",
+        "severity": "info",
+        "code": "quantization_applied",
+        "message": "sX · 4 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:w4a4",
+          "fieldPath": "quantizationOverrides"
+        }
+      },
+      {
+        "diagnosticId": "quantization-1",
+        "severity": "info",
+        "code": "quantization_applied",
+        "message": "sW · 4 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:w4a4",
+          "fieldPath": "quantizationOverrides"
+        }
+      },
+      {
+        "diagnosticId": "quantization-2",
+        "severity": "info",
+        "code": "quantization_applied",
+        "message": "sY · 4 bit · 规则 #1；ComputeClass 和显式流量/通信方程保持作者定义",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:w4a4",
+          "fieldPath": "quantizationOverrides"
+        }
+      },
+      {
+        "diagnosticId": "quantization-3",
+        "severity": "warning",
+        "code": "quantization_compute_unchanged",
+        "message": "量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:w4a4",
+          "fieldPath": "quantizationOverrides"
+        }
+      }
+    ]
+  }
+}

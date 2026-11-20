@@ -1,0 +1,63 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "editing:hardware",
+  "revision": 1,
+  "name": "Structure editing synthetic hardware",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 4096,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

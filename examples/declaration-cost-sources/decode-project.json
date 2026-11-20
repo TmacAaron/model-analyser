@@ -1,0 +1,963 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:declaration-sources-decode",
+  "projectRevision": 1,
+  "name": "Actual Decode declaration source",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:decode-state",
+      "name": "Three-step growing decode",
+      "model": {
+        "assetId": "example:model:decode-state:declaration-sources",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [
+        {
+          "parameterKey": "B",
+          "value": {
+            "kind": "symbol",
+            "name": "batchSize"
+          }
+        },
+        {
+          "parameterKey": "C",
+          "value": {
+            "kind": "symbol",
+            "name": "contextTokensPerRequest"
+          }
+        },
+        {
+          "parameterKey": "Q",
+          "value": {
+            "kind": "symbol",
+            "name": "queryTokensPerRequest"
+          }
+        }
+      ],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 2,
+        "queryTokensPerRequest": 1,
+        "steps": 3
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:decode-state:declaration-sources",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "modulePeakOverrides": [
+        {
+          "overrideId": "actual-decode-budget",
+          "nodeId": "block",
+          "phases": [
+            "decode"
+          ],
+          "peakBytes": {
+            "kind": "formula",
+            "call": {
+              "formula": {
+                "assetId": "example:formula:declaration-nested",
+                "revision": 1,
+                "kind": "formula"
+              },
+              "bindings": {
+                "bytes": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:formula:declaration-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "x": {
+                        "kind": "symbol",
+                        "name": "C"
+                      }
+                    }
+                  }
+                },
+                "flag": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 1,
+                    "unit": "count"
+                  }
+                }
+              }
+            }
+          },
+          "description": "Actual call C×100 private budget"
+        }
+      ],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:decode-state:declaration-sources",
+      "revision": 1,
+      "name": "Synthetic decode state",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "B",
+          "type": "integer",
+          "unit": "count",
+          "min": 1
+        },
+        {
+          "key": "C",
+          "name": "C",
+          "type": "integer",
+          "unit": "count",
+          "min": 0
+        },
+        {
+          "key": "Q",
+          "name": "Q",
+          "type": "integer",
+          "unit": "count",
+          "min": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Past cache allocation is explicit; the sequence reserves end-state growth in place. Traffic remains exactly the declared read/write equations."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "decode-state",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "block",
+              "name": "Decode block",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "decode-private-module:declaration-sources",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "B",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "parameterKey": "C",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "C"
+                    }
+                  },
+                  {
+                    "parameterKey": "Q",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:decode-state:declaration-sources",
+      "revision": 1,
+      "name": "C01 人工硬件",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:decode-elements:declaration-sources",
+      "revision": 1,
+      "name": "elements",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic decode state/cost hand reference"
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "C": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            },
+            "Q": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "B * C",
+          "output": {
+            "unit": "count",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit synthetic elements"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:decode-state-bytes:declaration-sources",
+      "revision": 1,
+      "name": "state-bytes",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic decode state/cost hand reference"
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "C": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            },
+            "Q": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "2 * B * C",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit synthetic state-bytes"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:decode-write-bytes:declaration-sources",
+      "revision": 1,
+      "name": "write-bytes",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic decode state/cost hand reference"
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "C": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            },
+            "Q": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "2 * B * Q",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit synthetic write-bytes"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:decode-operations:declaration-sources",
+      "revision": 1,
+      "name": "operations",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic decode state/cost hand reference"
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "C": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            },
+            "Q": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "B * (C + Q)",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit synthetic operations"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "decode-private-module:declaration-sources",
+      "revision": 1,
+      "name": "Synthetic decode state",
+      "tags": [
+        "synthetic-decode"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "B",
+          "type": "integer",
+          "unit": "count",
+          "min": 1
+        },
+        {
+          "key": "C",
+          "name": "C",
+          "type": "integer",
+          "unit": "count",
+          "min": 0
+        },
+        {
+          "key": "Q",
+          "name": "Q",
+          "type": "integer",
+          "unit": "count",
+          "min": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Past cache allocation is explicit; the sequence reserves end-state growth in place. Traffic remains exactly the declared read/write equations."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "update",
+              "name": "Read/update cache",
+              "phases": [
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "read",
+                  "tensorId": "cache-before"
+                },
+                {
+                  "portId": "write",
+                  "tensorId": "cache-write"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "work",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          },
+                          {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "matrix"
+                      },
+                      "usefulOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:decode-operations:declaration-sources",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "C": {
+                              "kind": "symbol",
+                              "name": "C"
+                            },
+                            "Q": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          }
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:decode-operations:declaration-sources",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "C": {
+                              "kind": "symbol",
+                              "name": "C"
+                            },
+                            "Q": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-cache",
+                      "storageId": "cache",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:decode-state-bytes:declaration-sources",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "C": {
+                              "kind": "symbol",
+                              "name": "C"
+                            },
+                            "Q": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    },
+                    {
+                      "accessId": "write-query",
+                      "storageId": "cache",
+                      "mode": "write",
+                      "logicalBytes": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:decode-write-bytes:declaration-sources",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "B": {
+                              "kind": "symbol",
+                              "name": "B"
+                            },
+                            "C": {
+                              "kind": "symbol",
+                              "name": "C"
+                            },
+                            "Q": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [
+                    "scratch"
+                  ],
+                  "timing": {
+                    "kind": "roofline_bound",
+                    "computeEfficiency": 1,
+                    "memoryEfficiency": 1,
+                    "computeMemoryOverlap": "ideal",
+                    "launchSeconds": 0
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "read",
+                    "tensorId": "cache-before"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "portId": "write",
+                    "tensorId": "cache-write"
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "cache-before",
+              "name": "cache-before",
+              "shape": [
+                {
+                  "axisId": "elements",
+                  "semantic": "token",
+                  "size": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:decode-elements:declaration-sources",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "cache"
+            },
+            {
+              "tensorId": "cache-write",
+              "name": "cache-write",
+              "shape": [
+                {
+                  "axisId": "elements",
+                  "semantic": "token",
+                  "size": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:decode-elements:declaration-sources",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "cache"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "cache",
+              "name": "BF16 cache",
+              "category": "state",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:formula:decode-state-bytes:declaration-sources",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "B": {
+                        "kind": "symbol",
+                        "name": "B"
+                      },
+                      "C": {
+                        "kind": "symbol",
+                        "name": "C"
+                      },
+                      "Q": {
+                        "kind": "symbol",
+                        "name": "Q"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "storageId": "weights",
+              "name": "Fixed 8-byte weight",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 8,
+                    "unit": "byte"
+                  }
+                }
+              }
+            },
+            {
+              "storageId": "scratch",
+              "name": "Private workspace",
+              "category": "workspace",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 20,
+                    "unit": "byte"
+                  }
+                }
+              }
+            }
+          ],
+          "states": [
+            {
+              "stateId": "kv",
+              "name": "Explicit cache update",
+              "stateKind": "kv",
+              "storageIds": [
+                "cache"
+              ],
+              "creator": {
+                "kind": "initialized"
+              },
+              "readers": [
+                {
+                  "kind": "node",
+                  "nodeId": "update",
+                  "portId": "read"
+                }
+              ],
+              "writers": [
+                {
+                  "kind": "node",
+                  "nodeId": "update",
+                  "portId": "write"
+                }
+              ],
+              "updatePolicy": {
+                "kind": "append"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:declaration-bytes",
+      "revision": 1,
+      "name": "Actual bound scalar ×100 bytes",
+      "tags": [
+        "synthetic-declaration-source"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic declaration proof only: root B2, module A B3, module B B5; physical private budgets300/500 and independent root200. Decode uses actual C×100."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "x": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            }
+          },
+          "expression": "100 * x",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Actual input scalar times100 bytes"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:declaration-nested",
+      "revision": 1,
+      "name": "Nested explicit branch budget",
+      "tags": [
+        "synthetic-declaration-source"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic declaration proof only: root B2, module A B3, module B B5; physical private budgets300/500 and independent root200. Decode uses actual C×100."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "bytes": {
+              "unit": "byte",
+              "integerRequired": true,
+              "min": 0
+            },
+            "flag": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            }
+          },
+          "expression": "if(flag > 0, bytes, sum(i, 1, 2, bytes))",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Nested binding evaluated eagerly; only the selected expression branch is evaluated"
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

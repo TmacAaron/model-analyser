@@ -1,0 +1,46 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:dsa:formula:a87e81ede8ee700e",
+  "revision": 1,
+  "name": "R + P [count]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp/blob/194c67e12b1b0d6df0ef373ddcf215bc84027409/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Decode-only single-query MLA attention fragment, without block input norm/residual, FFN, embeddings or full language-model costs. Artificial H=8, attention heads=2, query rank=4, latent rank=8, nonrotary/rotary/value dimensions=4/2/4, index heads=2 and index dimension/block=8/8. This reduced block is not source-kernel compatible. All ordinary projection weights and arithmetic use BF16 rather than the fixed FP8 checkpoint matrices. Index weights_proj stays FP32; index dots use FP8 E4M3 inputs with FP32 accumulation. BF16 main scores/probabilities follow the demo. Norm/rotary/Hadamard/selection use explicit FP32 vector proxies with on-chip internal workspace; BF16/FP32 and FP8 conversions add execution-only work. source-mask follows full-prefix demo arithmetic, with materialized BF16 score components and dense FP32 index mask. sparse-gather is a separately authored theoretical kernel path with explicit shared BF16 selected-KV/PE staging and selected QK/AV; it is not a claim that the released demo executes such kernels. dense is a no-indexer counterfactual, not output-equivalent attention. FP8 index kernel intermediates stay on chip; one full-prefix FP32 score tensor is materialized. Per-head rectification, weighting, reduction and key-scale multiplication remain explicit arithmetic in the same leaf. Top-K proxy costs L*(min(K,L)+2) per request. Debug clone/broadcast/equality checks and network are omitted on this single-device fragment. Dynamic buffers reserve call-end C+1 rows; provisioned buffers reserve M rows, reject C+1>M, and separately report active context. Index payload uses one byte per channel and each scale occupies four bytes. Two disjoint BF16 key/value weight slices sum to the original wkv_b size; no duplicate persistent dequantized weights. Warm history is initialized; no allocator slack or implicit migration cost. Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "P": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 2
+        },
+        "R": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 8
+        }
+      },
+      "expression": "R + P",
+      "output": {
+        "unit": "count",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

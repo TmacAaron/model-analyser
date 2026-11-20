@@ -1,0 +1,62 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "editing:model",
+  "revision": 1,
+  "name": "Editable repeated-module model",
+  "tags": [
+    "structure-editing",
+    "synthetic"
+  ],
+  "parameters": [],
+  "sources": [],
+  "definition": {
+    "kind": "model",
+    "family": "custom",
+    "variant": "table-reference",
+    "graph": {
+      "inputs": [],
+      "outputs": [],
+      "nodes": [
+        {
+          "nodeId": "block",
+          "name": "Repeated module",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "editing:module",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 3,
+                    "unit": "count"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [],
+      "dependencies": [],
+      "tensors": [],
+      "storages": [],
+      "states": []
+    },
+    "assumptions": [
+      "Fixed synthetic timings, not a hardware performance prediction."
+    ]
+  }
+}

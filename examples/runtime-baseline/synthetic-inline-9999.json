@@ -1,0 +1,195 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "runtime:project:inline-9999",
+  "projectRevision": 1,
+  "name": "Software runtime · inline-9999",
+  "scenarios": [
+    {
+      "scenarioId": "runtime:scenario:inline-9999",
+      "name": "inline-9999",
+      "model": {
+        "assetId": "runtime:model:inline:9999",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "runtime:model:inline:9999",
+      "revision": 1,
+      "name": "Synthetic inline × 9999",
+      "tags": [
+        "software-runtime-fixture"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic software-scaling input. No real model, kernel or hardware performance claim."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "software-scaling",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "leaves",
+              "name": "Synthetic leaf",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "repeat": {
+                "axis": "i",
+                "count": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 9999,
+                    "unit": "count"
+                  }
+                },
+                "wiring": "independent",
+                "carry": []
+              },
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.000001,
+                    "description": "Authored synthetic one-microsecond leaf, not a device measurement"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:c01",
+      "revision": 1,
+      "name": "C01 人工硬件",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

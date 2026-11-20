@@ -1,0 +1,1587 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:model:parallel-pp2",
+  "revision": 1,
+  "name": "PP2 · two attention stages / one microbatch · authored subgraph",
+  "description": "两张实际设备各驻留一个完整 GQA attention/residual 阶段的权重和 KV，通过一次 BF16 SendRecv 传递中间激活。单 microbatch 串行遍历两阶段，不宣称流水重叠或完整语言模型。",
+  "tags": [
+    "synthetic",
+    "pipeline-parallel",
+    "parallel-shortcut"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "NK",
+      "name": "NK",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic explicit GQA attention/residual block: separate Q/K/V projections, append cache, causal useful versus rectangular executed attention, vector softmax proxy, row-parallel output and residual. BF16 tensors/matrix, FP32 vector proxy. No norm, RoPE, MLP, embedding/head, inference, measured kernel or full language-model claim."
+    },
+    {
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/user_guide/feature_guide/pipeline_parallel.md",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model. Two consecutive synthetic GQA attention/residual blocks on distinct physical stage devices. Each stage owns its full weights and K/V state; a single microbatch traverses both stages serially. No claim of steady-state pipeline overlap or a full language model. The original GQA local equations and materialized buffers remain explicit. BF16 intermediate activation is sent once, without dividing payload by PP size. Network HBM/reduction arithmetic are unknown, not zero."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "synthetic-pipeline",
+    "variant": "two-attention-stages-single-microbatch",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "X",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "Z",
+          "tensorId": "Z"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "stage0",
+          "name": "stage0 attention/residual block",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "X"
+            },
+            {
+              "portId": "Z",
+              "tensorId": "B0"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:parallel-pp2-attention-stage",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "NK",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "send-activation",
+          "name": "PP stage0 → stage1 activation",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "source",
+              "tensorId": "B0"
+            },
+            {
+              "portId": "destination",
+              "tensorId": "B1"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "collective",
+            "communication": {
+              "operation": "send_recv",
+              "groupId": "world",
+              "source": {
+                "tensorId": "B0",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "world",
+                  "members": [
+                    {
+                      "deviceId": "gpu0",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "B"
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "H"
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "gpu1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "B"
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "H"
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "destination": {
+                "tensorId": "B1",
+                "distribution": {
+                  "kind": "manual",
+                  "groupId": "world",
+                  "members": [
+                    {
+                      "deviceId": "gpu0",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "B"
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "literal",
+                            "quantity": {
+                              "value": 0,
+                              "unit": "count"
+                            }
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "H"
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    },
+                    {
+                      "deviceId": "gpu1",
+                      "localShape": [
+                        {
+                          "axisId": "b",
+                          "semantic": "batch",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "B"
+                          }
+                        },
+                        {
+                          "axisId": "q",
+                          "semantic": "token",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        },
+                        {
+                          "axisId": "h",
+                          "semantic": "hidden",
+                          "size": {
+                            "kind": "symbol",
+                            "name": "H"
+                          }
+                        }
+                      ],
+                      "copies": 1
+                    }
+                  ],
+                  "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                }
+              },
+              "sourceDeviceId": "gpu0",
+              "destinationDeviceId": "gpu1",
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:pp2:formula:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:pp2:formula:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "One explicitly placed full BF16 activation transfer",
+                "trafficFactor": 1,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "send-activation",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": []
+            }
+          }
+        },
+        {
+          "nodeId": "stage1",
+          "name": "stage1 attention/residual block",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "X",
+              "tensorId": "B1"
+            },
+            {
+              "portId": "Z",
+              "tensorId": "Z"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:parallel-pp2-attention-stage",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "NK",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NK"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "input-stage0",
+          "from": {
+            "kind": "graph_input",
+            "portId": "X"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "stage0",
+            "portId": "X"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "stage0-send",
+          "from": {
+            "kind": "node",
+            "nodeId": "stage0",
+            "portId": "Z"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "send-activation",
+            "portId": "source"
+          },
+          "tensorId": "B0"
+        },
+        {
+          "edgeId": "recv-stage1",
+          "from": {
+            "kind": "node",
+            "nodeId": "send-activation",
+            "portId": "destination"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "stage1",
+            "portId": "X"
+          },
+          "tensorId": "B1"
+        },
+        {
+          "edgeId": "stage1-output",
+          "from": {
+            "kind": "node",
+            "nodeId": "stage1",
+            "portId": "Z"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "Z"
+          },
+          "tensorId": "Z"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "B0",
+          "name": "B0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "B0"
+        },
+        {
+          "tensorId": "B1",
+          "name": "B1",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "B1"
+        },
+        {
+          "tensorId": "Z",
+          "name": "Z",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "B0",
+          "name": "B0",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "B1",
+          "name": "B1",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z",
+          "name": "Z",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model.",
+      "Two consecutive synthetic GQA attention/residual blocks on distinct physical stage devices. Each stage owns its full weights and K/V state; a single microbatch traverses both stages serially. No claim of steady-state pipeline overlap or a full language model.",
+      "The original GQA local equations and materialized buffers remain explicit. BF16 intermediate activation is sent once, without dividing payload by PP size. Network HBM/reduction arithmetic are unknown, not zero."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "prefill",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "pastTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "parallelPresets": [
+    {
+      "presetId": "pp2",
+      "name": "PP2 · two attention stages / one microbatch",
+      "description": "两张实际设备各驻留一个完整 GQA attention/residual 阶段的权重和 KV，通过一次 BF16 SendRecv 传递中间激活。单 microbatch 串行遍历两阶段，不宣称流水重叠或完整语言模型。",
+      "strategy": "declared_plan",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "reductions": [],
+      "assumptions": [
+        "两张实际设备各驻留一个完整 GQA attention/residual 阶段的权重和 KV，通过一次 BF16 SendRecv 传递中间激活。单 microbatch 串行遍历两阶段，不宣称流水重叠或完整语言模型。",
+        "Fixed degree: device slots are bound in the selected physical group member order. All workload-dependent formulas remain live; no implicit communication HBM or reduction arithmetic."
+      ],
+      "declaredPlan": {
+        "deviceSlots": [
+          "gpu0",
+          "gpu1"
+        ],
+        "groups": [
+          {
+            "groupId": "world",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ]
+          },
+          {
+            "groupId": "stage0",
+            "members": [
+              "gpu0"
+            ]
+          },
+          {
+            "groupId": "stage1",
+            "members": [
+              "gpu1"
+            ]
+          }
+        ],
+        "plan": {
+          "assignments": [
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "$model"
+              },
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "B0",
+                  "distribution": {
+                    "kind": "manual",
+                    "groupId": "world",
+                    "members": [
+                      {
+                        "deviceId": "gpu0",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      },
+                      {
+                        "deviceId": "gpu1",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "literal",
+                              "quantity": {
+                                "value": 0,
+                                "unit": "count"
+                              }
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      }
+                    ],
+                    "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                  }
+                },
+                {
+                  "tensorId": "B1",
+                  "distribution": {
+                    "kind": "manual",
+                    "groupId": "world",
+                    "members": [
+                      {
+                        "deviceId": "gpu0",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "literal",
+                              "quantity": {
+                                "value": 0,
+                                "unit": "count"
+                              }
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      },
+                      {
+                        "deviceId": "gpu1",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      }
+                    ],
+                    "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                  }
+                },
+                {
+                  "tensorId": "Z",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                }
+              ],
+              "storageDistributions": []
+            },
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "stage0"
+              },
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "WQ",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "WK",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "WV",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "Qh",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "Knew",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "Vnew",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "cacheK",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "cacheV",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "scores",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "probs",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "softmaxScratch",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "attended",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "WO",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "Y",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage0"
+                  }
+                },
+                {
+                  "tensorId": "Z",
+                  "distribution": {
+                    "kind": "manual",
+                    "groupId": "world",
+                    "members": [
+                      {
+                        "deviceId": "gpu0",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      },
+                      {
+                        "deviceId": "gpu1",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "literal",
+                              "quantity": {
+                                "value": 0,
+                                "unit": "count"
+                              }
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      }
+                    ],
+                    "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                  }
+                }
+              ],
+              "storageDistributions": []
+            },
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "stage1"
+              },
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "manual",
+                    "groupId": "world",
+                    "members": [
+                      {
+                        "deviceId": "gpu0",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "literal",
+                              "quantity": {
+                                "value": 0,
+                                "unit": "count"
+                              }
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      },
+                      {
+                        "deviceId": "gpu1",
+                        "localShape": [
+                          {
+                            "axisId": "b",
+                            "semantic": "batch",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "B"
+                            }
+                          },
+                          {
+                            "axisId": "q",
+                            "semantic": "token",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "Q"
+                            }
+                          },
+                          {
+                            "axisId": "h",
+                            "semantic": "hidden",
+                            "size": {
+                              "kind": "symbol",
+                              "name": "H"
+                            }
+                          }
+                        ],
+                        "copies": 1
+                      }
+                    ],
+                    "description": "Only the designated stage owns this full activation; the other physical member has zero token rows."
+                  }
+                },
+                {
+                  "tensorId": "WQ",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "WK",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "WV",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "Qh",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "Knew",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "Vnew",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "cacheK",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "cacheV",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "scores",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "probs",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "softmaxScratch",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "attended",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "WO",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "Y",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                },
+                {
+                  "tensorId": "Z",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "stage1"
+                  }
+                }
+              ],
+              "storageDistributions": []
+            }
+          ],
+          "communications": [],
+          "assumptions": [
+            "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model.",
+            "Two consecutive synthetic GQA attention/residual blocks on distinct physical stage devices. Each stage owns its full weights and K/V state; a single microbatch traverses both stages serially. No claim of steady-state pipeline overlap or a full language model.",
+            "The original GQA local equations and materialized buffers remain explicit. BF16 intermediate activation is sent once, without dividing payload by PP size. Network HBM/reduction arithmetic are unknown, not zero."
+          ]
+        }
+      }
+    }
+  ]
+}

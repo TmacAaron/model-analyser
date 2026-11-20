@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "projectRevision": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "name": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scenarioId": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "name": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "model": {
+            "type": "object",
+            "properties": {
+              "assetId": {
+                "$ref": "#/$defs/__schema0"
+              },
+              "revision": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "model",
+                  "module",
+                  "operator",
+                  "formula",
+                  "parallel",
+                  "quantization",
+                  "hardware"
+                ]
+              }
+            },
+            "required": [
+              "assetId",
+              "revision",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "scenarioId",
+          "name",
+          "model"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "assetSnapshotCount": {
+      "$ref": "#/$defs/__schema2"
+    }
+  },
+  "required": [
+    "projectId",
+    "projectRevision",
+    "name",
+    "scenarios",
+    "assetSnapshotCount"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema2"
+    },
+    "__schema2": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

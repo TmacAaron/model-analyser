@@ -1,0 +1,112 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "C06 synthetic GEMM data-only update: selected formula 2MKN -> 20MKN; explicit operator/module/model revisions; historical project remains stable. No real hardware performance claim.",
+  "intent": {
+    "requestId": "example-c06-upgrade",
+    "projectId": "example:project:dependency-upgrade",
+    "expectedProjectRevision": 1,
+    "scenarioId": "example:scenario:c01",
+    "selections": [
+      {
+        "from": {
+          "assetId": "upgrade:builtin:formula:gemm-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        "to": {
+          "assetId": "upgrade:builtin:formula:gemm-operations",
+          "revision": 2,
+          "kind": "formula"
+        }
+      }
+    ]
+  },
+  "planHash": "b10df8e5d4e40af9e744ee07604d96f88930e6c0ab01c7cc70b8028861d19570",
+  "changes": [
+    {
+      "source": {
+        "assetId": "upgrade:builtin:formula:gemm-operations",
+        "revision": 1,
+        "kind": "formula"
+      },
+      "base": {
+        "assetId": "upgrade:builtin:formula:gemm-operations",
+        "revision": 2,
+        "kind": "formula"
+      },
+      "target": {
+        "assetId": "upgrade:builtin:formula:gemm-operations",
+        "revision": 2,
+        "kind": "formula"
+      },
+      "name": "GEMM 运算量",
+      "action": "reuse"
+    },
+    {
+      "source": {
+        "assetId": "upgrade:example:operator:gemm",
+        "revision": 1,
+        "kind": "operator"
+      },
+      "base": {
+        "assetId": "upgrade:example:operator:gemm",
+        "revision": 1,
+        "kind": "operator"
+      },
+      "target": {
+        "assetId": "upgrade:example:operator:gemm",
+        "revision": 2,
+        "kind": "operator"
+      },
+      "name": "C01 GEMM",
+      "action": "revision"
+    },
+    {
+      "source": {
+        "assetId": "upgrade:example:module:gemm",
+        "revision": 1,
+        "kind": "module"
+      },
+      "base": {
+        "assetId": "upgrade:example:module:gemm",
+        "revision": 1,
+        "kind": "module"
+      },
+      "target": {
+        "assetId": "upgrade:example:module:gemm",
+        "revision": 2,
+        "kind": "module"
+      },
+      "name": "C01 GEMM module",
+      "action": "revision"
+    },
+    {
+      "source": {
+        "assetId": "upgrade:example:model:gemm",
+        "revision": 1,
+        "kind": "model"
+      },
+      "base": {
+        "assetId": "upgrade:example:model:gemm",
+        "revision": 1,
+        "kind": "model"
+      },
+      "target": {
+        "assetId": "upgrade:example:model:gemm",
+        "revision": 2,
+        "kind": "model"
+      },
+      "name": "C01 GEMM model",
+      "action": "revision"
+    }
+  ],
+  "before": {
+    "inputHash": "0b2abd022ab52d508f15cc8c7cce9ee656ea5af5a08d509761139bdb76144f9b",
+    "seconds": 4.48
+  },
+  "after": {
+    "inputHash": "68bd6afa110de6ddd57b286b75a92ad818b73e5b42de6215e82cddbce6b9ea80",
+    "seconds": 10.24
+  },
+  "replayed": "complete"
+}

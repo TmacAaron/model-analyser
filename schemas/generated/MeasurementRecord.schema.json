@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "measurementId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "scenarioId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "inputHash": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "model"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "module"
+            },
+            "nodeId": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "nodeId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "node"
+            },
+            "nodeId": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "nodeId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "unmapped"
+            },
+            "eventName": {
+              "$ref": "#/$defs/__schema0"
+            },
+            "source": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "eventName",
+            "source"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "prefill",
+        "decode"
+      ]
+    },
+    "deviceIds": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "interval": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "time": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "single"
+            },
+            "seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "seconds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "mean"
+            },
+            "seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "seconds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "sum"
+            },
+            "seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "kind",
+            "seconds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "span"
+            },
+            "startSeconds": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "endSeconds": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "kind",
+            "startSeconds",
+            "endSeconds"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "actualBytes": {
+      "type": "object",
+      "properties": {
+        "readBytes": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "writeBytes": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "per_call",
+            "interval_total"
+          ]
+        }
+      },
+      "required": [
+        "readBytes",
+        "writeBytes",
+        "basis"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "import",
+            "agent"
+          ]
+        },
+        "file": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "eventId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "mappingBasis": {
+          "type": "string"
+        },
+        "importedFrom": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "measurementId",
+    "scenarioId",
+    "target",
+    "phase",
+    "deviceIds",
+    "interval",
+    "count",
+    "time",
+    "source"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

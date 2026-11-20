@@ -1,0 +1,953 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:kda:all-mla:inplace:model",
+  "revision": 1,
+  "name": "KDA/MLA four-fragment all-mla inplace",
+  "tags": [
+    "research",
+    "kda",
+    "hybrid",
+    "decode"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 15
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 128,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "N",
+      "name": "N",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "W",
+      "name": "W",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "P",
+      "name": "P",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Four attention-plus-input-norm/residual fragments from the first KDA/KDA/KDA/MLA group, omitting all interleaved FFN/MoE, embeddings and full-model costs. All-MLA and all-KDA are four-fragment counterfactuals, not output/accuracy-equivalent models. Decode Q=1 only; B=1,C=15,H=8, heads N=2, KDA key/value D=4, conv W=4, MLA latent R=4, key nonpositional/extra dimensions D/P=4/2 and value D=4. Projection, convolution and normalization weights are declared BF16; A_log/dt_bias are explicit FP32. Gate and beta are FP32; three convolution buffers are BF16 and matrix state is FP32. Nonlinear operations use stated FP32-vector proxies. Recurrent useful arithmetic is B*N*(7*D*D+8*D+2), with explicit input/output conversion execution-only work. No instruction-level throughput, tensor-core, training or chunk-prefill claim. source allocation records newly allocated recurrent state with an extra FP32 state-sized temporary. K/V concatenation is grouped as one atomic leaf, conservatively retaining both old/new tuple buffers with an old-prefix-sized temporary; Python assigns key/value list entries sequentially and can release one old tensor earlier. Semantic state traffic counts old inputs/new outputs once; allocation-only temporaries are not charged a second copy. Labels track logical carried allocation, not physical pointers or Python allocator simulation. inplace is a separate theoretical implementation with no extra recurrent allocation and preallocated expanded K/V. It writes only new K/V rows and does not copy history; it is not claimed to be the released Python path. Both variants retain full per-layer independent states and do not share recurrent matrices across layers. Inputs include initialized warm convolution/matrix/KV state, including explicit zero-initialized buffers if C=0. Allocation/initialization/weight-loading startup and source tensor views or allocator slack are not simulated. Materialized graph intermediates use last-read liveness; norm/gate/recurrent internal arithmetic workspace is on chip apart from the declared new-state allocation. Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "kimi-linear-fragment",
+    "variant": "all-mla-inplace",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Z3"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "layer0",
+          "name": "MLA attention/residual inplace",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z0"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:kda:module:mla:inplace",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer1",
+          "name": "MLA attention/residual inplace",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z0"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z1"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:kda:module:mla:inplace",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer2",
+          "name": "MLA attention/residual inplace",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z1"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z2"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:kda:module:mla:inplace",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "layer3",
+          "name": "MLA attention/residual inplace",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "Z2"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Z3"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:kda:module:mla:inplace",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "layer0-in",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "layer1-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer0",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "x"
+          },
+          "tensorId": "Z0"
+        },
+        {
+          "edgeId": "layer2-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer1",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "x"
+          },
+          "tensorId": "Z1"
+        },
+        {
+          "edgeId": "layer3-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer2",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "x"
+          },
+          "tensorId": "Z2"
+        },
+        {
+          "edgeId": "out-y",
+          "from": {
+            "kind": "node",
+            "nodeId": "layer3",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "Z3"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "Z0",
+          "name": "Z0",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z0"
+        },
+        {
+          "tensorId": "Z1",
+          "name": "Z1",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z1"
+        },
+        {
+          "tensorId": "Z2",
+          "name": "Z2",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z2"
+        },
+        {
+          "tensorId": "Z3",
+          "name": "Z3",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z3"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z0",
+          "name": "Z0",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z1",
+          "name": "Z1",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z2",
+          "name": "Z2",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z3",
+          "name": "Z3",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "Four attention-plus-input-norm/residual fragments from the first KDA/KDA/KDA/MLA group, omitting all interleaved FFN/MoE, embeddings and full-model costs. All-MLA and all-KDA are four-fragment counterfactuals, not output/accuracy-equivalent models. Decode Q=1 only; B=1,C=15,H=8, heads N=2, KDA key/value D=4, conv W=4, MLA latent R=4, key nonpositional/extra dimensions D/P=4/2 and value D=4.",
+      "Projection, convolution and normalization weights are declared BF16; A_log/dt_bias are explicit FP32. Gate and beta are FP32; three convolution buffers are BF16 and matrix state is FP32. Nonlinear operations use stated FP32-vector proxies. Recurrent useful arithmetic is B*N*(7*D*D+8*D+2), with explicit input/output conversion execution-only work. No instruction-level throughput, tensor-core, training or chunk-prefill claim.",
+      "source allocation records newly allocated recurrent state with an extra FP32 state-sized temporary. K/V concatenation is grouped as one atomic leaf, conservatively retaining both old/new tuple buffers with an old-prefix-sized temporary; Python assigns key/value list entries sequentially and can release one old tensor earlier. Semantic state traffic counts old inputs/new outputs once; allocation-only temporaries are not charged a second copy. Labels track logical carried allocation, not physical pointers or Python allocator simulation.",
+      "inplace is a separate theoretical implementation with no extra recurrent allocation and preallocated expanded K/V. It writes only new K/V rows and does not copy history; it is not claimed to be the released Python path. Both variants retain full per-layer independent states and do not share recurrent matrices across layers.",
+      "Inputs include initialized warm convolution/matrix/KV state, including explicit zero-initialized buffers if C=0. Allocation/initialization/weight-loading startup and source tensor views or allocator slack are not simulated. Materialized graph intermediates use last-read liveness; norm/gate/recurrent internal arithmetic workspace is on chip apart from the declared new-state allocation.",
+      "Artificial 8192-byte device, BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial execution and existing bounded integer capacity search. No networking, implicit fusion, real-kernel performance or source full-model support claim."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "extensions": {
+    "kda": {
+      "version": "kda-research.1",
+      "profile": "all-mla",
+      "allocation": "inplace",
+      "sourceOneBasedLayers": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "layerKinds": [
+        "mla",
+        "mla",
+        "mla",
+        "mla"
+      ],
+      "scope": "Four attention/input-norm/residual fragments; no FFN/MoE or complete language model."
+    }
+  }
+}

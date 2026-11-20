@@ -1,0 +1,2458 @@
+{
+  "engineVersion": "contract-example-only",
+  "inputHash": "example-input-hash-not-computed",
+  "scenarioId": "example:scenario:c01",
+  "phase": "decode",
+  "scope": {
+    "phase": "decode",
+    "target": {
+      "kind": "model"
+    },
+    "deviceIds": [
+      "gpu0"
+    ],
+    "aggregation": "per_device"
+  },
+  "nodes": [
+    {
+      "nodeId": "module/op",
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "module/op"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "K",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "K",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 64,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 448,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 4.48,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "modules": [
+    {
+      "nodeId": "module",
+      "leafNodeIds": [
+        "module/op"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "module"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "compute": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "K",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "executedOperations": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "operation"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "K",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 64,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 448,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 4.48,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "total": {
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "compute": [
+      {
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "usefulOperations": {
+          "status": "available",
+          "quantity": {
+            "value": 1024,
+            "unit": "operation"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "executedOperations": {
+          "status": "available",
+          "quantity": {
+            "value": 1024,
+            "unit": "operation"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "K",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    ],
+    "logicalReadBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 384,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:parallel:replicated",
+            "revision": 1,
+            "kind": "parallel"
+          },
+          {
+            "assetId": "example:quantization:w4",
+            "revision": 1,
+            "kind": "quantization"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "K",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "logicalWriteBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 64,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:parallel:replicated",
+            "revision": 1,
+            "kind": "parallel"
+          },
+          {
+            "assetId": "example:quantization:w4",
+            "revision": 1,
+            "kind": "quantization"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "K",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "hbmBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 448,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:parallel:replicated",
+            "revision": 1,
+            "kind": "parallel"
+          },
+          {
+            "assetId": "example:quantization:w4",
+            "revision": 1,
+            "kind": "quantization"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "K",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "communications": [],
+    "seconds": {
+      "status": "available",
+      "quantity": {
+        "value": 4.48,
+        "unit": "second"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:operator:gemm",
+            "revision": 1,
+            "kind": "operator"
+          },
+          {
+            "assetId": "example:module:gemm",
+            "revision": 1,
+            "kind": "module"
+          },
+          {
+            "assetId": "example:model:gemm",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:hardware:c01",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:parallel:replicated",
+            "revision": 1,
+            "kind": "parallel"
+          },
+          {
+            "assetId": "example:quantization:w4",
+            "revision": 1,
+            "kind": "quantization"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "builtin:formula:gemm-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:matrix-bytes",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "M",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "N",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "K",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+        ]
+      },
+      "diagnosticIds": []
+    }
+  },
+  "memory": [
+    {
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "categoryBreakdown": [
+        {
+          "category": "weight",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 256,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "K",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "activation",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "K",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "peakBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 448,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "peakPoint": {
+        "kind": "time",
+        "seconds": 0,
+        "nodeId": "module/op"
+      },
+      "capacityBytes": 4096,
+      "capacityStatus": {
+        "kind": "point_only",
+        "description": "Hand-calculated point; capacity solving has not run."
+      }
+    }
+  ],
+  "schedule": [
+    {
+      "nodeId": "module/op",
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "streamId": "serial",
+      "startSeconds": 0,
+      "endSeconds": 4.48
+    }
+  ],
+  "roofline": [
+    {
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "computeClass": {
+        "arithmetic": "float",
+        "inputDtypes": [
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          }
+        ],
+        "multiplyDtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "accumulateDtype": {
+          "category": "float",
+          "bits": 32,
+          "format": "fp32"
+        },
+        "resource": "matrix"
+      },
+      "operations": {
+        "status": "available",
+        "quantity": {
+          "value": 1024,
+          "unit": "operation"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "trafficBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 448,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "arithmeticIntensity": {
+        "status": "available",
+        "operationsPerByte": 2.2857142857142856
+      },
+      "computeCeiling": {
+        "status": "available",
+        "quantity": {
+          "value": 1000,
+          "unit": "operation_per_second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "memoryBandwidth": {
+        "status": "available",
+        "quantity": {
+          "value": 100,
+          "unit": "byte_per_second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "roofPerformance": {
+        "status": "available",
+        "quantity": {
+          "value": 228.57142857142858,
+          "unit": "operation_per_second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "actualOrPredictedPerformance": {
+        "status": "available",
+        "quantity": {
+          "value": 228.57142857142856,
+          "unit": "operation_per_second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:operator:gemm",
+              "revision": 1,
+              "kind": "operator"
+            },
+            {
+              "assetId": "example:module:gemm",
+              "revision": 1,
+              "kind": "module"
+            },
+            {
+              "assetId": "example:model:gemm",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:parallel:replicated",
+              "revision": 1,
+              "kind": "parallel"
+            },
+            {
+              "assetId": "example:quantization:w4",
+              "revision": 1,
+              "kind": "quantization"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "builtin:formula:gemm-operations",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:formula:matrix-bytes",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "M",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "N",
+              "source": "asset_default"
+            },
+            {
+              "parameterKey": "K",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "HBM factor=1; synthetic hardware; ideal compute-memory overlap."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "trafficBasis": "estimated_hbm"
+    }
+  ],
+  "diagnostics": []
+}

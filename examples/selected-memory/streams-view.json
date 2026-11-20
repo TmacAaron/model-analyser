@@ -1,0 +1,155 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+  "target": {
+    "kind": "node",
+    "nodeId": "B"
+  },
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": false,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "second",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:c05",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:c05-streams",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "batchSize",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "contextTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "queryTokensPerRequest",
+              "source": "evaluation_context"
+            },
+            {
+              "parameterKey": "steps",
+              "source": "evaluation_context"
+            }
+          ],
+          "assumptions": [
+            "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "prepare",
+          "executionNodeId": "prepare"
+        },
+        {
+          "nodeId": "A",
+          "executionNodeId": "A"
+        },
+        {
+          "nodeId": "B",
+          "executionNodeId": "B"
+        },
+        {
+          "nodeId": "join",
+          "executionNodeId": "join"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "scratchB",
+        "name": "Branch scratch",
+        "allocationKind": "bytes",
+        "category": "workspace",
+        "sharingDomain": "instance",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": false,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 3221225472,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 3221225472,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 3221225472,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0.001,
+            "end": 0.006
+          }
+        ]
+      },
+      "axis": "second",
+      "accessors": [
+        {
+          "nodeId": "B",
+          "executionNodeId": "B",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "B",
+          "executionNodeId": "B",
+          "reads": false,
+          "writes": false,
+          "temporary": true
+        }
+      ],
+      "shared": false,
+      "interfaceKnown": true,
+      "interfaceBoundary": false,
+      "input": false,
+      "output": false,
+      "private": true,
+      "replacedBy": []
+    }
+  ]
+}

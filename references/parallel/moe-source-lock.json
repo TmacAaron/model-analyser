@@ -1,0 +1,20 @@
+{
+  "checkedOn": "2026-11-14",
+  "repository": "https://github.com/NVIDIA/Megatron-LM",
+  "commit": "76cf2e2d64bbfa466d50de64d036db23395dc5af",
+  "path": "megatron/core/transformer/moe/token_dispatcher.py",
+  "url": "https://github.com/NVIDIA/Megatron-LM/blob/76cf2e2d64bbfa466d50de64d036db23395dc5af/megatron/core/transformer/moe/token_dispatcher.py",
+  "sha256": "b1580f97c0166107dcd90306144d60550a4a75e169bb56efaddaa8200c92604b",
+  "verifiedSemantics": [
+    "The explicit all-to-all dispatcher separates dispatch, tensor-parallel gathering, expert computation, tensor-parallel reduction/scattering and inverse combine.",
+    "The flex dispatcher can use a group spanning both tensor- and expert-parallel ranks."
+  ],
+  "authoredAssumptions": [
+    "Forward-only synthetic E=4, top-k=2 gated MoE subgraph, with EP=2 and TP=1 or 2; all experts remain resident.",
+    "Every global token routes to one expert in each owner. The balanced profile touches both experts per owner; the concentrated profile touches one, with the same number of token assignments.",
+    "Route packets carry BF16 activations, int64 expert indices and FP32 probabilities: 2H+12 bytes per assignment. Token order is known from the declared fixed routing map.",
+    "One TP×EP dispatch and two separate owner combine collectives are declared; these are not a claim to reproduce a fused production dispatcher.",
+    "Owner preparation/unpacking and repacking use distinct buffers with explicit HBM traffic. Transport workspace=0 is an ideal-buffer assumption; communication local HBM and reduction arithmetic remain unknown.",
+    "Artificial matrix/vector ceilings 1000 operations/s, HBM 100 byte/s, network 1000 byte/s, per-round latency 0.001 seconds, and 4096-byte devices are arithmetic references only."
+  ]
+}

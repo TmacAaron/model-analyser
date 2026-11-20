@@ -1,0 +1,1606 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.20",
+    "inputHash": "7d75f21496b5faeaaf305f9423d5427ed606ed2f9940c00e99717caccfba84db",
+    "scenarioId": "example:scenario:parallel-resolution",
+    "phase": "decode",
+    "memoryEvidence": [],
+    "quantizationApplications": [],
+    "fusions": [],
+    "tensorLayouts": [
+      {
+        "nodeId": "module/op",
+        "tensorId": "W",
+        "assignmentIndices": [
+          0
+        ],
+        "overriddenIndices": [],
+        "partition": {
+          "tensorId": "W",
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "groupId": "tp",
+          "distribution": {
+            "kind": "sharded",
+            "groupId": "tp",
+            "axes": [
+              {
+                "tensorAxisId": "col",
+                "meshAxisId": "tp"
+              }
+            ],
+            "policy": {
+              "kind": "even"
+            }
+          },
+          "globalShape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 16,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 8,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "coverage": "exact",
+          "placements": [
+            {
+              "deviceId": "gpu0",
+              "logicalShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "allocatedShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "copies": 1,
+              "logicalElements": 64,
+              "allocatedElements": 64,
+              "slices": [
+                {
+                  "axisId": "row",
+                  "start": 0,
+                  "end": 16,
+                  "paddedExtent": 16
+                },
+                {
+                  "axisId": "col",
+                  "start": 0,
+                  "end": 4,
+                  "paddedExtent": 4
+                }
+              ]
+            },
+            {
+              "deviceId": "gpu1",
+              "logicalShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "allocatedShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "copies": 1,
+              "logicalElements": 64,
+              "allocatedElements": 64,
+              "slices": [
+                {
+                  "axisId": "row",
+                  "start": 0,
+                  "end": 16,
+                  "paddedExtent": 16
+                },
+                {
+                  "axisId": "col",
+                  "start": 4,
+                  "end": 8,
+                  "paddedExtent": 4
+                }
+              ]
+            }
+          ],
+          "diagnostics": []
+        }
+      }
+    ],
+    "storageLayouts": [
+      {
+        "nodeId": "module/op",
+        "storageId": "sW",
+        "assignmentIndices": [
+          0
+        ],
+        "overriddenIndices": [],
+        "distribution": {
+          "kind": "sharded",
+          "groupId": "tp",
+          "axes": [
+            {
+              "tensorAxisId": "col",
+              "meshAxisId": "tp"
+            }
+          ],
+          "policy": {
+            "kind": "even"
+          }
+        }
+      }
+    ],
+    "storageAllocations": [
+      {
+        "storageId": "sW",
+        "category": "weight",
+        "aliasIds": [
+          "sW"
+        ],
+        "nodeIds": [
+          "module/op"
+        ],
+        "assignmentIndices": [
+          0
+        ],
+        "allocation": {
+          "storageId": "sW",
+          "canonicalStorageId": "sW",
+          "distribution": {
+            "kind": "sharded",
+            "groupId": "tp",
+            "axes": [
+              {
+                "tensorAxisId": "col",
+                "meshAxisId": "tp"
+              }
+            ],
+            "policy": {
+              "kind": "even"
+            }
+          },
+          "perDevice": [
+            {
+              "deviceId": "gpu0",
+              "copies": 1,
+              "allocatedShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "allocation": {
+                "storageId": "$device:gpu0::sW",
+                "canonicalStorageId": "$device:gpu0::sW",
+                "payloadBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 128,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:hardware:c01",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:gemm",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:gemm",
+                        "revision": 1,
+                        "kind": "module"
+                      },
+                      {
+                        "assetId": "example:operator:gemm",
+                        "revision": 1,
+                        "kind": "operator"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "batchSize",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "contextTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "queryTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "steps",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "M",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "N",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "K",
+                        "source": "evaluation_context"
+                      }
+                    ],
+                    "assumptions": [
+                      "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "auxiliaryBytes": [],
+                "totalBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 128,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:hardware:c01",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:gemm",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:gemm",
+                        "revision": 1,
+                        "kind": "module"
+                      },
+                      {
+                        "assetId": "example:operator:gemm",
+                        "revision": 1,
+                        "kind": "operator"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "batchSize",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "contextTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "queryTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "steps",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "M",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "N",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "K",
+                        "source": "evaluation_context"
+                      }
+                    ],
+                    "assumptions": [
+                      "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "diagnostics": []
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 128,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:matrix-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm",
+                      "revision": 1,
+                      "kind": "operator"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "batchSize",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "contextTokensPerRequest",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "queryTokensPerRequest",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "steps",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "M",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "N",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "K",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "deviceId": "gpu1",
+              "copies": 1,
+              "allocatedShape": [
+                {
+                  "axisId": "row",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 16,
+                      "unit": "count"
+                    }
+                  }
+                },
+                {
+                  "axisId": "col",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "allocation": {
+                "storageId": "$device:gpu1::sW",
+                "canonicalStorageId": "$device:gpu1::sW",
+                "payloadBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 128,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:hardware:c01",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:gemm",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:gemm",
+                        "revision": 1,
+                        "kind": "module"
+                      },
+                      {
+                        "assetId": "example:operator:gemm",
+                        "revision": 1,
+                        "kind": "operator"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "batchSize",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "contextTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "queryTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "steps",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "M",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "N",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "K",
+                        "source": "evaluation_context"
+                      }
+                    ],
+                    "assumptions": [
+                      "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "auxiliaryBytes": [],
+                "totalBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 128,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "builtin:formula:gemm-operations",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:formula:matrix-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      {
+                        "assetId": "example:hardware:c01",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:gemm",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:gemm",
+                        "revision": 1,
+                        "kind": "module"
+                      },
+                      {
+                        "assetId": "example:operator:gemm",
+                        "revision": 1,
+                        "kind": "operator"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "batchSize",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "contextTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "queryTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "steps",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "M",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "N",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "K",
+                        "source": "evaluation_context"
+                      }
+                    ],
+                    "assumptions": [
+                      "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "diagnostics": []
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 128,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "builtin:formula:gemm-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:matrix-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:gemm",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:gemm",
+                      "revision": 1,
+                      "kind": "module"
+                    },
+                    {
+                      "assetId": "example:operator:gemm",
+                      "revision": 1,
+                      "kind": "operator"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "batchSize",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "contextTokensPerRequest",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "queryTokensPerRequest",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "steps",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "M",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "N",
+                      "source": "evaluation_context"
+                    },
+                    {
+                      "parameterKey": "K",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "diagnostics": []
+        }
+      }
+    ],
+    "communications": [],
+    "deviceAllocations": [
+      {
+        "deviceId": "gpu0",
+        "categoryBreakdown": [
+          {
+            "category": "weight",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 128,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "knownBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      },
+      {
+        "deviceId": "gpu1",
+        "categoryBreakdown": [
+          {
+            "category": "weight",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 128,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:M",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "$model:K",
+                    "source": "asset_default"
+                  },
+                  {
+                    "parameterKey": "module:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module:K",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:M",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:N",
+                    "source": "node_override"
+                  },
+                  {
+                    "parameterKey": "module/op:K",
+                    "source": "node_override"
+                  }
+                ],
+                "assumptions": [
+                  "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "knownBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 128,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:M",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "$model:K",
+                "source": "asset_default"
+              },
+              {
+                "parameterKey": "module:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module:K",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:M",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:N",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "module/op:K",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    ],
+    "localCosts": {
+      "version": "0.1.0-local-cost.1",
+      "nodes": [
+        {
+          "nodeId": "module/op",
+          "placement": {
+            "kind": "unplaced",
+            "diagnosticIds": [
+              "local-cost-1"
+            ]
+          }
+        }
+      ],
+      "logicalModelCompute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                "Only weight placement is declared. The unassigned activations, local compute and whole-model schedule are not inferred."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                "Only weight placement is declared. The unassigned activations, local compute and whole-model schedule are not inferred."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "deviceSubtotals": []
+    },
+    "execution": {
+      "status": "available",
+      "result": {
+        "version": "0.1.0-serial-barrier.1",
+        "policy": "serial_barrier",
+        "completeness": "partial",
+        "orderedNodeIds": [
+          "module/op"
+        ],
+        "dependencies": [],
+        "steps": [
+          {
+            "nodeId": "module/op",
+            "kind": "compute",
+            "deviceIds": [],
+            "duration": {
+              "status": "unavailable",
+              "diagnosticIds": [
+                "local-cost-1"
+              ]
+            }
+          }
+        ],
+        "intervals": [],
+        "makespan": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "serial-execution-3"
+          ]
+        },
+        "unplacedCommunicationIndices": [],
+        "blockedNodeIds": [
+          "module/op"
+        ],
+        "memoryOrder": [
+          {
+            "nodeId": "module/op",
+            "executionNodeId": "module/op"
+          }
+        ]
+      }
+    },
+    "memory": [
+      {
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "categoryBreakdown": [],
+        "peakBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "distributed-memory-gpu0-4"
+          ]
+        },
+        "peakPoint": {
+          "kind": "order",
+          "index": 0
+        },
+        "capacityBytes": 4096,
+        "capacityStatus": {
+          "kind": "unavailable",
+          "diagnosticIds": [
+            "distributed-memory-gpu0-4"
+          ]
+        }
+      },
+      {
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu1"
+        },
+        "categoryBreakdown": [],
+        "peakBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "distributed-memory-gpu1-5"
+          ]
+        },
+        "peakPoint": {
+          "kind": "order",
+          "index": 0
+        },
+        "capacityBytes": 4096,
+        "capacityStatus": {
+          "kind": "unavailable",
+          "diagnosticIds": [
+            "distributed-memory-gpu1-5"
+          ]
+        }
+      }
+    ],
+    "unassignedTensorIds": [
+      "X",
+      "Y"
+    ],
+    "unassignedTensorUses": [
+      {
+        "nodeId": "module/op",
+        "tensorId": "X"
+      },
+      {
+        "nodeId": "module/op",
+        "tensorId": "Y"
+      }
+    ],
+    "unassignedStorageIds": [
+      "sX",
+      "sY"
+    ],
+    "diagnostics": [
+      {
+        "diagnosticId": "local-cost-1",
+        "severity": "error",
+        "code": "missing_local_cost_rule",
+        "message": "节点 module/op 未声明局部成本方程，不能按设备数平分逻辑成本",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:parallel-resolution"
+        }
+      },
+      {
+        "diagnosticId": "serial-execution-2",
+        "severity": "error",
+        "code": "unknown_execution_devices",
+        "message": "节点 module/op 的参与设备尚未确定",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:parallel-resolution"
+        }
+      },
+      {
+        "diagnosticId": "serial-execution-3",
+        "severity": "error",
+        "code": "incomplete_serial_execution",
+        "message": "存在未定位通信、布局/耗时/数值缺项，不能报告完整串行跨度",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:parallel-resolution"
+        }
+      },
+      {
+        "diagnosticId": "distributed-memory-gpu0-4",
+        "severity": "error",
+        "code": "incomplete_lifetime_plan",
+        "message": "存在未定位通信或未解决的数据布局，无法证明完整生命周期峰值",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:parallel-resolution"
+        }
+      },
+      {
+        "diagnosticId": "distributed-memory-gpu1-5",
+        "severity": "error",
+        "code": "incomplete_lifetime_plan",
+        "message": "存在未定位通信或未解决的数据布局，无法证明完整生命周期峰值",
+        "location": {
+          "kind": "scenario",
+          "scenarioId": "example:scenario:parallel-resolution"
+        }
+      }
+    ]
+  }
+}

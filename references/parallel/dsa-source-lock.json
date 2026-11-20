@@ -1,0 +1,27 @@
+{
+  "checkedOn":"2026-11-15",
+  "repository":"https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp",
+  "commit":"194c67e12b1b0d6df0ef373ddcf215bc84027409",
+  "url":"https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp/blob/194c67e12b1b0d6df0ef373ddcf215bc84027409/inference/model.py",
+  "files":[
+    {"path":"inference/model.py","sha256":"bfe5b89186b579910b6d59fa7e0cf1f7a75ceb4ec5d0f5b54f0ccbe77cdb6a63"},
+    {"path":"inference/kernel.py","sha256":"92abc46cb6457b8cbe105be66f26f9a119aeb86c872e4521d853d5177d181868"},
+    {"path":"inference/config_671B_v3.2.json","sha256":"f9fe074cdef8fdcc0feabbe635ff7c072a65d273a42a6bc207fe425439dff835"},
+    {"path":"config.json","sha256":"c7fa8b191e9936d8e6a57d864baab82b792fae16a116416cdd3a75ba76bc5af1"}
+  ],
+  "verifiedSemantics":[
+    "Indexer reads normalized query low rank, independently projects an index key from x, applies LayerNorm/rotary/Hadamard and FP8 activation quantization. Its cache has distinct FP8 payload and FP32 scale tensors; scale_fmt rounding does not make the scale storage one byte.",
+    "FP8 index scans every prefix key. Its kernel rectifies each head dot product, multiplies query weights, reduces heads, applies the key scale and writes one FP32 score per query/key. Top-K uses min(index_topk,end_pos); indices are forward-local, not a carried decode state.",
+    "The released MLA decode demo computes full-prefix latent/rotary QK and full-prefix AV, then uses a dense index mask around softmax. Top-K selection alone does not reduce those einsum costs.",
+    "The decode demo keeps normalized/fake-FP8-rounded latent KV in BF16 plus a separate rotary key cache. Query absorption and output expansion use disjoint key/value slices of wkv_b. RMSNorm weights and index LayerNorm weight/bias are FP32. Index weights_proj is FP32 in this implementation.",
+    "The fixed inference config uses 128 attention heads, 64 index heads, index dimension 128 and K=2048, with FP8 checkpoint matrices. Buffers use maximum batch/sequence allocation."
+  ],
+  "authoredAssumptions":[
+    "Decode-only single-query MLA attention fragment, without block input norm/residual, FFN, embeddings or full language-model costs. Artificial H=8, attention heads=2, query rank=4, latent rank=8, nonrotary/rotary/value dimensions=4/2/4, index heads=2 and index dimension/block=8/8. This reduced block is not source-kernel compatible.",
+    "All ordinary projection weights and arithmetic use BF16 rather than the fixed FP8 checkpoint matrices. Index weights_proj stays FP32; index dots use FP8 E4M3 inputs with FP32 accumulation. BF16 main scores/probabilities follow the demo. Norm/rotary/Hadamard/selection use explicit FP32 vector proxies with on-chip internal workspace; BF16/FP32 and FP8 conversions add execution-only work.",
+    "source-mask follows full-prefix demo arithmetic, with materialized BF16 score components and dense FP32 index mask. sparse-gather is a separately authored theoretical kernel path with explicit shared BF16 selected-KV/PE staging and selected QK/AV; it is not a claim that the released demo executes such kernels. dense is a no-indexer counterfactual, not output-equivalent attention.",
+    "FP8 index kernel intermediates stay on chip; one full-prefix FP32 score tensor is materialized. Per-head rectification, weighting, reduction and key-scale multiplication remain explicit arithmetic in the same leaf. Top-K proxy costs L*(min(K,L)+2) per request. Debug clone/broadcast/equality checks and network are omitted on this single-device fragment.",
+    "Dynamic buffers reserve call-end C+1 rows; provisioned buffers reserve M rows, reject C+1>M, and separately report active context. Index payload uses one byte per channel and each scale occupies four bytes. Two disjoint BF16 key/value weight slices sum to the original wkv_b size; no duplicate persistent dequantized weights. Warm history is initialized; no allocator slack or implicit migration cost.",
+    "Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+  ]
+}

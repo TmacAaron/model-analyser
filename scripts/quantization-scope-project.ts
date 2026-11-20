@@ -1,0 +1,30 @@
+import { AssetDocument,AssetId,ProjectDocument,NodeId,StorageId,TensorId,type GraphTemplate } from '@model-analyser/contracts';
+import { makeModelProject } from './model-project.js';
+import { matrix,ref } from './model-authoring.js';
+
+const literal=(value:number,unit:'count'|'operation')=>({kind:'literal' as const,quantity:{value,unit}}),symbol=(name:string)=>({kind:'symbol' as const,name});
+const parameter=(value:number,key='P')=>({key,name:key+' scope count',type:'integer' as const,unit:'count' as const,min:0,default:{kind:'integer' as const,value}});
+const dtype={category:'float' as const,bits:16,format:'bf16'},shape=[{axisId:'d',semantic:'hidden' as const,size:literal(4,'count')}];
+export type QuantizationScopeCase='short'|'nested'|'ancestor'|'repeat'|'shared'|'conflict'|'decode'|'fixed-decode'|'capacity';
+/** Two four-element BF16 weights; local P scales are BF16. No performance claim. */
+export function makeQuantizationScopeProject(kind:QuantizationScopeCase='short'):ProjectDocument{
+  const prefix='example:quantization-scope:'+kind,asset=(id:string,name:string,parameters:unknown[],definition:unknown)=>AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:prefix+':'+id,revision:1,name,parameters,tags:['synthetic','quantization-scope'],sources:[{kind:'note',text:'Independent hand model: per weight8B payload +2*actual-local-P scale bytes; two weights. Synthetic hardware only.'}],definition});
+  const storages=['left','right'].map(id=>({storageId:StorageId.parse(id),name:id+' BF16 weights',category:'weight' as const,sharingDomain:'instance' as const,allocation:{kind:'tensor' as const,shape,dtype}})),shared=kind==='shared'||kind==='conflict';
+  const cost={compute:[{segmentId:'work',computeClass:matrix,usefulOperations:literal(1,'operation'),executedOperations:literal(1,'operation')}],memoryAccess:storages.map(s=>({accessId:'read-'+s.storageId,storageId:s.storageId,mode:'read' as const,logicalBytes:{kind:'storage_allocation' as const,passes:literal(1,'count')},hbmEstimate:{kind:'factor' as const,value:1}})),temporaryStorageIds:[],timing:{kind:'roofline_bound' as const,computeEfficiency:1,memoryEfficiency:1,computeMemoryOverlap:'ideal' as const,launchSeconds:0}};
+  const ports=shared?[{portId:'x',tensorId:'input'}]:[],tensors=shared?[{tensorId:'input',name:'Shared source',storageId:'left',shape,dtype}]:[];
+  const op=asset('op','Scoped weight reader',kind==='ancestor'?[]:[parameter(3)],{kind:'operator',operator:{inputs:ports,outputs:[],tensors,storages,states:[],category:'custom',phases:['prefill','decode'],cost,localCost:{participation:{kind:'storage_layout',storageId:'left'},bindings:[],cost,description:'Explicit per-copy work and allocation accesses; no inferred division'}}});
+  const node=(id:string,target:AssetDocument,bindings:{parameterKey:string;value:ReturnType<typeof symbol>|ReturnType<typeof literal>}[]=[]):GraphTemplate['nodes'][number]=>({nodeId:NodeId.parse(id),name:id+' · scoped reader',phases:['prefill','decode'],portBindings:shared?[{portId:'x',tensorId:TensorId.parse('input')}]:[],stateBindings:[],body:{kind:target.definition.kind as 'operator'|'module',asset:ref(target),bindings}});
+  const graph=(nodes:GraphTemplate['nodes']):GraphTemplate=>({inputs:[],outputs:[],nodes,edges:[],dependencies:[],tensors:[],storages:[],states:[]});
+  const assets=[op];let nodes=[node('x',op)],parameters=[parameter(2)];
+  if(kind==='nested'||kind==='ancestor'){
+    const inner=asset('inner','Nearest ancestor P5',[parameter(5)],{kind:'module',graph:graph([node('c',op)])});assets.push(inner);const outer=asset('outer','Outer ancestor P4',[parameter(4)],{kind:'module',graph:graph([node('B',inner)])});assets.push(outer);nodes=[node('A',outer)];
+  }else if(kind==='repeat'){nodes[0]!.repeat={axis:'i',count:literal(2,'count'),wiring:'independent',carry:[]};}
+  else if(shared){nodes=[node('a',op,[{parameterKey:'P',value:literal(3,'count')}]),node('b',op,[{parameterKey:'P',value:literal(kind==='conflict'?5:3,'count')}])];}
+  else if(kind==='capacity'){parameters.push(parameter(3,'Z'));nodes=[node('x',op,[{parameterKey:'P',value:symbol('Z')}])];}
+  else if(kind==='decode'||kind==='fixed-decode'){parameters.push(parameter(2,'C'));nodes=[node('x',op,[{parameterKey:'P',value:symbol('C')}])];}
+  const rootGraph=graph(nodes);if(shared){rootGraph.tensors=[{tensorId:TensorId.parse('input'),name:'Canonical shared weight',storageId:StorageId.parse('shared'),shape,dtype}];rootGraph.storages=[{...storages[0]!,storageId:StorageId.parse('shared')}];}
+  const model=asset('model','Quantization scope '+kind,parameters,{kind:'model',family:'synthetic',variant:'quantization-scope-'+kind,graph:rootGraph,...(kind==='decode'||kind==='fixed-decode'?{workloadBindings:[{phase:'decode',parameterKey:'C',value:symbol('contextTokensPerRequest')}]}:{})});
+  const p=makeModelProject([model,...assets],kind==='decode'||kind==='fixed-decode'?{kind:'decode',batchSize:1,contextTokensPerRequest:2,queryTokensPerRequest:1,steps:3,...(kind==='fixed-decode'?{approximation:'fixed_context' as const}:{})}:{kind:'prefill',batchSize:1,pastTokensPerRequest:0,queryTokensPerRequest:1},'量化辅助公式 · '+kind),s=p.scenarios[0]!,hardware=p.assetSnapshots.find(a=>a.definition.kind==='hardware');if(hardware?.definition.kind!=='hardware')throw Error();hardware.definition.hardware.capacityBytes=kind==='capacity'?28:4096;hardware.definition.hardware.computeCapabilities=[{computeClass:matrix,kind:'peak',operationsPerSecond:1000}];hardware.definition.hardware.memoryCapabilities=[{key:'hbm',kind:'peak',bytesPerSecond:100}];
+  hardware.name='Synthetic '+hardware.definition.hardware.capacityBytes+'B · 1000op/s · 100B/s';hardware.assetId=AssetId.parse(prefix+':hardware');s.deviceTopology.devices[0]!.hardware=ref(hardware);
+  s.quantizationOverrides=[{selector:{kind:'subtree',rootNodeId:NodeId.parse('$model')},weight:{payloadBits:16,packingUnitElements:1,alignmentBytes:1,auxiliaries:[{name:'local-scales',dtype,count:{kind:'formula',value:symbol('P')}}]}}];return ProjectDocument.parse(p);
+}

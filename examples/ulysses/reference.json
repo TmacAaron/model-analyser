@@ -1,0 +1,133 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "source": {
+    "checkedOn": "2026-11-14",
+    "repository": "https://github.com/deepspeedai/DeepSpeed",
+    "commit": "79caae1c04fca210345bdeb03bcacf87b1ac2f23",
+    "path": "blogs/deepspeed-ulysses/README.md",
+    "url": "https://github.com/deepspeedai/DeepSpeed/blob/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+    "rawUrl": "https://raw.githubusercontent.com/deepspeedai/DeepSpeed/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+    "sha256": "49d730cb416643bfd73eeae3217027ae00778ce604b58ea19be34588248e543b",
+    "section": "Core Design of DeepSpeed-Ulysses",
+    "verifiedSemantics": [
+      "Sequences are partitioned before attention; all-to-all converts Q/K/V into full-sequence, disjoint-head layouts.",
+      "The return all-to-all restores sequence partitioning for subsequent operators.",
+      "Sequence parallelism alone does not shard model weights; ZeRO is a separate mechanism."
+    ],
+    "authoredAssumptions": [
+      "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model.",
+      "Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed.",
+      "Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds.",
+      "Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown.",
+      "All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks.",
+      "Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+    ]
+  },
+  "rows": [
+    {
+      "name": "single",
+      "oracle": {
+        "B": 1,
+        "S": 4,
+        "NH": 2,
+        "D": 2,
+        "degree": 1,
+        "mode": "replicated",
+        "logicalMatrix": 768,
+        "logicalVector": 176,
+        "physicalMatrix": 768,
+        "physicalVector": 176,
+        "matrixPerDevice": 768,
+        "vectorPerDevice": 176,
+        "weightPerDevice": 128,
+        "hbmPerDevice": 1120,
+        "peakPerDevice": 448,
+        "sourcePayloadPerExchangePerRank": 0,
+        "remoteBytesPerExchangePerRank": 0,
+        "networkGroupRemoteBytes": 0,
+        "networkSeconds": 0,
+        "leafSeconds": 11.2,
+        "seconds": 11.2,
+        "peakCandidates": {
+          "projection": 256,
+          "qk": 320,
+          "softmax": 448,
+          "av": 288,
+          "returnExchange": 0,
+          "output": 224
+        }
+      },
+      "maximumBatchInCheckedRange": 12
+    },
+    {
+      "name": "sequence-heads",
+      "oracle": {
+        "B": 1,
+        "S": 4,
+        "NH": 2,
+        "D": 2,
+        "degree": 2,
+        "mode": "ulysses",
+        "logicalMatrix": 768,
+        "logicalVector": 176,
+        "physicalMatrix": 768,
+        "physicalVector": 176,
+        "matrixPerDevice": 384,
+        "vectorPerDevice": 88,
+        "weightPerDevice": 128,
+        "hbmPerDevice": 624,
+        "peakPerDevice": 288,
+        "sourcePayloadPerExchangePerRank": 16,
+        "remoteBytesPerExchangePerRank": 8,
+        "networkGroupRemoteBytes": 64,
+        "networkSeconds": 0.036000000000000004,
+        "leafSeconds": 6.24,
+        "seconds": 6.276,
+        "peakCandidates": {
+          "projection": 208,
+          "qk": 224,
+          "softmax": 288,
+          "av": 208,
+          "returnExchange": 176,
+          "output": 176
+        }
+      },
+      "maximumBatchInCheckedRange": 24
+    },
+    {
+      "name": "redundant",
+      "oracle": {
+        "B": 1,
+        "S": 4,
+        "NH": 2,
+        "D": 2,
+        "degree": 2,
+        "mode": "replicated",
+        "logicalMatrix": 768,
+        "logicalVector": 176,
+        "physicalMatrix": 1536,
+        "physicalVector": 352,
+        "matrixPerDevice": 768,
+        "vectorPerDevice": 176,
+        "weightPerDevice": 128,
+        "hbmPerDevice": 1120,
+        "peakPerDevice": 448,
+        "sourcePayloadPerExchangePerRank": 0,
+        "remoteBytesPerExchangePerRank": 0,
+        "networkGroupRemoteBytes": 0,
+        "networkSeconds": 0,
+        "leafSeconds": 11.2,
+        "seconds": 11.2,
+        "peakCandidates": {
+          "projection": 256,
+          "qk": 320,
+          "softmax": 448,
+          "av": 288,
+          "returnExchange": 0,
+          "output": 224
+        }
+      },
+      "maximumBatchInCheckedRange": 12
+    }
+  ]
+}

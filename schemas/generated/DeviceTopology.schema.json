@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "devices": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "members": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "mesh": {
+            "type": "object",
+            "properties": {
+              "axes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "axisId": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "size": {
+                      "$ref": "#/$defs/__schema2"
+                    }
+                  },
+                  "required": [
+                    "axisId",
+                    "size"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "deviceId": {
+                      "$ref": "#/$defs/__schema1"
+                    },
+                    "coordinates": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema3"
+                      }
+                    }
+                  },
+                  "required": [
+                    "deviceId",
+                    "coordinates"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "axes",
+              "coordinates"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "groupId",
+          "members"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "devices",
+    "groups"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "hardware": {
+          "type": "object",
+          "properties": {
+            "assetId": {
+              "$ref": "#/$defs/__schema1"
+            },
+            "revision": {
+              "$ref": "#/$defs/__schema2"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "model",
+                "module",
+                "operator",
+                "formula",
+                "parallel",
+                "quantization",
+                "hardware"
+              ]
+            }
+          },
+          "required": [
+            "assetId",
+            "revision",
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "deviceId",
+        "hardware"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema2": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema3"
+    },
+    "__schema3": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

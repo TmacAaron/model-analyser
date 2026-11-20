@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "equal_samples",
+        "ordering_change"
+      ]
+    },
+    "lower": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "upper": {
+      "$ref": "#/$defs/__schema0"
+    }
+  },
+  "required": [
+    "kind",
+    "lower",
+    "upper"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

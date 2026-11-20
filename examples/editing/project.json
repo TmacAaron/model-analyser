@@ -1,0 +1,298 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:structure-editing",
+  "projectRevision": 1,
+  "name": "Structure table reference: 3 × 2 + 3 seconds",
+  "scenarios": [
+    {
+      "scenarioId": "editing:scenario",
+      "name": "Three repeats and tail",
+      "model": {
+        "assetId": "editing:model",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "editing:hardware",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "editing:hardware",
+      "revision": 1,
+      "name": "Structure editing synthetic hardware",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "editing:module",
+      "revision": 1,
+      "name": "Repeated work and dependent tail",
+      "tags": [
+        "structure-editing",
+        "synthetic"
+      ],
+      "parameters": [
+        {
+          "key": "P",
+          "name": "Repeat count",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Independent reference: P repeated two-second leaves, followed by one three-second tail. P=3 -> 9 seconds."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "repeated",
+              "name": "Repeated two seconds",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "repeat": {
+                "axis": "layer",
+                "count": {
+                  "kind": "symbol",
+                  "name": "P"
+                },
+                "wiring": "independent",
+                "carry": []
+              },
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 2,
+                    "description": "Explicit synthetic seconds for structure editing reference"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            },
+            {
+              "nodeId": "tail",
+              "name": "Three-second tail",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 3,
+                    "description": "Explicit synthetic seconds for structure editing reference"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [
+            {
+              "edgeId": "after-repeats",
+              "fromNodeId": "repeated",
+              "toNodeId": "tail",
+              "kind": "control"
+            }
+          ],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "editing:model",
+      "revision": 1,
+      "name": "Editable repeated-module model",
+      "tags": [
+        "structure-editing",
+        "synthetic"
+      ],
+      "parameters": [],
+      "sources": [],
+      "definition": {
+        "kind": "model",
+        "family": "custom",
+        "variant": "table-reference",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "block",
+              "name": "Repeated module",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "editing:module",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "P",
+                    "value": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        },
+        "assumptions": [
+          "Fixed synthetic timings, not a hardware performance prediction."
+        ]
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

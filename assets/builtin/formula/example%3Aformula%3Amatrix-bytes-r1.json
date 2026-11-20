@@ -1,0 +1,41 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:formula:matrix-bytes",
+  "revision": 1,
+  "name": "BF16 矩阵 bytes",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "rows": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "cols": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "rows * cols * 2",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "C01 BF16 matrix storage bytes"
+    }
+  }
+}

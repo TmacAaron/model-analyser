@@ -1,0 +1,673 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:operator:gemm-serial-gather",
+  "revision": 1,
+  "name": "C01 GEMM",
+  "tags": [
+    "contract-example"
+  ],
+  "parameters": [
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "N",
+      "name": "N",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic C01 contract example, not a production hardware/model preset."
+    }
+  ],
+  "definition": {
+    "kind": "operator",
+    "operator": {
+      "category": "linear",
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        },
+        {
+          "portId": "w",
+          "tensorId": "W"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Y"
+        }
+      ],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sX"
+        },
+        {
+          "tensorId": "W",
+          "name": "W",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "K"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sW"
+        },
+        {
+          "tensorId": "Y",
+          "name": "Y",
+          "shape": [
+            {
+              "axisId": "row",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "M"
+              }
+            },
+            {
+              "axisId": "col",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "N"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "sY"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "sX",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sW",
+          "name": "W",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "sY",
+          "name": "Y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "row",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "axisId": "col",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": [],
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "cost": {
+        "compute": [
+          {
+            "segmentId": "matmul",
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "usefulOperations": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "M": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "N": {
+                    "kind": "symbol",
+                    "name": "N"
+                  },
+                  "K": {
+                    "kind": "symbol",
+                    "name": "K"
+                  }
+                }
+              }
+            },
+            "executedOperations": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "M": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "N": {
+                    "kind": "symbol",
+                    "name": "N"
+                  },
+                  "K": {
+                    "kind": "symbol",
+                    "name": "K"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "memoryAccess": [
+          {
+            "accessId": "accessX",
+            "storageId": "sX",
+            "mode": "read",
+            "logicalBytes": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "rows": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "cols": {
+                    "kind": "symbol",
+                    "name": "K"
+                  }
+                }
+              }
+            },
+            "hbmEstimate": {
+              "kind": "factor",
+              "value": 1
+            }
+          },
+          {
+            "accessId": "accessW",
+            "storageId": "sW",
+            "mode": "read",
+            "logicalBytes": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "rows": {
+                    "kind": "symbol",
+                    "name": "K"
+                  },
+                  "cols": {
+                    "kind": "symbol",
+                    "name": "N"
+                  }
+                }
+              }
+            },
+            "hbmEstimate": {
+              "kind": "factor",
+              "value": 1
+            }
+          },
+          {
+            "accessId": "accessY",
+            "storageId": "sY",
+            "mode": "write",
+            "logicalBytes": {
+              "kind": "formula",
+              "call": {
+                "formula": {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                "bindings": {
+                  "rows": {
+                    "kind": "symbol",
+                    "name": "M"
+                  },
+                  "cols": {
+                    "kind": "symbol",
+                    "name": "N"
+                  }
+                }
+              }
+            },
+            "hbmEstimate": {
+              "kind": "factor",
+              "value": 1
+            }
+          }
+        ],
+        "temporaryStorageIds": [],
+        "timing": {
+          "kind": "roofline_bound",
+          "computeEfficiency": 1,
+          "memoryEfficiency": 1,
+          "computeMemoryOverlap": "ideal",
+          "launchSeconds": 0
+        }
+      },
+      "localCost": {
+        "participation": {
+          "kind": "tensor_layout",
+          "tensorId": "Y"
+        },
+        "bindings": [
+          {
+            "symbol": "ml",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "X",
+              "axisId": "row",
+              "basis": "logical"
+            }
+          },
+          {
+            "symbol": "ma",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "X",
+              "axisId": "row",
+              "basis": "allocated"
+            }
+          },
+          {
+            "symbol": "kl",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "X",
+              "axisId": "col",
+              "basis": "logical"
+            }
+          },
+          {
+            "symbol": "ka",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "X",
+              "axisId": "col",
+              "basis": "allocated"
+            }
+          },
+          {
+            "symbol": "nl",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "Y",
+              "axisId": "col",
+              "basis": "logical"
+            }
+          },
+          {
+            "symbol": "na",
+            "source": {
+              "kind": "tensor_axis",
+              "tensorId": "Y",
+              "axisId": "col",
+              "basis": "allocated"
+            }
+          },
+          {
+            "symbol": "xBytes",
+            "source": {
+              "kind": "storage_bytes",
+              "storageId": "sX",
+              "basis": "all_copies"
+            }
+          },
+          {
+            "symbol": "wBytes",
+            "source": {
+              "kind": "storage_bytes",
+              "storageId": "sW",
+              "basis": "all_copies"
+            }
+          },
+          {
+            "symbol": "yBytes",
+            "source": {
+              "kind": "storage_bytes",
+              "storageId": "sY",
+              "basis": "all_copies"
+            }
+          }
+        ],
+        "cost": {
+          "compute": [
+            {
+              "segmentId": "matmul",
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "usefulOperations": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "M": {
+                      "kind": "symbol",
+                      "name": "ml"
+                    },
+                    "N": {
+                      "kind": "symbol",
+                      "name": "nl"
+                    },
+                    "K": {
+                      "kind": "symbol",
+                      "name": "kl"
+                    }
+                  }
+                }
+              },
+              "executedOperations": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:local-gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "M": {
+                      "kind": "symbol",
+                      "name": "ma"
+                    },
+                    "N": {
+                      "kind": "symbol",
+                      "name": "na"
+                    },
+                    "K": {
+                      "kind": "symbol",
+                      "name": "ka"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "memoryAccess": [
+            {
+              "accessId": "accessX",
+              "storageId": "sX",
+              "mode": "read",
+              "logicalBytes": {
+                "kind": "symbol",
+                "name": "xBytes"
+              },
+              "hbmEstimate": {
+                "kind": "factor",
+                "value": 1
+              }
+            },
+            {
+              "accessId": "accessW",
+              "storageId": "sW",
+              "mode": "read",
+              "logicalBytes": {
+                "kind": "symbol",
+                "name": "wBytes"
+              },
+              "hbmEstimate": {
+                "kind": "factor",
+                "value": 1
+              }
+            },
+            {
+              "accessId": "accessY",
+              "storageId": "sY",
+              "mode": "write",
+              "logicalBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "rows": {
+                      "kind": "symbol",
+                      "name": "ma"
+                    },
+                    "cols": {
+                      "kind": "symbol",
+                      "name": "na"
+                    }
+                  }
+                }
+              },
+              "hbmEstimate": {
+                "kind": "factor",
+                "value": 1
+              }
+            }
+          ],
+          "temporaryStorageIds": [],
+          "timing": {
+            "kind": "roofline_bound",
+            "computeEfficiency": 1,
+            "memoryEfficiency": 1,
+            "computeMemoryOverlap": "ideal",
+            "launchSeconds": 0
+          }
+        },
+        "description": "Synthetic column-parallel GEMM: valid M/N/K determine useful work, allocated M/N/K determine executed work. Each declared local storage is read/written once, including quantization auxiliaries; HBM factor=1. No automatic speedup from storage bit width."
+      }
+    }
+  }
+}

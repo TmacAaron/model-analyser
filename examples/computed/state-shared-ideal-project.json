@@ -1,0 +1,578 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:shared-state:shared-ideal",
+  "projectRevision": 1,
+  "name": "C04 cross-module shared state · shared-ideal",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:shared-state",
+      "name": "C04 cross-module shared state",
+      "model": {
+        "assetId": "example:model:shared-state",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 3,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:state-reference",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "main",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "streams",
+        "assignments": [
+          {
+            "nodeId": "layer[0]",
+            "groupId": "main",
+            "streamId": "a"
+          },
+          {
+            "nodeId": "layer[1]",
+            "groupId": "main",
+            "streamId": "b"
+          }
+        ],
+        "extraDependencies": [],
+        "resourcePolicy": {
+          "kind": "ideal"
+        }
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:shared-state",
+      "revision": 1,
+      "name": "C04 cross-module shared state",
+      "tags": [
+        "paper-reference",
+        "state",
+        "shared"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "batch",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 3
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "shared",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "layer",
+              "name": "Shared-state reader module",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "state",
+                  "tensorId": "before"
+                }
+              ],
+              "stateBindings": [
+                {
+                  "localStateId": "local-state",
+                  "parentStateId": "persistent"
+                }
+              ],
+              "repeat": {
+                "axis": "reader",
+                "count": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                },
+                "wiring": "independent",
+                "carry": []
+              },
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "B",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "before",
+              "name": "before",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 32,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "state",
+              "name": "before",
+              "category": "state",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": [
+            {
+              "stateId": "persistent",
+              "name": "One parent-owned persistent state",
+              "stateKind": "custom",
+              "allocationBasis": "step_end",
+              "storageIds": [
+                "state"
+              ],
+              "creator": {
+                "kind": "initialized"
+              },
+              "readers": [],
+              "writers": [],
+              "updatePolicy": {
+                "kind": "static"
+              }
+            }
+          ]
+        },
+        "assumptions": [
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ],
+        "workloadBindings": [
+          {
+            "phase": "prefill",
+            "parameterKey": "B",
+            "value": {
+              "kind": "symbol",
+              "name": "batchSize"
+            }
+          },
+          {
+            "phase": "decode",
+            "parameterKey": "B",
+            "value": {
+              "kind": "symbol",
+              "name": "batchSize"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:module:shared-state",
+      "revision": 1,
+      "name": "Shared-state reader module",
+      "tags": [
+        "paper-reference",
+        "state",
+        "shared"
+      ],
+      "parameters": [
+        {
+          "key": "B",
+          "name": "batch",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 3
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [
+            {
+              "portId": "state",
+              "tensorId": "before"
+            }
+          ],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "read",
+              "name": "Read the full shared state",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "before",
+                  "tensorId": "before"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-before",
+                      "storageId": "state",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "roofline_bound",
+                    "computeEfficiency": 1,
+                    "memoryEfficiency": 1,
+                    "computeMemoryOverlap": "ideal",
+                    "launchSeconds": 0
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "before",
+                    "tensorId": "before"
+                  }
+                ],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [
+            {
+              "edgeId": "read-in-before",
+              "from": {
+                "kind": "graph_input",
+                "portId": "state"
+              },
+              "to": {
+                "kind": "node",
+                "nodeId": "read",
+                "portId": "before"
+              },
+              "tensorId": "before"
+            }
+          ],
+          "dependencies": [],
+          "tensors": [
+            {
+              "tensorId": "before",
+              "name": "before",
+              "shape": [
+                {
+                  "axisId": "b",
+                  "semantic": "batch",
+                  "size": {
+                    "kind": "symbol",
+                    "name": "B"
+                  }
+                },
+                {
+                  "axisId": "h",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 32,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "state"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "state",
+              "name": "before",
+              "category": "state",
+              "sharingDomain": "request",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "symbol",
+                      "name": "B"
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": [
+            {
+              "stateId": "local-state",
+              "name": "Module state",
+              "stateKind": "custom",
+              "allocationBasis": "step_end",
+              "storageIds": [
+                "state"
+              ],
+              "creator": {
+                "kind": "initialized"
+              },
+              "readers": [
+                {
+                  "kind": "node",
+                  "nodeId": "read",
+                  "portId": "before"
+                }
+              ],
+              "writers": [],
+              "updatePolicy": {
+                "kind": "static"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:state-reference",
+      "revision": 1,
+      "name": "Synthetic 4096 B / 1000 op/s / 100 B/s",
+      "tags": [
+        "synthetic"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Explicit arithmetic reference rates and capacity, not a real device."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 4096,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            },
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "vector"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "version": "selected-memory.1",
+  "inputHash": "28eac6bdc86bfc80e4dab8b60e9d643d2f83d7df3774b620b2b6357b370f2481",
+  "target": {
+    "kind": "module",
+    "nodeId": "layer[0]"
+  },
+  "device": "all",
+  "query": "",
+  "atomicWholeExecutionUnit": false,
+  "semantics": "Canonical allocation participation, not module peak. Storage.bytes is the original evaluated allocation; a state reservation supplies the actual max(before,after) call allocation. Private/total peak overrides remain separate.",
+  "sources": [
+    {
+      "deviceId": "gpu0",
+      "axis": "order",
+      "provenancePool": [
+        {
+          "assetRefs": [
+            {
+              "assetId": "example:hardware:state-reference",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:shared-state",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:shared-state",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:B",
+              "source": "asset_workload_binding"
+            },
+            {
+              "parameterKey": "layer[0]:B",
+              "source": "node_override"
+            },
+            {
+              "parameterKey": "layer[1]:B",
+              "source": "node_override"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+          ]
+        }
+      ],
+      "memoryUseOrder": [
+        {
+          "nodeId": "layer[0]/read",
+          "executionNodeId": "layer[0]/read"
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "executionNodeId": "layer[1]/read"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "deviceId": "gpu0",
+      "storage": {
+        "storageId": "state",
+        "name": "before",
+        "allocationKind": "tensor",
+        "category": "state",
+        "sharingDomain": "request",
+        "aliasIds": [],
+        "eliminatedBy": [],
+        "resident": true,
+        "bytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "diagnosticIds": [],
+          "provenanceIndex": 0
+        },
+        "perCopyAllocation": {
+          "copies": 1,
+          "payloadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "diagnosticIds": [],
+            "provenanceIndex": 0
+          },
+          "auxiliaryBytes": []
+        },
+        "intervals": [
+          {
+            "start": 0,
+            "end": 1
+          }
+        ]
+      },
+      "axis": "order",
+      "accessors": [
+        {
+          "nodeId": "layer[0]/read",
+          "executionNodeId": "layer[0]/read",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "executionNodeId": "layer[1]/read",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "selectedAccessors": [
+        {
+          "nodeId": "layer[0]/read",
+          "executionNodeId": "layer[0]/read",
+          "reads": true,
+          "writes": false,
+          "temporary": false
+        }
+      ],
+      "shared": true,
+      "interfaceKnown": true,
+      "interfaceBoundary": true,
+      "input": false,
+      "output": false,
+      "private": false,
+      "replacedBy": []
+    }
+  ]
+}

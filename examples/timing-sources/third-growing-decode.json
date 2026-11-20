@@ -1,0 +1,2169 @@
+{
+  "kind": "leaf_timing_source",
+  "schemaVersion": 2,
+  "engineVersion": "0.1.0-execution.20",
+  "inputHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1",
+  "selector": {
+    "nodeId": "update",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "node",
+        "nodeId": "update"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "field": "seconds"
+  },
+  "asset": {
+    "assetId": "example:model:decode-state",
+    "revision": 1,
+    "kind": "model"
+  },
+  "hardware": {
+    "assetId": "example:hardware:decode-state",
+    "revision": 1,
+    "kind": "hardware"
+  },
+  "metric": {
+    "status": "available",
+    "quantity": {
+      "value": 0.1,
+      "unit": "second"
+    },
+    "basis": "theoretical",
+    "provenance": {
+      "assetRefs": [
+        {
+          "assetId": "example:formula:decode-elements",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-state-bytes",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-write-bytes",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:hardware:decode-state",
+          "revision": 1,
+          "kind": "hardware"
+        },
+        {
+          "assetId": "example:model:decode-state",
+          "revision": 1,
+          "kind": "model"
+        }
+      ],
+      "formulaRefs": [
+        {
+          "assetId": "example:formula:decode-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-state-bytes",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-write-bytes",
+          "revision": 1,
+          "kind": "formula"
+        },
+        {
+          "assetId": "example:formula:decode-elements",
+          "revision": 1,
+          "kind": "formula"
+        }
+      ],
+      "parameterSources": [
+        {
+          "parameterKey": "$model:B",
+          "source": "scenario_override"
+        },
+        {
+          "parameterKey": "$model:C",
+          "source": "scenario_override"
+        },
+        {
+          "parameterKey": "$model:Q",
+          "source": "scenario_override"
+        }
+      ],
+      "assumptions": [
+        "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+        "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+        "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+        "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+        "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+        "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+      ]
+    },
+    "diagnosticIds": []
+  },
+  "timing": {
+    "kind": "roofline_bound",
+    "computeEfficiency": 1,
+    "memoryEfficiency": 1,
+    "computeMemoryOverlap": "ideal",
+    "launchSeconds": 0
+  },
+  "dag": {
+    "nodes": [
+      {
+        "id": "compute[\"work\"].work",
+        "operation": "input",
+        "inputs": [],
+        "value": 5,
+        "unit": "operation",
+        "source": {
+          "kind": "metric_boundary",
+          "field": "compute[\"work\"].executedOperations",
+          "evaluationIndex": 0
+        }
+      },
+      {
+        "id": "compute[\"work\"].capacity",
+        "operation": "input",
+        "inputs": [],
+        "value": 1000,
+        "unit": "operation_per_second",
+        "source": {
+          "kind": "hardware_field",
+          "capabilityIndex": 0,
+          "capabilityKind": "peak",
+          "field": "computeCapabilities.operationsPerSecond",
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          }
+        }
+      },
+      {
+        "id": "compute[\"work\"].efficiency",
+        "operation": "input",
+        "inputs": [],
+        "value": 1,
+        "unit": "ratio",
+        "source": {
+          "kind": "timing_field",
+          "field": "computeEfficiency"
+        }
+      },
+      {
+        "id": "compute[\"work\"].denominator",
+        "operation": "multiply",
+        "inputs": [
+          "compute[\"work\"].capacity",
+          "compute[\"work\"].efficiency"
+        ],
+        "value": 1000,
+        "unit": "operation_per_second"
+      },
+      {
+        "id": "compute[\"work\"].direct",
+        "operation": "divide",
+        "inputs": [
+          "compute[\"work\"].work",
+          "compute[\"work\"].denominator"
+        ],
+        "value": 0.005,
+        "unit": "second"
+      },
+      {
+        "id": "compute[\"work\"].seconds",
+        "operation": "return",
+        "inputs": [
+          "compute[\"work\"].direct"
+        ],
+        "value": 0.005,
+        "unit": "second"
+      },
+      {
+        "id": "compute_seconds.identity",
+        "operation": "literal",
+        "inputs": [],
+        "value": 0,
+        "unit": "second",
+        "source": {
+          "kind": "empty_sum_identity"
+        }
+      },
+      {
+        "id": "compute_seconds.step[0]",
+        "operation": "sum",
+        "inputs": [
+          "compute_seconds.identity",
+          "compute[\"work\"].seconds"
+        ],
+        "value": 0.005,
+        "unit": "second",
+        "source": {
+          "index": 0,
+          "recordedLeft": 0,
+          "recordedRight": 0.005
+        }
+      },
+      {
+        "id": "compute_seconds.total",
+        "operation": "return",
+        "inputs": [
+          "compute_seconds.step[0]"
+        ],
+        "value": 0.005,
+        "unit": "second",
+        "source": {
+          "count": 1
+        }
+      },
+      {
+        "id": "hbm.work",
+        "operation": "input",
+        "inputs": [],
+        "value": 10,
+        "unit": "byte",
+        "source": {
+          "kind": "metric_boundary",
+          "field": "hbmBytes"
+        }
+      },
+      {
+        "id": "hbm.capacity",
+        "operation": "input",
+        "inputs": [],
+        "value": 100,
+        "unit": "byte_per_second",
+        "source": {
+          "kind": "hardware_field",
+          "capabilityIndex": 0,
+          "capabilityKind": "peak",
+          "field": "memoryCapabilities.bytesPerSecond"
+        }
+      },
+      {
+        "id": "hbm.efficiency",
+        "operation": "input",
+        "inputs": [],
+        "value": 1,
+        "unit": "ratio",
+        "source": {
+          "kind": "timing_field",
+          "field": "memoryEfficiency"
+        }
+      },
+      {
+        "id": "hbm.denominator",
+        "operation": "multiply",
+        "inputs": [
+          "hbm.capacity",
+          "hbm.efficiency"
+        ],
+        "value": 100,
+        "unit": "byte_per_second"
+      },
+      {
+        "id": "hbm.direct",
+        "operation": "divide",
+        "inputs": [
+          "hbm.work",
+          "hbm.denominator"
+        ],
+        "value": 0.1,
+        "unit": "second"
+      },
+      {
+        "id": "hbm.seconds",
+        "operation": "return",
+        "inputs": [
+          "hbm.direct"
+        ],
+        "value": 0.1,
+        "unit": "second"
+      },
+      {
+        "id": "timing.overlap",
+        "operation": "max",
+        "inputs": [
+          "compute_seconds.total",
+          "hbm.seconds"
+        ],
+        "value": 0.1,
+        "unit": "second"
+      },
+      {
+        "id": "timing.launch",
+        "operation": "input",
+        "inputs": [],
+        "value": 0,
+        "unit": "second",
+        "source": {
+          "kind": "timing_field",
+          "field": "launchSeconds"
+        }
+      },
+      {
+        "id": "timing.seconds",
+        "operation": "sum",
+        "inputs": [
+          "timing.overlap",
+          "timing.launch"
+        ],
+        "value": 0.1,
+        "unit": "second"
+      }
+    ],
+    "root": "timing.seconds",
+    "completeTiming": true,
+    "truncated": false,
+    "guards": [
+      {
+        "kind": "compute_capability",
+        "segmentId": "work",
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "matchingCount": 1,
+        "matches": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "kind": "peak",
+            "operationsPerSecond": 1000
+          }
+        ],
+        "declaredEfficiency": 1
+      },
+      {
+        "kind": "memory_capability",
+        "matchingCount": 1,
+        "matches": [
+          {
+            "key": "hbm",
+            "kind": "peak",
+            "bytesPerSecond": 100
+          }
+        ],
+        "declaredEfficiency": 1
+      }
+    ],
+    "errors": []
+  },
+  "workExpressions": [
+    {
+      "segmentId": "work",
+      "computeClass": {
+        "arithmetic": "float",
+        "inputDtypes": [
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          }
+        ],
+        "multiplyDtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "accumulateDtype": {
+          "category": "float",
+          "bits": 32,
+          "format": "fp32"
+        },
+        "resource": "matrix"
+      },
+      "field": "compute[\"work\"].executedOperations",
+      "quantity": {
+        "value": 5,
+        "unit": "operation"
+      },
+      "proof": {
+        "kind": "formula",
+        "formula": {
+          "assetId": "example:formula:decode-operations",
+          "revision": 1,
+          "kind": "formula"
+        },
+        "name": "operations",
+        "definition": {
+          "inputs": {
+            "B": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            },
+            "C": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 0
+            },
+            "Q": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "B * (C + Q)",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit synthetic operations"
+        },
+        "bindings": [
+          {
+            "name": "B",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "B",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "name": "C",
+            "quantity": {
+              "value": 4,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "C",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "name": "Q",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            },
+            "proof": {
+              "kind": "symbol",
+              "symbol": "Q",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "events": [
+          {
+            "kind": "symbol",
+            "name": "B",
+            "value": 1,
+            "local": false
+          },
+          {
+            "kind": "symbol",
+            "name": "C",
+            "value": 4,
+            "local": false
+          },
+          {
+            "kind": "symbol",
+            "name": "Q",
+            "value": 1,
+            "local": false
+          },
+          {
+            "kind": "operation",
+            "operator": "+",
+            "operands": [
+              4,
+              1
+            ],
+            "value": 5
+          },
+          {
+            "kind": "operation",
+            "operator": "*",
+            "operands": [
+              1,
+              5
+            ],
+            "value": 5
+          }
+        ],
+        "quantity": {
+          "value": 5,
+          "unit": "operation"
+        }
+      },
+      "truncated": false
+    }
+  ],
+  "hbmSource": {
+    "schemaVersion": 1,
+    "kind": "leaf_cost_source",
+    "inputHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "update",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "node",
+          "nodeId": "update"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "hbmBytes"
+    },
+    "asset": {
+      "assetId": "example:model:decode-state",
+      "revision": 1,
+      "kind": "model"
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 10,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:formula:decode-elements",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-state-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-write-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:decode-state",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:decode-state",
+            "revision": 1,
+            "kind": "model"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "example:formula:decode-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-state-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-write-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-elements",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "scenario_override"
+          },
+          {
+            "parameterKey": "$model:C",
+            "source": "scenario_override"
+          },
+          {
+            "parameterKey": "$model:Q",
+            "source": "scenario_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "operation": "sum",
+    "componentCount": 2,
+    "page": 0,
+    "pageSize": 20,
+    "complete": true,
+    "items": [
+      {
+        "quantity": {
+          "value": 8,
+          "unit": "byte"
+        },
+        "proof": {
+          "kind": "formula",
+          "formula": {
+            "assetId": "example:formula:decode-state-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          "name": "state-bytes",
+          "definition": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "2 * B * C",
+            "output": {
+              "unit": "byte",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic state-bytes"
+          },
+          "bindings": [
+            {
+              "name": "B",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "B",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "name": "C",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "C",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "name": "Q",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "Q",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "kind": "symbol",
+              "name": "B",
+              "value": 1,
+              "local": false
+            },
+            {
+              "kind": "operation",
+              "operator": "*",
+              "operands": [
+                2,
+                1
+              ],
+              "value": 2
+            },
+            {
+              "kind": "symbol",
+              "name": "C",
+              "value": 4,
+              "local": false
+            },
+            {
+              "kind": "operation",
+              "operator": "*",
+              "operands": [
+                2,
+                4
+              ],
+              "value": 8
+            }
+          ],
+          "quantity": {
+            "value": 8,
+            "unit": "byte"
+          }
+        },
+        "truncated": false,
+        "field": "memoryAccess[\"read-cache\"].logicalBytes",
+        "operation": "multiply",
+        "factor": 1,
+        "contribution": {
+          "value": 8,
+          "unit": "byte"
+        }
+      },
+      {
+        "quantity": {
+          "value": 2,
+          "unit": "byte"
+        },
+        "proof": {
+          "kind": "formula",
+          "formula": {
+            "assetId": "example:formula:decode-write-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          "name": "write-bytes",
+          "definition": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "2 * B * Q",
+            "output": {
+              "unit": "byte",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic write-bytes"
+          },
+          "bindings": [
+            {
+              "name": "B",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "B",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "name": "C",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "C",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "name": "Q",
+              "quantity": {
+                "value": 1,
+                "unit": "count"
+              },
+              "proof": {
+                "kind": "symbol",
+                "symbol": "Q",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "kind": "symbol",
+              "name": "B",
+              "value": 1,
+              "local": false
+            },
+            {
+              "kind": "operation",
+              "operator": "*",
+              "operands": [
+                2,
+                1
+              ],
+              "value": 2
+            },
+            {
+              "kind": "symbol",
+              "name": "Q",
+              "value": 1,
+              "local": false
+            },
+            {
+              "kind": "operation",
+              "operator": "*",
+              "operands": [
+                2,
+                1
+              ],
+              "value": 2
+            }
+          ],
+          "quantity": {
+            "value": 2,
+            "unit": "byte"
+          }
+        },
+        "truncated": false,
+        "field": "memoryAccess[\"write-query\"].logicalBytes",
+        "operation": "multiply",
+        "factor": 1,
+        "contribution": {
+          "value": 2,
+          "unit": "byte"
+        }
+      }
+    ],
+    "symbols": [
+      {
+        "name": "B",
+        "quantity": {
+          "value": 1,
+          "unit": "count"
+        }
+      },
+      {
+        "name": "C",
+        "quantity": {
+          "value": 4,
+          "unit": "count"
+        }
+      },
+      {
+        "name": "Q",
+        "quantity": {
+          "value": 1,
+          "unit": "count"
+        }
+      }
+    ]
+  },
+  "page": 0,
+  "pageSize": 20,
+  "componentCount": 18,
+  "workExpressionCount": 1,
+  "hbmExpressionCount": 2,
+  "coverage": {
+    "completeTimingTransform": true,
+    "completeSupportedExpressions": true,
+    "parameterBindingDagComplete": true,
+    "distributedFusionAndOverrideTransformsComplete": false
+  },
+  "request": {
+    "scenario": {
+      "scenarioId": "example:scenario:decode-state",
+      "name": "Three-step growing decode",
+      "model": {
+        "assetId": "example:model:decode-state",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [
+        {
+          "parameterKey": "B",
+          "value": {
+            "kind": "symbol",
+            "name": "batchSize"
+          }
+        },
+        {
+          "parameterKey": "C",
+          "value": {
+            "kind": "symbol",
+            "name": "contextTokensPerRequest"
+          }
+        },
+        {
+          "parameterKey": "Q",
+          "value": {
+            "kind": "symbol",
+            "name": "queryTokensPerRequest"
+          }
+        }
+      ],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 4,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:decode-state",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "assets": [
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:model:decode-state",
+        "revision": 1,
+        "name": "Synthetic decode state",
+        "tags": [
+          "synthetic-decode"
+        ],
+        "parameters": [
+          {
+            "key": "B",
+            "name": "B",
+            "type": "integer",
+            "unit": "count",
+            "min": 1
+          },
+          {
+            "key": "C",
+            "name": "C",
+            "type": "integer",
+            "unit": "count",
+            "min": 0
+          },
+          {
+            "key": "Q",
+            "name": "Q",
+            "type": "integer",
+            "unit": "count",
+            "min": 1
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Past cache allocation is explicit; the sequence reserves end-state growth in place. Traffic remains exactly the declared read/write equations."
+          }
+        ],
+        "definition": {
+          "kind": "model",
+          "family": "synthetic",
+          "variant": "decode-state",
+          "graph": {
+            "inputs": [],
+            "outputs": [],
+            "nodes": [
+              {
+                "nodeId": "update",
+                "name": "Read/update cache",
+                "phases": [
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "read",
+                    "tensorId": "cache-before"
+                  },
+                  {
+                    "portId": "write",
+                    "tensorId": "cache-write"
+                  }
+                ],
+                "stateBindings": [],
+                "body": {
+                  "kind": "opaque",
+                  "cost": {
+                    "compute": [
+                      {
+                        "segmentId": "work",
+                        "computeClass": {
+                          "arithmetic": "float",
+                          "inputDtypes": [
+                            {
+                              "category": "float",
+                              "bits": 16,
+                              "format": "bf16"
+                            },
+                            {
+                              "category": "float",
+                              "bits": 16,
+                              "format": "bf16"
+                            }
+                          ],
+                          "multiplyDtype": {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          },
+                          "accumulateDtype": {
+                            "category": "float",
+                            "bits": 32,
+                            "format": "fp32"
+                          },
+                          "resource": "matrix"
+                        },
+                        "usefulOperations": {
+                          "kind": "formula",
+                          "call": {
+                            "formula": {
+                              "assetId": "example:formula:decode-operations",
+                              "revision": 1,
+                              "kind": "formula"
+                            },
+                            "bindings": {
+                              "B": {
+                                "kind": "symbol",
+                                "name": "B"
+                              },
+                              "C": {
+                                "kind": "symbol",
+                                "name": "C"
+                              },
+                              "Q": {
+                                "kind": "symbol",
+                                "name": "Q"
+                              }
+                            }
+                          }
+                        },
+                        "executedOperations": {
+                          "kind": "formula",
+                          "call": {
+                            "formula": {
+                              "assetId": "example:formula:decode-operations",
+                              "revision": 1,
+                              "kind": "formula"
+                            },
+                            "bindings": {
+                              "B": {
+                                "kind": "symbol",
+                                "name": "B"
+                              },
+                              "C": {
+                                "kind": "symbol",
+                                "name": "C"
+                              },
+                              "Q": {
+                                "kind": "symbol",
+                                "name": "Q"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "memoryAccess": [
+                      {
+                        "accessId": "read-cache",
+                        "storageId": "cache",
+                        "mode": "read",
+                        "logicalBytes": {
+                          "kind": "formula",
+                          "call": {
+                            "formula": {
+                              "assetId": "example:formula:decode-state-bytes",
+                              "revision": 1,
+                              "kind": "formula"
+                            },
+                            "bindings": {
+                              "B": {
+                                "kind": "symbol",
+                                "name": "B"
+                              },
+                              "C": {
+                                "kind": "symbol",
+                                "name": "C"
+                              },
+                              "Q": {
+                                "kind": "symbol",
+                                "name": "Q"
+                              }
+                            }
+                          }
+                        },
+                        "hbmEstimate": {
+                          "kind": "factor",
+                          "value": 1
+                        }
+                      },
+                      {
+                        "accessId": "write-query",
+                        "storageId": "cache",
+                        "mode": "write",
+                        "logicalBytes": {
+                          "kind": "formula",
+                          "call": {
+                            "formula": {
+                              "assetId": "example:formula:decode-write-bytes",
+                              "revision": 1,
+                              "kind": "formula"
+                            },
+                            "bindings": {
+                              "B": {
+                                "kind": "symbol",
+                                "name": "B"
+                              },
+                              "C": {
+                                "kind": "symbol",
+                                "name": "C"
+                              },
+                              "Q": {
+                                "kind": "symbol",
+                                "name": "Q"
+                              }
+                            }
+                          }
+                        },
+                        "hbmEstimate": {
+                          "kind": "factor",
+                          "value": 1
+                        }
+                      }
+                    ],
+                    "temporaryStorageIds": [],
+                    "timing": {
+                      "kind": "roofline_bound",
+                      "computeEfficiency": 1,
+                      "memoryEfficiency": 1,
+                      "computeMemoryOverlap": "ideal",
+                      "launchSeconds": 0
+                    }
+                  },
+                  "inputs": [
+                    {
+                      "portId": "read",
+                      "tensorId": "cache-before"
+                    }
+                  ],
+                  "outputs": [
+                    {
+                      "portId": "write",
+                      "tensorId": "cache-write"
+                    }
+                  ]
+                }
+              }
+            ],
+            "edges": [],
+            "dependencies": [],
+            "tensors": [
+              {
+                "tensorId": "cache-before",
+                "name": "cache-before",
+                "shape": [
+                  {
+                    "axisId": "elements",
+                    "semantic": "token",
+                    "size": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:decode-elements",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "B"
+                          },
+                          "C": {
+                            "kind": "symbol",
+                            "name": "C"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "cache"
+              },
+              {
+                "tensorId": "cache-write",
+                "name": "cache-write",
+                "shape": [
+                  {
+                    "axisId": "elements",
+                    "semantic": "token",
+                    "size": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:decode-elements",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "B"
+                          },
+                          "C": {
+                            "kind": "symbol",
+                            "name": "C"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "cache"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "cache",
+                "name": "BF16 cache",
+                "category": "state",
+                "sharingDomain": "request",
+                "allocation": {
+                  "kind": "bytes",
+                  "value": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "example:formula:decode-state-bytes",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "C": {
+                          "kind": "symbol",
+                          "name": "C"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "storageId": "weights",
+                "name": "Fixed 8-byte weight",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "bytes",
+                  "value": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 8,
+                      "unit": "byte"
+                    }
+                  }
+                }
+              }
+            ],
+            "states": [
+              {
+                "stateId": "kv",
+                "name": "Explicit cache update",
+                "stateKind": "kv",
+                "storageIds": [
+                  "cache"
+                ],
+                "creator": {
+                  "kind": "initialized"
+                },
+                "readers": [
+                  {
+                    "kind": "node",
+                    "nodeId": "update",
+                    "portId": "read"
+                  }
+                ],
+                "writers": [
+                  {
+                    "kind": "node",
+                    "nodeId": "update",
+                    "portId": "write"
+                  }
+                ],
+                "updatePolicy": {
+                  "kind": "append"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:hardware:decode-state",
+        "revision": 1,
+        "name": "C01 人工硬件",
+        "tags": [
+          "contract-example"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic C01 contract example, not a production hardware/model preset."
+          }
+        ],
+        "definition": {
+          "kind": "hardware",
+          "hardware": {
+            "capacityBytes": 18,
+            "computeCapabilities": [
+              {
+                "computeClass": {
+                  "arithmetic": "float",
+                  "inputDtypes": [
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    }
+                  ],
+                  "multiplyDtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  "accumulateDtype": {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  },
+                  "resource": "matrix"
+                },
+                "kind": "peak",
+                "operationsPerSecond": 1000
+              }
+            ],
+            "memoryCapabilities": [
+              {
+                "key": "hbm",
+                "kind": "peak",
+                "bytesPerSecond": 100
+              }
+            ],
+            "communicationDefaults": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:formula:decode-elements",
+        "revision": 1,
+        "name": "elements",
+        "tags": [
+          "synthetic-decode"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic decode state/cost hand reference"
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "B * C",
+            "output": {
+              "unit": "count",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic elements"
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:formula:decode-state-bytes",
+        "revision": 1,
+        "name": "state-bytes",
+        "tags": [
+          "synthetic-decode"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic decode state/cost hand reference"
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "2 * B * C",
+            "output": {
+              "unit": "byte",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic state-bytes"
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:formula:decode-write-bytes",
+        "revision": 1,
+        "name": "write-bytes",
+        "tags": [
+          "synthetic-decode"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic decode state/cost hand reference"
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "2 * B * Q",
+            "output": {
+              "unit": "byte",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic write-bytes"
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:formula:decode-operations",
+        "revision": 1,
+        "name": "operations",
+        "tags": [
+          "synthetic-decode"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Synthetic decode state/cost hand reference"
+          }
+        ],
+        "definition": {
+          "kind": "formula",
+          "formula": {
+            "inputs": {
+              "B": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              },
+              "C": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 0
+              },
+              "Q": {
+                "unit": "count",
+                "integerRequired": true,
+                "min": 1
+              }
+            },
+            "expression": "B * (C + Q)",
+            "output": {
+              "unit": "operation",
+              "integerRequired": true,
+              "nonNegative": true
+            },
+            "description": "Explicit synthetic operations"
+          }
+        }
+      }
+    ],
+    "stepContext": {
+      "index": 2,
+      "parentInputHash": "21246635c46108a2d0e327923bf9faf54986ae85a575ce894d89234f8c65e2dd",
+      "carriedStateIds": [
+        "kv"
+      ]
+    },
+    "inputHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "update",
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "node",
+          "nodeId": "update"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "seconds"
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 0.1,
+        "unit": "second"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:formula:decode-elements",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-state-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-write-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:hardware:decode-state",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:model:decode-state",
+            "revision": 1,
+            "kind": "model"
+          }
+        ],
+        "formulaRefs": [
+          {
+            "assetId": "example:formula:decode-operations",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-state-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-write-bytes",
+            "revision": 1,
+            "kind": "formula"
+          },
+          {
+            "assetId": "example:formula:decode-elements",
+            "revision": 1,
+            "kind": "formula"
+          }
+        ],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "scenario_override"
+          },
+          {
+            "parameterKey": "$model:C",
+            "source": "scenario_override"
+          },
+          {
+            "parameterKey": "$model:Q",
+            "source": "scenario_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "proofVersion": 2,
+    "bindingBudget": 256
+  },
+  "parameterBindings": {
+    "schemaVersion": 1,
+    "scope": "actual_call_and_storage_parameter_context",
+    "nodes": [
+      {
+        "id": "[\"parameter\",\"[\\\"workload\\\"]\",\"batchSize\"]",
+        "kind": "workload",
+        "inputs": [],
+        "value": {
+          "kind": "number",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"workload\"]",
+        "name": "batchSize"
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"B\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "batchSize",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"workload\\\"]\",\"batchSize\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"B\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "B",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "B",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"workload\\\"]\",\"contextTokensPerRequest\"]",
+        "kind": "workload",
+        "inputs": [],
+        "value": {
+          "kind": "number",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"workload\"]",
+        "name": "contextTokensPerRequest"
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"C\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "contextTokensPerRequest",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"workload\\\"]\",\"contextTokensPerRequest\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"C\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "C",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 4
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "C",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"workload\\\"]\",\"queryTokensPerRequest\"]",
+        "kind": "workload",
+        "inputs": [],
+        "value": {
+          "kind": "number",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"workload\"]",
+        "name": "queryTokensPerRequest"
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"Q\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "queryTokensPerRequest",
+        "kind": "symbol",
+        "inputs": [
+          "[\"parameter\",\"[\\\"workload\\\"]\",\"queryTokensPerRequest\"]"
+        ]
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"$model\\\\\\\"]\\\",\\\"Q\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "Q",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "Q",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "B",
+        "kind": "default",
+        "status": "unset",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:decode-state",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "B",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "C",
+        "kind": "default",
+        "status": "unset",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:decode-state",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "C",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "Q",
+        "kind": "default",
+        "status": "unset",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:decode-state",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "Q",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "scenario_override",
+          "scenarioId": "example:scenario:decode-state"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\",\"candidate\",1]"
+      }
+    ],
+    "roots": [
+      {
+        "role": "call",
+        "target": "update",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "B",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\"]"
+      },
+      {
+        "role": "call",
+        "target": "update",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "C",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\"]"
+      },
+      {
+        "role": "call",
+        "target": "update",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "Q",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\"]"
+      },
+      {
+        "role": "storage",
+        "target": "cache",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "B",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"B\"]"
+      },
+      {
+        "role": "storage",
+        "target": "cache",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "C",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"C\"]"
+      },
+      {
+        "role": "storage",
+        "target": "cache",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "Q",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"Q\"]"
+      }
+    ],
+    "complete": true,
+    "truncated": false,
+    "boundaries": [],
+    "frameCount": 2
+  }
+}

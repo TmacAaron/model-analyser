@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "rocm-timestamps.1"
+    },
+    "sourceName": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "contentHash": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "originNanoseconds": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "rawEventCount": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "ignoredColumns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "zeroDurationCount": {
+      "$ref": "#/$defs/__schema2"
+    },
+    "events": {
+      "maxItems": 100000,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema3"
+      }
+    }
+  },
+  "required": [
+    "version",
+    "sourceName",
+    "contentHash",
+    "originNanoseconds",
+    "rawEventCount",
+    "ignoredColumns",
+    "zeroDurationCount",
+    "events"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d{0,19})$"
+    },
+    "__schema2": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema3": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "name": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "category": {
+          "type": "string",
+          "const": "ROCm kernel"
+        },
+        "pid": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "tid": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "startSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "sourceDevice": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "correlation": {
+          "type": "string"
+        },
+        "rawStartNanoseconds": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "rawEndNanoseconds": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "dispatchId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "sourceQueue": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "csvLine": {
+          "minimum": 2,
+          "$ref": "#/$defs/__schema2"
+        },
+        "rawDispatchNanoseconds": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "rawCompleteNanoseconds": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "index",
+        "name",
+        "category",
+        "pid",
+        "tid",
+        "startSeconds",
+        "seconds",
+        "sourceDevice",
+        "rawStartNanoseconds",
+        "rawEndNanoseconds",
+        "dispatchId",
+        "sourceQueue",
+        "csvLine"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,771 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:comparison",
+  "projectRevision": 1,
+  "name": "Integer comparison hand reference",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:comparison-a",
+      "name": "Linear A",
+      "model": {
+        "assetId": "example:model:comparison-a",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    {
+      "scenarioId": "example:scenario:comparison-b",
+      "name": "Constant B",
+      "model": {
+        "assetId": "example:model:comparison-b",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    {
+      "scenarioId": "example:scenario:comparison-c",
+      "name": "Plateau C",
+      "model": {
+        "assetId": "example:model:comparison-c",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "groupId": "tp",
+            "members": [
+              "gpu0"
+            ]
+          }
+        ]
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": []
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:c01",
+      "revision": 1,
+      "name": "C01 人工硬件",
+      "tags": [
+        "contract-example"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic C01 contract example, not a production hardware/model preset."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 64,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 100
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-time-a",
+      "revision": 1,
+      "name": "Time a",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "X",
+          "output": {
+            "unit": "second",
+            "integerRequired": false,
+            "nonNegative": true
+          },
+          "description": "Independent synthetic time oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-bytes-a",
+      "revision": 1,
+      "name": "Bytes a",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "X * 16",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Independent resident weight oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:comparison-a",
+      "revision": 1,
+      "name": "Comparison a",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [
+        {
+          "key": "X",
+          "name": "Integer X",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "max": 1000,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "comparison-a",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "work",
+              "name": "Synthetic work",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "custom_formula",
+                    "seconds": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:comparison-time-a",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "X": {
+                            "kind": "symbol",
+                            "name": "X"
+                          }
+                        }
+                      }
+                    },
+                    "description": "Artificial time"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [
+            {
+              "storageId": "weights",
+              "name": "Resident synthetic weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:formula:comparison-bytes-a",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "X": {
+                        "kind": "symbol",
+                        "name": "X"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-time-b",
+      "revision": 1,
+      "name": "Time b",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "4.5",
+          "output": {
+            "unit": "second",
+            "integerRequired": false,
+            "nonNegative": true
+          },
+          "description": "Independent synthetic time oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-bytes-b",
+      "revision": 1,
+      "name": "Bytes b",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "X * 8",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Independent resident weight oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:comparison-b",
+      "revision": 1,
+      "name": "Comparison b",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [
+        {
+          "key": "X",
+          "name": "Integer X",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "max": 1000,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "comparison-b",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "work",
+              "name": "Synthetic work",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "custom_formula",
+                    "seconds": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:comparison-time-b",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "X": {
+                            "kind": "symbol",
+                            "name": "X"
+                          }
+                        }
+                      }
+                    },
+                    "description": "Artificial time"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [
+            {
+              "storageId": "weights",
+              "name": "Resident synthetic weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:formula:comparison-bytes-b",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "X": {
+                        "kind": "symbol",
+                        "name": "X"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-time-c",
+      "revision": 1,
+      "name": "Time c",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "max(3, X)",
+          "output": {
+            "unit": "second",
+            "integerRequired": false,
+            "nonNegative": true
+          },
+          "description": "Independent synthetic time oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:comparison-bytes-c",
+      "revision": 1,
+      "name": "Bytes c",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "X": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "X * 32",
+          "output": {
+            "unit": "byte",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Independent resident weight oracle"
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:comparison-c",
+      "revision": 1,
+      "name": "Comparison c",
+      "tags": [
+        "synthetic-comparison-reference"
+      ],
+      "parameters": [
+        {
+          "key": "X",
+          "name": "Integer X",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "max": 1000,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Artificial seconds and bytes, not measured hardware or performance."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "comparison-c",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "work",
+              "name": "Synthetic work",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "custom_formula",
+                    "seconds": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "example:formula:comparison-time-c",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "X": {
+                            "kind": "symbol",
+                            "name": "X"
+                          }
+                        }
+                      }
+                    },
+                    "description": "Artificial time"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [],
+          "tensors": [],
+          "storages": [
+            {
+              "storageId": "weights",
+              "name": "Resident synthetic weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "bytes",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "example:formula:comparison-bytes-c",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "X": {
+                        "kind": "symbol",
+                        "name": "X"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

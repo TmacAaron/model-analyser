@@ -1,0 +1,3713 @@
+{
+  "description": "Independent synthetic comparisons, not a complete distributed model analysis or real device benchmark. C03 KV arithmetic comes from docs/DATA_CONTRACT_DETAILS.md. Ring payload, bandwidth and latency are explicit mathematical assumptions. Missing local HBM/reduction work is intentionally diagnosed.",
+  "engineVersion": "0.1.0-execution.20",
+  "topology": {
+    "devices": [
+      {
+        "deviceId": "gpu0",
+        "hardware": {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      },
+      {
+        "deviceId": "gpu1",
+        "hardware": {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      },
+      {
+        "deviceId": "gpu2",
+        "hardware": {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      },
+      {
+        "deviceId": "gpu3",
+        "hardware": {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "groupId": "tp",
+        "members": [
+          "gpu0",
+          "gpu1"
+        ],
+        "mesh": {
+          "axes": [
+            {
+              "axisId": "tp",
+              "size": 2
+            }
+          ],
+          "coordinates": [
+            {
+              "deviceId": "gpu0",
+              "coordinates": [
+                0
+              ]
+            },
+            {
+              "deviceId": "gpu1",
+              "coordinates": [
+                1
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "groupId": "ring",
+        "members": [
+          "gpu0",
+          "gpu1",
+          "gpu2",
+          "gpu3"
+        ]
+      }
+    ]
+  },
+  "tensor": {
+    "tensorId": "kv",
+    "name": "C03 ordinary BF16 KV",
+    "shape": [
+      {
+        "axisId": "kv",
+        "semantic": "custom",
+        "size": {
+          "kind": "literal",
+          "quantity": {
+            "value": 2,
+            "unit": "count"
+          }
+        }
+      },
+      {
+        "axisId": "batch",
+        "semantic": "custom",
+        "size": {
+          "kind": "literal",
+          "quantity": {
+            "value": 2,
+            "unit": "count"
+          }
+        }
+      },
+      {
+        "axisId": "token",
+        "semantic": "custom",
+        "size": {
+          "kind": "literal",
+          "quantity": {
+            "value": 16,
+            "unit": "count"
+          }
+        }
+      },
+      {
+        "axisId": "head",
+        "semantic": "custom",
+        "size": {
+          "kind": "literal",
+          "quantity": {
+            "value": 2,
+            "unit": "count"
+          }
+        }
+      },
+      {
+        "axisId": "dim",
+        "semantic": "custom",
+        "size": {
+          "kind": "literal",
+          "quantity": {
+            "value": 4,
+            "unit": "count"
+          }
+        }
+      }
+    ],
+    "dtype": {
+      "category": "float",
+      "bits": 16,
+      "format": "bf16"
+    },
+    "storageId": "kv-storage"
+  },
+  "sharded": {
+    "status": "available",
+    "result": {
+      "storageId": "kv-storage",
+      "canonicalStorageId": "kv-storage",
+      "distribution": {
+        "kind": "sharded",
+        "groupId": "tp",
+        "axes": [
+          {
+            "tensorAxisId": "head",
+            "meshAxisId": "tp"
+          }
+        ],
+        "policy": {
+          "kind": "even"
+        }
+      },
+      "perDevice": [
+        {
+          "deviceId": "gpu0",
+          "copies": 1,
+          "allocatedShape": [
+            {
+              "axisId": "kv",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "batch",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "token",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 16,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "head",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "dim",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "allocation": {
+            "storageId": "$device:gpu0::kv-storage",
+            "canonicalStorageId": "$device:gpu0::kv-storage",
+            "payloadBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 512,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "auxiliaryBytes": [],
+            "totalBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 512,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "diagnostics": []
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 512,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "deviceId": "gpu1",
+          "copies": 1,
+          "allocatedShape": [
+            {
+              "axisId": "kv",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "batch",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "token",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 16,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "head",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 1,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "dim",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "allocation": {
+            "storageId": "$device:gpu1::kv-storage",
+            "canonicalStorageId": "$device:gpu1::kv-storage",
+            "payloadBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 512,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "auxiliaryBytes": [],
+            "totalBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 512,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "diagnostics": []
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 512,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "diagnostics": []
+    }
+  },
+  "replicated": {
+    "status": "available",
+    "result": {
+      "storageId": "kv-storage",
+      "canonicalStorageId": "kv-storage",
+      "distribution": {
+        "kind": "replicated",
+        "groupId": "tp"
+      },
+      "perDevice": [
+        {
+          "deviceId": "gpu0",
+          "copies": 1,
+          "allocatedShape": [
+            {
+              "axisId": "kv",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "batch",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "token",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 16,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "head",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "dim",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "allocation": {
+            "storageId": "$device:gpu0::kv-storage",
+            "canonicalStorageId": "$device:gpu0::kv-storage",
+            "payloadBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "auxiliaryBytes": [],
+            "totalBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "diagnostics": []
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "deviceId": "gpu1",
+          "copies": 1,
+          "allocatedShape": [
+            {
+              "axisId": "kv",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "batch",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "token",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 16,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "head",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 2,
+                  "unit": "count"
+                }
+              }
+            },
+            {
+              "axisId": "dim",
+              "semantic": "custom",
+              "size": {
+                "kind": "literal",
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                }
+              }
+            }
+          ],
+          "allocation": {
+            "storageId": "$device:gpu1::kv-storage",
+            "canonicalStorageId": "$device:gpu1::kv-storage",
+            "payloadBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "auxiliaryBytes": [],
+            "totalBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 1024,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "diagnostics": []
+          },
+          "totalBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1024,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "diagnostics": []
+    }
+  },
+  "communication": {
+    "status": "available",
+    "result": {
+      "definition": {
+        "operation": "all_reduce",
+        "groupId": "ring",
+        "source": {
+          "tensorId": "kv",
+          "distribution": {
+            "kind": "partial",
+            "groupId": "ring",
+            "reduceOperation": "sum"
+          }
+        },
+        "destination": {
+          "tensorId": "kv",
+          "distribution": {
+            "kind": "replicated",
+            "groupId": "ring"
+          }
+        },
+        "payloadDtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "sendBytesPerMember": {
+          "kind": "literal",
+          "quantity": {
+            "value": 1000,
+            "unit": "byte"
+          }
+        },
+        "receiveBytesPerMember": {
+          "kind": "literal",
+          "quantity": {
+            "value": 1000,
+            "unit": "byte"
+          }
+        },
+        "algorithm": {
+          "name": "Explicit assumed ring factor 2*(4-1)/4 and 3 startup rounds",
+          "trafficFactor": 1.5,
+          "startupRounds": 3
+        },
+        "timing": {
+          "kind": "bandwidth_latency",
+          "bytePerSecond": 1000000,
+          "latencySeconds": 0.001
+        }
+      },
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "reference-all-reduce"
+          },
+          "deviceIds": [
+            "gpu0",
+            "gpu1",
+            "gpu2",
+            "gpu3"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-ring-reference-all-reduce-1"
+          ]
+        },
+        "logicalWriteBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-ring-reference-all-reduce-1"
+          ]
+        },
+        "hbmBytes": {
+          "status": "unavailable",
+          "diagnosticIds": [
+            "communication-ring-reference-all-reduce-1"
+          ]
+        },
+        "communications": [
+          {
+            "groupId": "ring",
+            "operation": "all_reduce",
+            "sendBytesPerMember": {
+              "status": "available",
+              "quantity": {
+                "value": 1000,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                  "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                  "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "receiveBytesPerMember": {
+              "status": "available",
+              "quantity": {
+                "value": 1000,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                  "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                  "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "algorithmTrafficBytesPerMember": {
+              "status": "available",
+              "quantity": {
+                "value": 1500,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                  "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                  "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "groupSendBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4000,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                  "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                  "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "groupReceiveBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 4000,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "builtin:formula:gemm-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:matrix-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:operator:gemm",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  {
+                    "assetId": "example:module:gemm",
+                    "revision": 1,
+                    "kind": "module"
+                  },
+                  {
+                    "assetId": "example:model:gemm",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:parallel:replicated",
+                    "revision": 1,
+                    "kind": "parallel"
+                  },
+                  {
+                    "assetId": "example:quantization:w4",
+                    "revision": 1,
+                    "kind": "quantization"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                  "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                  "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 0.0045000000000000005,
+            "unit": "second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "builtin:formula:gemm-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:matrix-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:operator:gemm",
+                "revision": 1,
+                "kind": "operator"
+              },
+              {
+                "assetId": "example:module:gemm",
+                "revision": 1,
+                "kind": "module"
+              },
+              {
+                "assetId": "example:model:gemm",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:parallel:replicated",
+                "revision": 1,
+                "kind": "parallel"
+              },
+              {
+                "assetId": "example:quantization:w4",
+                "revision": 1,
+                "kind": "quantization"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+              "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+              "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      },
+      "source": {
+        "tensorId": "kv",
+        "dtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "groupId": "ring",
+        "distribution": {
+          "kind": "partial",
+          "groupId": "ring",
+          "reduceOperation": "sum"
+        },
+        "globalShape": [
+          {
+            "axisId": "kv",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "batch",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "token",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 16,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "head",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "dim",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "coverage": "partial",
+        "placements": [
+          {
+            "deviceId": "gpu0",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu1",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu2",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu3",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "destination": {
+        "tensorId": "kv",
+        "dtype": {
+          "category": "float",
+          "bits": 16,
+          "format": "bf16"
+        },
+        "groupId": "ring",
+        "distribution": {
+          "kind": "replicated",
+          "groupId": "ring"
+        },
+        "globalShape": [
+          {
+            "axisId": "kv",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "batch",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "token",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 16,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "head",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            }
+          },
+          {
+            "axisId": "dim",
+            "semantic": "custom",
+            "size": {
+              "kind": "literal",
+              "quantity": {
+                "value": 4,
+                "unit": "count"
+              }
+            }
+          }
+        ],
+        "coverage": "exact",
+        "placements": [
+          {
+            "deviceId": "gpu0",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu1",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu2",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          },
+          {
+            "deviceId": "gpu3",
+            "logicalShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "allocatedShape": [
+              {
+                "axisId": "kv",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "batch",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "token",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 16,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "head",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 2,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "dim",
+                "semantic": "custom",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "copies": 1,
+            "logicalElements": 512,
+            "allocatedElements": 512,
+            "slices": [
+              {
+                "axisId": "kv",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "batch",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "token",
+                "start": 0,
+                "end": 16,
+                "paddedExtent": 16
+              },
+              {
+                "axisId": "head",
+                "start": 0,
+                "end": 2,
+                "paddedExtent": 2
+              },
+              {
+                "axisId": "dim",
+                "start": 0,
+                "end": 4,
+                "paddedExtent": 4
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "perDevice": [
+        {
+          "deviceId": "gpu0",
+          "sendBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "receiveBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "algorithmTrafficBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1500,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "deviceId": "gpu1",
+          "sendBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "receiveBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "algorithmTrafficBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1500,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "deviceId": "gpu2",
+          "sendBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "receiveBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "algorithmTrafficBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1500,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "deviceId": "gpu3",
+          "sendBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "receiveBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1000,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "algorithmTrafficBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 1500,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:parallel:replicated",
+                  "revision": 1,
+                  "kind": "parallel"
+                },
+                {
+                  "assetId": "example:quantization:w4",
+                  "revision": 1,
+                  "kind": "quantization"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.",
+                "Bandwidth/latency time uses per-sender algorithm traffic and startupRounds; the group total time is a collective span, not a sum over devices.",
+                "This evaluator models network transfer only. Local HBM reads/writes, staging allocation, reduction arithmetic and quantization conversion work require separate declarations."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "diagnosticId": "communication-ring-reference-all-reduce-1",
+          "severity": "error",
+          "code": "missing_communication_memory",
+          "message": "通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间",
+          "location": {
+            "kind": "scenario",
+            "scenarioId": "communication"
+          }
+        }
+      ]
+    }
+  }
+}

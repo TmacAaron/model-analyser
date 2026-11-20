@@ -1,0 +1,41 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:formula:two-card-gather-bytes",
+  "revision": 1,
+  "name": "两卡 BF16 gather 每成员 payload",
+  "tags": [
+    "synthetic-serial-reference"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic equal two-card BF16 column split: M*N*2 bytes / 2 members. Applies to this explicitly declared two-member plan."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "rows": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "cols": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "rows * cols",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Two-card BF16 equal column split payload; follows root M/N during scans."
+    }
+  }
+}

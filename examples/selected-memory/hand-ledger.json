@@ -1,0 +1,653 @@
+{
+  "scope": "Canonical allocation participation is not module peak attribution; W4 payload64B+scales8B=72B per copy; one192B shared backing, two192B reads=384B total; growing third8→10B vs window6B; fused2+0+2=4B; branchB3GiB with1..6ms lifetime while full overlap peak5GiB; private2GiB scratch replaced by1GiB budget separately; actual two-card allocations.",
+  "observations": [
+    {
+      "name": "quantized",
+      "inputHash": "43b22f3ead6d107de021dc9f967520c3ff0de3a2f7f21eb36ad2eee268483699",
+      "actualCallHash": "43b22f3ead6d107de021dc9f967520c3ff0de3a2f7f21eb36ad2eee268483699",
+      "rows": 3,
+      "knownAllocationSum": {
+        "known": 264,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 264,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:gemm",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm",
+                  "revision": 1,
+                  "kind": "operator"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:M",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "$model:K",
+                  "source": "asset_default"
+                },
+                {
+                  "parameterKey": "module:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module:K",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:M",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:N",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "module/op:K",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "shared",
+      "inputHash": "28eac6bdc86bfc80e4dab8b60e9d643d2f83d7df3774b620b2b6357b370f2481",
+      "actualCallHash": "28eac6bdc86bfc80e4dab8b60e9d643d2f83d7df3774b620b2b6357b370f2481",
+      "rows": 1,
+      "knownAllocationSum": {
+        "known": 192,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "growing",
+      "inputHash": "21246635c46108a2d0e327923bf9faf54986ae85a575ce894d89234f8c65e2dd",
+      "actualCallHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1",
+      "rows": 1,
+      "knownAllocationSum": {
+        "known": 10,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 18,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "windowed",
+      "inputHash": "e89e8e3282593403daf8474767c5487d4a979139ce891a8fc15a33e01cf84887",
+      "actualCallHash": "9aff79ce94e1be4efb38a67ff263013514e6d5716be569f30924e730737b4b87",
+      "rows": 1,
+      "knownAllocationSum": {
+        "known": 6,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 14,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:decode-elements-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:decode-state",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:decode-state-window",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:decode-elements-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-operations-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-state-bytes-window",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:decode-write-bytes-window",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [],
+              "assumptions": [
+                "Each decode call is expanded and evaluated independently. Context advances by queryTokensPerRequest after each call; fixed_context explicitly freezes modeled context and state capacity.",
+                "State identity is canonical storage identity. Static data retains its version; declared updates create a new logical version, preserving backing identity.",
+                "State growth reserves max(before,after) for the whole call in the same backing. No implicit reallocation copy, conversion, staging or traffic is invented; declare such cost/workspace explicitly.",
+                "Persistent weights/state are not summed across calls. Sequence capacity uses the maximum per-device call peak, including final state growth. No request compaction or cross-call overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "fusion",
+      "inputHash": "cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c",
+      "actualCallHash": "cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c",
+      "rows": 3,
+      "knownAllocationSum": {
+        "known": 4,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 4,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": true
+    },
+    {
+      "name": "streams",
+      "inputHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+      "actualCallHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+      "rows": 1,
+      "knownAllocationSum": {
+        "known": 3221225472,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 5368709120,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "budget",
+      "inputHash": "60f6f1f4a9ba184f7f0c4f0b552d8fdd6fab011ae715250ce82bf9868c36e22e",
+      "actualCallHash": "60f6f1f4a9ba184f7f0c4f0b552d8fdd6fab011ae715250ce82bf9868c36e22e",
+      "rows": 1,
+      "knownAllocationSum": {
+        "known": 2147483648,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 4294967296,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:c05-streams",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "private-A",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "private-B",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Private module budgets are reserved for the complete actual call span. Persistent, boundary and cross-module canonical allocations remain unchanged. The opaque private budget is classified as reserve; it is not a measured category breakdown.",
+                "Explicit private-only budget; theoretical scratch remains separately recorded"
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    },
+    {
+      "name": "physical",
+      "inputHash": "be0dd6ba3dc025355cd5054cfbfa8db3ee539af2c6d384083c8791bccfd55954",
+      "actualCallHash": "be0dd6ba3dc025355cd5054cfbfa8db3ee539af2c6d384083c8791bccfd55954",
+      "rows": 8,
+      "knownAllocationSum": {
+        "known": 1040,
+        "missing": 0,
+        "overflow": false
+      },
+      "originalGlobalPeaks": [
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 392,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:local-gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "device": {
+            "kind": "per_device",
+            "deviceId": "gpu1"
+          },
+          "peak": {
+            "status": "available",
+            "quantity": {
+              "value": 392,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                {
+                  "assetId": "example:operator:gemm-serial-gather",
+                  "revision": 1,
+                  "kind": "operator"
+                },
+                {
+                  "assetId": "builtin:formula:gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:matrix-bytes",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:formula:local-gemm-operations",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                "Explicit column-parallel local equations under serial barriers; no implicit communication or cross-node overlap."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "atomic": false
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "scenarioId": "example:scenario:c01",
+  "name": "C01",
+  "model": {
+    "assetId": "example:model:gemm",
+    "revision": 1,
+    "kind": "model"
+  },
+  "bindings": [],
+  "workload": {
+    "kind": "decode",
+    "batchSize": 1,
+    "contextTokensPerRequest": 0,
+    "queryTokensPerRequest": 1,
+    "steps": 1
+  },
+  "deviceTopology": {
+    "devices": [
+      {
+        "deviceId": "gpu0",
+        "hardware": {
+          "assetId": "example:hardware:c01",
+          "revision": 1,
+          "kind": "hardware"
+        }
+      }
+    ],
+    "groups": [
+      {
+        "groupId": "tp",
+        "members": [
+          "gpu0"
+        ]
+      }
+    ]
+  },
+  "parallelPlan": {
+    "assignments": [],
+    "communications": [],
+    "assumptions": []
+  },
+  "executionPlan": {
+    "kind": "serial"
+  },
+  "quantizationOverrides": [],
+  "numericOverrides": [],
+  "fusionGroups": []
+}

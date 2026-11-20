@@ -1,0 +1,859 @@
+{
+  "schemaVersion": 3,
+  "kind": "leaf_storage_source",
+  "inputHash": "b5b2449ae2e73f5281d5eafe9dc923b231699793c934776af8c525aa1b4caa6a",
+  "engineVersion": "0.1.0-execution.20",
+  "selector": {
+    "nodeId": "x",
+    "scope": {
+      "phase": "prefill",
+      "target": {
+        "kind": "node",
+        "nodeId": "x"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "field": "hbmBytes"
+  },
+  "asset": {
+    "assetId": "example:quantization-scope:short:op",
+    "revision": 1,
+    "kind": "operator"
+  },
+  "metric": {
+    "status": "available",
+    "quantity": {
+      "value": 0,
+      "unit": "byte"
+    },
+    "basis": "estimated",
+    "provenance": {
+      "assetRefs": [
+        {
+          "assetId": "example:quantization-scope:short:hardware",
+          "revision": 1,
+          "kind": "hardware"
+        },
+        {
+          "assetId": "example:quantization-scope:short:model",
+          "revision": 1,
+          "kind": "model"
+        },
+        {
+          "assetId": "example:quantization-scope:short:op",
+          "revision": 1,
+          "kind": "operator"
+        }
+      ],
+      "formulaRefs": [],
+      "parameterSources": [
+        {
+          "parameterKey": "$model:P",
+          "source": "asset_default"
+        },
+        {
+          "parameterKey": "x:P",
+          "source": "asset_default"
+        }
+      ],
+      "assumptions": [
+        "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+        "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+        "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+        "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+        "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+        "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+        "One device; no inferred parallelism, fusion or measured kernel efficiency."
+      ]
+    },
+    "diagnosticIds": []
+  },
+  "page": 0,
+  "pageSize": 20,
+  "componentCount": 2,
+  "complete": true,
+  "storageAccessSource": {
+    "kind": "storage_access_source",
+    "field": "hbmBytes",
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 0,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:quantization-scope:short:hardware",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:quantization-scope:short:model",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:quantization-scope:short:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:P",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "x:P",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "pageSize": 20,
+    "componentCount": 2,
+    "operation": "ordered_sum",
+    "total": {
+      "value": 0,
+      "unit": "byte"
+    },
+    "items": [
+      {
+        "index": 0,
+        "accessId": "read-left",
+        "mode": "read",
+        "kind": "storage_allocation",
+        "proof": {
+          "quantity": {
+            "value": 0,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 0,
+              "unit": "count"
+            }
+          },
+          "truncated": false,
+          "field": "memoryAccess[\"read-left\"].logicalBytes.passes",
+          "frameId": "[\"asset\",\"x\"]"
+        },
+        "factor": 1,
+        "skippedStorage": true,
+        "contribution": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "sum": {
+          "left": 0,
+          "right": 0,
+          "value": 0
+        },
+        "complete": true,
+        "boundaries": []
+      },
+      {
+        "index": 1,
+        "accessId": "read-right",
+        "mode": "read",
+        "kind": "storage_allocation",
+        "proof": {
+          "quantity": {
+            "value": 0,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 0,
+              "unit": "count"
+            }
+          },
+          "truncated": false,
+          "field": "memoryAccess[\"read-right\"].logicalBytes.passes",
+          "frameId": "[\"asset\",\"x\"]"
+        },
+        "factor": 1,
+        "skippedStorage": true,
+        "contribution": {
+          "value": 0,
+          "unit": "byte"
+        },
+        "sum": {
+          "left": 0,
+          "right": 0,
+          "value": 0
+        },
+        "complete": true,
+        "boundaries": []
+      }
+    ],
+    "complete": true
+  },
+  "parameterBindings": {
+    "schemaVersion": 1,
+    "scope": "actual_call_and_storage_parameter_context",
+    "nodes": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"x\\\"]\",\"P\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"x\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:short:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"x\\\"]\",\"P\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"x\\\"]\",\"P\",\"candidate\",0]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"x\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:short:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"x\\\"]\",\"P\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"x\"]",
+        "parameterKey": "P",
+        "kind": "default",
+        "status": "winning",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:short:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"x\\\"]\",\"P\",\"candidate\",0]"
+      }
+    ],
+    "roots": [
+      {
+        "role": "call",
+        "target": "x",
+        "frameId": "[\"asset\",\"x\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"x\\\"]\",\"P\"]"
+      },
+      {
+        "role": "storage",
+        "target": "x::left",
+        "frameId": "[\"asset\",\"x\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"x\\\"]\",\"P\"]"
+      },
+      {
+        "role": "storage",
+        "target": "x::right",
+        "frameId": "[\"asset\",\"x\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"x\\\"]\",\"P\"]"
+      }
+    ],
+    "complete": true,
+    "truncated": false,
+    "boundaries": [],
+    "frameCount": 3
+  },
+  "request": {
+    "scenario": {
+      "scenarioId": "example:scenario:example:quantization-scope:short:model",
+      "name": "量化辅助公式 · short",
+      "model": {
+        "assetId": "example:quantization-scope:short:model",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:quantization-scope:short:hardware",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": [
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [
+        {
+          "selector": {
+            "kind": "subtree",
+            "rootNodeId": "$model"
+          },
+          "weight": {
+            "payloadBits": 16,
+            "packingUnitElements": 1,
+            "alignmentBytes": 1,
+            "auxiliaries": [
+              {
+                "name": "local-scales",
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "count": {
+                  "kind": "formula",
+                  "value": {
+                    "kind": "symbol",
+                    "name": "P"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "assets": [
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:short:model",
+        "revision": 1,
+        "name": "Quantization scope short",
+        "tags": [
+          "synthetic",
+          "quantization-scope"
+        ],
+        "parameters": [
+          {
+            "key": "P",
+            "name": "P scope count",
+            "type": "integer",
+            "unit": "count",
+            "min": 0,
+            "default": {
+              "kind": "integer",
+              "value": 2
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Independent hand model: per weight8B payload +2*actual-local-P scale bytes; two weights. Synthetic hardware only."
+          }
+        ],
+        "definition": {
+          "kind": "model",
+          "family": "synthetic",
+          "variant": "quantization-scope-short",
+          "graph": {
+            "inputs": [],
+            "outputs": [],
+            "nodes": [
+              {
+                "nodeId": "x",
+                "name": "x · scoped reader",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [],
+                "stateBindings": [],
+                "body": {
+                  "kind": "operator",
+                  "asset": {
+                    "assetId": "example:quantization-scope:short:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  "bindings": []
+                }
+              }
+            ],
+            "edges": [],
+            "dependencies": [],
+            "tensors": [],
+            "storages": [],
+            "states": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:short:op",
+        "revision": 1,
+        "name": "Scoped weight reader",
+        "tags": [
+          "synthetic",
+          "quantization-scope"
+        ],
+        "parameters": [
+          {
+            "key": "P",
+            "name": "P scope count",
+            "type": "integer",
+            "unit": "count",
+            "min": 0,
+            "default": {
+              "kind": "integer",
+              "value": 3
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Independent hand model: per weight8B payload +2*actual-local-P scale bytes; two weights. Synthetic hardware only."
+          }
+        ],
+        "definition": {
+          "kind": "operator",
+          "operator": {
+            "category": "custom",
+            "inputs": [],
+            "outputs": [],
+            "tensors": [],
+            "storages": [
+              {
+                "storageId": "left",
+                "name": "left BF16 weights",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "right",
+                "name": "right BF16 weights",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": [],
+            "phases": [
+              "prefill",
+              "decode"
+            ],
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "work",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 1,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 1,
+                      "unit": "operation"
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-left",
+                  "storageId": "left",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 0,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-right",
+                  "storageId": "right",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 0,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "storage_layout",
+                "storageId": "left"
+              },
+              "bindings": [],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "work",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "operation"
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "operation"
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-left",
+                    "storageId": "left",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 0,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-right",
+                    "storageId": "right",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 0,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit per-copy work and allocation accesses; no inferred division"
+            }
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:short:hardware",
+        "revision": 1,
+        "name": "Synthetic 4096B · 1000op/s · 100B/s",
+        "tags": [
+          "synthetic",
+          "hand-reference"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Invented decimal capacities/rates for independently reproducible arithmetic, not a hardware specification, benchmark or purchasing recommendation."
+          }
+        ],
+        "definition": {
+          "kind": "hardware",
+          "hardware": {
+            "capacityBytes": 4096,
+            "computeCapabilities": [
+              {
+                "computeClass": {
+                  "arithmetic": "float",
+                  "inputDtypes": [
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    }
+                  ],
+                  "multiplyDtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  "accumulateDtype": {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  },
+                  "resource": "matrix"
+                },
+                "kind": "peak",
+                "operationsPerSecond": 1000
+              }
+            ],
+            "memoryCapabilities": [
+              {
+                "key": "hbm",
+                "kind": "peak",
+                "bytesPerSecond": 100
+              }
+            ],
+            "communicationDefaults": []
+          }
+        }
+      }
+    ],
+    "inputHash": "b5b2449ae2e73f5281d5eafe9dc923b231699793c934776af8c525aa1b4caa6a",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "x",
+      "scope": {
+        "phase": "prefill",
+        "target": {
+          "kind": "node",
+          "nodeId": "x"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "hbmBytes"
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 0,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:quantization-scope:short:hardware",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:quantization-scope:short:model",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:quantization-scope:short:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:P",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "x:P",
+            "source": "asset_default"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "proofVersion": 3,
+    "bindingBudget": 256
+  }
+}

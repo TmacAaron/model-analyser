@@ -1,0 +1,61 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:qwen3:b7252a03e5b5eea4",
+  "revision": 1,
+  "name": "2 * B * Q * NK * D [byte]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3-0.6B/resolve/c1899de289a04d12100db370d81485cdf75e47ca/config.json",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/huggingface/transformers/blob/0720e206c6ba28887e4d60ef60a6a089f6c1cc76/src/transformers/models/qwen3/modeling_qwen3.py",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Offline snapshots and SHA256: references/models/source-lock.json. BF16 mathematical/materialized causal GQA reference; no measured kernel or GPU performance claim. Weight tying follows config, despite duplicate serialized lm_head. HBM assumption: one declared read/write per buffer; no cache/reuse/materialized repeat_kv guarantee. Vector counts approximate norms 5/element, QK norm + RoPE 8/element, softmax 5/score, SiLU×up 6/element. FP32 vector work is separated from BF16 matrix work. No fused attention, rotary table/trig construction, allocator/runtime overhead or network model."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "NK": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * Q * NK * D",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

@@ -1,0 +1,2504 @@
+{
+  "status": "available",
+  "result": {
+    "engineVersion": "0.1.0-execution.19",
+    "inputHash": "f078df51cc4c945f2ee8998911509c30cccd2de8835b874027625880512613f0",
+    "scenarioId": "example:scenario:fusion-pair",
+    "phase": "decode",
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "memoryEvidence": [
+      {
+        "version": "canonical-memory.1",
+        "deviceId": "gpu0",
+        "axis": "order",
+        "provenancePool": [
+          {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          }
+        ],
+        "interfaces": [
+          {
+            "nodeId": "A",
+            "storageIds": [
+              "sX",
+              "sT"
+            ]
+          },
+          {
+            "nodeId": "B",
+            "storageIds": [
+              "sT",
+              "sY"
+            ]
+          },
+          {
+            "nodeId": "$model",
+            "storageIds": [
+              "sX",
+              "sY"
+            ]
+          }
+        ],
+        "initialStorageIds": [
+          "sX"
+        ],
+        "outputStorageIds": [
+          "sY"
+        ],
+        "carriedStorageIds": [
+          "sT"
+        ],
+        "allocations": [
+          {
+            "storageId": "sX",
+            "name": "X",
+            "allocationKind": "tensor",
+            "category": "activation",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 2,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": []
+            },
+            "intervals": [
+              {
+                "start": 0,
+                "end": 0
+              }
+            ]
+          },
+          {
+            "storageId": "sT",
+            "name": "T",
+            "allocationKind": "tensor",
+            "category": "activation",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 8,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": []
+            },
+            "intervals": [
+              {
+                "start": 0,
+                "end": 1
+              }
+            ]
+          },
+          {
+            "storageId": "sY",
+            "name": "Y",
+            "allocationKind": "tensor",
+            "category": "activation",
+            "sharingDomain": "instance",
+            "aliasIds": [],
+            "eliminatedBy": [],
+            "resident": false,
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 2,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "diagnosticIds": [],
+              "provenanceIndex": 0
+            },
+            "perCopyAllocation": {
+              "copies": 1,
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "auxiliaryBytes": []
+            },
+            "intervals": [
+              {
+                "start": 1,
+                "end": 1
+              }
+            ]
+          }
+        ],
+        "uses": [
+          {
+            "nodeId": "A",
+            "executionNodeId": "A",
+            "reads": [
+              "sX"
+            ],
+            "writes": [
+              "sT"
+            ],
+            "temporary": []
+          },
+          {
+            "nodeId": "B",
+            "executionNodeId": "B",
+            "reads": [
+              "sT"
+            ],
+            "writes": [
+              "sY"
+            ],
+            "temporary": []
+          }
+        ]
+      }
+    ],
+    "parameterTrace": [
+      {
+        "nodeId": "$model",
+        "parameterKey": "N",
+        "value": {
+          "kind": "integer",
+          "value": 1
+        },
+        "unit": "count",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:model:fusion-pair",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      }
+    ],
+    "quantizationApplications": [],
+    "nodes": [
+      {
+        "nodeId": "A",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "A"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "usefulOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:fusion-pair",
+                      "revision": 1,
+                      "kind": "model"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "executedOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 2,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:fusion-pair",
+                      "revision": 1,
+                      "kind": "model"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 8,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 10,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 1,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      },
+      {
+        "nodeId": "B",
+        "cost": {
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "node",
+              "nodeId": "B"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "usefulOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 3,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:fusion-pair",
+                      "revision": 1,
+                      "kind": "model"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "executedOperations": {
+                "status": "available",
+                "quantity": {
+                  "value": 3,
+                  "unit": "operation"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:c01",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:fusion-pair",
+                      "revision": 1,
+                      "kind": "model"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "logicalReadBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 8,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "logicalWriteBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "hbmBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 10,
+              "unit": "byte"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "communications": [],
+          "seconds": {
+            "status": "available",
+            "quantity": {
+              "value": 2,
+              "unit": "second"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      }
+    ],
+    "modules": [],
+    "total": {
+      "scope": {
+        "phase": "decode",
+        "target": {
+          "kind": "model"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "compute": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "usefulOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 5,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "executedOperations": {
+            "status": "available",
+            "quantity": {
+              "value": 5,
+              "unit": "operation"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                },
+                {
+                  "assetId": "example:hardware:c01",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:fusion-pair",
+                  "revision": 1,
+                  "kind": "model"
+                }
+              ],
+              "formulaRefs": [
+                {
+                  "assetId": "example:formula:fusion-intermediate-elements",
+                  "revision": 1,
+                  "kind": "formula"
+                }
+              ],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:N",
+                  "source": "asset_default"
+                }
+              ],
+              "assumptions": [
+                "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "logicalReadBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 10,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "logicalWriteBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 10,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "hbmBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 20,
+          "unit": "byte"
+        },
+        "basis": "estimated",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "communications": [],
+      "seconds": {
+        "status": "available",
+        "quantity": {
+          "value": 3,
+          "unit": "second"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            },
+            {
+              "assetId": "example:hardware:c01",
+              "revision": 1,
+              "kind": "hardware"
+            },
+            {
+              "assetId": "example:model:fusion-pair",
+              "revision": 1,
+              "kind": "model"
+            }
+          ],
+          "formulaRefs": [
+            {
+              "assetId": "example:formula:fusion-intermediate-elements",
+              "revision": 1,
+              "kind": "formula"
+            }
+          ],
+          "parameterSources": [
+            {
+              "parameterKey": "$model:N",
+              "source": "asset_default"
+            }
+          ],
+          "assumptions": [
+            "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+            "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+            "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+            "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+            "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+            "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+          ]
+        },
+        "diagnosticIds": []
+      }
+    },
+    "memory": [
+      {
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "categoryBreakdown": [
+          {
+            "category": "weight",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "state",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "activation",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 10,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "workspace",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "communication",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "graph",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "runtime",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          },
+          {
+            "category": "reserve",
+            "bytes": {
+              "status": "available",
+              "quantity": {
+                "value": 0,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:c01",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "peakBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 10,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "peakPoint": {
+          "kind": "time",
+          "seconds": 0,
+          "nodeId": "A"
+        },
+        "capacityBytes": 4096,
+        "capacityStatus": {
+          "kind": "point_only",
+          "description": "Canonical allocation lifetimes under the selected serial order; no capacity search has run."
+        }
+      }
+    ],
+    "schedule": [
+      {
+        "nodeId": "A",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 0,
+        "endSeconds": 1
+      },
+      {
+        "nodeId": "B",
+        "deviceScope": {
+          "kind": "per_device",
+          "deviceId": "gpu0"
+        },
+        "streamId": "serial",
+        "startSeconds": 1,
+        "endSeconds": 3
+      }
+    ],
+    "roofline": [
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "A"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "operations": {
+          "status": "available",
+          "quantity": {
+            "value": 2,
+            "unit": "operation"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 10,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "arithmeticIntensity": {
+          "status": "available",
+          "operationsPerByte": 0.2
+        },
+        "computeCeiling": {
+          "status": "available",
+          "quantity": {
+            "value": 1000,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "memoryBandwidth": {
+          "status": "available",
+          "quantity": {
+            "value": 100,
+            "unit": "byte_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "roofPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 20,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "actualOrPredictedPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 2,
+            "unit": "operation_per_second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBasis": "estimated_hbm"
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "B"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "computeClass": {
+          "arithmetic": "float",
+          "inputDtypes": [
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          ],
+          "multiplyDtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "accumulateDtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "resource": "matrix"
+        },
+        "operations": {
+          "status": "available",
+          "quantity": {
+            "value": 3,
+            "unit": "operation"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 10,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "arithmeticIntensity": {
+          "status": "available",
+          "operationsPerByte": 0.3
+        },
+        "computeCeiling": {
+          "status": "available",
+          "quantity": {
+            "value": 1000,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "memoryBandwidth": {
+          "status": "available",
+          "quantity": {
+            "value": 100,
+            "unit": "byte_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "roofPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 30,
+            "unit": "operation_per_second"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "actualOrPredictedPerformance": {
+          "status": "available",
+          "quantity": {
+            "value": 1.5,
+            "unit": "operation_per_second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "trafficBasis": "estimated_hbm"
+      }
+    ],
+    "diagnostics": []
+  }
+}

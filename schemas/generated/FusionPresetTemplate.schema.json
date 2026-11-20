@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "presetId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "name": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "description": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "phases": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "assumptions": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "group": {
+      "type": "object",
+      "properties": {
+        "groupId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "memberNodeIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "eliminatedTensorIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "extraCost": {
+          "type": "object",
+          "properties": {
+            "compute": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "segmentId": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "computeClass": {
+                    "type": "object",
+                    "properties": {
+                      "arithmetic": {
+                        "type": "string",
+                        "enum": [
+                          "float",
+                          "integer"
+                        ]
+                      },
+                      "inputDtypes": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema2"
+                        }
+                      },
+                      "multiplyDtype": {
+                        "$ref": "#/$defs/__schema2"
+                      },
+                      "accumulateDtype": {
+                        "$ref": "#/$defs/__schema2"
+                      },
+                      "resource": {
+                        "type": "string",
+                        "enum": [
+                          "matrix",
+                          "vector",
+                          "custom"
+                        ]
+                      },
+                      "resourceKey": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "arithmetic",
+                      "inputDtypes",
+                      "multiplyDtype",
+                      "accumulateDtype",
+                      "resource"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "usefulOperations": {
+                    "$ref": "#/$defs/__schema4"
+                  },
+                  "executedOperations": {
+                    "$ref": "#/$defs/__schema4"
+                  }
+                },
+                "required": [
+                  "segmentId",
+                  "computeClass",
+                  "usefulOperations",
+                  "executedOperations"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "memoryAccess": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "accessId": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "storageId": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write"
+                    ]
+                  },
+                  "logicalBytes": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/__schema4"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "storage_allocation"
+                          },
+                          "passes": {
+                            "$ref": "#/$defs/__schema4"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "passes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "hbmEstimate": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "factor"
+                          },
+                          "value": {
+                            "$ref": "#/$defs/__schema5"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "bytes"
+                          },
+                          "value": {
+                            "$ref": "#/$defs/__schema4"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "accessId",
+                  "storageId",
+                  "mode",
+                  "logicalBytes"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "temporaryStorageIds": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            },
+            "timing": {
+              "$ref": "#/$defs/__schema6"
+            }
+          },
+          "required": [
+            "compute",
+            "memoryAccess",
+            "temporaryStorageIds",
+            "timing"
+          ],
+          "additionalProperties": false
+        },
+        "timeStrategy": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "sum_members"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "override"
+                },
+                "timing": {
+                  "$ref": "#/$defs/__schema6"
+                },
+                "description": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "kind",
+                "timing",
+                "description"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "groupId",
+        "memberNodeIds",
+        "eliminatedTensorIds",
+        "extraCost",
+        "timeStrategy"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "presetId",
+    "name",
+    "description",
+    "phases",
+    "assumptions",
+    "group"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "string",
+      "enum": [
+        "prefill",
+        "decode"
+      ]
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "format": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema3": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "__schema4": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "literal"
+            },
+            "quantity": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "scalar",
+                    "count",
+                    "ratio",
+                    "byte",
+                    "second",
+                    "operation",
+                    "operation_per_second",
+                    "byte_per_second"
+                  ]
+                }
+              },
+              "required": [
+                "value",
+                "unit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "quantity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "symbol"
+            },
+            "name": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "formula"
+            },
+            "call": {
+              "type": "object",
+              "properties": {
+                "formula": {
+                  "type": "object",
+                  "properties": {
+                    "assetId": {
+                      "$ref": "#/$defs/__schema0"
+                    },
+                    "revision": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "module",
+                        "operator",
+                        "formula",
+                        "parallel",
+                        "quantization",
+                        "hardware"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "assetId",
+                    "revision",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                "bindings": {
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "additionalProperties": {
+                    "$ref": "#/$defs/__schema4"
+                  }
+                }
+              },
+              "required": [
+                "formula",
+                "bindings"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "call"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema5": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema6": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "roofline_bound"
+            },
+            "computeEfficiency": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "memoryEfficiency": {
+              "$ref": "#/$defs/__schema7"
+            },
+            "computeMemoryOverlap": {
+              "type": "string",
+              "enum": [
+                "ideal",
+                "serial"
+              ]
+            },
+            "launchSeconds": {
+              "$ref": "#/$defs/__schema5"
+            }
+          },
+          "required": [
+            "kind",
+            "computeEfficiency",
+            "memoryEfficiency",
+            "computeMemoryOverlap",
+            "launchSeconds"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "custom_formula"
+            },
+            "seconds": {
+              "$ref": "#/$defs/__schema4"
+            },
+            "description": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "seconds",
+            "description"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "fixed"
+            },
+            "seconds": {
+              "$ref": "#/$defs/__schema5"
+            },
+            "description": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "kind",
+            "seconds",
+            "description"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "__schema7": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    }
+  }
+}

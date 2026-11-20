@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "sourceName": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "json",
+        "yaml"
+      ]
+    },
+    "rawConfig": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/__schema0"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/__schema1"
+      }
+    },
+    "documentType": {
+      "type": "string",
+      "const": "config_import_seed"
+    },
+    "version": {
+      "type": "string",
+      "const": "config-import.1"
+    },
+    "assetId": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "sourceName",
+    "format",
+    "rawConfig",
+    "documentType",
+    "version",
+    "assetId",
+    "name"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      ]
+    }
+  }
+}

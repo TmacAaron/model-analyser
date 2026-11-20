@@ -1,0 +1,801 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "available"
+        },
+        "value": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "inputHash": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "fits",
+            "exceeds",
+            "unknown"
+          ]
+        },
+        "memory": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema2"
+          }
+        },
+        "compute": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema8"
+          }
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "phase": {
+              "type": "string",
+              "enum": [
+                "prefill",
+                "decode"
+              ]
+            },
+            "target": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "model"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "module"
+                    },
+                    "nodeId": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "nodeId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "node"
+                    },
+                    "nodeId": {
+                      "$ref": "#/$defs/__schema1"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "nodeId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "deviceIds": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "aggregation": {
+              "type": "string",
+              "enum": [
+                "per_device",
+                "group_total",
+                "model_useful"
+              ]
+            }
+          },
+          "required": [
+            "phase",
+            "target",
+            "deviceIds",
+            "aggregation"
+          ],
+          "additionalProperties": false
+        },
+        "modelUsefulCompute": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema8"
+          }
+        },
+        "hbmBytes": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "quantity": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "const": "byte"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "theoretical",
+                    "estimated",
+                    "measured"
+                  ]
+                },
+                "provenance": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "diagnosticIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "status",
+                "quantity",
+                "basis",
+                "provenance",
+                "diagnosticIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/__schema7"
+            }
+          ]
+        },
+        "seconds": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "quantity": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "const": "second"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "theoretical",
+                    "estimated",
+                    "measured"
+                  ]
+                },
+                "provenance": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "diagnosticIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "status",
+                "quantity",
+                "basis",
+                "provenance",
+                "diagnosticIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/__schema7"
+            }
+          ]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema10"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "inputHash",
+        "fit",
+        "memory",
+        "compute",
+        "hbmBytes",
+        "seconds",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unavailable"
+        },
+        "value": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "diagnostics": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema10"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "diagnostics"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema1": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "peakBytes": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "quantity": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "const": "byte"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "theoretical",
+                    "estimated",
+                    "measured"
+                  ]
+                },
+                "provenance": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "diagnosticIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "status",
+                "quantity",
+                "basis",
+                "provenance",
+                "diagnosticIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/__schema7"
+            }
+          ]
+        },
+        "capacityBytes": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "deviceId",
+        "peakBytes",
+        "capacityBytes"
+      ],
+      "additionalProperties": false
+    },
+    "__schema3": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema4": {
+      "type": "object",
+      "properties": {
+        "assetRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema5"
+          }
+        },
+        "formulaRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema5"
+          }
+        },
+        "parameterSources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "parameterKey": {
+                "$ref": "#/$defs/__schema1"
+              },
+              "source": {
+                "$ref": "#/$defs/__schema1"
+              }
+            },
+            "required": [
+              "parameterKey",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "assetRefs",
+        "formulaRefs",
+        "parameterSources",
+        "assumptions"
+      ],
+      "additionalProperties": false
+    },
+    "__schema5": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "revision": {
+          "$ref": "#/$defs/__schema6"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "model",
+            "module",
+            "operator",
+            "formula",
+            "parallel",
+            "quantization",
+            "hardware"
+          ]
+        }
+      },
+      "required": [
+        "assetId",
+        "revision",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "__schema6": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema7": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "unavailable"
+        },
+        "diagnosticIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        }
+      },
+      "required": [
+        "status",
+        "diagnosticIds"
+      ],
+      "additionalProperties": false
+    },
+    "__schema8": {
+      "type": "object",
+      "properties": {
+        "computeClass": {
+          "type": "object",
+          "properties": {
+            "arithmetic": {
+              "type": "string",
+              "enum": [
+                "float",
+                "integer"
+              ]
+            },
+            "inputDtypes": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema9"
+              }
+            },
+            "multiplyDtype": {
+              "$ref": "#/$defs/__schema9"
+            },
+            "accumulateDtype": {
+              "$ref": "#/$defs/__schema9"
+            },
+            "resource": {
+              "type": "string",
+              "enum": [
+                "matrix",
+                "vector",
+                "custom"
+              ]
+            },
+            "resourceKey": {
+              "$ref": "#/$defs/__schema1"
+            }
+          },
+          "required": [
+            "arithmetic",
+            "inputDtypes",
+            "multiplyDtype",
+            "accumulateDtype",
+            "resource"
+          ],
+          "additionalProperties": false
+        },
+        "usefulOperations": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "quantity": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "const": "operation"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "theoretical",
+                    "estimated",
+                    "measured"
+                  ]
+                },
+                "provenance": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "diagnosticIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "status",
+                "quantity",
+                "basis",
+                "provenance",
+                "diagnosticIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/__schema7"
+            }
+          ]
+        },
+        "executedOperations": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "quantity": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "unit": {
+                      "type": "string",
+                      "const": "operation"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "unit"
+                  ],
+                  "additionalProperties": false
+                },
+                "basis": {
+                  "type": "string",
+                  "enum": [
+                    "theoretical",
+                    "estimated",
+                    "measured"
+                  ]
+                },
+                "provenance": {
+                  "$ref": "#/$defs/__schema4"
+                },
+                "diagnosticIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema1"
+                  }
+                }
+              },
+              "required": [
+                "status",
+                "quantity",
+                "basis",
+                "provenance",
+                "diagnosticIds"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/__schema7"
+            }
+          ]
+        }
+      },
+      "required": [
+        "computeClass",
+        "usefulOperations",
+        "executedOperations"
+      ],
+      "additionalProperties": false
+    },
+    "__schema9": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "$ref": "#/$defs/__schema6"
+        },
+        "format": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema10": {
+      "type": "object",
+      "properties": {
+        "diagnosticId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "message": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "location": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "asset"
+                },
+                "assetId": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "fieldPath": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "assetId"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "node"
+                },
+                "nodeId": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "fieldPath": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "nodeId"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "scenario"
+                },
+                "scenarioId": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "fieldPath": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "scenarioId"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "file"
+                },
+                "name": {
+                  "$ref": "#/$defs/__schema1"
+                },
+                "line": {
+                  "$ref": "#/$defs/__schema6"
+                },
+                "column": {
+                  "$ref": "#/$defs/__schema6"
+                },
+                "fieldPath": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "diagnosticId",
+        "severity",
+        "code",
+        "message",
+        "location"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

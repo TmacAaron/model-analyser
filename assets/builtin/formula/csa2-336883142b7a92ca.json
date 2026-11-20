@@ -1,0 +1,51 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:csa2:csa2:bf16:formula:3cefe0cbd395eedc",
+  "revision": 1,
+  "name": "2 * B * H * R [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Four ordered decoder attention fragments corresponding to layers 20,21,24,25, omitting intervening layers and all non-attention network components. This is not the complete model or a benchmark prediction. One query per decode call. Artificial H=4, query/output ranks=2, one attention/index head, D=16, index D=8, window=2, Top-K=2, one candidate block of width 2. Existing cache is initialized and append/window updates reserve the call-end capacity in place. Profiles are counterfactual all-Full, main/indexer-K sharing with four index computations, and source-pattern Full/Reuse/Reindex/Reuse. Each counterfactual is explicit graph data, not an inferred reuse ratio. BF16 weights and matrix arithmetic, explicit FP32 vector proxies for normalization, rotary transform, packing, selection and unpacking. Cache payload/metadata accesses and independent staging buffers are declared separately. In the packed variant, indexer K unpack is an explicit vector segment inside the score leaf, using registers with no additional HBM backing. Gather and index-key unpack increase executed operations only; cache representation does not increase model-useful arithmetic. The packed theoretical variant uses row-local FP4 main/index and FP8 window payloads with one-byte scale metadata; the BF16 cache variant keeps uncompressed allocation. Neither claims bitwise numerical equivalence to the inference demo. Artificial 4096-byte device, matrix/vector 1000 operations/s and HBM 100 bytes/s. Ideal streams ignore contention; shared_bandwidth is the existing declared-HBM resource model. No kernel fusion, communication, allocator slack or omitted model components are inferred."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "H": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "R": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 2
+        }
+      },
+      "expression": "2 * B * H * R",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

@@ -1,0 +1,283 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "description": "Independent literal hand ledgers. Presentation only; source AnalysisResult/inputHash remains unchanged. Nested module totals overlap and are never added. Fused execution counted once per actual decode step. Time shares use the duration budget, not wall time. Nonuniform network sends and receives stay separate.",
+  "rows": [
+    {
+      "name": "nested",
+      "inputHash": "cb8264f041458c0819cabe389354a97cc15bacab68cb09ab57f9d826345d74f4",
+      "matrixGaps": {
+        "delta": 4,
+        "usefulGap": 0,
+        "executedGap": 4
+      },
+      "hbm": {
+        "sum": 32,
+        "knownSubtotal": 32,
+        "unknown": 0
+      },
+      "time": {
+        "budget": 5.5,
+        "originalSpan": 5.5,
+        "rows": [
+          {
+            "id": "outer/inner/A",
+            "value": 2,
+            "shareOfBudgetPercent": 36.36363636363637,
+            "entries": [
+              {
+                "id": "outer/inner/A",
+                "step": 0,
+                "members": [
+                  "outer/inner/A"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "outer/C",
+            "value": 2,
+            "shareOfBudgetPercent": 36.36363636363637,
+            "entries": [
+              {
+                "id": "outer/C",
+                "step": 0,
+                "members": [
+                  "outer/C"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "outer/inner/B",
+            "value": 1,
+            "shareOfBudgetPercent": 18.181818181818183,
+            "entries": [
+              {
+                "id": "outer/inner/B",
+                "step": 0,
+                "members": [
+                  "outer/inner/B"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "outside",
+            "value": 0.5,
+            "shareOfBudgetPercent": 9.090909090909092,
+            "entries": [
+              {
+                "id": "outside",
+                "step": 0,
+                "members": [
+                  "outside"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "fused-decode",
+      "inputHash": "881c3ef1d3b44e56db05306bd3d85d2433318965d38f89d5bcf2e03da626754b",
+      "matrixGaps": {
+        "delta": 2,
+        "usefulGap": 0,
+        "executedGap": 2
+      },
+      "hbm": {
+        "sum": 8,
+        "knownSubtotal": 8,
+        "unknown": 0
+      },
+      "time": {
+        "budget": 1,
+        "originalSpan": 1,
+        "rows": [
+          {
+            "id": "$fusion:pair",
+            "value": 1,
+            "shareOfBudgetPercent": 100,
+            "entries": [
+              {
+                "id": "$fusion:pair",
+                "step": 0,
+                "members": [
+                  "A",
+                  "B"
+                ]
+              },
+              {
+                "id": "$fusion:pair",
+                "step": 1,
+                "members": [
+                  "A",
+                  "B"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "overlap",
+      "inputHash": "7d5eda3bbbc8249761186ede04a9e743d160a28f1a64513d30af2685845d5f6b",
+      "matrixGaps": {
+        "delta": null,
+        "usefulGap": null,
+        "executedGap": null
+      },
+      "hbm": {
+        "sum": 0,
+        "knownSubtotal": 0,
+        "unknown": 0
+      },
+      "time": {
+        "budget": 0.0085,
+        "originalSpan": 0.006500000000000001,
+        "rows": [
+          {
+            "id": "B",
+            "value": 0.005,
+            "shareOfBudgetPercent": 58.8235294117647,
+            "entries": [
+              {
+                "id": "B",
+                "step": 0,
+                "members": [
+                  "B"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "A",
+            "value": 0.002,
+            "shareOfBudgetPercent": 23.52941176470588,
+            "entries": [
+              {
+                "id": "A",
+                "step": 0,
+                "members": [
+                  "A"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "prepare",
+            "value": 0.001,
+            "shareOfBudgetPercent": 11.76470588235294,
+            "entries": [
+              {
+                "id": "prepare",
+                "step": 0,
+                "members": [
+                  "prepare"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "join",
+            "value": 0.0005000000000000004,
+            "shareOfBudgetPercent": 5.8823529411764754,
+            "entries": [
+              {
+                "id": "join",
+                "step": 0,
+                "members": [
+                  "join"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "network",
+      "inputHash": "a48e03094677dc303b12cddf99da6d70eadb1380e71e3049c93e3d0b3d63774c",
+      "matrixGaps": {
+        "delta": 0,
+        "usefulGap": 0,
+        "executedGap": 0
+      },
+      "hbm": {
+        "sum": null,
+        "knownSubtotal": 576,
+        "unknown": 1
+      },
+      "time": {
+        "budget": 2.929,
+        "originalSpan": 2.929,
+        "rows": [
+          {
+            "id": "module/op",
+            "value": 2.88,
+            "shareOfBudgetPercent": 98.32707408671902,
+            "entries": [
+              {
+                "id": "module/op",
+                "step": 0,
+                "members": [
+                  "module/op"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "gather-Y",
+            "value": 0.049,
+            "shareOfBudgetPercent": 1.6729259132809835,
+            "entries": [
+              {
+                "id": "gather-Y",
+                "step": 0,
+                "members": [
+                  "gather-Y"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "replicated",
+      "inputHash": "81c3c05288584ad0acc9951c9c903e264d78ecccabb081ddcdb54ef9801b6a65",
+      "matrixGaps": {
+        "delta": 0,
+        "usefulGap": 1024,
+        "executedGap": 1024
+      },
+      "hbm": {
+        "sum": 896,
+        "knownSubtotal": 896,
+        "unknown": 0
+      },
+      "time": {
+        "budget": 4.48,
+        "originalSpan": 4.48,
+        "rows": [
+          {
+            "id": "module/op",
+            "value": 4.48,
+            "shareOfBudgetPercent": 100,
+            "entries": [
+              {
+                "id": "module/op",
+                "step": 0,
+                "members": [
+                  "module/op"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

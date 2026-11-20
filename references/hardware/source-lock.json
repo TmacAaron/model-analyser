@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-14",
+  "documents": [
+    {
+      "id": "a100-datasheet",
+      "url": "https://images.nvidia.com/data-center/a100/a100-datasheet.pdf",
+      "sha256": "fddf4c231c708cd7c9557ebdbb951c7f745587f86ab6e3a790a2f600b2569fb7",
+      "page": 1,
+      "column": "A100 80GB SXM",
+      "facts": {"capacityGB": 80, "hbmGBPerSecond": 2039, "bf16DenseTFLOPS": 312, "fp16DenseTFLOPS": 312, "fp32NonTensorTFLOPS": 19.5, "bf16SparseTFLOPS": 624},
+      "note": "Dense and sparse values are separate. Per-device SXM column; PCIe memory bandwidth is different."
+    },
+    {
+      "id": "h100-whitepaper",
+      "url": "https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf",
+      "landingPage": "https://resources.nvidia.com/en-us-hopper-architecture",
+      "sha256": "3641614979809a027a8aabdc2e77639efb8fcd0f8dc7873a22ba2125489f5a27",
+      "version": "1.04",
+      "page": 39,
+      "table": "3",
+      "column": "H100 SXM5",
+      "facts": {"bf16DenseFp32AccumulateTFLOPS": 989.4, "fp16DenseFp32AccumulateTFLOPS": 989.4, "fp32NonTensorTFLOPS": 66.9, "bf16SparseFp32AccumulateTFLOPS": 1978.9},
+      "note": "Use the explicit dense column values, not half of a separately rounded sparse headline."
+    },
+    {
+      "id": "h100-datasheet",
+      "url": "https://dam-cdn.nvd.orangelogic.com/AssetLink/u5hh6fv4r7564i4y673484y3m20083nj.pdf",
+      "landingPage": "https://resources.nvidia.com/en-us-gpu/h100-datasheet-24306",
+      "sha256": "17494a1792c15c55bae2453305e265ad508987b474e9235ecbc6f7c815399b98",
+      "version": "3440270 Sep24",
+      "page": 2,
+      "column": "H100 SXM",
+      "facts": {"capacityGB": 80, "hbmTBPerSecond": 3.35},
+      "note": "Memory values from SXM, not NVL or combined two-GPU memory. No collective bandwidth or startup latency is inferred."
+    }
+  ],
+  "assumptions": [
+    "Nominal GB/TB use decimal SI conversion; capacityBytes is a nameplate modeling assumption, not driver-reported free memory.",
+    "FP32 non-Tensor peak is used as the existing generic vector compute-class ceiling, not a measured softmax/SFU throughput.",
+    "Whole device only; no MIG, power-cap/thermal derating or measured efficiency is inferred. Unknown capabilities and communication defaults are absent."
+  ]
+}

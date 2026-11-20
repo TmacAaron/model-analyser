@@ -1,0 +1,2894 @@
+{
+  "schemaVersion": 3,
+  "kind": "leaf_storage_source",
+  "inputHash": "f2597c996de2beb1c64ab81e1bce6f7b264d2e9654b23e671a063e71c2d4c920",
+  "engineVersion": "0.1.0-execution.20",
+  "selector": {
+    "nodeId": "a",
+    "scope": {
+      "phase": "prefill",
+      "target": {
+        "kind": "node",
+        "nodeId": "a"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "per_device"
+    },
+    "field": "hbmBytes"
+  },
+  "asset": {
+    "assetId": "example:quantization-scope:shared:op",
+    "revision": 1,
+    "kind": "operator"
+  },
+  "metric": {
+    "status": "available",
+    "quantity": {
+      "value": 28,
+      "unit": "byte"
+    },
+    "basis": "estimated",
+    "provenance": {
+      "assetRefs": [
+        {
+          "assetId": "example:quantization-scope:shared:hardware",
+          "revision": 1,
+          "kind": "hardware"
+        },
+        {
+          "assetId": "example:quantization-scope:shared:model",
+          "revision": 1,
+          "kind": "model"
+        },
+        {
+          "assetId": "example:quantization-scope:shared:op",
+          "revision": 1,
+          "kind": "operator"
+        }
+      ],
+      "formulaRefs": [],
+      "parameterSources": [
+        {
+          "parameterKey": "$model:P",
+          "source": "asset_default"
+        },
+        {
+          "parameterKey": "a:P",
+          "source": "node_override"
+        }
+      ],
+      "assumptions": [
+        "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+        "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+        "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+        "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+        "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+        "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+        "One device; no inferred parallelism, fusion or measured kernel efficiency."
+      ]
+    },
+    "diagnosticIds": []
+  },
+  "page": 0,
+  "pageSize": 20,
+  "componentCount": 2,
+  "complete": true,
+  "storageAccessSource": {
+    "kind": "storage_access_source",
+    "field": "hbmBytes",
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 28,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:quantization-scope:shared:hardware",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:P",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "a:P",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "pageSize": 20,
+    "componentCount": 2,
+    "operation": "ordered_sum",
+    "total": {
+      "value": 28,
+      "unit": "byte"
+    },
+    "items": [
+      {
+        "index": 0,
+        "accessId": "read-left",
+        "mode": "read",
+        "kind": "storage_allocation",
+        "proof": {
+          "quantity": {
+            "value": 1,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            }
+          },
+          "truncated": false,
+          "field": "memoryAccess[\"read-left\"].logicalBytes.passes",
+          "frameId": "[\"asset\",\"a\"]"
+        },
+        "factor": 1,
+        "storage": {
+          "localStorageId": "left",
+          "storageId": "shared",
+          "aliases": [
+            "shared"
+          ],
+          "asset": {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          },
+          "initial": {
+            "storage": {
+              "storageId": "shared",
+              "name": "left BF16 weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            "proofs": [
+              {
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                },
+                "proof": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                },
+                "truncated": false,
+                "field": "shape.d",
+                "frameId": "[\"asset\",\"$model\"]"
+              }
+            ],
+            "result": {
+              "storageId": "shared",
+              "canonicalStorageId": "shared",
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "P",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "auxiliaryBytes": [],
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "P",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "diagnostics": []
+            },
+            "events": [
+              {
+                "field": "shape.d",
+                "operation": "multiply",
+                "inputs": [
+                  1,
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "paddedElements",
+                "operation": "identity",
+                "inputs": [
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "packedPayload",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  4,
+                  16
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "alignedPayload",
+                "operation": "identity",
+                "inputs": [
+                  8
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "totalBytes",
+                "operation": "sum",
+                "inputs": [
+                  8
+                ],
+                "value": 8,
+                "unit": "byte"
+              }
+            ]
+          },
+          "quantization": {
+            "application": {
+              "storageId": "shared",
+              "category": "weight",
+              "nodeIds": [
+                "a",
+                "b"
+              ],
+              "assignmentIndices": [
+                0
+              ],
+              "overriddenIndices": [],
+              "shape": [
+                {
+                  "axisId": "d",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "beforeBytes": 8,
+              "afterBytes": 14,
+              "specification": {
+                "payloadBits": 16,
+                "packingUnitElements": 1,
+                "alignmentBytes": 1,
+                "auxiliaries": [
+                  {
+                    "name": "local-scales",
+                    "dtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "count": {
+                      "kind": "formula",
+                      "value": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "allocationOverridden": false
+            },
+            "decisions": [
+              {
+                "kind": "rule_decision",
+                "storageId": "shared",
+                "nodeId": "a",
+                "winners": [
+                  {
+                    "ruleIndex": 0,
+                    "priority": 1
+                  }
+                ],
+                "losers": [],
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "rule_decision",
+                "storageId": "shared",
+                "nodeId": "b",
+                "winners": [
+                  {
+                    "ruleIndex": 0,
+                    "priority": 1
+                  }
+                ],
+                "losers": [],
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "bindings": [
+              {
+                "nodeId": "a",
+                "ruleIndex": 0,
+                "raw": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "symbol",
+                          "name": "P"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "proofs": [
+                  {
+                    "quantity": {
+                      "value": 3,
+                      "unit": "count"
+                    },
+                    "proof": {
+                      "kind": "symbol",
+                      "symbol": "P",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    },
+                    "truncated": false,
+                    "field": "auxiliary.local-scales",
+                    "links": [
+                      {
+                        "name": "P",
+                        "frameId": "[\"asset\",\"a\"]",
+                        "parameter": "P",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        },
+                        "candidates": [
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 2,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "$model",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 2
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "asset_default",
+                                  "asset": {
+                                    "assetId": "example:quantization-scope:shared:model",
+                                    "revision": 1,
+                                    "kind": "model"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 3,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "a",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 3
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "node_override",
+                                  "nodeId": "a"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "nodeId": "b",
+                "ruleIndex": 0,
+                "raw": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "symbol",
+                          "name": "P"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "proofs": [
+                  {
+                    "quantity": {
+                      "value": 3,
+                      "unit": "count"
+                    },
+                    "proof": {
+                      "kind": "symbol",
+                      "symbol": "P",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    },
+                    "truncated": false,
+                    "field": "auxiliary.local-scales",
+                    "links": [
+                      {
+                        "name": "P",
+                        "frameId": "[\"asset\",\"b\"]",
+                        "parameter": "P",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        },
+                        "candidates": [
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 2,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "$model",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 2
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "asset_default",
+                                  "asset": {
+                                    "assetId": "example:quantization-scope:shared:model",
+                                    "revision": 1,
+                                    "kind": "model"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 3,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "b",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 3
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "node_override",
+                                  "nodeId": "b"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "operations": [
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "before",
+                "event": {
+                  "field": "shape.d",
+                  "operation": "multiply",
+                  "inputs": [
+                    1,
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "before",
+                "event": {
+                  "field": "paddedElements",
+                  "operation": "identity",
+                  "inputs": [
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "before",
+                "event": {
+                  "field": "packedPayload",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    4,
+                    16
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "before",
+                "event": {
+                  "field": "alignedPayload",
+                  "operation": "identity",
+                  "inputs": [
+                    8
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "before",
+                "event": {
+                  "field": "totalBytes",
+                  "operation": "sum",
+                  "inputs": [
+                    8
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "shape.d",
+                  "operation": "multiply",
+                  "inputs": [
+                    1,
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "paddedElements",
+                  "operation": "ceil_multiple",
+                  "inputs": [
+                    4,
+                    1
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "packedPayload",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    4,
+                    16
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "alignedPayload",
+                  "operation": "ceil_multiple",
+                  "inputs": [
+                    8,
+                    1
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "auxiliary.local-scales.count",
+                  "operation": "declared_formula",
+                  "inputs": [
+                    3
+                  ],
+                  "value": 3,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "auxiliary.local-scales.bytes",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    3,
+                    16
+                  ],
+                  "value": 6,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "shared",
+                "phase": "after",
+                "event": {
+                  "field": "totalBytes",
+                  "operation": "sum",
+                  "inputs": [
+                    8,
+                    6
+                  ],
+                  "value": 14,
+                  "unit": "byte"
+                }
+              }
+            ]
+          },
+          "overrides": [],
+          "final": {
+            "storage": {
+              "storageId": "shared",
+              "name": "left BF16 weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "quantization": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "result": {
+              "storageId": "shared",
+              "canonicalStorageId": "shared",
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "auxiliaryBytes": [
+                {
+                  "name": "local-scales",
+                  "bytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 6,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "provenance": {
+                      "assetRefs": [],
+                      "formulaRefs": [],
+                      "parameterSources": [],
+                      "assumptions": [
+                        "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                      ]
+                    },
+                    "diagnosticIds": []
+                  }
+                }
+              ],
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 14,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "diagnostics": []
+            },
+            "events": [
+              {
+                "field": "shape.d",
+                "operation": "multiply",
+                "inputs": [
+                  1,
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "paddedElements",
+                "operation": "ceil_multiple",
+                "inputs": [
+                  4,
+                  1
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "packedPayload",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  4,
+                  16
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "alignedPayload",
+                "operation": "ceil_multiple",
+                "inputs": [
+                  8,
+                  1
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "auxiliary.local-scales.count",
+                "operation": "declared_formula",
+                "inputs": [
+                  3
+                ],
+                "value": 3,
+                "unit": "count"
+              },
+              {
+                "field": "auxiliary.local-scales.bytes",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  3,
+                  16
+                ],
+                "value": 6,
+                "unit": "byte"
+              },
+              {
+                "field": "totalBytes",
+                "operation": "sum",
+                "inputs": [
+                  8,
+                  6
+                ],
+                "value": 14,
+                "unit": "byte"
+              }
+            ],
+            "truncated": false,
+            "bytes": 14
+          },
+          "bytes": 14,
+          "complete": true,
+          "boundaries": []
+        },
+        "skippedStorage": false,
+        "contribution": {
+          "value": 14,
+          "unit": "byte"
+        },
+        "sum": {
+          "left": 0,
+          "right": 14,
+          "value": 14
+        },
+        "complete": true,
+        "boundaries": []
+      },
+      {
+        "index": 1,
+        "accessId": "read-right",
+        "mode": "read",
+        "kind": "storage_allocation",
+        "proof": {
+          "quantity": {
+            "value": 1,
+            "unit": "count"
+          },
+          "proof": {
+            "kind": "literal",
+            "quantity": {
+              "value": 1,
+              "unit": "count"
+            }
+          },
+          "truncated": false,
+          "field": "memoryAccess[\"read-right\"].logicalBytes.passes",
+          "frameId": "[\"asset\",\"a\"]"
+        },
+        "factor": 1,
+        "storage": {
+          "localStorageId": "right",
+          "storageId": "a::right",
+          "aliases": [
+            "a::right"
+          ],
+          "asset": {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          },
+          "initial": {
+            "storage": {
+              "storageId": "a::right",
+              "name": "right BF16 weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            "proofs": [
+              {
+                "quantity": {
+                  "value": 4,
+                  "unit": "count"
+                },
+                "proof": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 4,
+                    "unit": "count"
+                  }
+                },
+                "truncated": false,
+                "field": "shape.d",
+                "frameId": "[\"asset\",\"a\"]"
+              }
+            ],
+            "result": {
+              "storageId": "a::right",
+              "canonicalStorageId": "a::right",
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "P",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "auxiliaryBytes": [],
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "P",
+                      "source": "evaluation_context"
+                    }
+                  ],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "diagnostics": []
+            },
+            "events": [
+              {
+                "field": "shape.d",
+                "operation": "multiply",
+                "inputs": [
+                  1,
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "paddedElements",
+                "operation": "identity",
+                "inputs": [
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "packedPayload",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  4,
+                  16
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "alignedPayload",
+                "operation": "identity",
+                "inputs": [
+                  8
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "totalBytes",
+                "operation": "sum",
+                "inputs": [
+                  8
+                ],
+                "value": 8,
+                "unit": "byte"
+              }
+            ]
+          },
+          "quantization": {
+            "application": {
+              "storageId": "a::right",
+              "category": "weight",
+              "nodeIds": [
+                "a"
+              ],
+              "assignmentIndices": [
+                0
+              ],
+              "overriddenIndices": [],
+              "shape": [
+                {
+                  "axisId": "d",
+                  "semantic": "hidden",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "beforeBytes": 8,
+              "afterBytes": 14,
+              "specification": {
+                "payloadBits": 16,
+                "packingUnitElements": 1,
+                "alignmentBytes": 1,
+                "auxiliaries": [
+                  {
+                    "name": "local-scales",
+                    "dtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "count": {
+                      "kind": "formula",
+                      "value": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "allocationOverridden": false
+            },
+            "decisions": [
+              {
+                "kind": "rule_decision",
+                "storageId": "a::right",
+                "nodeId": "a",
+                "winners": [
+                  {
+                    "ruleIndex": 0,
+                    "priority": 1
+                  }
+                ],
+                "losers": [],
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "bindings": [
+              {
+                "nodeId": "a",
+                "ruleIndex": 0,
+                "raw": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "symbol",
+                          "name": "P"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "specification": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "proofs": [
+                  {
+                    "quantity": {
+                      "value": 3,
+                      "unit": "count"
+                    },
+                    "proof": {
+                      "kind": "symbol",
+                      "symbol": "P",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    },
+                    "truncated": false,
+                    "field": "auxiliary.local-scales",
+                    "links": [
+                      {
+                        "name": "P",
+                        "frameId": "[\"asset\",\"a\"]",
+                        "parameter": "P",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        },
+                        "candidates": [
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 2,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "$model",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 2
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "asset_default",
+                                  "asset": {
+                                    "assetId": "example:quantization-scope:shared:model",
+                                    "revision": 1,
+                                    "kind": "model"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "P",
+                            "quantity": {
+                              "value": 3,
+                              "unit": "count"
+                            },
+                            "source": {
+                              "kind": "parameter",
+                              "parameter": {
+                                "nodeId": "a",
+                                "parameterKey": "P",
+                                "value": {
+                                  "kind": "integer",
+                                  "value": 3
+                                },
+                                "unit": "count",
+                                "source": {
+                                  "kind": "node_override",
+                                  "nodeId": "a"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "operations": [
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "before",
+                "event": {
+                  "field": "shape.d",
+                  "operation": "multiply",
+                  "inputs": [
+                    1,
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "before",
+                "event": {
+                  "field": "paddedElements",
+                  "operation": "identity",
+                  "inputs": [
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "before",
+                "event": {
+                  "field": "packedPayload",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    4,
+                    16
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "before",
+                "event": {
+                  "field": "alignedPayload",
+                  "operation": "identity",
+                  "inputs": [
+                    8
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "before",
+                "event": {
+                  "field": "totalBytes",
+                  "operation": "sum",
+                  "inputs": [
+                    8
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "shape.d",
+                  "operation": "multiply",
+                  "inputs": [
+                    1,
+                    4
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "paddedElements",
+                  "operation": "ceil_multiple",
+                  "inputs": [
+                    4,
+                    1
+                  ],
+                  "value": 4,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "packedPayload",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    4,
+                    16
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "alignedPayload",
+                  "operation": "ceil_multiple",
+                  "inputs": [
+                    8,
+                    1
+                  ],
+                  "value": 8,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "auxiliary.local-scales.count",
+                  "operation": "declared_formula",
+                  "inputs": [
+                    3
+                  ],
+                  "value": 3,
+                  "unit": "count"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "auxiliary.local-scales.bytes",
+                  "operation": "ceil_bits_div8",
+                  "inputs": [
+                    3,
+                    16
+                  ],
+                  "value": 6,
+                  "unit": "byte"
+                }
+              },
+              {
+                "kind": "allocation_operation",
+                "storageId": "a::right",
+                "phase": "after",
+                "event": {
+                  "field": "totalBytes",
+                  "operation": "sum",
+                  "inputs": [
+                    8,
+                    6
+                  ],
+                  "value": 14,
+                  "unit": "byte"
+                }
+              }
+            ]
+          },
+          "overrides": [],
+          "final": {
+            "storage": {
+              "storageId": "a::right",
+              "name": "right BF16 weights",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "quantization": {
+                  "payloadBits": 16,
+                  "packingUnitElements": 1,
+                  "alignmentBytes": 1,
+                  "auxiliaries": [
+                    {
+                      "name": "local-scales",
+                      "dtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "count": {
+                        "kind": "formula",
+                        "value": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 3,
+                            "unit": "count"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "result": {
+              "storageId": "a::right",
+              "canonicalStorageId": "a::right",
+              "payloadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 8,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "auxiliaryBytes": [
+                {
+                  "name": "local-scales",
+                  "bytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 6,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "provenance": {
+                      "assetRefs": [],
+                      "formulaRefs": [],
+                      "parameterSources": [],
+                      "assumptions": [
+                        "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                      ]
+                    },
+                    "diagnosticIds": []
+                  }
+                }
+              ],
+              "totalBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 14,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Bit packing is rounded up; payload alignment is applied before tightly packed auxiliary tensors."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "diagnostics": []
+            },
+            "events": [
+              {
+                "field": "shape.d",
+                "operation": "multiply",
+                "inputs": [
+                  1,
+                  4
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "paddedElements",
+                "operation": "ceil_multiple",
+                "inputs": [
+                  4,
+                  1
+                ],
+                "value": 4,
+                "unit": "count"
+              },
+              {
+                "field": "packedPayload",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  4,
+                  16
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "alignedPayload",
+                "operation": "ceil_multiple",
+                "inputs": [
+                  8,
+                  1
+                ],
+                "value": 8,
+                "unit": "byte"
+              },
+              {
+                "field": "auxiliary.local-scales.count",
+                "operation": "declared_formula",
+                "inputs": [
+                  3
+                ],
+                "value": 3,
+                "unit": "count"
+              },
+              {
+                "field": "auxiliary.local-scales.bytes",
+                "operation": "ceil_bits_div8",
+                "inputs": [
+                  3,
+                  16
+                ],
+                "value": 6,
+                "unit": "byte"
+              },
+              {
+                "field": "totalBytes",
+                "operation": "sum",
+                "inputs": [
+                  8,
+                  6
+                ],
+                "value": 14,
+                "unit": "byte"
+              }
+            ],
+            "truncated": false,
+            "bytes": 14
+          },
+          "bytes": 14,
+          "complete": true,
+          "boundaries": []
+        },
+        "skippedStorage": false,
+        "contribution": {
+          "value": 14,
+          "unit": "byte"
+        },
+        "sum": {
+          "left": 14,
+          "right": 14,
+          "value": 28
+        },
+        "complete": true,
+        "boundaries": []
+      }
+    ],
+    "complete": true
+  },
+  "parameterBindings": {
+    "schemaVersion": 1,
+    "scope": "actual_call_storage_and_quantization_parameter_context",
+    "nodes": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"a\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "literal",
+        "kind": "literal",
+        "inputs": []
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"a\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "a"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"a\\\"]\",\"P\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "a"
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 2
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\",\"candidate\",0]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 2
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",0]",
+        "kind": "default",
+        "inputs": [],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"b\"]",
+        "name": "P",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        }
+      },
+      {
+        "id": "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"b\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]",
+        "value": {
+          "kind": "number",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"b\"]",
+        "name": "literal",
+        "kind": "literal",
+        "inputs": []
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",1]",
+        "kind": "binding",
+        "inputs": [
+          "[\"[\\\"[\\\\\\\"asset\\\\\\\",\\\\\\\"b\\\\\\\"]\\\",\\\"P\\\",\\\"candidate\\\",1]\",\"expression\"]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"b\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "b"
+        }
+      },
+      {
+        "id": "[\"parameter\",\"[\\\"asset\\\",\\\"b\\\"]\",\"P\"]",
+        "kind": "parameter",
+        "inputs": [
+          "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",1]"
+        ],
+        "value": {
+          "kind": "integer",
+          "value": 3
+        },
+        "unit": "count",
+        "frameId": "[\"asset\",\"b\"]",
+        "name": "P",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "b"
+        }
+      }
+    ],
+    "candidates": [
+      {
+        "id": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"a\"]",
+        "parameterKey": "P",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"a\"]",
+        "parameterKey": "P",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "a"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"a\\\"]\",\"P\",\"candidate\",1]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"$model\"]",
+        "parameterKey": "P",
+        "kind": "default",
+        "status": "winning",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",0]",
+        "frameId": "[\"asset\",\"b\"]",
+        "parameterKey": "P",
+        "kind": "default",
+        "status": "superseded",
+        "source": {
+          "kind": "asset_default",
+          "asset": {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",0]"
+      },
+      {
+        "id": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",1]",
+        "frameId": "[\"asset\",\"b\"]",
+        "parameterKey": "P",
+        "kind": "binding",
+        "status": "winning",
+        "source": {
+          "kind": "node_override",
+          "nodeId": "b"
+        },
+        "nodeId": "[\"[\\\"asset\\\",\\\"b\\\"]\",\"P\",\"candidate\",1]"
+      }
+    ],
+    "roots": [
+      {
+        "role": "call",
+        "target": "a",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"a\\\"]\",\"P\"]"
+      },
+      {
+        "role": "storage",
+        "target": "shared",
+        "frameId": "[\"asset\",\"$model\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"$model\\\"]\",\"P\"]"
+      },
+      {
+        "role": "storage",
+        "target": "a::right",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"a\\\"]\",\"P\"]"
+      },
+      {
+        "role": "quantization",
+        "target": "storage shared / consumer a / rule 0 / auxiliary local-scales",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"a\\\"]\",\"P\"]"
+      },
+      {
+        "role": "quantization",
+        "target": "storage shared / consumer b / rule 0 / auxiliary local-scales",
+        "frameId": "[\"asset\",\"b\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"b\\\"]\",\"P\"]"
+      },
+      {
+        "role": "quantization",
+        "target": "storage a::right / consumer a / rule 0 / auxiliary local-scales",
+        "frameId": "[\"asset\",\"a\"]",
+        "name": "P",
+        "nodeId": "[\"parameter\",\"[\\\"asset\\\",\\\"a\\\"]\",\"P\"]"
+      }
+    ],
+    "complete": true,
+    "truncated": false,
+    "boundaries": [],
+    "frameCount": 4
+  },
+  "request": {
+    "scenario": {
+      "scenarioId": "example:scenario:example:quantization-scope:shared:model",
+      "name": "量化辅助公式 · shared",
+      "model": {
+        "assetId": "example:quantization-scope:shared:model",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "prefill",
+        "batchSize": 1,
+        "queryTokensPerRequest": 1,
+        "pastTokensPerRequest": 0
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:quantization-scope:shared:hardware",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": [
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [
+        {
+          "selector": {
+            "kind": "subtree",
+            "rootNodeId": "$model"
+          },
+          "weight": {
+            "payloadBits": 16,
+            "packingUnitElements": 1,
+            "alignmentBytes": 1,
+            "auxiliaries": [
+              {
+                "name": "local-scales",
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "count": {
+                  "kind": "formula",
+                  "value": {
+                    "kind": "symbol",
+                    "name": "P"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "numericOverrides": [],
+      "fusionGroups": []
+    },
+    "assets": [
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:shared:model",
+        "revision": 1,
+        "name": "Quantization scope shared",
+        "tags": [
+          "synthetic",
+          "quantization-scope"
+        ],
+        "parameters": [
+          {
+            "key": "P",
+            "name": "P scope count",
+            "type": "integer",
+            "unit": "count",
+            "min": 0,
+            "default": {
+              "kind": "integer",
+              "value": 2
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Independent hand model: per weight8B payload +2*actual-local-P scale bytes; two weights. Synthetic hardware only."
+          }
+        ],
+        "definition": {
+          "kind": "model",
+          "family": "synthetic",
+          "variant": "quantization-scope-shared",
+          "graph": {
+            "inputs": [],
+            "outputs": [],
+            "nodes": [
+              {
+                "nodeId": "a",
+                "name": "a · scoped reader",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "x",
+                    "tensorId": "input"
+                  }
+                ],
+                "stateBindings": [],
+                "body": {
+                  "kind": "operator",
+                  "asset": {
+                    "assetId": "example:quantization-scope:shared:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  "bindings": [
+                    {
+                      "parameterKey": "P",
+                      "value": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "nodeId": "b",
+                "name": "b · scoped reader",
+                "phases": [
+                  "prefill",
+                  "decode"
+                ],
+                "portBindings": [
+                  {
+                    "portId": "x",
+                    "tensorId": "input"
+                  }
+                ],
+                "stateBindings": [],
+                "body": {
+                  "kind": "operator",
+                  "asset": {
+                    "assetId": "example:quantization-scope:shared:op",
+                    "revision": 1,
+                    "kind": "operator"
+                  },
+                  "bindings": [
+                    {
+                      "parameterKey": "P",
+                      "value": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "edges": [],
+            "dependencies": [],
+            "tensors": [
+              {
+                "tensorId": "input",
+                "name": "Canonical shared weight",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "shared"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "shared",
+                "name": "left BF16 weights",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": []
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:shared:op",
+        "revision": 1,
+        "name": "Scoped weight reader",
+        "tags": [
+          "synthetic",
+          "quantization-scope"
+        ],
+        "parameters": [
+          {
+            "key": "P",
+            "name": "P scope count",
+            "type": "integer",
+            "unit": "count",
+            "min": 0,
+            "default": {
+              "kind": "integer",
+              "value": 3
+            }
+          }
+        ],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Independent hand model: per weight8B payload +2*actual-local-P scale bytes; two weights. Synthetic hardware only."
+          }
+        ],
+        "definition": {
+          "kind": "operator",
+          "operator": {
+            "category": "custom",
+            "inputs": [
+              {
+                "portId": "x",
+                "tensorId": "input"
+              }
+            ],
+            "outputs": [],
+            "tensors": [
+              {
+                "tensorId": "input",
+                "name": "Shared source",
+                "shape": [
+                  {
+                    "axisId": "d",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "storageId": "left"
+              }
+            ],
+            "storages": [
+              {
+                "storageId": "left",
+                "name": "left BF16 weights",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              },
+              {
+                "storageId": "right",
+                "name": "right BF16 weights",
+                "category": "weight",
+                "sharingDomain": "instance",
+                "allocation": {
+                  "kind": "tensor",
+                  "shape": [
+                    {
+                      "axisId": "d",
+                      "semantic": "hidden",
+                      "size": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 4,
+                          "unit": "count"
+                        }
+                      }
+                    }
+                  ],
+                  "dtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                }
+              }
+            ],
+            "states": [],
+            "phases": [
+              "prefill",
+              "decode"
+            ],
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "work",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 1,
+                      "unit": "operation"
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 1,
+                      "unit": "operation"
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-left",
+                  "storageId": "left",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-right",
+                  "storageId": "right",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "storage_layout",
+                "storageId": "left"
+              },
+              "bindings": [],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "work",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "operation"
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "operation"
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-left",
+                    "storageId": "left",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-right",
+                    "storageId": "right",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Explicit per-copy work and allocation accesses; no inferred division"
+            }
+          }
+        }
+      },
+      {
+        "documentType": "asset",
+        "schemaVersion": 1,
+        "assetId": "example:quantization-scope:shared:hardware",
+        "revision": 1,
+        "name": "Synthetic 4096B · 1000op/s · 100B/s",
+        "tags": [
+          "synthetic",
+          "hand-reference"
+        ],
+        "parameters": [],
+        "sources": [
+          {
+            "kind": "note",
+            "text": "Invented decimal capacities/rates for independently reproducible arithmetic, not a hardware specification, benchmark or purchasing recommendation."
+          }
+        ],
+        "definition": {
+          "kind": "hardware",
+          "hardware": {
+            "capacityBytes": 4096,
+            "computeCapabilities": [
+              {
+                "computeClass": {
+                  "arithmetic": "float",
+                  "inputDtypes": [
+                    {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    }
+                  ],
+                  "multiplyDtype": {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  "accumulateDtype": {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  },
+                  "resource": "matrix"
+                },
+                "kind": "peak",
+                "operationsPerSecond": 1000
+              }
+            ],
+            "memoryCapabilities": [
+              {
+                "key": "hbm",
+                "kind": "peak",
+                "bytesPerSecond": 100
+              }
+            ],
+            "communicationDefaults": []
+          }
+        }
+      }
+    ],
+    "inputHash": "f2597c996de2beb1c64ab81e1bce6f7b264d2e9654b23e671a063e71c2d4c920",
+    "engineVersion": "0.1.0-execution.20",
+    "selector": {
+      "nodeId": "a",
+      "scope": {
+        "phase": "prefill",
+        "target": {
+          "kind": "node",
+          "nodeId": "a"
+        },
+        "deviceIds": [
+          "gpu0"
+        ],
+        "aggregation": "per_device"
+      },
+      "field": "hbmBytes"
+    },
+    "metric": {
+      "status": "available",
+      "quantity": {
+        "value": 28,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:quantization-scope:shared:hardware",
+            "revision": 1,
+            "kind": "hardware"
+          },
+          {
+            "assetId": "example:quantization-scope:shared:model",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:quantization-scope:shared:op",
+            "revision": 1,
+            "kind": "operator"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:P",
+            "source": "asset_default"
+          },
+          {
+            "parameterKey": "a:P",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+          "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+          "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+          "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+          "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+          "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "page": 0,
+    "proofVersion": 3,
+    "bindingBudget": 256
+  }
+}

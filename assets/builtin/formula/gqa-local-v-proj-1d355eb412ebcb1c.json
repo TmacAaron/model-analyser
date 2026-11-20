@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:gqa-local:v-proj:1d355eb412ebcb1c",
+  "revision": 1,
+  "name": "2 * b_a * q_a * h_a * k_a * d_a [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic explicit GQA attention/residual block: separate Q/K/V projections, append cache, causal useful versus rectangular executed attention, vector softmax proxy, row-parallel output and residual. BF16 tensors/matrix, FP32 vector proxy. No norm, RoPE, MLP, embedding/head, inference, measured kernel or full language-model claim."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "b_a": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "d_a": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "h_a": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "k_a": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "q_a": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "2 * b_a * q_a * h_a * k_a * d_a",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

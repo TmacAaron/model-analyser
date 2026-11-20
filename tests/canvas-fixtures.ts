@@ -1,0 +1,8 @@
+import { AssetDocument,GraphTemplate,ProjectDocument,Scenario } from '@model-analyser/contracts';
+import { echo } from './model-fixtures.js';
+/** Two real referenced operators, initially independent; a data edit can connect them. */
+export function canvasEditProject():ProjectDocument{
+  const f=echo(),original=f.model.definition;if(original.kind!=='model')throw Error();const g=original.graph,template=g.nodes[0],y=g.tensors.find(t=>t.tensorId==='Y'),sy=g.storages.find(s=>s.storageId==='sY');if(!template||!y||!sy)throw Error();
+  const graph=GraphTemplate.parse({...g,tensors:[...g.tensors,{...y,tensorId:'M',name:'Intermediate',storageId:'sM'}],storages:[...g.storages,{...sy,storageId:'sM',name:'Intermediate'}],nodes:[{...template,nodeId:'a',name:'Projection A',portBindings:[{portId:'x',tensorId:'X'},{portId:'y',tensorId:'M'}]},{...template,nodeId:'b',name:'Projection B',portBindings:[{portId:'x',tensorId:'X'},{portId:'y',tensorId:'Y'}]}],edges:[{edgeId:'in-a',from:{kind:'graph_input',portId:'x'},to:{kind:'node',nodeId:'a',portId:'x'},tensorId:'X'},{edgeId:'in-b',from:{kind:'graph_input',portId:'x'},to:{kind:'node',nodeId:'b',portId:'x'},tensorId:'X'},{edgeId:'out-b',from:{kind:'node',nodeId:'b',portId:'y'},to:{kind:'graph_output',portId:'y'},tensorId:'Y'}],dependencies:[]}),model=AssetDocument.parse({...f.model,name:'Editable two-operator model',definition:{...original,graph}}),scenario=Scenario.parse({...f.scenario,name:'基准配置'});
+  return ProjectDocument.parse({documentType:'project',schemaVersion:1,projectId:'canvas-edit-fixture',projectRevision:1,name:'Canvas editing fixture',scenarios:[scenario],assetSnapshots:f.assets.map(a=>a.assetId===model.assetId?model:a),measurements:[],viewState:{nodes:[]}});
+}

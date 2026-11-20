@@ -1,0 +1,51 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:glm4:972d7ab022fa67f4",
+  "revision": 1,
+  "name": "if(D / 4 == floor(D / 4), D / 4, 1 / 0) [count]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/config.json",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/modeling_chatglm.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/THUDM/glm-4-9b/resolve/8cd2b585357ba9e702647ac4e6fa4fafe5cc7bee/model.safetensors.index.json",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "GLM-4-9B BASE 8K, not chat/128K/all GLM. Independent BF16 mathematical/materialized attention reference of the SDPA-selected structure; NOT a literal SDPA/Python allocation or measured kernel. No Q/K norm, biased fused QKV represented by three materialized split buffers, interleaved half-head RoPE, group-head preallocated K/V state (NOT source cat/repack allocation), explicit full-head K/V activation expansion. Full-M RoPE construction proxy, shared bool mask, FP32 score/probability and BF16 cast are authored materialization choices; SDPA backend could fuse them. No eager per-layer QK scaling (the selected SDPA override bypasses it), dropout/training, padding, runtime/network or actual kernel precision claim. FP32 vector proxies: RMSNorm5/element, SiLU6/element, rotary3/rotated element; BF16 matrix separately. LAST=0 full logits (forward default), LAST=1 last position (generation uses it). Per-buffer HBM read/write factor1, each weight read once per leaf. See references/models/expansion-source-lock.json; no Python execution or model weights."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 4
+        }
+      },
+      "expression": "if(D / 4 == floor(D / 4), D / 4, 1 / 0)",
+      "output": {
+        "unit": "count",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

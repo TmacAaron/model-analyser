@@ -1,0 +1,19 @@
+import {evidenceDirectory} from './evidence-directory.js';
+const artifacts=evidenceDirectory(67);
+import {test,expect} from '@playwright/test';
+import {randomUUID,createHash} from 'node:crypto';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {ProjectDocument,AnalysisResult} from '@model-analyser/contracts';
+import {projectAtFileBoundary} from '../project-export-fixture.js';
+import {PROJECT_TEXT_BYTES} from '../../packages/contracts/src/project-limits.js';
+test.setTimeout(180000);
+const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
+test('a formal32MiB Unicode/escaped project exports within the source cap and imports a portable snapshot under a fresh workspace identity',async({page})=>{
+ const project=projectAtFileBoundary(),source=JSON.stringify(project,null,2);expect(Buffer.byteLength(source)).toBe(PROJECT_TEXT_BYTES-1);
+ await page.goto('/');await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'formal-boundary.json',mimeType:'application/json',buffer:Buffer.from(source)});await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ const waiting=page.waitForEvent('download');await page.getByRole('button',{name:'导出',exact:true}).click();const file=await waiting,path=await file.path();if(!path)throw Error('Missing formal export');const text=await readFile(path,'utf8');expect(Buffer.byteLength(text)).toBe(PROJECT_TEXT_BYTES-1);const exported=ProjectDocument.parse(JSON.parse(text));expect(digest(JSON.stringify(exported))).toBe(digest(JSON.stringify(ProjectDocument.parse(project))));expect(digest(JSON.stringify(exported.assetSnapshots))).toBe(digest(JSON.stringify(ProjectDocument.parse(project).assetSnapshots)));
+ await page.reload();await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ const portable={...exported,projectId:randomUUID()},portableText=JSON.stringify(portable,null,2);expect(Buffer.byteLength(portableText)).toBe(PROJECT_TEXT_BYTES-1);await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'portable-formal-boundary.json',mimeType:'application/json',buffer:Buffer.from(portableText)});await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',portable.projectId);await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');await expect(page.getByRole('application',{name:'模型结构画布',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();const panel=page.locator('.studio-inspector .analysis-panel');await expect(panel.locator('.analysis-cards')).toBeVisible();const resultWaiting=page.waitForEvent('download');await panel.getByRole('button',{name:'导出结果 JSON',exact:true}).click();const resultFile=await resultWaiting,resultPath=await resultFile.path();if(!resultPath)throw Error('Missing result export');const result=AnalysisResult.parse(JSON.parse(await readFile(resultPath,'utf8')));
+ const persisted=ProjectDocument.parse((await(await page.request.get('/api/v1/project?id='+portable.projectId)).json()).data);expect(digest(JSON.stringify(persisted.assetSnapshots))).toBe(digest(JSON.stringify(ProjectDocument.parse(project).assetSnapshots)));expect(persisted.projectRevision).toBe(1);await mkdir(artifacts,{recursive:true});await writeFile(artifacts+'/formal-boundary-browser.json',JSON.stringify({storedBytesIncludingNewline:PROJECT_TEXT_BYTES,exportBytes:Buffer.byteLength(text),sourceSha256:digest(source),exportSha256:digest(text),fullProjectValuePreserved:true,portableIdentity:portable.projectId,portableRevision:1,snapshotSha256:digest(JSON.stringify(persisted.assetSnapshots)),reloaded:true,analysisInputHash:result.inputHash},null,2)+'\n');
+});

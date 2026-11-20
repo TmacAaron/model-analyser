@@ -1,0 +1,2449 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:model:parallel-sp2",
+  "revision": 1,
+  "name": "SP2 · sequence → heads → sequence · authored subgraph",
+  "description": "两张实际设备上的 Ulysses 式 MHA 前向子图：token 分片 → Q/K/V 三次 AllToAll → head 分片 attention → AllToAll → token 分片。非因果、物化 SDPA、past=0；含投影与残差，不代表完整 LLM。",
+  "tags": [
+    "research",
+    "ulysses",
+    "prefill",
+    "parallel-shortcut"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "S",
+      "name": "S",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "C",
+      "name": "No past cache in this prefill study",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/deepspeedai/DeepSpeed/blob/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "Pinned Ulysses core layout roles; 49d730cb416643bfd73eeae3217027ae00778ce604b58ea19be34588248e543b"
+    },
+    {
+      "kind": "note",
+      "text": "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model. Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed. Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds. Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown. All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks. Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "synthetic-mha",
+    "variant": "ulysses",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "z",
+          "tensorId": "Z"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "pre",
+          "name": "Ulysses pre · materialized reference",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "q",
+              "tensorId": "QSP"
+            },
+            {
+              "portId": "k",
+              "tensorId": "KSP"
+            },
+            {
+              "portId": "v",
+              "tensorId": "VSP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "example:module:ulysses-pre",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "exchange-q",
+          "name": "QSP sequence → heads",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "source",
+              "tensorId": "QSP"
+            },
+            {
+              "portId": "destination",
+              "tensorId": "QHP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "collective",
+            "communication": {
+              "operation": "all_to_all",
+              "groupId": "exchange",
+              "source": {
+                "tensorId": "QSP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "sequence",
+                  "axes": [
+                    {
+                      "tensorAxisId": "s",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "QHP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "heads",
+                  "axes": [
+                    {
+                      "tensorAxisId": "h",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Authored pairwise exchange; local self block excluded exactly once",
+                "trafficFactor": 0.5,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "exchange-q",
+                "phases": [
+                  "prefill"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": []
+            }
+          }
+        },
+        {
+          "nodeId": "exchange-k",
+          "name": "KSP sequence → heads",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "source",
+              "tensorId": "KSP"
+            },
+            {
+              "portId": "destination",
+              "tensorId": "KHP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "collective",
+            "communication": {
+              "operation": "all_to_all",
+              "groupId": "exchange",
+              "source": {
+                "tensorId": "KSP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "sequence",
+                  "axes": [
+                    {
+                      "tensorAxisId": "s",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "KHP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "heads",
+                  "axes": [
+                    {
+                      "tensorAxisId": "h",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Authored pairwise exchange; local self block excluded exactly once",
+                "trafficFactor": 0.5,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "exchange-k",
+                "phases": [
+                  "prefill"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": []
+            }
+          }
+        },
+        {
+          "nodeId": "exchange-v",
+          "name": "VSP sequence → heads",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "source",
+              "tensorId": "VSP"
+            },
+            {
+              "portId": "destination",
+              "tensorId": "VHP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "collective",
+            "communication": {
+              "operation": "all_to_all",
+              "groupId": "exchange",
+              "source": {
+                "tensorId": "VSP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "sequence",
+                  "axes": [
+                    {
+                      "tensorAxisId": "s",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "VHP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "heads",
+                  "axes": [
+                    {
+                      "tensorAxisId": "h",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Authored pairwise exchange; local self block excluded exactly once",
+                "trafficFactor": 0.5,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "exchange-v",
+                "phases": [
+                  "prefill"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": []
+            }
+          }
+        },
+        {
+          "nodeId": "attention",
+          "name": "Ulysses attention · materialized reference",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "q",
+              "tensorId": "QHP"
+            },
+            {
+              "portId": "k",
+              "tensorId": "KHP"
+            },
+            {
+              "portId": "v",
+              "tensorId": "VHP"
+            },
+            {
+              "portId": "a",
+              "tensorId": "AHP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "example:module:ulysses-attention",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "exchange-output",
+          "name": "Attention heads → sequence",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "source",
+              "tensorId": "AHP"
+            },
+            {
+              "portId": "destination",
+              "tensorId": "ASP"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "collective",
+            "communication": {
+              "operation": "all_to_all",
+              "groupId": "exchange",
+              "source": {
+                "tensorId": "AHP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "heads",
+                  "axes": [
+                    {
+                      "tensorAxisId": "h",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "destination": {
+                "tensorId": "ASP",
+                "distribution": {
+                  "kind": "sharded",
+                  "groupId": "sequence",
+                  "axes": [
+                    {
+                      "tensorAxisId": "s",
+                      "meshAxisId": "rank"
+                    }
+                  ],
+                  "policy": {
+                    "kind": "even"
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "sendBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "receiveBytesPerMember": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "example:formula:ulysses:a446e0035cd91223",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "D": {
+                      "kind": "symbol",
+                      "name": "D"
+                    },
+                    "NH": {
+                      "kind": "symbol",
+                      "name": "NH"
+                    },
+                    "S": {
+                      "kind": "symbol",
+                      "name": "S"
+                    }
+                  }
+                }
+              },
+              "algorithm": {
+                "name": "Authored pairwise exchange; local self block excluded exactly once",
+                "trafficFactor": 0.5,
+                "startupRounds": 1
+              },
+              "timing": {
+                "kind": "bandwidth_latency",
+                "bytePerSecond": 1000,
+                "latencySeconds": 0.001
+              },
+              "placement": {
+                "nodeId": "exchange-output",
+                "phases": [
+                  "prefill"
+                ],
+                "afterNodeIds": [],
+                "beforeNodeIds": []
+              },
+              "temporaryStorageIds": []
+            }
+          }
+        },
+        {
+          "nodeId": "post",
+          "name": "Ulysses post · materialized reference",
+          "phases": [
+            "prefill"
+          ],
+          "portBindings": [
+            {
+              "portId": "a",
+              "tensorId": "ASP"
+            },
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "z",
+              "tensorId": "Z"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "example:module:ulysses-post",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "input-x",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "pre",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "pre-Q",
+          "from": {
+            "kind": "node",
+            "nodeId": "pre",
+            "portId": "q"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "exchange-q",
+            "portId": "source"
+          },
+          "tensorId": "QSP"
+        },
+        {
+          "edgeId": "hp-Q",
+          "from": {
+            "kind": "node",
+            "nodeId": "exchange-q",
+            "portId": "destination"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "attention",
+            "portId": "q"
+          },
+          "tensorId": "QHP"
+        },
+        {
+          "edgeId": "pre-K",
+          "from": {
+            "kind": "node",
+            "nodeId": "pre",
+            "portId": "k"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "exchange-k",
+            "portId": "source"
+          },
+          "tensorId": "KSP"
+        },
+        {
+          "edgeId": "hp-K",
+          "from": {
+            "kind": "node",
+            "nodeId": "exchange-k",
+            "portId": "destination"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "attention",
+            "portId": "k"
+          },
+          "tensorId": "KHP"
+        },
+        {
+          "edgeId": "pre-V",
+          "from": {
+            "kind": "node",
+            "nodeId": "pre",
+            "portId": "v"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "exchange-v",
+            "portId": "source"
+          },
+          "tensorId": "VSP"
+        },
+        {
+          "edgeId": "hp-V",
+          "from": {
+            "kind": "node",
+            "nodeId": "exchange-v",
+            "portId": "destination"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "attention",
+            "portId": "v"
+          },
+          "tensorId": "VHP"
+        },
+        {
+          "edgeId": "attn-return",
+          "from": {
+            "kind": "node",
+            "nodeId": "attention",
+            "portId": "a"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "exchange-output",
+            "portId": "source"
+          },
+          "tensorId": "AHP"
+        },
+        {
+          "edgeId": "restore-post",
+          "from": {
+            "kind": "node",
+            "nodeId": "exchange-output",
+            "portId": "destination"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "post",
+            "portId": "a"
+          },
+          "tensorId": "ASP"
+        },
+        {
+          "edgeId": "residual-input",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "post",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "post-output",
+          "from": {
+            "kind": "node",
+            "nodeId": "post",
+            "portId": "z"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "z"
+          },
+          "tensorId": "Z"
+        }
+      ],
+      "dependencies": [
+        {
+          "edgeId": "pre-barrier-Q",
+          "fromNodeId": "pre",
+          "toNodeId": "exchange-q",
+          "kind": "control"
+        },
+        {
+          "edgeId": "pre-barrier-K",
+          "fromNodeId": "pre",
+          "toNodeId": "exchange-k",
+          "kind": "control"
+        },
+        {
+          "edgeId": "collective-order-K",
+          "fromNodeId": "exchange-q",
+          "toNodeId": "exchange-k",
+          "kind": "control"
+        },
+        {
+          "edgeId": "pre-barrier-V",
+          "fromNodeId": "pre",
+          "toNodeId": "exchange-v",
+          "kind": "control"
+        },
+        {
+          "edgeId": "collective-order-V",
+          "fromNodeId": "exchange-k",
+          "toNodeId": "exchange-v",
+          "kind": "control"
+        },
+        {
+          "edgeId": "all-qkv-ready",
+          "fromNodeId": "exchange-v",
+          "toNodeId": "attention",
+          "kind": "control"
+        }
+      ],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "QSP",
+          "name": "QSP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "QSP"
+        },
+        {
+          "tensorId": "QHP",
+          "name": "QHP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "QHP"
+        },
+        {
+          "tensorId": "KSP",
+          "name": "KSP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "KSP"
+        },
+        {
+          "tensorId": "KHP",
+          "name": "KHP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "KHP"
+        },
+        {
+          "tensorId": "VSP",
+          "name": "VSP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "VSP"
+        },
+        {
+          "tensorId": "VHP",
+          "name": "VHP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "VHP"
+        },
+        {
+          "tensorId": "AHP",
+          "name": "AHP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "AHP"
+        },
+        {
+          "tensorId": "ASP",
+          "name": "ASP",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "ASP"
+        },
+        {
+          "tensorId": "Z",
+          "name": "Z",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "s",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "S"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "head",
+              "size": {
+                "kind": "symbol",
+                "name": "NH"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "D"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Z"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "QSP",
+          "name": "QSP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "QHP",
+          "name": "QHP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "KSP",
+          "name": "KSP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "KHP",
+          "name": "KHP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "VSP",
+          "name": "VSP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "VHP",
+          "name": "VHP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "AHP",
+          "name": "AHP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "ASP",
+          "name": "ASP",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Z",
+          "name": "Z",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "s",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "head",
+                "size": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model.",
+      "Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed.",
+      "Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds.",
+      "Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown.",
+      "All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks.",
+      "Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "prefill",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "S",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "pastTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "parallelPresets": [
+    {
+      "presetId": "sp2",
+      "name": "SP2 · sequence → heads → sequence",
+      "description": "两张实际设备上的 Ulysses 式 MHA 前向子图：token 分片 → Q/K/V 三次 AllToAll → head 分片 attention → AllToAll → token 分片。非因果、物化 SDPA、past=0；含投影与残差，不代表完整 LLM。",
+      "strategy": "declared_plan",
+      "phases": [
+        "prefill"
+      ],
+      "tensorShards": [],
+      "reductions": [],
+      "assumptions": [
+        "两张实际设备上的 Ulysses 式 MHA 前向子图：token 分片 → Q/K/V 三次 AllToAll → head 分片 attention → AllToAll → token 分片。非因果、物化 SDPA、past=0；含投影与残差，不代表完整 LLM。",
+        "Fixed degree: device slots are bound in the selected physical group member order. All workload-dependent formulas remain live; no implicit communication HBM or reduction arithmetic."
+      ],
+      "declaredPlan": {
+        "deviceSlots": [
+          "gpu0",
+          "gpu1"
+        ],
+        "groups": [
+          {
+            "groupId": "sequence",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "rank",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "groupId": "heads",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "rank",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "groupId": "exchange",
+            "members": [
+              "gpu0",
+              "gpu1"
+            ],
+            "mesh": {
+              "axes": [
+                {
+                  "axisId": "rank",
+                  "size": 2
+                }
+              ],
+              "coordinates": [
+                {
+                  "deviceId": "gpu0",
+                  "coordinates": [
+                    0
+                  ]
+                },
+                {
+                  "deviceId": "gpu1",
+                  "coordinates": [
+                    1
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "plan": {
+          "assignments": [
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "pre"
+              },
+              "phases": [
+                "prefill"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "WQ",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "sequence"
+                  }
+                },
+                {
+                  "tensorId": "Q",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "WK",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "sequence"
+                  }
+                },
+                {
+                  "tensorId": "K",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "WV",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "sequence"
+                  }
+                },
+                {
+                  "tensorId": "V",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                }
+              ],
+              "storageDistributions": []
+            },
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "attention"
+              },
+              "phases": [
+                "prefill"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "Q",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "K",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "V",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "Scores",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "Probs",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "FP32scratch",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "A",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "heads",
+                    "axes": [
+                      {
+                        "tensorAxisId": "h",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                }
+              ],
+              "storageDistributions": []
+            },
+            {
+              "selector": {
+                "kind": "subtree",
+                "rootNodeId": "post"
+              },
+              "phases": [
+                "prefill"
+              ],
+              "tensorDistributions": [
+                {
+                  "tensorId": "A",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "X",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "WO",
+                  "distribution": {
+                    "kind": "replicated",
+                    "groupId": "sequence"
+                  }
+                },
+                {
+                  "tensorId": "Y",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                },
+                {
+                  "tensorId": "Z",
+                  "distribution": {
+                    "kind": "sharded",
+                    "groupId": "sequence",
+                    "axes": [
+                      {
+                        "tensorAxisId": "s",
+                        "meshAxisId": "rank"
+                      }
+                    ],
+                    "policy": {
+                      "kind": "even"
+                    }
+                  }
+                }
+              ],
+              "storageDistributions": []
+            }
+          ],
+          "communications": [],
+          "assumptions": [
+            "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model.",
+            "Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed.",
+            "Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds.",
+            "Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown.",
+            "All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks.",
+            "Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero.",
+            "All three group names reuse the identical physical members."
+          ]
+        }
+      }
+    }
+  ]
+}

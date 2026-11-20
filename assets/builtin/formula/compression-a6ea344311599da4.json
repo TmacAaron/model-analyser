@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:compression:formula:19eecef14ad2bb19",
+  "revision": 1,
+  "name": "2 * B * (floor(Q / R)) * D [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Compressor plus independent window/cache preparation components only, not full attention, an indexer, or a complete language model. Two modules export new pre-rotary latents, full cache/ring capacity buffers and current-window KV. Active entries and partial occupancy are reported separately; unfilled capacity is not an attention-valid token. Artificial H=4, D=16 and W=2. Each ratio is a fixed asset identity with matching precision; prefill starts at C=0, decode uses Q=1. Initialized warm history includes the declared pending slots. Version numbers denote call snapshots, not the number of completed groups. Materialized FP32 softmax, elementwise product and reduction buffers; explicit BF16/FP32 casts. Window weights/projection use BF16, and ratio-greater-than-one value/gate weights and arithmetic use FP32. Normalization, rotary and quantization use declared vector proxies and on-chip internal workspace. Conversions add execution only, not model-useful arithmetic. Declared last-use liveness is not Python local-variable or allocator lifetime. The packed theoretical cache uses FP4 main rows with one E4M3 byte per 16 channels and FP8 window rows with one E8M0 byte per 32 channels. Partial metadata blocks use ceil; this is not a source-kernel shape/accuracy claim. BF16-cache comparison retains fake-quant work. Dynamic cache reserves floor((C+Q)/R) rows at call start; provisioned cache reserves floor(M/R) rows as a separate variant. Both keep two full FP32 partial-group buffers and a full W-row window ring. Demo max-batch/max-sequence preallocation is not silently equated with current active length. Artificial 4096-byte device with BF16 matrix, FP32 matrix and FP32 vector ceilings of 1000 operations/s and HBM 100 bytes/s. Serial, ideal two-stream and declared-HBM sharing policies use the existing engine. No implicit communication, allocator slack, fusion or omitted attention costs."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 16
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "R": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * (floor(Q / R)) * D",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

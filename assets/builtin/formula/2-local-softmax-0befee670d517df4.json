@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "example:pcp:2:local:softmax:0befee670d517df4",
+  "revision": 1,
+  "name": "5 * b * h * qa * sa [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://raw.githubusercontent.com/vllm-project/vllm-ascend/4b3bd7ebe51094f3afa5288bb7a3316d12d3154e/docs/source/developer_guide/Design_Documents/context_parallel.md",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Primary topology/cache/partial softmax merge and stage-transfer concepts only. Authored contiguous PCP chunks, fixed-capacity contiguous DCP slots, three-reduction stable merge, artificial rates and standalone attention stages are explicit mathematical choices, not a literal vLLM kernel/cache implementation or full model. PCP: contiguous even query chunks with original causal offsets; current K/V AllGather, full replicated KV cache and local causal attention. This intentionally differs from head-tail balancing. Outputs remain query-sharded. All rates are artificial. Dense rectangular executed work and causal/valid useful work are separate. Network-only collectives do not invent local HBM, staging or reduction arithmetic. Softmax/exp vector costs are explicitly authored proxies, not a runtime kernel prediction."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "b": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "h": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "qa": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "sa": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "5 * b * h * qa * sa",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

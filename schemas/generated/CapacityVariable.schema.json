@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "workload"
+        },
+        "field": {
+          "type": "string",
+          "enum": [
+            "batchSize",
+            "queryTokensPerRequest",
+            "pastTokensPerRequest",
+            "contextTokensPerRequest"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "field"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "parameter"
+        },
+        "parameterKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "parameterKey"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

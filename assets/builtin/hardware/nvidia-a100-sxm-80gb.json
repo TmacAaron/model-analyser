@@ -1,0 +1,207 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:hardware:nvidia-a100-sxm-80gb",
+  "revision": 1,
+  "name": "NVIDIA A100 80GB SXM · dense peak",
+  "description": "Full-device theoretical nameplate profile; decimal capacity assumption; no measured or collective performance claim.",
+  "tags": [
+    "hardware",
+    "nvidia",
+    "a100-sxm-80gb",
+    "dense",
+    "source-checked-2026-11-14"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://images.nvidia.com/data-center/a100/a100-datasheet.pdf",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "url",
+      "url": "https://dam-cdn.nvd.orangelogic.com/AssetLink/705n6ur546g0uk43w0117r17n8042d73.pdf",
+      "checkedOn": "2026-11-14"
+    },
+    {
+      "kind": "note",
+      "text": "A100 SXM 80GB datasheet: BF16/FP16 dense 312 TFLOPS, FP32 non-Tensor 19.5 TFLOPS, HBM 2039 GB/s. FP32 accumulation semantics cross-checked against H100 whitepaper Table 3; its A100 memory column is not used."
+    },
+    {
+      "kind": "note",
+      "text": "Nominal GB/TB use decimal SI conversion; capacityBytes is a nameplate modeling assumption, not driver-reported free memory."
+    },
+    {
+      "kind": "note",
+      "text": "FP32 non-Tensor peak is used as the existing generic vector compute-class ceiling, not a measured softmax/SFU throughput."
+    },
+    {
+      "kind": "note",
+      "text": "Whole device only; no MIG, power-cap/thermal derating or measured efficiency is inferred. Unknown capabilities and communication defaults are absent."
+    },
+    {
+      "kind": "note",
+      "text": "Homogeneous inputDtypes listed once or as two operands are explicit equivalent precision entries. No mixed-type matching or input-count multiplier is inferred."
+    },
+    {
+      "kind": "note",
+      "text": "Source a100-datasheet, page 1, SHA256 fddf4c231c708cd7c9557ebdbb951c7f745587f86ab6e3a790a2f600b2569fb7; fact lock references/hardware/source-lock.json."
+    },
+    {
+      "kind": "note",
+      "text": "Source h100-whitepaper, page 39, SHA256 3641614979809a027a8aabdc2e77639efb8fcd0f8dc7873a22ba2125489f5a27; fact lock references/hardware/source-lock.json."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 80000000000,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 312000000000000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 312000000000000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "fp16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 312000000000000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              },
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "fp16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "fp16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 312000000000000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "vector"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 19500000000000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 2039000000000
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

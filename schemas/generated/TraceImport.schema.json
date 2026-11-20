@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "chrome-trace.1"
+    },
+    "sourceName": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "contentHash": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "originMicroseconds": {
+      "type": "number"
+    },
+    "rawEventCount": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "ignoredPhases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "count": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "required": [
+          "phase",
+          "count"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "zeroDurationCount": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "events": {
+      "maxItems": 100000,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema2"
+      }
+    }
+  },
+  "required": [
+    "version",
+    "sourceName",
+    "contentHash",
+    "originMicroseconds",
+    "rawEventCount",
+    "ignoredPhases",
+    "zeroDurationCount",
+    "events"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema2": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "name": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "category": {
+          "type": "string"
+        },
+        "pid": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "tid": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "startSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rawStartMicroseconds": {
+          "type": "number"
+        },
+        "rawDurationMicroseconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "sourceDevice": {
+          "type": "string"
+        },
+        "correlation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "name",
+        "category",
+        "pid",
+        "tid",
+        "startSeconds",
+        "seconds",
+        "rawStartMicroseconds",
+        "rawDurationMicroseconds"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

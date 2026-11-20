@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:kda-prefill:formula:78910d949bc880b7",
+  "revision": 1,
+  "name": "5 * B * Q * N * D [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/fla-org/flash-linear-attention/blob/2e0f6c31f9db50f010cb157c712c048b8a3a89d2/fla/ops/kda/chunk.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Cold prefill with explicit initialized zero buffers and C=0, Q=2..64 for short or 65..256 for chunk. Q=1 remains the fixed decode preset. Four attention/input-norm/residual fragments; no FFN/MoE or full-model weight loading, startup/zero-fill, varlen, backward or full-model inference execution. Declared projection/norm weights remain included in cost and allocation. Miniature H=8,N=2,D=4,W=4,R=4,P=2 follows the separate decode study's declared precision. Each weight is read once per batched leaf. Convolution uses declared direct-stencil logical HBM reads, including final-tail copy; no unstated cache reuse or per-Triton-block weight replay. Causal zero-padding contributes execution but not useful dot work. Its old/new three-buffer coexistence is conservatively retained over the whole KDA module using allocation-only workspace, rather than simulating Python pointers. Short recurrence loads/stores the FP32 matrix once. Chunk uses a mathematical stage ledger, not a CUDA instruction counter: valid causal pairs define useful work; fixed 64-token tiles define executed intra/solve/dot work. Channel tiling, launch tuning and actual Tensor Core tile padding are not inferred from the artificial D=4 shape. Exponential/normalization/triangular-solve operations use stated scalar proxies. Chunk tensors preserve source logical dtypes and row storage Q*64, not ceil(Q/64)*64*64. Last-use materialization releases raw Akk after solve and WY matrices after inter-state processing. Allocation-only new final matrix and old convolution tuple are not charged extra HBM copies. Projection/norm/gate proxies retain their declared on-chip internal workspace and explicit execution-only conversions. One shared BF16 causal mask is created for models containing MLA and retained until its last reader. Dense future score/AV work and storage remain executed; useful work counts causal pairs. FP32 probability materialization and BF16 output conversion are separate nodes. Expanded K/V contains all Q rows and is not a latent cache. Artificial 262144-byte prefill device with BF16 matrix 2000 operations/s, FP32 vector 1000 operations/s and HBM 100 bytes/s. Serial last-use liveness, no implicit networking/fusion or real-kernel speed/accuracy claim. Existing decode asset identities and contents are preserved."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 4
+        },
+        "N": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "5 * B * Q * N * D",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

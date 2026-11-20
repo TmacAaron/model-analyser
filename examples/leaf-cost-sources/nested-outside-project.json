@@ -1,0 +1,989 @@
+{
+  "documentType": "project",
+  "schemaVersion": 1,
+  "projectId": "example:project:example:model:cost-ranking",
+  "projectRevision": 1,
+  "name": "成本排序与贡献手算参考",
+  "scenarios": [
+    {
+      "scenarioId": "example:scenario:example:model:cost-ranking",
+      "name": "成本排序与贡献手算参考",
+      "model": {
+        "assetId": "example:model:cost-ranking",
+        "revision": 1,
+        "kind": "model"
+      },
+      "bindings": [],
+      "workload": {
+        "kind": "decode",
+        "batchSize": 1,
+        "contextTokensPerRequest": 0,
+        "queryTokensPerRequest": 1,
+        "steps": 1
+      },
+      "deviceTopology": {
+        "devices": [
+          {
+            "deviceId": "gpu0",
+            "hardware": {
+              "assetId": "example:hardware:transformer-hand-reference",
+              "revision": 1,
+              "kind": "hardware"
+            }
+          }
+        ],
+        "groups": []
+      },
+      "parallelPlan": {
+        "assignments": [],
+        "communications": [],
+        "assumptions": [
+          "One device; no inferred parallelism, fusion or measured kernel efficiency."
+        ]
+      },
+      "executionPlan": {
+        "kind": "serial"
+      },
+      "quantizationOverrides": [],
+      "numericOverrides": [],
+      "fusionGroups": []
+    }
+  ],
+  "assetSnapshots": [
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:model:cost-ranking",
+      "revision": 1,
+      "name": "Synthetic nested cost ranking",
+      "tags": [
+        "synthetic",
+        "cost-ranking-reference"
+      ],
+      "parameters": [
+        {
+          "key": "P",
+          "name": "Hand scalar",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        }
+      ],
+      "definition": {
+        "kind": "model",
+        "family": "synthetic",
+        "variant": "cost-ranking",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "outer",
+              "name": "outer",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "example:module:cost-ranking-outer",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "P",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "P"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "nodeId": "outside",
+              "name": "Integer custom hand reference",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "wo",
+                  "tensorId": "wo"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "integer",
+                        "inputDtypes": [
+                          {
+                            "category": "int",
+                            "bits": 32,
+                            "format": "int32"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "int",
+                          "bits": 32,
+                          "format": "int32"
+                        },
+                        "accumulateDtype": {
+                          "category": "int",
+                          "bits": 32,
+                          "format": "int32"
+                        },
+                        "resource": "custom",
+                        "resourceKey": "topk-comparison"
+                      },
+                      "usefulOperations": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 7,
+                          "unit": "operation"
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 10,
+                          "unit": "operation"
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-wo",
+                      "storageId": "wo",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 0.5,
+                    "description": "Synthetic outside"
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "wo",
+                    "tensorId": "wo"
+                  }
+                ],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [
+            {
+              "edgeId": "ot",
+              "fromNodeId": "outer",
+              "toNodeId": "outside",
+              "kind": "control"
+            }
+          ],
+          "tensors": [
+            {
+              "tensorId": "wo",
+              "name": "wo",
+              "shape": [
+                {
+                  "axisId": "n",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 2,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "wo"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "wo",
+              "name": "wo",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "n",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 2,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": []
+        },
+        "assumptions": [
+          "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        ]
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:module:cost-ranking-outer",
+      "revision": 1,
+      "name": "Outer A/B/C",
+      "tags": [
+        "synthetic",
+        "cost-ranking-reference"
+      ],
+      "parameters": [
+        {
+          "key": "P",
+          "name": "Hand scalar",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "inner",
+              "name": "inner",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "module",
+                "asset": {
+                  "assetId": "example:module:cost-ranking-inner",
+                  "revision": 1,
+                  "kind": "module"
+                },
+                "bindings": [
+                  {
+                    "parameterKey": "P",
+                    "value": {
+                      "kind": "symbol",
+                      "name": "P"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "nodeId": "C",
+              "name": "Equal duration tie",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "matrix"
+                      },
+                      "usefulOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:cost-ranking:f4f6f2cfa59deede",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "P": {
+                              "kind": "symbol",
+                              "name": "P"
+                            }
+                          }
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:cost-ranking:f4f6f2cfa59deede",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "P": {
+                              "kind": "symbol",
+                              "name": "P"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 2,
+                    "description": "Synthetic C"
+                  }
+                },
+                "inputs": [],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [
+            {
+              "edgeId": "ic",
+              "fromNodeId": "inner",
+              "toNodeId": "C",
+              "kind": "control"
+            }
+          ],
+          "tensors": [],
+          "storages": [],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:module:cost-ranking-inner",
+      "revision": 1,
+      "name": "Inner A/B",
+      "tags": [
+        "synthetic",
+        "cost-ranking-reference"
+      ],
+      "parameters": [
+        {
+          "key": "P",
+          "name": "Hand scalar",
+          "type": "integer",
+          "unit": "count",
+          "min": 1,
+          "default": {
+            "kind": "integer",
+            "value": 2
+          }
+        }
+      ],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        }
+      ],
+      "definition": {
+        "kind": "module",
+        "graph": {
+          "inputs": [],
+          "outputs": [],
+          "nodes": [
+            {
+              "nodeId": "A",
+              "name": "Matrix padding hand reference",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "wa",
+                  "tensorId": "wa"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 16,
+                            "format": "bf16"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "matrix"
+                      },
+                      "usefulOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:cost-ranking:f4f6f2cfa59deede",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "P": {
+                              "kind": "symbol",
+                              "name": "P"
+                            }
+                          }
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "formula",
+                        "call": {
+                          "formula": {
+                            "assetId": "example:formula:cost-ranking:b373ea65070907b5",
+                            "revision": 1,
+                            "kind": "formula"
+                          },
+                          "bindings": {
+                            "P": {
+                              "kind": "symbol",
+                              "name": "P"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-wa",
+                      "storageId": "wa",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 2
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 2,
+                    "description": "Synthetic A"
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "wa",
+                    "tensorId": "wa"
+                  }
+                ],
+                "outputs": []
+              }
+            },
+            {
+              "nodeId": "B",
+              "name": "Vector hand reference",
+              "phases": [
+                "prefill",
+                "decode"
+              ],
+              "portBindings": [
+                {
+                  "portId": "wb",
+                  "tensorId": "wb"
+                }
+              ],
+              "stateBindings": [],
+              "body": {
+                "kind": "opaque",
+                "cost": {
+                  "compute": [
+                    {
+                      "segmentId": "arithmetic",
+                      "computeClass": {
+                        "arithmetic": "float",
+                        "inputDtypes": [
+                          {
+                            "category": "float",
+                            "bits": 32,
+                            "format": "fp32"
+                          }
+                        ],
+                        "multiplyDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "accumulateDtype": {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        },
+                        "resource": "vector"
+                      },
+                      "usefulOperations": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "operation"
+                        }
+                      },
+                      "executedOperations": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 3,
+                          "unit": "operation"
+                        }
+                      }
+                    }
+                  ],
+                  "memoryAccess": [
+                    {
+                      "accessId": "read-wb",
+                      "storageId": "wb",
+                      "mode": "read",
+                      "logicalBytes": {
+                        "kind": "storage_allocation",
+                        "passes": {
+                          "kind": "literal",
+                          "quantity": {
+                            "value": 1,
+                            "unit": "count"
+                          }
+                        }
+                      },
+                      "hbmEstimate": {
+                        "kind": "factor",
+                        "value": 1
+                      }
+                    }
+                  ],
+                  "temporaryStorageIds": [],
+                  "timing": {
+                    "kind": "fixed",
+                    "seconds": 1,
+                    "description": "Synthetic B"
+                  }
+                },
+                "inputs": [
+                  {
+                    "portId": "wb",
+                    "tensorId": "wb"
+                  }
+                ],
+                "outputs": []
+              }
+            }
+          ],
+          "edges": [],
+          "dependencies": [
+            {
+              "edgeId": "ab",
+              "fromNodeId": "A",
+              "toNodeId": "B",
+              "kind": "control"
+            }
+          ],
+          "tensors": [
+            {
+              "tensorId": "wa",
+              "name": "wa",
+              "shape": [
+                {
+                  "axisId": "n",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 4,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "wa"
+            },
+            {
+              "tensorId": "wb",
+              "name": "wb",
+              "shape": [
+                {
+                  "axisId": "n",
+                  "semantic": "custom",
+                  "size": {
+                    "kind": "literal",
+                    "quantity": {
+                      "value": 6,
+                      "unit": "count"
+                    }
+                  }
+                }
+              ],
+              "dtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "storageId": "wb"
+            }
+          ],
+          "storages": [
+            {
+              "storageId": "wa",
+              "name": "wa",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "n",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 4,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            },
+            {
+              "storageId": "wb",
+              "name": "wb",
+              "category": "weight",
+              "sharingDomain": "instance",
+              "allocation": {
+                "kind": "tensor",
+                "shape": [
+                  {
+                    "axisId": "n",
+                    "semantic": "custom",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 6,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "dtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              }
+            }
+          ],
+          "states": []
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:cost-ranking:f4f6f2cfa59deede",
+      "revision": 1,
+      "name": "2 * P [operation]",
+      "tags": [
+        "transformer-equation"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "P": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "2 * P",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:formula:cost-ranking:b373ea65070907b5",
+      "revision": 1,
+      "name": "4 * P [operation]",
+      "tags": [
+        "transformer-equation"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Synthetic cost ranking oracle, not a model/kernel. Fixed times and per-buffer traffic: A=2s/16B, B=1s/12B, C=2s/0B, outside=.5s/4B; read bytes24, HBM32, span5.5s. Matrix useful8/executed12, vector3/3, integer custom7/10. Nested modules are not additional work."
+        }
+      ],
+      "definition": {
+        "kind": "formula",
+        "formula": {
+          "inputs": {
+            "P": {
+              "unit": "count",
+              "integerRequired": true,
+              "min": 1
+            }
+          },
+          "expression": "4 * P",
+          "output": {
+            "unit": "operation",
+            "integerRequired": true,
+            "nonNegative": true
+          },
+          "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+        }
+      }
+    },
+    {
+      "documentType": "asset",
+      "schemaVersion": 1,
+      "assetId": "example:hardware:transformer-hand-reference",
+      "revision": 1,
+      "name": "Synthetic 80 GB · 1 TOP/s matrix/vector/selection · 1 TB/s HBM",
+      "tags": [
+        "synthetic",
+        "hand-reference"
+      ],
+      "parameters": [],
+      "sources": [
+        {
+          "kind": "note",
+          "text": "Invented decimal capacities/rates for independently reproducible arithmetic, not a hardware specification, benchmark or purchasing recommendation."
+        }
+      ],
+      "definition": {
+        "kind": "hardware",
+        "hardware": {
+          "capacityBytes": 80000000000,
+          "computeCapabilities": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000000000000
+            },
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 32,
+                    "format": "fp32"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "vector"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000000000000
+            },
+            {
+              "computeClass": {
+                "arithmetic": "integer",
+                "inputDtypes": [
+                  {
+                    "category": "int",
+                    "bits": 32,
+                    "format": "int32"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "int",
+                  "bits": 32,
+                  "format": "int32"
+                },
+                "accumulateDtype": {
+                  "category": "int",
+                  "bits": 32,
+                  "format": "int32"
+                },
+                "resource": "custom",
+                "resourceKey": "topk-comparison"
+              },
+              "kind": "peak",
+              "operationsPerSecond": 1000000000000
+            }
+          ],
+          "memoryCapabilities": [
+            {
+              "key": "hbm",
+              "kind": "peak",
+              "bytesPerSecond": 1000000000000
+            }
+          ],
+          "communicationDefaults": []
+        }
+      }
+    }
+  ],
+  "measurements": [],
+  "viewState": {
+    "nodes": []
+  }
+}

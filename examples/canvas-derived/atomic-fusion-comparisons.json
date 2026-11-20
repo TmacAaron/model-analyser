@@ -1,0 +1,300 @@
+[
+  {
+    "kind": "item",
+    "index": 0,
+    "id": "atomic-fusion-0",
+    "attempt": {
+      "status": "available",
+      "comparison": {
+        "measurementId": "atomic-fusion-0",
+        "inputHash": "cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c",
+        "measurementHash": "ef805c83454530a610098d0fccb2b3b8f5f49fe85d10940baaf5a5efaa5ac3ec",
+        "engineVersion": "0.1.0-execution.20",
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "mfuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "mbuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "executedUtilization": {
+          "version": "executed-utilization.1",
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "model"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "group_total"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "value": {
+                "status": "available",
+                "quantity": {
+                  "value": 0.0012,
+                  "unit": "ratio"
+                },
+                "basis": "estimated",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:fusion-pair",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:fusion-intermediate-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:N",
+                      "source": "asset_default"
+                    }
+                  ],
+                  "assumptions": [
+                    "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                    "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                    "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                    "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                    "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                    "Measurement atomic-fusion-0; time kind=single, count=1; per-call equivalent 5 second.",
+                    "Executed-work utilization uses declared physical executed operations and unique matching peak capability on each actual device. It is separate from model-useful MFU and is not a measured hardware counter."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ]
+        },
+        "normalizedTime": {
+          "kind": "single",
+          "count": 1,
+          "intervalSeconds": 5,
+          "perCallEquivalentSeconds": 5
+        },
+        "mfu": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "value": {
+              "status": "available",
+              "quantity": {
+                "value": 0.001,
+                "unit": "ratio"
+              },
+              "basis": "estimated",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:fusion-pair",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:fusion-intermediate-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:N",
+                    "source": "asset_default"
+                  }
+                ],
+                "assumptions": [
+                  "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+                  "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+                  "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+                  "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+                  "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+                  "Measurement atomic-fusion-0, input cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c; time kind=single, count=1.",
+                  "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+                  "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "mbu": {
+          "status": "available",
+          "quantity": {
+            "value": 0.008,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:fusion-pair",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:fusion-intermediate-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:N",
+                "source": "asset_default"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "Measurement atomic-fusion-0, input cd033fc3cfd0331a01809b99cfbd024f9c8656744b0424d3cbacbf4146a30b4c; time kind=single, count=1.",
+              "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "mbuBasis": "estimated_hbm",
+        "diagnostics": [
+          {
+            "diagnosticId": "fusion-0",
+            "severity": "info",
+            "code": "fusion_applied",
+            "message": "pair · 保留 2 个数学步骤，取消 1 份内部物化；执行时仅计融合组一次",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:fusion-pair",
+              "fieldPath": "fusionGroups"
+            }
+          },
+          {
+            "diagnosticId": "distributed-node-A-2",
+            "severity": "error",
+            "code": "fused_member_interval",
+            "message": "该数学步骤属于融合组，没有独立的执行/测量区间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:fusion-pair"
+            }
+          },
+          {
+            "diagnosticId": "distributed-node-B-3",
+            "severity": "error",
+            "code": "fused_member_interval",
+            "message": "该数学步骤属于融合组，没有独立的执行/测量区间",
+            "location": {
+              "kind": "scenario",
+              "scenarioId": "example:scenario:fusion-pair"
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "kind": "complete",
+    "count": 1
+  }
+]

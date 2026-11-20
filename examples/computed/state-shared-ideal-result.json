@@ -1,0 +1,4412 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "inputHash": "9013cd99acf072caccf8afe0c10964c5d6b6b66c76cd5e1dc5d5dae67bcba5a9",
+  "scenarioId": "example:scenario:shared-state",
+  "phase": "decode",
+  "scope": {
+    "phase": "decode",
+    "target": {
+      "kind": "model"
+    },
+    "deviceIds": [
+      "gpu0"
+    ],
+    "aggregation": "group_total"
+  },
+  "parameterTrace": [
+    {
+      "nodeId": "$model",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "asset_workload_binding",
+        "asset": {
+          "assetId": "example:model:shared-state",
+          "revision": 1,
+          "kind": "model"
+        },
+        "phase": "decode"
+      }
+    },
+    {
+      "nodeId": "layer[0]",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "node_override",
+        "nodeId": "layer[0]"
+      }
+    },
+    {
+      "nodeId": "layer[1]",
+      "parameterKey": "B",
+      "value": {
+        "kind": "integer",
+        "value": 3
+      },
+      "unit": "count",
+      "source": {
+        "kind": "node_override",
+        "nodeId": "layer[1]"
+      }
+    }
+  ],
+  "quantizationApplications": [],
+  "fusions": [],
+  "nodes": [
+    {
+      "nodeId": "layer[0]/read",
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[0]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+              "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+              "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+              "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+              "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+              "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer[1]/read",
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[1]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [],
+            "assumptions": [
+              "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+              "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+              "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+              "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+              "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+              "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "modules": [
+    {
+      "nodeId": "layer[0]",
+      "leafNodeIds": [
+        "layer[0]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[0]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer[1]",
+      "leafNodeIds": [
+        "layer[1]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[1]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 192,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    },
+    {
+      "nodeId": "layer",
+      "leafNodeIds": [
+        "layer[0]/read",
+        "layer[1]/read"
+      ],
+      "cost": {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "group_total"
+        },
+        "compute": [],
+        "logicalReadBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "logicalWriteBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 0,
+            "unit": "byte"
+          },
+          "basis": "theoretical",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "hbmBytes": {
+          "status": "available",
+          "quantity": {
+            "value": 384,
+            "unit": "byte"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "communications": [],
+        "seconds": {
+          "status": "available",
+          "quantity": {
+            "value": 1.92,
+            "unit": "second"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:model:shared-state",
+                "revision": 1,
+                "kind": "model"
+              },
+              {
+                "assetId": "example:module:shared-state",
+                "revision": 1,
+                "kind": "module"
+              }
+            ],
+            "formulaRefs": [],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "asset_workload_binding"
+              },
+              {
+                "parameterKey": "layer[0]:B",
+                "source": "node_override"
+              },
+              {
+                "parameterKey": "layer[1]:B",
+                "source": "node_override"
+              }
+            ],
+            "assumptions": [
+              "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+              "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+              "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+              "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+              "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+              "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+            ]
+          },
+          "diagnosticIds": []
+        }
+      }
+    }
+  ],
+  "total": {
+    "scope": {
+      "phase": "decode",
+      "target": {
+        "kind": "model"
+      },
+      "deviceIds": [
+        "gpu0"
+      ],
+      "aggregation": "group_total"
+    },
+    "compute": [],
+    "logicalReadBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 384,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+          "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+          "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+          "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+          "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "logicalWriteBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 0,
+        "unit": "byte"
+      },
+      "basis": "theoretical",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+          "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+          "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+          "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+          "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "hbmBytes": {
+      "status": "available",
+      "quantity": {
+        "value": 384,
+        "unit": "byte"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [
+          {
+            "parameterKey": "$model:B",
+            "source": "asset_workload_binding"
+          },
+          {
+            "parameterKey": "layer[0]:B",
+            "source": "node_override"
+          },
+          {
+            "parameterKey": "layer[1]:B",
+            "source": "node_override"
+          }
+        ],
+        "assumptions": [
+          "Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.",
+          "Logical compute is evaluated once from the expanded graph and kept in model_useful scopes separately from physical group_total costs.",
+          "Node seconds use the slowest participating device. Model seconds use the declared serial-barrier makespan, including named communications; device seconds are never summed as wall time.",
+          "Modules aggregate their declared expanded graph leaves, including graph-native communications. Plan-level communications belong to the model; they are not implicitly assigned to a module.",
+          "Unplaced or incomplete local equations remain unknown. Network-only communication does not imply zero HBM, local reduction or staging cost.",
+          "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark."
+        ]
+      },
+      "diagnosticIds": []
+    },
+    "communications": [],
+    "seconds": {
+      "status": "available",
+      "quantity": {
+        "value": 1.92,
+        "unit": "second"
+      },
+      "basis": "estimated",
+      "provenance": {
+        "assetRefs": [
+          {
+            "assetId": "example:model:shared-state",
+            "revision": 1,
+            "kind": "model"
+          },
+          {
+            "assetId": "example:module:shared-state",
+            "revision": 1,
+            "kind": "module"
+          }
+        ],
+        "formulaRefs": [],
+        "parameterSources": [],
+        "assumptions": [
+          "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+          "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+          "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+          "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+          "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+          "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+        ]
+      },
+      "diagnosticIds": []
+    }
+  },
+  "memory": [
+    {
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "categoryBreakdown": [
+        {
+          "category": "weight",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "state",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "activation",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "workspace",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "communication",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "graph",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "runtime",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        },
+        {
+          "category": "reserve",
+          "bytes": {
+            "status": "available",
+            "quantity": {
+              "value": 0,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "peakBytes": {
+        "status": "available",
+        "quantity": {
+          "value": 192,
+          "unit": "byte"
+        },
+        "basis": "theoretical",
+        "provenance": {
+          "assetRefs": [
+            {
+              "assetId": "example:model:shared-state",
+              "revision": 1,
+              "kind": "model"
+            },
+            {
+              "assetId": "example:module:shared-state",
+              "revision": 1,
+              "kind": "module"
+            }
+          ],
+          "formulaRefs": [],
+          "parameterSources": [],
+          "assumptions": [
+            "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+          ]
+        },
+        "diagnosticIds": []
+      },
+      "peakPoint": {
+        "kind": "time",
+        "seconds": 0,
+        "nodeId": "layer[0]/read"
+      },
+      "capacityBytes": 4096,
+      "capacityStatus": {
+        "kind": "point_only",
+        "description": "Peak of physical storage lifetimes under the declared stream/resource policy; not a capacity search."
+      }
+    }
+  ],
+  "schedule": [
+    {
+      "nodeId": "layer[0]/read",
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "streamId": "a",
+      "startSeconds": 0,
+      "endSeconds": 1.92
+    },
+    {
+      "nodeId": "layer[1]/read",
+      "deviceScope": {
+        "kind": "per_device",
+        "deviceId": "gpu0"
+      },
+      "streamId": "b",
+      "startSeconds": 0,
+      "endSeconds": 1.92
+    }
+  ],
+  "roofline": [],
+  "distributed": {
+    "layout": {
+      "engineVersion": "0.1.0-execution.20",
+      "inputHash": "9013cd99acf072caccf8afe0c10964c5d6b6b66c76cd5e1dc5d5dae67bcba5a9",
+      "scenarioId": "example:scenario:shared-state",
+      "phase": "decode",
+      "memoryEvidence": [
+        {
+          "version": "canonical-memory.1",
+          "deviceId": "gpu0",
+          "axis": "second",
+          "provenancePool": [
+            {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "batchSize",
+                  "source": "evaluation_context"
+                },
+                {
+                  "parameterKey": "contextTokensPerRequest",
+                  "source": "evaluation_context"
+                },
+                {
+                  "parameterKey": "queryTokensPerRequest",
+                  "source": "evaluation_context"
+                },
+                {
+                  "parameterKey": "steps",
+                  "source": "evaluation_context"
+                },
+                {
+                  "parameterKey": "B",
+                  "source": "evaluation_context"
+                }
+              ],
+              "assumptions": [
+                "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+              ]
+            }
+          ],
+          "interfaces": [
+            {
+              "nodeId": "layer[0]/read",
+              "storageIds": [
+                "state"
+              ]
+            },
+            {
+              "nodeId": "layer[1]/read",
+              "storageIds": [
+                "state"
+              ]
+            },
+            {
+              "nodeId": "layer[0]",
+              "storageIds": [
+                "state"
+              ]
+            },
+            {
+              "nodeId": "layer[1]",
+              "storageIds": [
+                "state"
+              ]
+            },
+            {
+              "nodeId": "layer",
+              "storageIds": [
+                "state"
+              ]
+            },
+            {
+              "nodeId": "$model",
+              "storageIds": []
+            }
+          ],
+          "initialStorageIds": [],
+          "outputStorageIds": [],
+          "carriedStorageIds": [],
+          "allocations": [
+            {
+              "storageId": "state",
+              "name": "before",
+              "allocationKind": "tensor",
+              "category": "state",
+              "sharingDomain": "request",
+              "aliasIds": [],
+              "eliminatedBy": [],
+              "resident": true,
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 192,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "diagnosticIds": [],
+                "provenanceIndex": 0
+              },
+              "perCopyAllocation": {
+                "copies": 1,
+                "payloadBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "diagnosticIds": [],
+                  "provenanceIndex": 0
+                },
+                "totalBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "diagnosticIds": [],
+                  "provenanceIndex": 0
+                },
+                "auxiliaryBytes": []
+              },
+              "intervals": [
+                {
+                  "start": 0,
+                  "end": 1.92
+                }
+              ]
+            }
+          ],
+          "uses": [
+            {
+              "nodeId": "layer[0]/read",
+              "executionNodeId": "layer[0]/read",
+              "reads": [
+                "state"
+              ],
+              "writes": [],
+              "temporary": []
+            },
+            {
+              "nodeId": "layer[1]/read",
+              "executionNodeId": "layer[1]/read",
+              "reads": [
+                "state"
+              ],
+              "writes": [],
+              "temporary": []
+            }
+          ]
+        }
+      ],
+      "quantizationApplications": [],
+      "fusions": [],
+      "singleDeviceBaseline": true,
+      "tensorLayouts": [
+        {
+          "nodeId": "layer[0]/read",
+          "tensorId": "before",
+          "assignmentIndices": [
+            0
+          ],
+          "overriddenIndices": [],
+          "partition": {
+            "tensorId": "before",
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "groupId": "$single-fusion",
+            "distribution": {
+              "kind": "replicated",
+              "groupId": "$single-fusion"
+            },
+            "globalShape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 3,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 32,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "coverage": "exact",
+            "placements": [
+              {
+                "deviceId": "gpu0",
+                "logicalShape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "allocatedShape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "copies": 1,
+                "logicalElements": 96,
+                "allocatedElements": 96,
+                "slices": [
+                  {
+                    "axisId": "b",
+                    "start": 0,
+                    "end": 3,
+                    "paddedExtent": 3
+                  },
+                  {
+                    "axisId": "h",
+                    "start": 0,
+                    "end": 32,
+                    "paddedExtent": 32
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "tensorId": "before",
+          "assignmentIndices": [
+            0
+          ],
+          "overriddenIndices": [],
+          "partition": {
+            "tensorId": "before",
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "groupId": "$single-fusion",
+            "distribution": {
+              "kind": "replicated",
+              "groupId": "$single-fusion"
+            },
+            "globalShape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 3,
+                    "unit": "count"
+                  }
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "literal",
+                  "quantity": {
+                    "value": 32,
+                    "unit": "count"
+                  }
+                }
+              }
+            ],
+            "coverage": "exact",
+            "placements": [
+              {
+                "deviceId": "gpu0",
+                "logicalShape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "allocatedShape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "copies": 1,
+                "logicalElements": 96,
+                "allocatedElements": 96,
+                "slices": [
+                  {
+                    "axisId": "b",
+                    "start": 0,
+                    "end": 3,
+                    "paddedExtent": 3
+                  },
+                  {
+                    "axisId": "h",
+                    "start": 0,
+                    "end": 32,
+                    "paddedExtent": 32
+                  }
+                ]
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      ],
+      "storageLayouts": [
+        {
+          "nodeId": "layer[0]/read",
+          "storageId": "state",
+          "assignmentIndices": [
+            0
+          ],
+          "overriddenIndices": [],
+          "distribution": {
+            "kind": "replicated",
+            "groupId": "$single-fusion"
+          }
+        },
+        {
+          "nodeId": "layer[1]/read",
+          "storageId": "state",
+          "assignmentIndices": [
+            0
+          ],
+          "overriddenIndices": [],
+          "distribution": {
+            "kind": "replicated",
+            "groupId": "$single-fusion"
+          }
+        }
+      ],
+      "storageAllocations": [
+        {
+          "storageId": "state",
+          "category": "state",
+          "aliasIds": [
+            "state"
+          ],
+          "nodeIds": [
+            "layer[0]/read",
+            "layer[1]/read"
+          ],
+          "assignmentIndices": [
+            0
+          ],
+          "allocation": {
+            "storageId": "state",
+            "canonicalStorageId": "state",
+            "distribution": {
+              "kind": "replicated",
+              "groupId": "$single-fusion"
+            },
+            "perDevice": [
+              {
+                "deviceId": "gpu0",
+                "copies": 1,
+                "allocatedShape": [
+                  {
+                    "axisId": "b",
+                    "semantic": "batch",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 3,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  {
+                    "axisId": "h",
+                    "semantic": "hidden",
+                    "size": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 32,
+                        "unit": "count"
+                      }
+                    }
+                  }
+                ],
+                "allocation": {
+                  "storageId": "$device:gpu0::state",
+                  "canonicalStorageId": "$device:gpu0::state",
+                  "payloadBytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 192,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "provenance": {
+                      "assetRefs": [
+                        {
+                          "assetId": "example:hardware:state-reference",
+                          "revision": 1,
+                          "kind": "hardware"
+                        },
+                        {
+                          "assetId": "example:model:shared-state",
+                          "revision": 1,
+                          "kind": "model"
+                        },
+                        {
+                          "assetId": "example:module:shared-state",
+                          "revision": 1,
+                          "kind": "module"
+                        }
+                      ],
+                      "formulaRefs": [],
+                      "parameterSources": [
+                        {
+                          "parameterKey": "batchSize",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "contextTokensPerRequest",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "queryTokensPerRequest",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "steps",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "B",
+                          "source": "evaluation_context"
+                        }
+                      ],
+                      "assumptions": [
+                        "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                      ]
+                    },
+                    "diagnosticIds": []
+                  },
+                  "auxiliaryBytes": [],
+                  "totalBytes": {
+                    "status": "available",
+                    "quantity": {
+                      "value": 192,
+                      "unit": "byte"
+                    },
+                    "basis": "theoretical",
+                    "provenance": {
+                      "assetRefs": [
+                        {
+                          "assetId": "example:hardware:state-reference",
+                          "revision": 1,
+                          "kind": "hardware"
+                        },
+                        {
+                          "assetId": "example:model:shared-state",
+                          "revision": 1,
+                          "kind": "model"
+                        },
+                        {
+                          "assetId": "example:module:shared-state",
+                          "revision": 1,
+                          "kind": "module"
+                        }
+                      ],
+                      "formulaRefs": [],
+                      "parameterSources": [
+                        {
+                          "parameterKey": "batchSize",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "contextTokensPerRequest",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "queryTokensPerRequest",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "steps",
+                          "source": "evaluation_context"
+                        },
+                        {
+                          "parameterKey": "B",
+                          "source": "evaluation_context"
+                        }
+                      ],
+                      "assumptions": [
+                        "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                      ]
+                    },
+                    "diagnosticIds": []
+                  },
+                  "diagnostics": []
+                },
+                "totalBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:hardware:state-reference",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "batchSize",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "contextTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "queryTokensPerRequest",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "steps",
+                        "source": "evaluation_context"
+                      },
+                      {
+                        "parameterKey": "B",
+                        "source": "evaluation_context"
+                      }
+                    ],
+                    "assumptions": [
+                      "Physical copies on different devices are distinct allocations; quantization packing, padding and auxiliaries are recalculated per local copy. Manual copies multiply fully packed allocations, not the payload element count."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              }
+            ],
+            "diagnostics": []
+          }
+        }
+      ],
+      "communications": [],
+      "deviceAllocations": [
+        {
+          "deviceId": "gpu0",
+          "categoryBreakdown": [
+            {
+              "category": "state",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 192,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:hardware:state-reference",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "asset_workload_binding"
+                    },
+                    {
+                      "parameterKey": "layer[0]:B",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "layer[1]:B",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "knownBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:hardware:state-reference",
+                  "revision": 1,
+                  "kind": "hardware"
+                },
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [
+                {
+                  "parameterKey": "$model:B",
+                  "source": "asset_workload_binding"
+                },
+                {
+                  "parameterKey": "layer[0]:B",
+                  "source": "node_override"
+                },
+                {
+                  "parameterKey": "layer[1]:B",
+                  "source": "node_override"
+                }
+              ],
+              "assumptions": [
+                "Declared unique physical storage allocations only: the sum is not a lifetime peak, full model footprint or device capacity bound. Unassigned objects remain explicit. Compute work, execution order and communication insertion are not inferred from layout."
+              ]
+            },
+            "diagnosticIds": []
+          }
+        }
+      ],
+      "localCosts": {
+        "version": "0.1.0-local-cost.1",
+        "nodes": [
+          {
+            "nodeId": "layer[0]/read",
+            "placement": {
+              "kind": "placed",
+              "perDevice": [
+                {
+                  "deviceId": "gpu0",
+                  "outcome": {
+                    "status": "available",
+                    "bindings": [],
+                    "cost": {
+                      "scope": {
+                        "phase": "decode",
+                        "target": {
+                          "kind": "node",
+                          "nodeId": "layer[0]/read"
+                        },
+                        "deviceIds": [
+                          "gpu0"
+                        ],
+                        "aggregation": "per_device"
+                      },
+                      "compute": [],
+                      "logicalReadBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 192,
+                          "unit": "byte"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[0]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "logicalWriteBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 0,
+                          "unit": "byte"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[0]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "hbmBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 192,
+                          "unit": "byte"
+                        },
+                        "basis": "estimated",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[0]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "communications": [],
+                      "seconds": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 1.92,
+                          "unit": "second"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[0]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "nodeId": "layer[1]/read",
+            "placement": {
+              "kind": "placed",
+              "perDevice": [
+                {
+                  "deviceId": "gpu0",
+                  "outcome": {
+                    "status": "available",
+                    "bindings": [],
+                    "cost": {
+                      "scope": {
+                        "phase": "decode",
+                        "target": {
+                          "kind": "node",
+                          "nodeId": "layer[1]/read"
+                        },
+                        "deviceIds": [
+                          "gpu0"
+                        ],
+                        "aggregation": "per_device"
+                      },
+                      "compute": [],
+                      "logicalReadBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 192,
+                          "unit": "byte"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[1]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "logicalWriteBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 0,
+                          "unit": "byte"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[1]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "hbmBytes": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 192,
+                          "unit": "byte"
+                        },
+                        "basis": "estimated",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[1]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      },
+                      "communications": [],
+                      "seconds": {
+                        "status": "available",
+                        "quantity": {
+                          "value": 1.92,
+                          "unit": "second"
+                        },
+                        "basis": "theoretical",
+                        "provenance": {
+                          "assetRefs": [
+                            {
+                              "assetId": "example:hardware:state-reference",
+                              "revision": 1,
+                              "kind": "hardware"
+                            },
+                            {
+                              "assetId": "example:model:shared-state",
+                              "revision": 1,
+                              "kind": "model"
+                            },
+                            {
+                              "assetId": "example:module:shared-state",
+                              "revision": 1,
+                              "kind": "module"
+                            }
+                          ],
+                          "formulaRefs": [],
+                          "parameterSources": [
+                            {
+                              "parameterKey": "$model:B",
+                              "source": "asset_workload_binding"
+                            },
+                            {
+                              "parameterKey": "layer[1]:B",
+                              "source": "node_override"
+                            }
+                          ],
+                          "assumptions": [
+                            "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                            "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                            "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                            "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                            "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                            "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                            "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                          ]
+                        },
+                        "diagnosticIds": []
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "logicalModelCompute": [],
+        "deviceSubtotals": [
+          {
+            "deviceId": "gpu0",
+            "knownNodeIds": [
+              "layer[0]/read",
+              "layer[1]/read"
+            ],
+            "missingNodeIds": [],
+            "knownLeafCost": {
+              "scope": {
+                "phase": "decode",
+                "target": {
+                  "kind": "model"
+                },
+                "deviceIds": [
+                  "gpu0"
+                ],
+                "aggregation": "per_device"
+              },
+              "compute": [],
+              "logicalReadBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 384,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:hardware:state-reference",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "asset_workload_binding"
+                    },
+                    {
+                      "parameterKey": "layer[0]:B",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "layer[1]:B",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                    "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                    "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                    "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                    "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "logicalWriteBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:hardware:state-reference",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "asset_workload_binding"
+                    },
+                    {
+                      "parameterKey": "layer[0]:B",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "layer[1]:B",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                    "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                    "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                    "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                    "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "hbmBytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 384,
+                  "unit": "byte"
+                },
+                "basis": "estimated",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:hardware:state-reference",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "asset_workload_binding"
+                    },
+                    {
+                      "parameterKey": "layer[0]:B",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "layer[1]:B",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                    "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                    "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                    "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                    "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "communications": [],
+              "seconds": {
+                "status": "available",
+                "quantity": {
+                  "value": 3.84,
+                  "unit": "second"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:hardware:state-reference",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "asset_workload_binding"
+                    },
+                    {
+                      "parameterKey": "layer[0]:B",
+                      "source": "node_override"
+                    },
+                    {
+                      "parameterKey": "layer[1]:B",
+                      "source": "node_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                    "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                    "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                    "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                    "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          }
+        ]
+      },
+      "execution": {
+        "status": "available",
+        "result": {
+          "version": "0.1.0-streams.1",
+          "policy": "streams",
+          "completeness": "complete",
+          "orderedNodeIds": [
+            "layer[0]/read",
+            "layer[1]/read"
+          ],
+          "dependencies": [],
+          "steps": [
+            {
+              "nodeId": "layer[0]/read",
+              "kind": "compute",
+              "deviceIds": [
+                "gpu0"
+              ],
+              "duration": {
+                "status": "available",
+                "quantity": {
+                  "value": 1.92,
+                  "unit": "second"
+                },
+                "basis": "estimated",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+                    "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+                    "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+                    "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+                    "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+                    "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "startSeconds": 0,
+              "endSeconds": 1.92,
+              "streamId": "a"
+            },
+            {
+              "nodeId": "layer[1]/read",
+              "kind": "compute",
+              "deviceIds": [
+                "gpu0"
+              ],
+              "duration": {
+                "status": "available",
+                "quantity": {
+                  "value": 1.92,
+                  "unit": "second"
+                },
+                "basis": "estimated",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+                    "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+                    "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+                    "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+                    "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+                    "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+                  ]
+                },
+                "diagnosticIds": []
+              },
+              "startSeconds": 0,
+              "endSeconds": 1.92,
+              "streamId": "b"
+            }
+          ],
+          "intervals": [
+            {
+              "nodeId": "layer[0]/read",
+              "kind": "compute",
+              "deviceId": "gpu0",
+              "startSeconds": 0,
+              "endSeconds": 1.92,
+              "streamId": "a"
+            },
+            {
+              "nodeId": "layer[1]/read",
+              "kind": "compute",
+              "deviceId": "gpu0",
+              "startSeconds": 0,
+              "endSeconds": 1.92,
+              "streamId": "b"
+            }
+          ],
+          "makespan": {
+            "status": "available",
+            "quantity": {
+              "value": 1.92,
+              "unit": "second"
+            },
+            "basis": "estimated",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+                "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+                "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+                "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+                "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+                "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "unplacedCommunicationIndices": [],
+          "blockedNodeIds": [],
+          "memoryOrder": [
+            {
+              "nodeId": "layer[0]/read",
+              "executionNodeId": "layer[0]/read",
+              "startSeconds": 0
+            },
+            {
+              "nodeId": "layer[1]/read",
+              "executionNodeId": "layer[1]/read",
+              "startSeconds": 0
+            }
+          ],
+          "streams": {
+            "resourcePolicy": {
+              "kind": "ideal"
+            },
+            "assignments": [
+              {
+                "nodeId": "layer[0]/read",
+                "streamId": "a",
+                "deviceIds": [
+                  "gpu0"
+                ],
+                "groupId": "main"
+              },
+              {
+                "nodeId": "layer[1]/read",
+                "streamId": "b",
+                "deviceIds": [
+                  "gpu0"
+                ],
+                "groupId": "main"
+              }
+            ],
+            "isolated": [
+              {
+                "nodeId": "layer[0]/read",
+                "deviceId": "gpu0",
+                "seconds": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 1.92,
+                    "unit": "second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:hardware:state-reference",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "$model:B",
+                        "source": "asset_workload_binding"
+                      },
+                      {
+                        "parameterKey": "layer[0]:B",
+                        "source": "node_override"
+                      }
+                    ],
+                    "assumptions": [
+                      "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                      "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                      "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                      "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                      "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                      "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "hbmBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "estimated",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:hardware:state-reference",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "$model:B",
+                        "source": "asset_workload_binding"
+                      },
+                      {
+                        "parameterKey": "layer[0]:B",
+                        "source": "node_override"
+                      }
+                    ],
+                    "assumptions": [
+                      "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                      "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                      "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                      "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                      "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                      "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "hbmBandwidth": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 100,
+                    "unit": "byte_per_second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+                      "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+                      "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+                      "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+                      "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+                      "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "nodeId": "layer[1]/read",
+                "deviceId": "gpu0",
+                "seconds": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 1.92,
+                    "unit": "second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:hardware:state-reference",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "$model:B",
+                        "source": "asset_workload_binding"
+                      },
+                      {
+                        "parameterKey": "layer[1]:B",
+                        "source": "node_override"
+                      }
+                    ],
+                    "assumptions": [
+                      "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                      "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                      "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                      "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                      "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                      "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "hbmBytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "estimated",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:hardware:state-reference",
+                        "revision": 1,
+                        "kind": "hardware"
+                      },
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [
+                      {
+                        "parameterKey": "$model:B",
+                        "source": "asset_workload_binding"
+                      },
+                      {
+                        "parameterKey": "layer[1]:B",
+                        "source": "node_override"
+                      }
+                    ],
+                    "assumptions": [
+                      "LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.",
+                      "Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.",
+                      "Device subtotals sum evaluated leaf equations once per device. Serial seconds exclude communication, unplaced and missing nodes; they are not a whole-model schedule.",
+                      "logicalModelCompute is the single logical graph definition, not a sum of replicated device work.",
+                      "C04: one 64-byte BF16 state per request, two module readers, one physical backing. Read traffic is counted once per reader. Synthetic hardware, not a real model or benchmark.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division.",
+                      "One physical device with complete replicated objects; use the declared global leaf equation exactly once."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "hbmBandwidth": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 100,
+                    "unit": "byte_per_second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+                      "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+                      "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+                      "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+                      "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+                      "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              }
+            ],
+            "slices": [
+              {
+                "startSeconds": 0,
+                "endSeconds": 1.92,
+                "progress": [
+                  {
+                    "nodeId": "layer[0]/read",
+                    "deviceId": "gpu0",
+                    "speed": 1,
+                    "workSeconds": 1.92
+                  },
+                  {
+                    "nodeId": "layer[1]/read",
+                    "deviceId": "gpu0",
+                    "speed": 1,
+                    "workSeconds": 1.92
+                  }
+                ]
+              }
+            ],
+            "serialMakespan": {
+              "status": "available",
+              "quantity": {
+                "value": 3.84,
+                "unit": "second"
+              },
+              "basis": "estimated",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:shared-state",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:shared-state",
+                    "revision": 1,
+                    "kind": "module"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+                  "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+                  "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+                  "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+                  "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "timeSavedSeconds": 1.92,
+            "assumptions": [
+              "Logical nodes start all participating devices together; successors on any shared device stream wait for the node barrier. Independent streams may overlap.",
+              "Assignments resolve stable leaf/container scopes; unspecified nodes use $default on their actual devices. Stream identity is (physical device, streamId), independent of group aliases.",
+              "Read/write and scratch alias hazards retain expanded mathematical order on each physical device. Disjoint regions are not inferred from a shared backing.",
+              "ideal ignores resource contention. user_efficiency uniformly scales the progress of every device interval, including fixed and communication time.",
+              "shared_bandwidth models only declared compute HBM demand: bytes/isolatedSeconds. On a device all active compute intervals progress at min(1, peakHBM/sumDemand). Network-only events keep their declared isolated transfer model; local staging/reduction and link contention are not inferred.",
+              "No cross-call overlap, implicit communication or real-hardware trace claim. Missing times/resources leave absolute stream timing and temporal memory unavailable."
+            ]
+          }
+        }
+      },
+      "memory": [
+        {
+          "deviceScope": {
+            "kind": "per_device",
+            "deviceId": "gpu0"
+          },
+          "categoryBreakdown": [
+            {
+              "category": "weight",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "state",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 192,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "activation",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "workspace",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "communication",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "graph",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "runtime",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            },
+            {
+              "category": "reserve",
+              "bytes": {
+                "status": "available",
+                "quantity": {
+                  "value": 0,
+                  "unit": "byte"
+                },
+                "basis": "theoretical",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:model:shared-state",
+                      "revision": 1,
+                      "kind": "model"
+                    },
+                    {
+                      "assetId": "example:module:shared-state",
+                      "revision": 1,
+                      "kind": "module"
+                    }
+                  ],
+                  "formulaRefs": [],
+                  "parameterSources": [],
+                  "assumptions": [
+                    "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                    "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ],
+          "peakBytes": {
+            "status": "available",
+            "quantity": {
+              "value": 192,
+              "unit": "byte"
+            },
+            "basis": "theoretical",
+            "provenance": {
+              "assetRefs": [
+                {
+                  "assetId": "example:model:shared-state",
+                  "revision": 1,
+                  "kind": "model"
+                },
+                {
+                  "assetId": "example:module:shared-state",
+                  "revision": 1,
+                  "kind": "module"
+                }
+              ],
+              "formulaRefs": [],
+              "parameterSources": [],
+              "assumptions": [
+                "Physical canonical storage lifetimes use actual logical node intervals under the stream policy. Persistent categories span the phase; retained fusion buffers span their atomic group. Scratch may have disjoint intervals; touching end/start releases old scratch before allocating new scratch. Zero-duration uses count at their instant.",
+                "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+              ]
+            },
+            "diagnosticIds": []
+          },
+          "peakPoint": {
+            "kind": "time",
+            "seconds": 0,
+            "nodeId": "layer[0]/read"
+          },
+          "capacityBytes": 4096,
+          "capacityStatus": {
+            "kind": "point_only",
+            "description": "Peak of physical storage lifetimes under the declared stream/resource policy; not a capacity search."
+          }
+        }
+      ],
+      "serialBaseline": {
+        "execution": {
+          "status": "available",
+          "result": {
+            "version": "0.1.0-serial-barrier.1",
+            "policy": "serial_barrier",
+            "completeness": "complete",
+            "orderedNodeIds": [
+              "layer[0]/read",
+              "layer[1]/read"
+            ],
+            "dependencies": [],
+            "steps": [
+              {
+                "nodeId": "layer[0]/read",
+                "kind": "compute",
+                "deviceIds": [
+                  "gpu0"
+                ],
+                "duration": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 1.92,
+                    "unit": "second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+                      "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+                      "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+                      "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "startSeconds": 0,
+                "endSeconds": 1.92
+              },
+              {
+                "nodeId": "layer[1]/read",
+                "kind": "compute",
+                "deviceIds": [
+                  "gpu0"
+                ],
+                "duration": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 1.92,
+                    "unit": "second"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+                      "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+                      "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+                      "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                },
+                "startSeconds": 1.92,
+                "endSeconds": 3.84
+              }
+            ],
+            "intervals": [
+              {
+                "nodeId": "layer[0]/read",
+                "kind": "compute",
+                "deviceId": "gpu0",
+                "startSeconds": 0,
+                "endSeconds": 1.92
+              },
+              {
+                "nodeId": "layer[1]/read",
+                "kind": "compute",
+                "deviceId": "gpu0",
+                "startSeconds": 1.92,
+                "endSeconds": 3.84
+              }
+            ],
+            "makespan": {
+              "status": "available",
+              "quantity": {
+                "value": 3.84,
+                "unit": "second"
+              },
+              "basis": "estimated",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:shared-state",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:shared-state",
+                    "revision": 1,
+                    "kind": "module"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Global serial-barrier policy: devices within one logical node start together; the next logical node waits for the slowest participating device. No inter-node overlap.",
+                  "Compute ready-node ties follow expanded graph order. Communication ties use stable node IDs; explicit and inferred data dependencies take priority.",
+                  "External graph inputs, weights and initialized states are available in their explicitly declared initial layouts. Load/conversion time is outside this phase.",
+                  "Legacy communications without placement are not silently appended to the timeline. Unknown durations or data readiness stop absolute timestamps, while known per-step durations remain visible.",
+                  "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "unplacedCommunicationIndices": [],
+            "blockedNodeIds": [],
+            "memoryOrder": [
+              {
+                "nodeId": "layer[0]/read",
+                "executionNodeId": "layer[0]/read",
+                "startSeconds": 0
+              },
+              {
+                "nodeId": "layer[1]/read",
+                "executionNodeId": "layer[1]/read",
+                "startSeconds": 1.92
+              }
+            ]
+          }
+        },
+        "memory": [
+          {
+            "deviceScope": {
+              "kind": "per_device",
+              "deviceId": "gpu0"
+            },
+            "categoryBreakdown": [
+              {
+                "category": "weight",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "state",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 192,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "activation",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "workspace",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "communication",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "graph",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "runtime",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              },
+              {
+                "category": "reserve",
+                "bytes": {
+                  "status": "available",
+                  "quantity": {
+                    "value": 0,
+                    "unit": "byte"
+                  },
+                  "basis": "theoretical",
+                  "provenance": {
+                    "assetRefs": [
+                      {
+                        "assetId": "example:model:shared-state",
+                        "revision": 1,
+                        "kind": "model"
+                      },
+                      {
+                        "assetId": "example:module:shared-state",
+                        "revision": 1,
+                        "kind": "module"
+                      }
+                    ],
+                    "formulaRefs": [],
+                    "parameterSources": [],
+                    "assumptions": [
+                      "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                      "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                    ]
+                  },
+                  "diagnosticIds": []
+                }
+              }
+            ],
+            "peakBytes": {
+              "status": "available",
+              "quantity": {
+                "value": 192,
+                "unit": "byte"
+              },
+              "basis": "theoretical",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:model:shared-state",
+                    "revision": 1,
+                    "kind": "model"
+                  },
+                  {
+                    "assetId": "example:module:shared-state",
+                    "revision": 1,
+                    "kind": "module"
+                  }
+                ],
+                "formulaRefs": [],
+                "parameterSources": [],
+                "assumptions": [
+                  "Per-device canonical liveness under serial-barrier order. Persistent categories stay resident; scratch is released after use unless it carries data. Unknown time uses order indices. No implicit staging allocation.",
+                  "Single-device graph execution uses complete replicated objects and the original global leaf equations; no device-count division."
+                ]
+              },
+              "diagnosticIds": []
+            },
+            "peakPoint": {
+              "kind": "time",
+              "seconds": 0,
+              "nodeId": "layer[0]/read"
+            },
+            "capacityBytes": 4096,
+            "capacityStatus": {
+              "kind": "point_only",
+              "description": "Canonical allocation lifetimes under the selected serial order; no capacity search has run."
+            }
+          }
+        ]
+      },
+      "temporalMemory": {
+        "initialStorageIds": [],
+        "outputStorageIds": [],
+        "carriedStorageIds": [],
+        "uses": [
+          {
+            "nodeId": "layer[0]/read",
+            "executionNodeId": "layer[0]/read",
+            "deviceId": "gpu0",
+            "reads": [
+              "state"
+            ],
+            "writes": [],
+            "temporary": []
+          },
+          {
+            "nodeId": "layer[1]/read",
+            "executionNodeId": "layer[1]/read",
+            "deviceId": "gpu0",
+            "reads": [
+              "state"
+            ],
+            "writes": [],
+            "temporary": []
+          }
+        ],
+        "lifetimes": [
+          {
+            "storageId": "state",
+            "deviceId": "gpu0",
+            "category": "state",
+            "intervals": [
+              {
+                "startSeconds": 0,
+                "endSeconds": 1.92
+              }
+            ]
+          }
+        ]
+      },
+      "unassignedTensorIds": [],
+      "unassignedTensorUses": [],
+      "unassignedStorageIds": [],
+      "diagnostics": []
+    },
+    "logicalCompute": [
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[0]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "node",
+            "nodeId": "layer[1]/read"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[0]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer[1]"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "module",
+            "nodeId": "layer"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      },
+      {
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "model_useful"
+        },
+        "compute": []
+      }
+    ]
+  },
+  "diagnostics": []
+}

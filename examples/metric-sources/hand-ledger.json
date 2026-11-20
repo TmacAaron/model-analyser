@@ -1,0 +1,1483 @@
+{
+  "version": "metric-source-reference.1",
+  "notes": [
+    "Independent2s→5s/64B→128B/1024→1280 operations; no class-count metric.",
+    "Two declared32B/member sends on two devices give64B/event,128B total.",
+    "Three calls3+4+5=12 operations; step3 is5, not the aggregate.",
+    "Shared provenance is preserved as recorded and is not independent per-component formula attribution."
+  ],
+  "ledgers": [
+    {
+      "name": "same-model",
+      "scope": "Same fixed model, independently configured results; no project or numeric algorithm changes",
+      "engine": "0.1.0-execution.20",
+      "hashes": [
+        "c6f147ff871afe36f93c346783e03ba5bdce229be434571a2511958d2238c4aa",
+        "33ad6d699526e79302ccda5d0cccf7101a14d44db1e34453f57f99684fcd46c5"
+      ],
+      "seconds": [
+        2,
+        5
+      ],
+      "capacity": [
+        64,
+        128
+      ],
+      "rows": [
+        {
+          "key": "seconds",
+          "label": "端到端理论跨度",
+          "unit": "second",
+          "values": [
+            2,
+            5
+          ]
+        },
+        {
+          "key": "hbm",
+          "label": "模型 HBM 流量（缺项不补零）",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "模型有效 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1280
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "物理执行 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1280
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "label": "gpu0 生命周期峰值",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "label": "gpu0 硬件容量",
+          "unit": "byte",
+          "values": [
+            64,
+            128
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "label": "模块 module 跨度",
+          "unit": "second",
+          "values": [
+            2,
+            5
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "label": "模块 module HBM",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        }
+      ],
+      "sourceIdentities": [
+        {
+          "key": "seconds",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 5,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "hbm",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1280,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1280,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "entries": [
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:metric-source64",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 64,
+              "matches": true
+            },
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:metric-source128",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 128,
+              "matches": true
+            }
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 5,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "mixed",
+      "scope": "Same fixed model, independently configured results; no project or numeric algorithm changes",
+      "engine": "0.1.0-execution.20",
+      "hashes": [
+        "cdf1e2be2fa931e4d36b4b2d67f8a4b27689f2dbef360c88cdd38170de710dd3",
+        "8bcc03b2a04bd18c732b78f5cfab3b7138842ab4687187351d95e6b2edb66050"
+      ],
+      "seconds": [
+        2,
+        5
+      ],
+      "capacity": [
+        64,
+        128
+      ],
+      "rows": [
+        {
+          "key": "seconds",
+          "label": "端到端理论跨度",
+          "unit": "second",
+          "values": [
+            2,
+            5
+          ]
+        },
+        {
+          "key": "hbm",
+          "label": "模型 HBM 流量（缺项不补零）",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "模型有效 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1280
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "物理执行 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1280
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"resource\":\"vector\"}",
+          "label": "模型有效 float vector fp32 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            2,
+            2
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"resource\":\"vector\"}",
+          "label": "物理执行 float vector fp32 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "label": "gpu0 生命周期峰值",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "label": "gpu0 硬件容量",
+          "unit": "byte",
+          "values": [
+            64,
+            128
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "label": "模块 module 跨度",
+          "unit": "second",
+          "values": [
+            2,
+            5
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "label": "模块 module HBM",
+          "unit": "byte",
+          "values": [
+            448,
+            496
+          ]
+        }
+      ],
+      "sourceIdentities": [
+        {
+          "key": "seconds",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 5,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "hbm",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1280,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1280,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"resource\":\"vector\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:1",
+                  "value": {
+                    "value": 2,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "useful:1",
+                  "value": {
+                    "value": 2,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"resource\":\"vector\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:1",
+                  "value": {
+                    "value": 3,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:1",
+                  "value": {
+                    "value": 3,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "entries": [
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:metric-source64",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 64,
+              "matches": true
+            },
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:metric-source128",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 128,
+              "matches": true
+            }
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 5,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 448,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 496,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "communication",
+      "scope": "Same fixed model, independently configured results; no project or numeric algorithm changes",
+      "engine": "0.1.0-execution.20",
+      "hashes": [
+        "d0778c40c858496132018a0f157fd12199a31e02d69b8a34c8ea16b6af8980b3",
+        "2a4f1ad89886f84c20b5e0f681c3e29931ec8b6fbc861c8fdf6f491aebad1c53"
+      ],
+      "seconds": [
+        2.9459999999999997,
+        2.9459999999999997
+      ],
+      "capacity": [
+        4096,
+        4096
+      ],
+      "rows": [
+        {
+          "key": "seconds",
+          "label": "端到端理论跨度",
+          "unit": "second",
+          "values": [
+            2.9459999999999997,
+            2.9459999999999997
+          ]
+        },
+        {
+          "key": "hbm",
+          "label": "模型 HBM 流量（缺项不补零）",
+          "unit": "byte",
+          "values": [
+            null,
+            null
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "模型有效 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "物理执行 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "label": "gpu0 生命周期峰值",
+          "unit": "byte",
+          "values": [
+            392,
+            392
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "label": "gpu0 硬件容量",
+          "unit": "byte",
+          "values": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "key": "peak:gpu1",
+          "label": "gpu1 生命周期峰值",
+          "unit": "byte",
+          "values": [
+            392,
+            392
+          ]
+        },
+        {
+          "key": "capacity:gpu1",
+          "label": "gpu1 硬件容量",
+          "unit": "byte",
+          "values": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "key": "send:tp",
+          "label": "tp 通信 group send（多事件累计）",
+          "unit": "byte",
+          "values": [
+            128,
+            128
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "label": "模块 module 跨度",
+          "unit": "second",
+          "values": [
+            2.88,
+            2.88
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "label": "模块 module HBM",
+          "unit": "byte",
+          "values": [
+            576,
+            576
+          ]
+        }
+      ],
+      "sourceIdentities": [
+        {
+          "key": "seconds",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2.9459999999999997,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2.9459999999999997,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "hbm",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm"
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "logical:4",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "logical:4",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 1024,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 392,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 392,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "entries": [
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 4096,
+              "matches": true
+            },
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 4096,
+              "matches": true
+            }
+          ]
+        },
+        {
+          "key": "peak:gpu1",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:1",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 392,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:1",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 392,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capacity:gpu1",
+          "entries": [
+            {
+              "kind": "hardware",
+              "deviceId": "gpu1",
+              "hardwareRef": {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 4096,
+              "matches": true
+            },
+            {
+              "kind": "hardware",
+              "deviceId": "gpu1",
+              "hardwareRef": {
+                "assetId": "example:hardware:c01",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 4096,
+              "matches": true
+            }
+          ]
+        },
+        {
+          "key": "send:tp",
+          "entries": [
+            {
+              "kind": "sum",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "group-send:0",
+                  "value": {
+                    "value": 64,
+                    "unit": "byte"
+                  }
+                },
+                {
+                  "targetId": "model",
+                  "metricId": "group-send:1",
+                  "value": {
+                    "value": 64,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "sum",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "group-send:0",
+                  "value": {
+                    "value": 64,
+                    "unit": "byte"
+                  }
+                },
+                {
+                  "targetId": "model",
+                  "metricId": "group-send:1",
+                  "value": {
+                    "value": 64,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "module-seconds:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2.88,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 2.88,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "module-hbm:module",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 576,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "module:module",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 576,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sequence",
+      "scope": "Same fixed model, independently configured results; no project or numeric algorithm changes",
+      "engine": "0.1.0-execution.20",
+      "hashes": [
+        "21246635c46108a2d0e327923bf9faf54986ae85a575ce894d89234f8c65e2dd",
+        "f4d82daeb0513525d90dc9a3dc2c9f8bd6bbcb95d5046d30e15daa6eab643b92"
+      ],
+      "seconds": [
+        0.24000000000000002,
+        0.24000000000000002
+      ],
+      "capacity": [
+        18,
+        18
+      ],
+      "rows": [
+        {
+          "key": "seconds",
+          "label": "端到端理论跨度",
+          "unit": "second",
+          "values": [
+            0.24000000000000002,
+            0.24000000000000002
+          ]
+        },
+        {
+          "key": "hbm",
+          "label": "模型 HBM 流量（缺项不补零）",
+          "unit": "byte",
+          "values": [
+            24,
+            24
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "模型有效 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            12,
+            12
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "label": "物理执行 float matrix bf16 → fp32 inputs[bf16,bf16]",
+          "unit": "operation",
+          "values": [
+            12,
+            12
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "label": "gpu0 生命周期峰值",
+          "unit": "byte",
+          "values": [
+            18,
+            18
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "label": "gpu0 硬件容量",
+          "unit": "byte",
+          "values": [
+            18,
+            18
+          ]
+        }
+      ],
+      "sourceIdentities": [
+        {
+          "key": "seconds",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 0.24000000000000002,
+                    "unit": "second"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "seconds",
+                  "value": {
+                    "value": 0.24000000000000002,
+                    "unit": "second"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "hbm",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 24,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "hbm",
+                  "value": {
+                    "value": 24,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "useful:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "logical:1",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 12,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "logical:1",
+                  "metricId": "useful:0",
+                  "value": {
+                    "value": 12,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "executed:{\"accumulateDtype\":{\"bits\":32,\"category\":\"float\",\"format\":\"fp32\"},\"arithmetic\":\"float\",\"inputDtypes\":[{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"}],\"multiplyDtype\":{\"bits\":16,\"category\":\"float\",\"format\":\"bf16\"},\"resource\":\"matrix\"}",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 12,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "model",
+                  "metricId": "executed:0",
+                  "value": {
+                    "value": 12,
+                    "unit": "operation"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "peak:gpu0",
+          "entries": [
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 18,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "metric",
+              "parts": [
+                {
+                  "targetId": "memory:0",
+                  "metricId": "peak",
+                  "value": {
+                    "value": 18,
+                    "unit": "byte"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "capacity:gpu0",
+          "entries": [
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 18,
+              "matches": true
+            },
+            {
+              "kind": "hardware",
+              "deviceId": "gpu0",
+              "hardwareRef": {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              "capacity": 18,
+              "matches": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

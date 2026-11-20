@@ -1,0 +1,1162 @@
+{
+  "engineVersion": "0.1.0-execution.20",
+  "sources": {
+    "ulysses": {
+      "checkedOn": "2026-11-14",
+      "repository": "https://github.com/deepspeedai/DeepSpeed",
+      "commit": "79caae1c04fca210345bdeb03bcacf87b1ac2f23",
+      "path": "blogs/deepspeed-ulysses/README.md",
+      "url": "https://github.com/deepspeedai/DeepSpeed/blob/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+      "rawUrl": "https://raw.githubusercontent.com/deepspeedai/DeepSpeed/79caae1c04fca210345bdeb03bcacf87b1ac2f23/blogs/deepspeed-ulysses/README.md",
+      "sha256": "49d730cb416643bfd73eeae3217027ae00778ce604b58ea19be34588248e543b",
+      "section": "Core Design of DeepSpeed-Ulysses",
+      "verifiedSemantics": [
+        "Sequences are partitioned before attention; all-to-all converts Q/K/V into full-sequence, disjoint-head layouts.",
+        "The return all-to-all restores sequence partitioning for subsequent operators.",
+        "Sequence parallelism alone does not shard model weights; ZeRO is a separate mechanism."
+      ],
+      "authoredAssumptions": [
+        "This project is a forward-only materialized dense MHA subgraph, not the paper's full training stack or a production model.",
+        "Three separate Q/K/V exchanges incur three startups; no fused QKV communication or zero-cost packing is claimed.",
+        "Whole local payload includes the self block; an explicit pairwise factor (P-1)/P accounts for remote bytes once, with P-1 startup rounds.",
+        "Separate source/destination buffers are allocated; zero extra transport workspace is an explicit ideal-buffer assumption. Local communication HBM is unknown.",
+        "All rates, capacity, efficiency, softmax operation proxy and full FP32 scratch below are artificial author declarations, not sourced benchmarks.",
+        "Dense unmasked attention on the current prefill sequence only; no KV cache, causal mask, RoPE, norm, MLP, backward or optimizer. Past context must be zero."
+      ]
+    },
+    "moe": {
+      "checkedOn": "2026-11-14",
+      "repository": "https://github.com/NVIDIA/Megatron-LM",
+      "commit": "76cf2e2d64bbfa466d50de64d036db23395dc5af",
+      "path": "megatron/core/transformer/moe/token_dispatcher.py",
+      "url": "https://github.com/NVIDIA/Megatron-LM/blob/76cf2e2d64bbfa466d50de64d036db23395dc5af/megatron/core/transformer/moe/token_dispatcher.py",
+      "sha256": "b1580f97c0166107dcd90306144d60550a4a75e169bb56efaddaa8200c92604b",
+      "verifiedSemantics": [
+        "The explicit all-to-all dispatcher separates dispatch, tensor-parallel gathering, expert computation, tensor-parallel reduction/scattering and inverse combine.",
+        "The flex dispatcher can use a group spanning both tensor- and expert-parallel ranks."
+      ],
+      "authoredAssumptions": [
+        "Forward-only synthetic E=4, top-k=2 gated MoE subgraph, with EP=2 and TP=1 or 2; all experts remain resident.",
+        "Every global token routes to one expert in each owner. The balanced profile touches both experts per owner; the concentrated profile touches one, with the same number of token assignments.",
+        "Route packets carry BF16 activations, int64 expert indices and FP32 probabilities: 2H+12 bytes per assignment. Token order is known from the declared fixed routing map.",
+        "One TP×EP dispatch and two separate owner combine collectives are declared; these are not a claim to reproduce a fused production dispatcher.",
+        "Owner preparation/unpacking and repacking use distinct buffers with explicit HBM traffic. Transport workspace=0 is an ideal-buffer assumption; communication local HBM and reduction arithmetic remain unknown.",
+        "Artificial matrix/vector ceilings 1000 operations/s, HBM 100 byte/s, network 1000 byte/s, per-round latency 0.001 seconds, and 4096-byte devices are arithmetic references only."
+      ]
+    }
+  },
+  "fixedAssets": {
+    "publishedAssets": 79,
+    "totalAssetHeads": 589,
+    "totalJsonFiles": 593
+  },
+  "rows": [
+    {
+      "kind": "sp2",
+      "inputHash": "8b8bf2a9635dd16ade2f828de2ccecdb4a44d30133a45678b8a24f94001c1c4a",
+      "devices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "groups": [
+        {
+          "groupId": "physical-pool",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ]
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"sequence\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"heads\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "bindings": {
+        "groups": [
+          {
+            "logicalGroupId": "sequence",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"sequence\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "heads",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"heads\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "exchange",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          }
+        ],
+        "devices": [
+          {
+            "logicalDeviceId": "gpu0",
+            "physicalDeviceId": "rack-A/device-1"
+          },
+          {
+            "logicalDeviceId": "gpu1",
+            "physicalDeviceId": "rack-A/device-2"
+          }
+        ],
+        "network": {
+          "bytesPerSecond": 1000,
+          "latencySeconds": 0.001
+        }
+      },
+      "communicationCount": 4,
+      "allocations": [
+        {
+          "deviceId": "rack-A/device-1",
+          "totalBytes": 432,
+          "weightBytes": 128,
+          "stateBytes": 0
+        },
+        {
+          "deviceId": "rack-A/device-2",
+          "totalBytes": 432,
+          "weightBytes": 128,
+          "stateBytes": 0
+        }
+      ],
+      "seconds": 6.276,
+      "peakPerDevice": [
+        288,
+        288
+      ],
+      "oracle": {
+        "B": 1,
+        "S": 4,
+        "NH": 2,
+        "D": 2,
+        "degree": 2,
+        "mode": "ulysses",
+        "logicalMatrix": 768,
+        "logicalVector": 176,
+        "physicalMatrix": 768,
+        "physicalVector": 176,
+        "matrixPerDevice": 384,
+        "vectorPerDevice": 88,
+        "weightPerDevice": 128,
+        "hbmPerDevice": 624,
+        "peakPerDevice": 288,
+        "sourcePayloadPerExchangePerRank": 16,
+        "remoteBytesPerExchangePerRank": 8,
+        "networkGroupRemoteBytes": 64,
+        "networkSeconds": 0.036000000000000004,
+        "leafSeconds": 6.24,
+        "seconds": 6.276,
+        "peakCandidates": {
+          "projection": 208,
+          "qk": 224,
+          "softmax": 288,
+          "av": 208,
+          "returnExchange": 176,
+          "output": 176
+        }
+      },
+      "communications": [
+        {
+          "nodeId": "exchange-q",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            }
+          ],
+          "seconds": 0.009000000000000001
+        },
+        {
+          "nodeId": "exchange-k",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            }
+          ],
+          "seconds": 0.009000000000000001
+        },
+        {
+          "nodeId": "exchange-v",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            }
+          ],
+          "seconds": 0.009000000000000001
+        },
+        {
+          "nodeId": "exchange-output",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"exchange\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 16,
+              "receiveBytes": 16,
+              "remoteBytes": 8
+            }
+          ],
+          "seconds": 0.009000000000000001
+        }
+      ]
+    },
+    {
+      "kind": "ep2",
+      "inputHash": "e4e6a8b5386c954caea554f278a5be66f2d74c632dbb0ca850d044658b9da397",
+      "devices": [
+        "rack-A/device-1",
+        "rack-A/device-2"
+      ],
+      "groups": [
+        {
+          "groupId": "physical-pool",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ]
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"grid\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:ep",
+                "size": 2
+              },
+              {
+                "axisId": "bound:tp",
+                "size": 1
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1,
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+          "members": [
+            "rack-A/device-1"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 1
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+          "members": [
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 1
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "bindings": {
+        "groups": [
+          {
+            "logicalGroupId": "world",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "grid",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"grid\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "ep",
+                "physicalAxisId": "bound:ep"
+              },
+              {
+                "logicalAxisId": "tp",
+                "physicalAxisId": "bound:tp"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "tp0",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "tp1",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          }
+        ],
+        "devices": [
+          {
+            "logicalDeviceId": "gpu0",
+            "physicalDeviceId": "rack-A/device-1"
+          },
+          {
+            "logicalDeviceId": "gpu1",
+            "physicalDeviceId": "rack-A/device-2"
+          }
+        ],
+        "network": {
+          "bytesPerSecond": 1000,
+          "latencySeconds": 0.001
+        }
+      },
+      "communicationCount": 3,
+      "allocations": [
+        {
+          "deviceId": "rack-A/device-1",
+          "totalBytes": 1296,
+          "weightBytes": 416,
+          "stateBytes": 0
+        },
+        {
+          "deviceId": "rack-A/device-2",
+          "totalBytes": 1296,
+          "weightBytes": 416,
+          "stateBytes": 0
+        }
+      ],
+      "seconds": 34.363,
+      "peakPerDevice": [
+        672,
+        672
+      ],
+      "oracle": {
+        "B": 1,
+        "Q": 4,
+        "H": 4,
+        "I": 8,
+        "tp": 1,
+        "policy": "serial",
+        "profile": "balanced",
+        "physicalDevices": 2,
+        "touchedPerOwner": 2,
+        "logicalMatrix": 1664,
+        "logicalVector": 432,
+        "matrixPerDevice": 832,
+        "vectorPerDevice": 216,
+        "weightPerDevice": 416,
+        "activeWeightReadPerGemm": 128,
+        "hbmPerDevice": 1984,
+        "peakPerDevice": 672,
+        "peakCandidates": {
+          "topk": 80,
+          "pack": 128,
+          "prepare": 160,
+          "gather": 0,
+          "unpack": 160,
+          "up": 208,
+          "activation": 240,
+          "down": 144,
+          "reduce": 0,
+          "repack": 160,
+          "return": 144
+        },
+        "sourcePayload": 80,
+        "dispatchRemote": [
+          40,
+          40
+        ],
+        "dispatchSeconds": 0.041,
+        "agSeconds": 0,
+        "rsSeconds": 0,
+        "combineSeconds": 0.041,
+        "networkGroupRemoteBytes": 160,
+        "networkSeconds": 0.123,
+        "leafSeconds": 34.239999999999995,
+        "routerSeconds": 3.04,
+        "ownerSeconds": 14.399999999999999,
+        "rootSeconds": 2.4,
+        "seconds": 34.36299999999999
+      },
+      "communications": [
+        {
+          "nodeId": "dispatch",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 80,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 80,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            }
+          ],
+          "seconds": 0.041
+        },
+        {
+          "nodeId": "combine0",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 80,
+              "receiveBytes": 40,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 0,
+              "receiveBytes": 40,
+              "remoteBytes": 0
+            }
+          ],
+          "seconds": 0.041
+        },
+        {
+          "nodeId": "combine1",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 0,
+              "receiveBytes": 40,
+              "remoteBytes": 0
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 80,
+              "receiveBytes": 40,
+              "remoteBytes": 40
+            }
+          ],
+          "seconds": 0.041
+        }
+      ]
+    },
+    {
+      "kind": "ep2-tp2",
+      "inputHash": "0f955bc70511ef8770e353d9cadb076b919803ba3ac23114b043c00f0e36e888",
+      "devices": [
+        "rack-A/device-1",
+        "rack-A/device-2",
+        "rack-A/device-3",
+        "rack-A/device-4"
+      ],
+      "groups": [
+        {
+          "groupId": "physical-pool",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2",
+            "rack-A/device-3",
+            "rack-A/device-4"
+          ]
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2",
+            "rack-A/device-3",
+            "rack-A/device-4"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 4
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-3",
+                "coordinates": [
+                  2
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-4",
+                "coordinates": [
+                  3
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"grid\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2",
+            "rack-A/device-3",
+            "rack-A/device-4"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:ep",
+                "size": 2
+              },
+              {
+                "axisId": "bound:tp",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0,
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-3",
+                "coordinates": [
+                  1,
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-4",
+                "coordinates": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+          "members": [
+            "rack-A/device-1",
+            "rack-A/device-2"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-1",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-2",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+          "members": [
+            "rack-A/device-3",
+            "rack-A/device-4"
+          ],
+          "mesh": {
+            "axes": [
+              {
+                "axisId": "bound:rank",
+                "size": 2
+              }
+            ],
+            "coordinates": [
+              {
+                "deviceId": "rack-A/device-3",
+                "coordinates": [
+                  0
+                ]
+              },
+              {
+                "deviceId": "rack-A/device-4",
+                "coordinates": [
+                  1
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "bindings": {
+        "groups": [
+          {
+            "logicalGroupId": "world",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "grid",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"grid\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "ep",
+                "physicalAxisId": "bound:ep"
+              },
+              {
+                "logicalAxisId": "tp",
+                "physicalAxisId": "bound:tp"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "tp0",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          },
+          {
+            "logicalGroupId": "tp1",
+            "physicalGroupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+            "meshAxes": [
+              {
+                "logicalAxisId": "rank",
+                "physicalAxisId": "bound:rank"
+              }
+            ]
+          }
+        ],
+        "devices": [
+          {
+            "logicalDeviceId": "gpu0",
+            "physicalDeviceId": "rack-A/device-1"
+          },
+          {
+            "logicalDeviceId": "gpu1",
+            "physicalDeviceId": "rack-A/device-2"
+          },
+          {
+            "logicalDeviceId": "gpu2",
+            "physicalDeviceId": "rack-A/device-3"
+          },
+          {
+            "logicalDeviceId": "gpu3",
+            "physicalDeviceId": "rack-A/device-4"
+          }
+        ],
+        "network": {
+          "bytesPerSecond": 1000,
+          "latencySeconds": 0.001
+        }
+      },
+      "communicationCount": 7,
+      "allocations": [
+        {
+          "deviceId": "rack-A/device-1",
+          "totalBytes": 816,
+          "weightBytes": 224,
+          "stateBytes": 0
+        },
+        {
+          "deviceId": "rack-A/device-2",
+          "totalBytes": 816,
+          "weightBytes": 224,
+          "stateBytes": 0
+        },
+        {
+          "deviceId": "rack-A/device-3",
+          "totalBytes": 816,
+          "weightBytes": 224,
+          "stateBytes": 0
+        },
+        {
+          "deviceId": "rack-A/device-4",
+          "totalBytes": 816,
+          "weightBytes": 224,
+          "stateBytes": 0
+        }
+      ],
+      "seconds": 21.525,
+      "peakPerDevice": [
+        392,
+        392,
+        392,
+        392
+      ],
+      "oracle": {
+        "B": 1,
+        "Q": 4,
+        "H": 4,
+        "I": 8,
+        "tp": 2,
+        "policy": "serial",
+        "profile": "balanced",
+        "physicalDevices": 4,
+        "touchedPerOwner": 2,
+        "logicalMatrix": 1664,
+        "logicalVector": 432,
+        "matrixPerDevice": 416,
+        "vectorPerDevice": 108,
+        "weightPerDevice": 224,
+        "activeWeightReadPerGemm": 64,
+        "hbmPerDevice": 1208,
+        "peakPerDevice": 392,
+        "peakCandidates": {
+          "topk": 40,
+          "pack": 64,
+          "prepare": 80,
+          "gather": 120,
+          "unpack": 160,
+          "up": 144,
+          "activation": 144,
+          "down": 112,
+          "reduce": 96,
+          "repack": 104,
+          "return": 72
+        },
+        "sourcePayload": 40,
+        "dispatchRemote": [
+          20,
+          40,
+          40,
+          20
+        ],
+        "dispatchSeconds": 0.043000000000000003,
+        "agSeconds": 0.041,
+        "rsSeconds": 0.017,
+        "combineSeconds": 0.043000000000000003,
+        "networkGroupRemoteBytes": 464,
+        "networkSeconds": 0.24500000000000002,
+        "leafSeconds": 21.279999999999998,
+        "routerSeconds": 1.6800000000000002,
+        "ownerSeconds": 9.2,
+        "rootSeconds": 1.2,
+        "seconds": 21.525
+      },
+      "communications": [
+        {
+          "nodeId": "dispatch",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 40,
+              "receiveBytes": 40,
+              "remoteBytes": 20
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 40,
+              "receiveBytes": 40,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-3",
+              "sendBytes": 40,
+              "receiveBytes": 40,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-4",
+              "sendBytes": 40,
+              "receiveBytes": 40,
+              "remoteBytes": 20
+            }
+          ],
+          "seconds": 0.043000000000000003
+        },
+        {
+          "nodeId": "owner0/gather",
+          "operation": "all_gather",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 40,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 40,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            }
+          ],
+          "seconds": 0.041
+        },
+        {
+          "nodeId": "owner0/scatter",
+          "operation": "reduce_scatter",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp0\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 32,
+              "receiveBytes": 16,
+              "remoteBytes": 16
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 32,
+              "receiveBytes": 16,
+              "remoteBytes": 16
+            }
+          ],
+          "seconds": 0.017
+        },
+        {
+          "nodeId": "combine0",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 40,
+              "receiveBytes": 20,
+              "remoteBytes": 20
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 40,
+              "receiveBytes": 20,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-3",
+              "sendBytes": 0,
+              "receiveBytes": 20,
+              "remoteBytes": 0
+            },
+            {
+              "deviceId": "rack-A/device-4",
+              "sendBytes": 0,
+              "receiveBytes": 20,
+              "remoteBytes": 0
+            }
+          ],
+          "seconds": 0.043000000000000003
+        },
+        {
+          "nodeId": "owner1/gather",
+          "operation": "all_gather",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-3",
+              "sendBytes": 40,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-4",
+              "sendBytes": 40,
+              "receiveBytes": 80,
+              "remoteBytes": 40
+            }
+          ],
+          "seconds": 0.041
+        },
+        {
+          "nodeId": "owner1/scatter",
+          "operation": "reduce_scatter",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"tp1\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-3",
+              "sendBytes": 32,
+              "receiveBytes": 16,
+              "remoteBytes": 16
+            },
+            {
+              "deviceId": "rack-A/device-4",
+              "sendBytes": 32,
+              "receiveBytes": 16,
+              "remoteBytes": 16
+            }
+          ],
+          "seconds": 0.017
+        },
+        {
+          "nodeId": "combine1",
+          "operation": "all_to_all",
+          "groupId": "$preset:[\"physical-pool\",\"bound\",\"world\"]",
+          "perDevice": [
+            {
+              "deviceId": "rack-A/device-1",
+              "sendBytes": 0,
+              "receiveBytes": 20,
+              "remoteBytes": 0
+            },
+            {
+              "deviceId": "rack-A/device-2",
+              "sendBytes": 0,
+              "receiveBytes": 20,
+              "remoteBytes": 0
+            },
+            {
+              "deviceId": "rack-A/device-3",
+              "sendBytes": 40,
+              "receiveBytes": 20,
+              "remoteBytes": 40
+            },
+            {
+              "deviceId": "rack-A/device-4",
+              "sendBytes": 40,
+              "receiveBytes": 20,
+              "remoteBytes": 20
+            }
+          ],
+          "seconds": 0.043000000000000003
+        }
+      ]
+    }
+  ]
+}

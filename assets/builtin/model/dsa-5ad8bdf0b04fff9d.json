@@ -1,0 +1,560 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:dsa:dense:dynamic:model",
+  "revision": 1,
+  "name": "DSA MLA decode dense dynamic",
+  "tags": [
+    "research",
+    "dsa",
+    "decode",
+    "attention-fragment"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "max": 4096,
+      "default": {
+        "kind": "integer",
+        "value": 31
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 128,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "A",
+      "name": "A",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "I",
+      "name": "I",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 512,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 8192,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "max": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "T",
+      "name": "T",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 8,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "P",
+      "name": "P",
+      "type": "integer",
+      "unit": "count",
+      "min": 2,
+      "max": 2,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "V",
+      "name": "V",
+      "type": "integer",
+      "unit": "count",
+      "min": 4,
+      "max": 4,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "J",
+      "name": "J",
+      "type": "integer",
+      "unit": "count",
+      "min": 8,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "S",
+      "name": "S",
+      "type": "integer",
+      "unit": "count",
+      "min": 8,
+      "max": 8,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2-Exp/blob/194c67e12b1b0d6df0ef373ddcf215bc84027409/inference/model.py",
+      "checkedOn": "2026-11-15"
+    },
+    {
+      "kind": "note",
+      "text": "Decode-only single-query MLA attention fragment, without block input norm/residual, FFN, embeddings or full language-model costs. Artificial H=8, attention heads=2, query rank=4, latent rank=8, nonrotary/rotary/value dimensions=4/2/4, index heads=2 and index dimension/block=8/8. This reduced block is not source-kernel compatible. All ordinary projection weights and arithmetic use BF16 rather than the fixed FP8 checkpoint matrices. Index weights_proj stays FP32; index dots use FP8 E4M3 inputs with FP32 accumulation. BF16 main scores/probabilities follow the demo. Norm/rotary/Hadamard/selection use explicit FP32 vector proxies with on-chip internal workspace; BF16/FP32 and FP8 conversions add execution-only work. source-mask follows full-prefix demo arithmetic, with materialized BF16 score components and dense FP32 index mask. sparse-gather is a separately authored theoretical kernel path with explicit shared BF16 selected-KV/PE staging and selected QK/AV; it is not a claim that the released demo executes such kernels. dense is a no-indexer counterfactual, not output-equivalent attention. FP8 index kernel intermediates stay on chip; one full-prefix FP32 score tensor is materialized. Per-head rectification, weighting, reduction and key-scale multiplication remain explicit arithmetic in the same leaf. Top-K proxy costs L*(min(K,L)+2) per request. Debug clone/broadcast/equality checks and network are omitted on this single-device fragment. Dynamic buffers reserve call-end C+1 rows; provisioned buffers reserve M rows, reject C+1>M, and separately report active context. Index payload uses one byte per channel and each scale occupies four bytes. Two disjoint BF16 key/value weight slices sum to the original wkv_b size; no duplicate persistent dequantized weights. Warm history is initialized; no allocator slack or implicit migration cost. Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "deepseek-v32-exp-dsa-fragment",
+    "variant": "dense-dynamic",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "X"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "y",
+          "tensorId": "Y"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "mla",
+          "name": "DSA MLA decode dense dynamic",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "X"
+            },
+            {
+              "portId": "y",
+              "tensorId": "Y"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:dsa:dense:dynamic:module",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "A",
+                "value": {
+                  "kind": "symbol",
+                  "name": "A"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "T",
+                "value": {
+                  "kind": "symbol",
+                  "name": "T"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "mla-in",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "mla",
+            "portId": "x"
+          },
+          "tensorId": "X"
+        },
+        {
+          "edgeId": "out-y",
+          "from": {
+            "kind": "node",
+            "nodeId": "mla",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "Y"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "X",
+          "name": "X",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "X"
+        },
+        {
+          "tensorId": "Y",
+          "name": "Y",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "Y"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "X",
+          "name": "X",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "Y",
+          "name": "Y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "Decode-only single-query MLA attention fragment, without block input norm/residual, FFN, embeddings or full language-model costs. Artificial H=8, attention heads=2, query rank=4, latent rank=8, nonrotary/rotary/value dimensions=4/2/4, index heads=2 and index dimension/block=8/8. This reduced block is not source-kernel compatible.",
+      "All ordinary projection weights and arithmetic use BF16 rather than the fixed FP8 checkpoint matrices. Index weights_proj stays FP32; index dots use FP8 E4M3 inputs with FP32 accumulation. BF16 main scores/probabilities follow the demo. Norm/rotary/Hadamard/selection use explicit FP32 vector proxies with on-chip internal workspace; BF16/FP32 and FP8 conversions add execution-only work.",
+      "source-mask follows full-prefix demo arithmetic, with materialized BF16 score components and dense FP32 index mask. sparse-gather is a separately authored theoretical kernel path with explicit shared BF16 selected-KV/PE staging and selected QK/AV; it is not a claim that the released demo executes such kernels. dense is a no-indexer counterfactual, not output-equivalent attention.",
+      "FP8 index kernel intermediates stay on chip; one full-prefix FP32 score tensor is materialized. Per-head rectification, weighting, reduction and key-scale multiplication remain explicit arithmetic in the same leaf. Top-K proxy costs L*(min(K,L)+2) per request. Debug clone/broadcast/equality checks and network are omitted on this single-device fragment.",
+      "Dynamic buffers reserve call-end C+1 rows; provisioned buffers reserve M rows, reject C+1>M, and separately report active context. Index payload uses one byte per channel and each scale occupies four bytes. Two disjoint BF16 key/value weight slices sum to the original wkv_b size; no duplicate persistent dequantized weights. Warm history is initialized; no allocator slack or implicit migration cost.",
+      "Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "extensions": {
+    "dsa": {
+      "version": "dsa-research.1",
+      "profile": "dense",
+      "allocation": "dynamic",
+      "indexerScans": "C+1",
+      "attentionPositions": "C + Q",
+      "selectionLifetime": "forward-local int64 activation",
+      "scope": "MLA decode attention only; no block norm/residual/FFN or full model."
+    }
+  }
+}

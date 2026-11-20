@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "inputs": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/__schema0"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "unit": {
+            "$ref": "#/$defs/__schema1"
+          },
+          "integerRequired": {
+            "type": "boolean"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "unit",
+          "integerRequired"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "expression": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "integerRequired": {
+          "type": "boolean"
+        },
+        "nonNegative": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "unit",
+        "integerRequired",
+        "nonNegative"
+      ],
+      "additionalProperties": false
+    },
+    "description": {
+      "$ref": "#/$defs/__schema0"
+    }
+  },
+  "required": [
+    "inputs",
+    "expression",
+    "output",
+    "description"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema1": {
+      "type": "string",
+      "enum": [
+        "scalar",
+        "count",
+        "ratio",
+        "byte",
+        "second",
+        "operation",
+        "operation_per_second",
+        "byte_per_second"
+      ]
+    }
+  }
+}

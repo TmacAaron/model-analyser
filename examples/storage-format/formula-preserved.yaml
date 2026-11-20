@@ -1,0 +1,33 @@
+documentType: asset
+schemaVersion: 1
+assetId: upgrade:builtin:formula:gemm-operations
+revision: 2
+name: GEMM 运算量
+tags:
+  - gemm
+parameters: []
+sources:
+  - kind: note
+    text: 一次乘加计两次运算；C01 手算基线
+definition:
+  kind: formula
+  formula:
+    inputs:
+      M:
+        unit: count
+        integerRequired: true
+        min: 1
+      N:
+        unit: count
+        integerRequired: true
+        min: 1
+      K:
+        unit: count
+        integerRequired: true
+        min: 1
+    expression: 20 * M * N * K
+    output:
+      unit: operation
+      integerRequired: false
+      nonNegative: true
+    description: 数学运算次数，与存储位宽分开计量

@@ -1,0 +1,133 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:hardware:dsa-research",
+  "revision": 1,
+  "name": "Artificial exact-precision DSA arithmetic device",
+  "tags": [
+    "synthetic"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Artificial 4096-byte device: BF16 matrix 1000, FP8 matrix 2000, FP32 matrix 500, FP32 vector 1000 operations/s; HBM 100 bytes/s. Serial, ideal main/index streams and declared-HBM sharing use the existing engine, exact precision classes and last-use liveness. No measured speed or accuracy claim."
+    }
+  ],
+  "definition": {
+    "kind": "hardware",
+    "hardware": {
+      "capacityBytes": 4096,
+      "computeCapabilities": [
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 8,
+                "format": "e4m3"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 8,
+              "format": "e4m3"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 2000
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "matrix"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 500
+        },
+        {
+          "computeClass": {
+            "arithmetic": "float",
+            "inputDtypes": [
+              {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              }
+            ],
+            "multiplyDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "accumulateDtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "resource": "vector"
+          },
+          "kind": "peak",
+          "operationsPerSecond": 1000
+        }
+      ],
+      "memoryCapabilities": [
+        {
+          "key": "hbm",
+          "kind": "peak",
+          "bytesPerSecond": 100
+        }
+      ],
+      "communicationDefaults": []
+    }
+  }
+}

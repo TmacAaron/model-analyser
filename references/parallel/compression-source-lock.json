@@ -1,0 +1,22 @@
+{
+  "checkedOn":"2026-11-15",
+  "repository":"https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+  "commit":"314113f8a7dadb388215396ba5fbee2c610a04d6",
+  "url":"https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+  "sha256":"e5decd76fe70fd56ef2f10124d245c6f64fb6a0003cc9068a1d3182a168b8d2d",
+  "configSha256":"2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809",
+  "verifiedSemantics":[
+    "Compressor uses a single BF16 projection at ratio one. At larger ratios, value/gate projections and softmax pooling use FP32; normalization consumes the pooled latent cast back to the input dtype.",
+    "Only complete groups are emitted. Prefill keeps its remainder, while decode fills a slot and emits a latent only on a completed group. Two distinct FP32 buffers of shape batch x ratio x head_dim remain allocated.",
+    "Main-cache and indexer-key append occur only when a new latent exists. The compressor returns pre-rotary values; main-cache rotary and quantization occur afterwards.",
+    "The raw sliding-window cache is separate. The fixed inference configuration uses ratio two for encoder source layers and ratio one for the decoder; ratio four below is an authored use of the generic compressor."
+  ],
+  "authoredAssumptions":[
+    "Compressor plus independent window/cache preparation components only, not full attention, an indexer, or a complete language model. Two modules export new pre-rotary latents, full cache/ring capacity buffers and current-window KV. Active entries and partial occupancy are reported separately; unfilled capacity is not an attention-valid token.",
+    "Artificial H=4, D=16 and W=2. Each ratio is a fixed asset identity with matching precision; prefill starts at C=0, decode uses Q=1. Initialized warm history includes the declared pending slots. Version numbers denote call snapshots, not the number of completed groups.",
+    "Materialized FP32 softmax, elementwise product and reduction buffers; explicit BF16/FP32 casts. Window weights/projection use BF16, and ratio-greater-than-one value/gate weights and arithmetic use FP32. Normalization, rotary and quantization use declared vector proxies and on-chip internal workspace. Conversions add execution only, not model-useful arithmetic. Declared last-use liveness is not Python local-variable or allocator lifetime.",
+    "The packed theoretical cache uses FP4 main rows with one E4M3 byte per 16 channels and FP8 window rows with one E8M0 byte per 32 channels. Partial metadata blocks use ceil; this is not a source-kernel shape/accuracy claim. BF16-cache comparison retains fake-quant work.",
+    "Dynamic cache reserves floor((C+Q)/R) rows at call start; provisioned cache reserves floor(M/R) rows as a separate variant. Both keep two full FP32 partial-group buffers and a full W-row window ring. Demo max-batch/max-sequence preallocation is not silently equated with current active length.",
+    "Artificial 4096-byte device with BF16 matrix, FP32 matrix and FP32 vector ceilings of 1000 operations/s and HBM 100 bytes/s. Serial, ideal two-stream and declared-HBM sharing policies use the existing engine. No implicit communication, allocator slack, fusion or omitted attention costs."
+  ]
+}

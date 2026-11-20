@@ -1,0 +1,12 @@
+import { mkdir,readFile,writeFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import { ProjectDocument } from '@model-analyser/contracts';
+import { compareScenarios,ENGINE_VERSION } from '@model-analyser/core';
+import { validateProject } from '../packages/contracts/src/validation.js';
+import { makeComparisonProject } from './comparison-project.js';
+const p=makeComparisonProject(ProjectDocument.parse(JSON.parse(await readFile('examples/contracts/project.json','utf8')) as unknown));assert.deepEqual(validateProject(p),[]);
+const request={scenarioIds:p.scenarios.map(s=>s.scenarioId),scan:{variable:{kind:'parameter' as const,parameterKey:'X'},searchRange:{min:1,max:8}}},a=await compareScenarios(p.scenarios,p.assetSnapshots,request);if(a.status!=='available')throw Error(JSON.stringify(a.diagnostics));
+assert.deepEqual(a.result.pairs.map(p=>p.crossings),[[{kind:'ordering_change',lower:4,upper:5}],[{kind:'equal_samples',lower:3,upper:8}],[{kind:'ordering_change',lower:4,upper:5}]]);
+assert.deepEqual(a.result.entries.map(e=>e.scan?.status==='available'&&e.scan.result.capacityStatus.kind==='solved'?e.scan.result.capacityStatus.maximum:null),[4,8,2]);
+const rows=[];for(let x=1;x<=8;x++)rows.push({X:x,seconds:[x,4.5,Math.max(3,x)],peakBytes:[16*x,8*x,32*x],fits:[16*x<=64,8*x<=64,32*x<=64]});
+await mkdir('examples/comparison',{recursive:true});for(const [name,value] of Object.entries({project:p,result:a.result,reference:{engineVersion:ENGINE_VERSION,scope:'Artificial formula/byte oracle; exhaustive integer range only, not benchmark or continuous root proof.',rows,capacityMaximum:[4,8,2],orderingChangeIntervals:[[4,5]],sampledEqualityA_C:[3,8]}}))await writeFile('examples/comparison/'+name+'.json',JSON.stringify(value,null,2)+'\n');console.log('Scenario comparison: A=X, B=4.5, C=max(3,X) seconds; [4,5] reversals, A=C at 3..8; per-scenario capacities 4/8/2. Portable project generated.');

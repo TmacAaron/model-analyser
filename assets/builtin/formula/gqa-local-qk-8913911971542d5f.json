@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:gqa-local:qk:8913911971542d5f",
+  "revision": 1,
+  "name": "2 * b_l * n_l * (C * q_l + q_l * (q_l + 1) / 2) * d_l [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Synthetic explicit GQA attention/residual block: separate Q/K/V projections, append cache, causal useful versus rectangular executed attention, vector softmax proxy, row-parallel output and residual. BF16 tensors/matrix, FP32 vector proxy. No norm, RoPE, MLP, embedding/head, inference, measured kernel or full language-model claim."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "C": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "b_l": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "d_l": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "n_l": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "q_l": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "2 * b_l * n_l * (C * q_l + q_l * (q_l + 1) / 2) * d_l",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

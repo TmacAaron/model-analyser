@@ -1,0 +1,400 @@
+[
+  {
+    "kind": "item",
+    "index": 0,
+    "id": "decode-third-0",
+    "attempt": {
+      "status": "available",
+      "comparison": {
+        "measurementId": "decode-third-0",
+        "inputHash": "8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1",
+        "measurementHash": "97ce47f5663fd6f6082506eab562f2570b37e4abf6d6db7042ae8542521d2366",
+        "engineVersion": "0.1.0-execution.20",
+        "scope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "mfuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "mbuScope": {
+          "phase": "decode",
+          "target": {
+            "kind": "model"
+          },
+          "deviceIds": [
+            "gpu0"
+          ],
+          "aggregation": "per_device"
+        },
+        "executedUtilization": {
+          "version": "executed-utilization.1",
+          "scope": {
+            "phase": "decode",
+            "target": {
+              "kind": "model"
+            },
+            "deviceIds": [
+              "gpu0"
+            ],
+            "aggregation": "per_device"
+          },
+          "compute": [
+            {
+              "computeClass": {
+                "arithmetic": "float",
+                "inputDtypes": [
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  },
+                  {
+                    "category": "float",
+                    "bits": 16,
+                    "format": "bf16"
+                  }
+                ],
+                "multiplyDtype": {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                "accumulateDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "resource": "matrix"
+              },
+              "value": {
+                "status": "available",
+                "quantity": {
+                  "value": 0.001,
+                  "unit": "ratio"
+                },
+                "basis": "estimated",
+                "provenance": {
+                  "assetRefs": [
+                    {
+                      "assetId": "example:formula:decode-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-state-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-write-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:hardware:decode-state",
+                      "revision": 1,
+                      "kind": "hardware"
+                    },
+                    {
+                      "assetId": "example:model:decode-state",
+                      "revision": 1,
+                      "kind": "model"
+                    }
+                  ],
+                  "formulaRefs": [
+                    {
+                      "assetId": "example:formula:decode-operations",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-state-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-write-bytes",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    {
+                      "assetId": "example:formula:decode-elements",
+                      "revision": 1,
+                      "kind": "formula"
+                    }
+                  ],
+                  "parameterSources": [
+                    {
+                      "parameterKey": "$model:B",
+                      "source": "scenario_override"
+                    },
+                    {
+                      "parameterKey": "$model:C",
+                      "source": "scenario_override"
+                    },
+                    {
+                      "parameterKey": "$model:Q",
+                      "source": "scenario_override"
+                    }
+                  ],
+                  "assumptions": [
+                    "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                    "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                    "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                    "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                    "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                    "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                    "Measurement decode-third-0; time kind=single, count=1; per-call equivalent 5 second.",
+                    "Executed-work utilization uses declared physical executed operations and unique matching peak capability on each actual device. It is separate from model-useful MFU and is not a measured hardware counter."
+                  ]
+                },
+                "diagnosticIds": []
+              }
+            }
+          ]
+        },
+        "normalizedTime": {
+          "kind": "single",
+          "count": 1,
+          "intervalSeconds": 5,
+          "perCallEquivalentSeconds": 5
+        },
+        "mfu": [
+          {
+            "computeClass": {
+              "arithmetic": "float",
+              "inputDtypes": [
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                },
+                {
+                  "category": "float",
+                  "bits": 16,
+                  "format": "bf16"
+                }
+              ],
+              "multiplyDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              },
+              "accumulateDtype": {
+                "category": "float",
+                "bits": 32,
+                "format": "fp32"
+              },
+              "resource": "matrix"
+            },
+            "value": {
+              "status": "available",
+              "quantity": {
+                "value": 0.001,
+                "unit": "ratio"
+              },
+              "basis": "estimated",
+              "provenance": {
+                "assetRefs": [
+                  {
+                    "assetId": "example:formula:decode-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-state-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-write-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:hardware:decode-state",
+                    "revision": 1,
+                    "kind": "hardware"
+                  },
+                  {
+                    "assetId": "example:model:decode-state",
+                    "revision": 1,
+                    "kind": "model"
+                  }
+                ],
+                "formulaRefs": [
+                  {
+                    "assetId": "example:formula:decode-operations",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-state-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-write-bytes",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  {
+                    "assetId": "example:formula:decode-elements",
+                    "revision": 1,
+                    "kind": "formula"
+                  }
+                ],
+                "parameterSources": [
+                  {
+                    "parameterKey": "$model:B",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:C",
+                    "source": "scenario_override"
+                  },
+                  {
+                    "parameterKey": "$model:Q",
+                    "source": "scenario_override"
+                  }
+                ],
+                "assumptions": [
+                  "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+                  "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+                  "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+                  "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+                  "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+                  "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+                  "Measurement decode-third-0, input 8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1; time kind=single, count=1.",
+                  "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+                  "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+                ]
+              },
+              "diagnosticIds": []
+            }
+          }
+        ],
+        "mbu": {
+          "status": "available",
+          "quantity": {
+            "value": 0.02,
+            "unit": "ratio"
+          },
+          "basis": "estimated",
+          "provenance": {
+            "assetRefs": [
+              {
+                "assetId": "example:formula:decode-elements",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:hardware:decode-state",
+                "revision": 1,
+                "kind": "hardware"
+              },
+              {
+                "assetId": "example:model:decode-state",
+                "revision": 1,
+                "kind": "model"
+              }
+            ],
+            "formulaRefs": [
+              {
+                "assetId": "example:formula:decode-operations",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-state-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-write-bytes",
+                "revision": 1,
+                "kind": "formula"
+              },
+              {
+                "assetId": "example:formula:decode-elements",
+                "revision": 1,
+                "kind": "formula"
+              }
+            ],
+            "parameterSources": [
+              {
+                "parameterKey": "$model:B",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "$model:C",
+                "source": "scenario_override"
+              },
+              {
+                "parameterKey": "$model:Q",
+                "source": "scenario_override"
+              }
+            ],
+            "assumptions": [
+              "Single-device serial baseline, one explicitly declared prefill/decode step; no implicit batch multiplier.",
+              "Each leaf is counted once. Containers aggregate leaves without adding another cost.",
+              "Weights, state, graph/runtime/reserve are resident; unreferenced workspace/communication storage is conservatively resident.",
+              "Activation lifetimes follow producers/last uses; temporary scratch is live only during declared uses unless linked across nodes.",
+              "Quantization payload alignment precedes tightly packed auxiliary tensors. Storage aliases share an allocation; accesses are counted independently.",
+              "Roofline is per compute class and leaf; each class uses the whole leaf traffic as an explicit shared-traffic bound, never a mixed-precision denominator.",
+              "Measurement decode-third-0, input 8bec73b8cebb810c45e3e39a11759acc5ca36e5c9302468cf6942a37d549a0c1; time kind=single, count=1.",
+              "Mean/single times multiplied by count represent cumulative work time, not a wall-clock span.",
+              "MFU uses useful work and matching peak capability per compute class; MBU uses actualBytes only when declared as measured HBM traffic."
+            ]
+          },
+          "diagnosticIds": []
+        },
+        "mbuBasis": "estimated_hbm",
+        "diagnostics": []
+      }
+    }
+  },
+  {
+    "kind": "complete",
+    "count": 1
+  }
+]
