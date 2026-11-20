@@ -10,6 +10,8 @@ import { useFusionTask } from './use-fusion-task.js';
 import { useModelInstantiation } from './use-model-instantiation.js';
 import { mergeMeasurements } from '../../../packages/contracts/src/measurement-file.js';
 import { canonical } from '../../../packages/contracts/src/validation.js';
+import { copyConfiguration, resetConfigurationDraft } from '../../../packages/contracts/src/configuration-edit.js';
+import { validateScenario } from '../../../packages/contracts/src/scenario-validation.js';
 import { type SaveState } from './serialized-autosave.js';
 import { CanvasConnectionEditor } from './canvas-connection-editor.js';
 import { CanvasStructureEditor } from './canvas-structure-editor.js';
@@ -38,6 +40,16 @@ const familyLabel=(family:string|undefined)=>family?.startsWith('qwen')?'Qwen':f
 const panels:Record<Panel,string>={inspect:'节点与算法',workload:'推理配置',parallel:'并行方式',device:'设备',quantization:'量化',fusion:'融合',execution:'执行与多流',memory:'显存假设',analysis:'分析结果',capacity:'容量',compare:'配置对比',connection:'连接编辑',advanced:'高级配置',structure:'编辑结构'};
 const number=(n:number)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:3,notation:n>=1e6?'compact':'standard'}).format(n);
 const emptyCanvas:CanvasGraph={nodes:[],edges:[]};
+const layoutPanels:Panel[]=['analysis','capacity','parallel','device'];
+
+function primaryDeviceTopology(scenario:Scenario):Scenario['deviceTopology']{
+  const primary=scenario.deviceTopology.devices[0]!;
+  return {
+    devices:[primary],
+    groups:scenario.deviceTopology.groups.filter(group=>group.members.length===1&&group.members[0]===primary.deviceId),
+  };
+}
+
 export function ModelWorkspace(props:Props){
   const display=useDisplayUnits();
   const {project,scenario:s,catalog,status}=props,[scope,setScope]=useState('$model'),[selected,setSelected]=useState<string[]>([]),[panel,setPanel]=useState<Panel>('inspect'),[error,setError]=useState(''),[result,setResult]=useState<AnalysisResult|null>(null),[analysisRun,setAnalysisRun]=useState(0),[connection,setConnection]=useState<{from:string;to:string}|null>(null);
@@ -48,6 +60,13 @@ export function ModelWorkspace(props:Props){
   const fingerprint=useMemo(()=>canonical({scenario:s?withoutQuantizationReviews(s):s,assets:project?.assetSnapshots}),[s,project?.assetSnapshots]);
   const expansion=useModelInstantiation(s,project?.assetSnapshots,fingerprint,{scope,expandOperatorCalls}),{attempt,projection}=expansion;
   const resolved=attempt?.status==='available'?attempt.resolved:undefined,graph=projection?.graph??emptyCanvas;
+  const missingLayout=!!s&&s.deviceTopology.devices.length>1&&!s.parallelPlan.nativeBindings&&
+    !s.parallelPlan.assignments.some(assignment=>assignment.phases.includes(s.workload.kind));
+  const canCopySingleDevice=useMemo(()=>{
+    if(!missingLayout||!s||!project||!resolved||s.parallelPlan.assignments.length||
+      s.parallelPlan.communications.length||resolved.graph.nodes.some(node=>node.body.kind==='collective'))return false;
+    return !validateScenario({...s,deviceTopology:primaryDeviceTopology(s)},project.assetSnapshots).some(diagnostic=>diagnostic.severity==='error');
+  },[missingLayout,s,project?.assetSnapshots,resolved]);
   const resolvedNodes=useMemo(()=>new Map(resolved?.graph.nodes.map(node=>[node.nodeId as string,node])),[resolved]);
   const repeatRoot=scope.replace(/\[\d+\]$/,'');
   const repeatInstances=useMemo(()=>resolved?[...new Set([...resolved.containers,...resolved.graph.nodes]
@@ -94,6 +113,18 @@ export function ModelWorkspace(props:Props){
   function patch(next:Scenario){setError('');props.onScenario(next);}
   function openPanel(next:Panel){setSidebarCollapsed(false);setPanel(next);}
   function analyzeCanvas(layout=false){setOpenLayout(layout);openPanel('analysis');setAnalysisRun(value=>value+1);}
+  function copySingleDevice(){
+    if(!canCopySingleDevice||!s||!project)return;
+    try{
+      const id=crypto.randomUUID();
+      const copy=resetConfigurationDraft(copyConfiguration(project,s.scenarioId,id),id);
+      const scenarios=copy.scenarios.map(scenario=>scenario.scenarioId===id
+        ? {...scenario,name:s.name+' · 单卡',deviceTopology:primaryDeviceTopology(scenario)} : scenario);
+      props.onProject({...copy,scenarios});
+      props.onSelectConfiguration(id);
+      if(panel==='analysis')analyzeCanvas();
+    }catch(issue){setError(issue instanceof Error?issue.message:String(issue));}
+  }
   function selectPresetMembers(ids:string[]){
     const group=graph.nodes.find(item=>item.viewGroup?.kind==='operator'&&ids.every(id=>item.leafIds.includes(id)));
     if(group)setScope(group.id);
@@ -112,6 +143,11 @@ export function ModelWorkspace(props:Props){
       {resolved&&<div className="canvas-status"><span>{resolved.graph.nodes.length} 算子 · {resolved.containers.length-1} 模块 · {s?.deviceTopology.devices.length} 物理设备</span><span>{s?.workload.kind} · Batch {s?.workload.batchSize}{result?' · 分析结果已生成':''}</span></div>}
     </section><section id="studio-inspector" hidden={sidebarCollapsed} className="studio-inspector" aria-label="画布配置与详情"><div className="inspector-heading"><div><small>{scope==='$model'?'MODEL WORKSPACE':'MODULE WORKSPACE'}</small><h2>{panels[panel]}</h2></div><button onClick={()=>setPanel('inspect')} aria-label="返回节点详情">⌕</button></div>
       {project&&s&&<div className="studio-panel-body">
+        {missingLayout&&layoutPanels.includes(panel)&&<div className="studio-layout-notice" role="status">
+          <p>{s.deviceTopology.devices.length} 张卡尚未应用当前阶段的并行布局。</p>
+          {canCopySingleDevice&&<button type="button" onClick={copySingleDevice}>新建单卡配置</button>}
+          {panel!=='parallel'&&<button type="button" onClick={()=>openPanel('parallel')}>前往并行配置</button>}
+        </div>}
         {panel==='inspect'&&<>{node?<><h3>{node.name}</h3><p className="studio-node-path">{node.id}</p>{summary(node)}{node.kind==='operator'&&<OperatorCalculation key={'calculation:'+node.id} asset={scopeDefinition} nodeId={node.id}/>}{resolved&&<ResolvedNodeInspector key={node.id} resolved={resolved} model={s.model} assets={project.assetSnapshots} nodeId={node.id} leafIds={node.leafIds}/>} {node.kind==='module'&&node.id!==scope&&<button onClick={()=>drill(node)}>进入模块计算流程 →</button>}{node.kind==='module'&&!node.viewGroup&&<button onClick={()=>setPanel('memory')}>配置此模块显存预算</button>}<button type="button" onClick={()=>analyzeCanvas(true)}>查看所选节点设备布局</button><h3>算法与计算来源</h3>{trace?.chain.filter((c,i,a)=>a.findIndex(v=>v.name===c.name)===i).map((c,i)=><p key={i}>{c.name}</p>)}{trace?.formulas.map(a=><div className="studio-algorithm" key={a.assetId}><strong>{a.name}</strong>{a.definition.kind==='formula'&&<><p>{a.definition.formula.description}</p><code>{a.definition.formula.expression}</code><small>输入：{Object.entries(a.definition.formula.inputs).map(([name,v])=>name+' ('+v.unit+')').join('，')} · 输出 {a.definition.formula.output.unit}</small></>}</div>)}</>:<><h3>{model?.name}</h3><p>点击模块进入计算流程，悬浮查看涉及的算子与计算；在算子层框选多个节点以配置融合。</p>{resolved&&<ResolvedNodeInspector key="$model" resolved={resolved} model={s.model} assets={project.assetSnapshots} nodeId="$model" leafIds={resolved.graph.nodes.map(n=>n.nodeId)}/>}<h3>当前配置</h3><p>{s.name} · {s.workload.kind} · {s.deviceTopology.devices.length} 卡</p><p>并行、量化和其他配置保存在同一模型下，可复制配置后对照查看。</p></>}{attempt?.diagnostics.length?attempt.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>):null}</>}
         {panel==='workload'&&<><label>配置名称<input aria-label="配置名称" value={s.name} onChange={e=>{if(e.target.value.trim())patch({...s,name:e.target.value});}}/></label><label>推理阶段<select aria-label="画布推理阶段" value={s.workload.kind} onChange={e=>{const shared={batchSize:s.workload.batchSize,queryTokensPerRequest:s.workload.queryTokensPerRequest};patch({...s,workload:e.target.value==='prefill'?{kind:'prefill',...shared,pastTokensPerRequest:s.workload.kind==='decode'?s.workload.contextTokensPerRequest:s.workload.pastTokensPerRequest}:{kind:'decode',...shared,contextTokensPerRequest:s.workload.kind==='prefill'?s.workload.pastTokensPerRequest:s.workload.contextTokensPerRequest,steps:1}});}}><option value="prefill">Prefill</option><option value="decode">Decode</option></select></label>{Object.entries(s.workload).filter((entry):entry is [string,number]=>typeof entry[1]==='number').map(([key,value])=><label key={key}>{{batchSize:'Batch',queryTokensPerRequest:'Query tokens',contextTokensPerRequest:'Context tokens',pastTokensPerRequest:'Past tokens',steps:'Decode steps',chunkTokens:'Chunk tokens'}[key]??key}<input aria-label={'画布 '+key} type="number" min={key.includes('context')||key.includes('past')?0:1} value={value} onChange={e=>workload(key,e.target.value)}/></label>)}</>}
         {panel==='parallel'&&<>
