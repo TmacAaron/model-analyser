@@ -104,18 +104,19 @@ function Term({item}:{item:LayoutSourceReport['items'][number]}){
  </>;
  case 'repeat_member':return <><h5>堆叠切片 {item.instanceIndex+1}</h5><p><code>{item.tensorId}</code> · {dimensions(item.shape)} · <code>{item.storageId}</code></p></>;
  case 'formula':return <><h5>{item.field}</h5><FormulaProof proof={item.formula.proof}/>{item.formula.truncated&&<p>公式记录达到预算，值已按完整表达式复算。</p>}</>;
- case 'partition':{
-  const {operation}=item;
-  if(operation.kind==='elements')return <><h5>{scopeNames[operation.scope]}</h5><p>{operation.dimensions.join(' × ')||'1'} = {operation.value}{operation.emptyAxis===undefined?'':' · 存在空维度'}</p></>;
-  if(operation.kind==='explicit_coverage')return <p>{operation.rectangles} 个互斥分片坐标覆盖 {operation.covered}/{operation.globalElements} 个全局元素</p>;
-  return <><h5>轴 {operation.axisId} · {methodNames[operation.method]}</h5>
-   {operation.mesh&&<p>全局维度 {operation.extent} · mesh {operation.mesh.axisId} 坐标 {operation.mesh.rank} · 轴大小 {operation.mesh.width}</p>}
-   {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>每卡分配 ceil({operation.extent} ÷ {operation.mesh.width}) = {operation.allocated}</p>}
-   {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>起点 min({operation.extent}, {operation.mesh.rank} × {operation.allocated}) = {operation.start} · 终点 min({operation.extent}, {operation.start} + {operation.allocated}) = {operation.end}</p>}
-   <p>{operation.start===undefined?'手工尺寸':`[${operation.start}, ${operation.end})`} · 有效 {operation.logical} · 分配 {operation.allocated}</p></>;
- }
+ case 'partition':return <PartitionOperationProof operation={item.operation}/>;
  case 'allocation':return <><h5>{item.operation.field}</h5><p>{allocationExpression(item.operation.operation,item.operation.inputs)} = {item.operation.value} {item.operation.unit}</p><small>{item.operation.operation}</small></>;
  case 'copies':return <><h5>全部物理副本</h5><p>{item.perCopyBytes} × {item.copies} = {item.totalBytes} byte</p></>;
  case 'quantization':return <><h5>量化规则 · {item.nodeId}</h5><p>生效 {item.winners.map(rule=>'#'+(rule.ruleIndex+1)+' 优先级 '+rule.priority).join('、')||'沿用声明'}{item.losers.length?' · 被覆盖 '+item.losers.map(rule=>'#'+(rule.ruleIndex+1)).join('、'):''}</p></>;
  }
+}
+
+export function PartitionOperationProof({operation}:{operation:Extract<LayoutSourceReport['items'][number],{kind:'partition'}>['operation']}){
+ if(operation.kind==='elements')return <><h5>{scopeNames[operation.scope]}</h5><p>{operation.dimensions.join(' × ')||'1'} = {operation.value}{operation.emptyAxis===undefined?'':' · 存在空维度'}</p></>;
+ if(operation.kind==='explicit_coverage')return <p>{operation.rectangles} 个互斥分片坐标覆盖 {operation.covered}/{operation.globalElements} 个全局元素</p>;
+ return <><h5>轴 {operation.axisId} · {methodNames[operation.method]}</h5>
+  {operation.mesh&&<p>全局维度 {operation.extent} · mesh {operation.mesh.axisId} 坐标 {operation.mesh.rank} · 轴大小 {operation.mesh.width}</p>}
+  {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>每卡分配 ceil({operation.extent} ÷ {operation.mesh.width}) = {operation.allocated}</p>}
+  {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>起点 min({operation.extent}, {operation.mesh.rank} × {operation.allocated}) = {operation.start} · 终点 min({operation.extent}, {operation.start} + {operation.allocated}) = {operation.end}</p>}
+  <p>{operation.start===undefined?'手工尺寸':`[${operation.start}, ${operation.end})`} · 有效 {operation.logical} · 分配 {operation.allocated}</p></>;
 }

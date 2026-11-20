@@ -4,6 +4,7 @@ import type {CommunicationCostSelector,CommunicationCostSourceReport,Communicati
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import {readCommunicationSourceReply} from './communication-source-task.js';
 import {FormulaProof} from './declaration-source-view.js';
+import {PartitionOperationProof} from './layout-source-view.js';
 import {ParameterBindingProof} from './parameter-binding-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
 
@@ -23,7 +24,7 @@ export function CommunicationCostSourceView({metric,selector,result,scenario,ass
   const actualStep=step===undefined?undefined:result.decode?.steps.find(item=>item.index===step);
   if(result.decode&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:3,
    ...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,cancel,retry}=useCostSourceWorker(open,request,'communication_cost_source',readCommunicationSourceReply);
@@ -42,6 +43,10 @@ export function CommunicationCostSourceView({metric,selector,result,scenario,ass
 type SummaryMetric=CommunicationCostSourceReport['summary']['send'];
 const describe=(metric:SummaryMetric)=>metric.status==='available'?`${metric.quantity.value} ${metric.quantity.unit}`:'不可用';
 const label={communication_bandwidth:'带宽',communication_latency:'单轮延迟',fixed_seconds:'固定耗时'};
+const layoutNames={sharded:'分片',replicated:'复制',partial:'待归约',manual:'手工布局'};
+const coverageNames={exact:'精确覆盖',padded:'填充覆盖',partial:'归约前覆盖',manual:'手工指定'};
+const endpointNames={source:'源端',destination:'目标端'};
+type EndpointLayouts=NonNullable<CommunicationCostSourceReport['endpointLayouts']>;
 
 function timingValue(timing:CommunicationCostSourceReport['network']['effective']){
  if(timing.kind==='bandwidth_latency')return `${timing.bytePerSecond} byte/s · ${timing.latencySeconds} s/轮`;
@@ -49,8 +54,33 @@ function timingValue(timing:CommunicationCostSourceReport['network']['effective'
  return '自定义公式';
 }
 
+function EndpointLayoutsProof({layouts}:{layouts:EndpointLayouts}){
+ return <section className="storage-access-item" aria-label="通信端点布局">
+  <h5>实际通信端点布局</h5><p>消息数据类型 {layouts.payloadDtype.format} · {layouts.payloadDtype.bits} bit</p>
+  {(['source','destination'] as const).map(side=>{
+   const {tensorId,declaredTensorId,groupId,declaredGroupId,kind,dtype,placementCount,globalShape,operations,coverage,reduceOperation}=layouts[side];
+   const shape=globalShape.map(axis=>axis.size.kind==='literal'?`${axis.axisId}=${axis.size.quantity.value}`:axis.axisId).join(' × ')||'标量';
+   return <div key={side}>
+    <h5>{endpointNames[side]} {tensorId} · {layoutNames[kind]}</h5>
+    <p>物理布局组 {groupId} · {placementCount} 台设备 · {coverageNames[coverage]} · 张量 {dtype.format} · {shape}</p>
+    {reduceOperation&&<p>声明归约算式 {reduceOperation}</p>}
+    {(declaredTensorId!==tensorId||declaredGroupId!==groupId)&&<p>声明张量 {declaredTensorId} · 声明组 {declaredGroupId}</p>}
+    {operations.map((operation,index)=><PartitionOperationProof key={index} operation={operation}/>)}
+   </div>;
+  })}
+ </section>;
+}
+
+function EndpointDeviceProof({side,placement}:{side:keyof typeof endpointNames;placement:NonNullable<EndpointLayouts['devices'][number]['source']>}){
+ const [open,setOpen]=useState(false);
+ return <details onToggle={event=>setOpen(event.currentTarget.open)}>
+  <summary>{endpointNames[side]}布局 · {placement.logicalElements} 个有效元素 · {placement.allocatedElements} 个分配元素 · {placement.copies} 份副本</summary>
+  {open&&placement.operations.map((operation,index)=><PartitionOperationProof key={index} operation={operation}/>)}
+ </details>;
+}
+
 function CommunicationProof({report}:{report:CommunicationCostSourceReport}){
- const {summary,timing,network,uniformMessages,declaration}=report;
+ const {summary,timing,network,uniformMessages,declaration,endpointLayouts}=report;
  return <div className="storage-access-proof">
   <h5>{report.operation} · {report.groupId} · {report.algorithm.name}</h5>
   <p>张量 {report.endpoints.source} → {report.endpoints.destination}</p>
@@ -58,6 +88,7 @@ function CommunicationProof({report}:{report:CommunicationCostSourceReport}){
   <p>已复核原指标 {describe(report.metric)} · {report.componentCount} 台设备 · 第 {report.page+1} 页</p>
   <p>每成员发送 {describe(summary.send)} · 接收 {describe(summary.receive)} · 算法流量 {describe(summary.traffic)}</p>
   <p>组总发送 {describe(summary.groupSend)} · 组总接收 {describe(summary.groupReceive)}</p>
+  {endpointLayouts&&<EndpointLayoutsProof layouts={endpointLayouts}/>}
   {uniformMessages&&<details><summary>统一消息的公式与组总量</summary>
    <p>发送 {uniformMessages.send.quantity.value} byte，接收 {uniformMessages.receive.quantity.value} byte，分别乘以 {uniformMessages.count} 得到组总量。</p>
    {uniformMessages.send.proof&&<FormulaProof proof={uniformMessages.send.proof}/>}
@@ -72,14 +103,19 @@ function CommunicationProof({report}:{report:CommunicationCostSourceReport}){
    {report.timingFormula?.proof&&<FormulaProof proof={report.timingFormula.proof}/>}
    <p>该值是通信模型的网络耗时。多流调度区间在聚合来源与时间线中查看。</p>
   </section>
-  {report.items.map(item=><article className="storage-access-item" key={item.deviceId}>
+  {report.items.map((item,index)=>{
+   const device=endpointLayouts?.devices[index];
+   return <article className="storage-access-item" key={item.deviceId}>
    <h5>{item.deviceId}{item.role==='sender'?' · 发送端':item.role==='receiver'?' · 接收端':''}</h5>
    <p>发送 {describe(item.send)} · 接收 {describe(item.receive)} · 发送量 × {item.factor} = {describe(item.traffic)}</p>
    {timing?.kind==='bandwidth_latency'&&item.traffic.status==='available'&&item.traffic.quantity.value===timing.maxTraffic&&<p>该设备的算法流量达到网络耗时使用的最大值。</p>}
    {item.sendSum&&item.receiveSum&&item.send.status==='available'&&item.receive.status==='available'&&<p>组发送累计 {item.sendSum.before} + {item.send.quantity.value} = {item.sendSum.after} byte · 组接收累计 {item.receiveSum.before} + {item.receive.quantity.value} = {item.receiveSum.after} byte</p>}
    {item.sendFormula?.proof&&<FormulaProof proof={item.sendFormula.proof}/>}
    {item.receiveFormula?.proof&&<FormulaProof proof={item.receiveFormula.proof}/>}
-  </article>)}
+   {device?.source&&<EndpointDeviceProof side="source" placement={device.source}/>}
+   {device?.destination&&<EndpointDeviceProof side="destination" placement={device.destination}/>}
+  </article>;
+  })}
   {report.parameterBindings&&(report.parameterBindings.roots.length>0||!report.parameterBindings.complete?
    <ParameterBindingProof graph={report.parameterBindings}/>:<p>本页消息和耗时算式未读取参数。</p>)}
   {!report.complete&&<p>此页公式记录达到证据预算。</p>}

@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {MetricScope,NodeId,type CommunicationEvaluation,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
+import {MetricScope,NodeId,type CommunicationDefinition,type CommunicationEvaluation,type DeviceId,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
 import {jsonBytes} from '../../contracts/src/json-size.js';
 import {canonical} from '../../contracts/src/validation.js';
 import {LeafCostSourceRequest} from './leaf-cost-context.js';
@@ -10,14 +10,15 @@ import {explainValue} from './formula.js';
 import {namespaceDiagnostics} from './decode.js';
 import {communicationParameterBindingGraph,parameterReads,type AdditionalParameterRoot} from './parameter-binding-graph.js';
 import {assetParameterFrameId,workloadParameterFrameId,type ParameterCaptureTrace} from './parameter-observation.js';
-import type {CommunicationPlanObservation} from './communication-observation.js';
+import type {CommunicationEndpointObserver,CommunicationEndpointSide,CommunicationPlanObservation} from './communication-observation.js';
+import type {PartitionOperation} from './layout-observation.js';
 
 export const CommunicationCostSelector=z.strictObject({
  index:z.number().int().nonnegative(),nativeNodeId:NodeId.optional(),scope:MetricScope,
  field:z.enum(['seconds','sendBytesPerMember','receiveBytesPerMember','algorithmTrafficBytesPerMember','groupSendBytes','groupReceiveBytes']),
 });
 export type CommunicationCostSelector=z.infer<typeof CommunicationCostSelector>;
-export const CommunicationCostSourceRequest=LeafCostSourceRequest.extend({selector:CommunicationCostSelector,proofVersion:z.literal(2).optional(),decodeFrame:z.literal(true).optional()});
+export const CommunicationCostSourceRequest=LeafCostSourceRequest.extend({selector:CommunicationCostSelector,proofVersion:z.union([z.literal(2),z.literal(3)]).optional(),decodeFrame:z.literal(true).optional()});
 export type CommunicationCostSourceRequest=z.input<typeof CommunicationCostSourceRequest>;
 const pageSize=20;
 type FormulaEvidence=Omit<ReturnType<typeof explainValue>,'proof'>&{proof?:ReturnType<typeof explainValue>['proof']};
@@ -32,18 +33,56 @@ function compact(metric:MetricValue){
 
 const isNumber=(metric:MetricValue,value:number)=>metric.status==='available'&&metric.quantity.value===value;
 
+type EndpointOperations=Record<CommunicationEndpointSide,{global:PartitionOperation[];devices:Map<DeviceId,PartitionOperation[]>}>;
+
+function endpointLayoutEvidence(evaluation:CommunicationEvaluation,authored:CommunicationDefinition,deviceIds:DeviceId[],trace:EndpointOperations){
+ const {definition}=evaluation;
+ function endpoint(side:CommunicationEndpointSide){
+  const {tensorId,groupId,dtype,globalShape,coverage,distribution,placements}=evaluation[side],declared=authored[side];
+  const operations=trace[side].global;
+  if(operations[0]?.kind!=='elements'||operations[0].scope!=='global')throw Error('通信端点缺少实际全局张量运算');
+  return {tensorId,declaredTensorId:declared.tensorId,groupId,declaredGroupId:declared.distribution.groupId,dtype,globalShape,coverage,
+   kind:distribution.kind,placementCount:placements.length,operations,
+   ...(distribution.kind==='partial'?{reduceOperation:distribution.reduceOperation}:{})};
+ }
+ const placements={source:new Map(evaluation.source.placements.map(placement=>[placement.deviceId,placement])),
+  destination:new Map(evaluation.destination.placements.map(placement=>[placement.deviceId,placement]))};
+ function onDevice(side:CommunicationEndpointSide,deviceId:DeviceId){
+  if(definition.operation==='send_recv'&&deviceId!==(side==='source'?definition.sourceDeviceId:definition.destinationDeviceId))return;
+  const placement=placements[side].get(deviceId),operations=trace[side].devices.get(deviceId);
+  if(!placement||!operations||operations.length!==placement.logicalShape.length+2)throw Error('通信端点缺少实际逐卡分片运算');
+  return {...placement,operations};
+ }
+ const devices=deviceIds.map(deviceId=>{
+  const source=onDevice('source',deviceId),destination=onDevice('destination',deviceId);
+  return {deviceId,...(source?{source}:{}),...(destination?{destination}:{})};
+ });
+ return {source:endpoint('source'),destination:endpoint('destination'),payloadDtype:definition.payloadDtype,devices};
+}
+
 export async function replayCommunicationCostSource(input:unknown){
  const request=CommunicationCostSourceRequest.parse(input),{scenario,assets,stepContext,selector,page,inputHash,engineVersion}=request;
- const extended=request.proofVersion===2;
+ const extended=request.proofVersion!==undefined,start=page*pageSize;
  if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1)throw Error('通信来源需要选择一个实际 Decode 步骤');
  if(request.decodeFrame&&!stepContext)throw Error('通信来源缺少实际 Decode 步骤上下文');
  const prefix=request.decodeFrame&&stepContext?`decode-step-${stepContext.index}::`:undefined;
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('通信固定输入、实际步骤或引擎版本不匹配');
  const observations:CommunicationPlanObservation[]=[];
  let bindingTrace:ParameterCaptureTrace|undefined;
+ const endpointOperations:EndpointOperations|undefined=request.proofVersion===3?{
+  source:{global:[],devices:new Map()},destination:{global:[],devices:new Map()},
+ }:undefined;
+ const endpoints:CommunicationEndpointObserver|undefined=endpointOperations?{start,limit:pageSize,record:(side,operation,deviceId)=>{
+  const trace=endpointOperations[side];
+  if(deviceId===undefined){trace.global.push(operation);return;}
+  const operations=trace.devices.get(deviceId)??[];
+  operations.push(operation);
+  trace.devices.set(deviceId,operations);
+ }}:undefined;
  const resolved=await resolveParallelPlan(scenario,assets,stepContext,{
   index:selector.index,...(selector.nativeNodeId?{nativeNodeId:selector.nativeNodeId}:{}),record:trace=>observations.push(trace),
   ...(extended?{bindings:(trace:ParameterCaptureTrace)=>{bindingTrace=trace;}}:{}),
+  ...(endpoints?{endpoints}:{}),
  });
  if(resolved.status!=='available')throw Error('原通信布局不能复算');
  const row=resolved.result.communications.find(entry=>entry.index===selector.index),observed=observations[0];
@@ -57,7 +96,7 @@ export async function replayCommunicationCostSource(input:unknown){
  if(!authored||!boundRoles)throw Error('缺少原通信声明');
  const symbols=collective?.symbols??observed.symbols;
  const planKeys=new Set(observed.planParameterKeys);
- const start=page*pageSize,componentCount=evaluation.perDevice.length;
+ const componentCount=evaluation.perDevice.length;
  if(page>0&&start>=componentCount)throw Error('请求的通信设备页不存在');
  const uniform=!effective.perDevicePayloads,sendRecv=effective.operation==='send_recv',factor=effective.algorithm.trafficFactor;
  if(!!boundRoles.perDevicePayloads===uniform)throw Error('通信逐设备声明类型不同');
@@ -129,14 +168,15 @@ export async function replayCommunicationCostSource(input:unknown){
   ...(uniformMessages?{uniformMessages}:{}),items,...(timing?{timing}:{}),...(timingFormula?{timingFormula}:{}),diagnostics};
  if(extended&&!bindingTrace)throw Error('未采集到实际通信参数域');
  const parameterBindings=bindingTrace?communicationParameterBindingGraph({...bindingTrace,truncated:bindingTrace.truncated||!complete||readsTruncated},assets,reads):undefined;
- return {schemaVersion:extended?2 as const:1 as const,kind:'communication_cost_source' as const,inputHash,engineVersion,selector,page,pageSize,componentCount,complete,
-  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(parameterBindings?{parameterBindings}:{}),request};
+ const endpointLayouts=endpointOperations?endpointLayoutEvidence(evaluation,authored,items.map(item=>item.deviceId),endpointOperations):undefined;
+ return {schemaVersion:request.proofVersion??1 as const,kind:'communication_cost_source' as const,inputHash,engineVersion,selector,page,pageSize,componentCount,complete,
+  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(parameterBindings?{parameterBindings}:{}),...(endpointLayouts?{endpointLayouts}:{}),request};
 }
 
 export type CommunicationCostSourceReport=Awaited<ReturnType<typeof replayCommunicationCostSource>>;
 
 export async function verifyCommunicationCostSourceReport(input:unknown){
- if(!input||typeof input!=='object'||!('kind'in input)||input.kind!=='communication_cost_source'||!('schemaVersion'in input)||(input.schemaVersion!==1&&input.schemaVersion!==2)||!('request'in input))throw Error('无效的通信来源报告');
+ if(!input||typeof input!=='object'||!('kind'in input)||input.kind!=='communication_cost_source'||!('schemaVersion'in input)||(input.schemaVersion!==1&&input.schemaVersion!==2&&input.schemaVersion!==3)||!('request'in input))throw Error('无效的通信来源报告');
  const actual=await replayCommunicationCostSource(input.request);
  if(stableStringify(actual)!==stableStringify(input))throw Error('通信来源与固定输入复算不同');
  return actual;

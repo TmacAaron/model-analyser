@@ -5,7 +5,9 @@ export type PartitionOperation=
  |{kind:'axis';axisId:string;method:'whole'|'manual'|'explicit'|'even'|'padded';logical:number;allocated:number;extent?:number;start?:number;end?:number;mesh?:{axisId:string;width:number;rank:number}}
  |{kind:'elements';scope:'global'|'logical'|'allocated';dimensions:number[];value:number;emptyAxis?:number;products?:number[]}
  |{kind:'explicit_coverage';rectangles:number;covered:number;globalElements:number};
-export type PartitionObserver={deviceId:DeviceId;record:(operation:PartitionOperation)=>void};
+type PartitionRecorder=(operation:PartitionOperation,deviceId?:DeviceId)=>void;
+export type PartitionObserver={deviceId:DeviceId;record:PartitionRecorder};
+export type PartitionPageObserver={deviceIds:ReadonlySet<DeviceId>;record:PartitionRecorder};
 
 export type LayoutTarget={kind:'tensor';nodeId:NodeId;tensorId:TensorId;deviceId:DeviceId}|{kind:'storage';storageId:StorageId;deviceId:DeviceId};
 export type LayoutDeclaration={

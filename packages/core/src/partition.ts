@@ -2,11 +2,11 @@ import { TensorSpec,TensorDistribution,DeviceTopology,TensorPartitionAttempt,typ
 import { numericValue,type EvaluationContext } from './storage.js';
 import { FormulaError } from './formula.js';
 import { canonical } from '../../contracts/src/validation.js';
-import type {PartitionObserver,PartitionOperation} from './layout-observation.js';
+import type {PartitionObserver,PartitionOperation,PartitionPageObserver} from './layout-observation.js';
 
 export const MAX_PARTITION_DEVICES=1024;
 const exact=(n:number)=>{if(!Number.isSafeInteger(n)||n<0)throw new FormulaError('numeric_overflow','分布的精确元素数量超出安全整数');return n;};
-function elements(sizes:number[],observe?:PartitionObserver['record'],scope:Extract<PartitionOperation,{kind:'elements'}>['scope']='global'){
+function elements(sizes:number[],observe?:(operation:PartitionOperation)=>void,scope:Extract<PartitionOperation,{kind:'elements'}>['scope']='global'){
   const empty=sizes.indexOf(0);
   if(empty>=0){observe?.({kind:'elements',scope,dimensions:sizes,value:0,emptyAxis:empty});return 0;}
   const products:number[]|undefined=observe?[]:undefined;
@@ -16,9 +16,11 @@ function elements(sizes:number[],observe?:PartitionObserver['record'],scope:Extr
 const shape=(original:Shape,sizes:number[]):Shape=>original.map((a,i)=>({...a,size:{kind:'literal',quantity:{value:sizes[i]??0,unit:'count'}}}));
 
 /** Partition a logical tensor, preserving padding and unused mesh-axis replicas. */
-export function partitionTensor(input:TensorSpec,layout:TensorDistribution,inputTopology:DeviceTopology,context:EvaluationContext,observer?:PartitionObserver):TensorPartitionAttempt{
+export function partitionTensor(input:TensorSpec,layout:TensorDistribution,inputTopology:DeviceTopology,context:EvaluationContext,observer?:PartitionObserver|PartitionPageObserver):TensorPartitionAttempt{
   const diagnostics:Diagnostic[]=[];
-  const emit=observer?(operation:PartitionOperation)=>observer.record(structuredClone(operation)):undefined;
+  type Device=DeviceTopology['devices'][number]['deviceId'];
+  const emit=observer?(operation:PartitionOperation,deviceId?:Device)=>observer.record(structuredClone(operation),deviceId):undefined;
+  const observeDevice=observer&&('deviceId'in observer?(deviceId:Device)=>observer.deviceId===deviceId:(deviceId:Device)=>observer.deviceIds.has(deviceId));
   try{
     const tensor=TensorSpec.parse(input),distribution=TensorDistribution.parse(layout),topology=DeviceTopology.parse(inputTopology),group=topology.groups.find(g=>g.groupId===distribution.groupId);
     if(!group)throw new FormulaError('missing_reference','张量分布引用缺少设备组');
@@ -35,7 +37,7 @@ export function partitionTensor(input:TensorSpec,layout:TensorDistribution,input
     const sizes=original.map(a=>numericValue(a.size,'count',context,true)),globalShape=shape(original,sizes),globalElements=elements(sizes,emit);
     const placements:TensorPartitionResult['placements']=[];
     function add(deviceId:DeviceTopology['devices'][number]['deviceId'],local:number[],allocated:number[],slices:TensorPartitionResult['placements'][number]['slices'],copies=1,source=original,shards?:ReadonlyMap<string,PartitionOperation>){
-      const observe=observer?.deviceId===deviceId?emit:undefined;
+      const observe=emit&&observeDevice?.(deviceId)?(operation:PartitionOperation)=>emit(operation,deviceId):undefined;
       if(observe)for(const [index,axis] of source.entries()){
         const slice=slices.find(s=>s.axisId===axis.axisId),shard=shards?.get(axis.axisId);
         observe(shard??{kind:'axis',axisId:axis.axisId,method:slice?'whole':'manual',logical:local[index]??0,allocated:allocated[index]??0,...(slice?{extent:slice.end,start:slice.start,end:slice.end}:{})});
@@ -56,7 +58,7 @@ export function partitionTensor(input:TensorSpec,layout:TensorDistribution,input
         if(policy.slices.length!==group.members.length*mappings.length||policy.slices.some(s=>!group.members.includes(s.deviceId)||!distribution.axes.some(a=>a.tensorAxisId===s.axisId)))throw new FormulaError('invalid_distribution','显式切片必须为每个设备的每个分片轴提供且只提供一项');
       }
       for(const id of group.members){const coordinate=mesh.coordinates.find(c=>c.deviceId===id);if(!coordinate)throw new FormulaError('invalid_distribution','设备缺少 mesh 坐标');const local=[...sizes],allocated=[...sizes],slices=fullSlices.map(s=>({...s}));
-        const observedAxes=observer?.deviceId===id?new Map<string,PartitionOperation>():undefined;
+        const observedAxes=observeDevice?.(id)?new Map<string,PartitionOperation>():undefined;
         for(const {axis,meshAxis} of mappings){const extent=sizes[axis]??0,width=mesh.axes[meshAxis]?.size??1,rank=coordinate.coordinates[meshAxis]??0;let start:number,end:number,physical:number;
           if(policy.kind==='explicit'){const matches=policy.slices.filter(s=>s.deviceId===id&&s.axisId===original[axis]?.axisId),s=matches[0];if(matches.length!==1||!s||s.end<=s.start||s.end>extent)throw new FormulaError('invalid_distribution','显式切片重复、为空或超出逻辑维度');start=s.start;end=s.end;physical=end-start;}
           else {if(policy.kind==='even'&&extent%width!==0)throw new FormulaError('invalid_distribution','均匀分片要求逻辑维度可整除 mesh 大小；请显式选择 padded 或切片');physical=Math.ceil(extent/width);start=Math.min(extent,rank*physical);end=Math.min(extent,start+physical);}

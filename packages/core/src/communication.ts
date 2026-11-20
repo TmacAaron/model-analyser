@@ -5,10 +5,11 @@ import { partitionTensor } from './partition.js';
 import { MetricFactory } from './metrics.js';
 import { canReadTensorLocally } from './layout-compatibility.js';
 import { canonical,collectRefs } from '../../contracts/src/validation.js';
-import type {CommunicationTimingArithmetic} from './communication-observation.js';
+import type {CommunicationEndpointObserver,CommunicationEndpointSide,CommunicationTimingArithmetic} from './communication-observation.js';
+import type {PartitionPageObserver} from './layout-observation.js';
 
 /** Network traffic is explicit; collective names never introduce a second coefficient. */
-export function evaluateCommunication(input:CommunicationDefinition,inputScope:MetricScope,tensors:TensorSpec[],inputTopology:DeviceTopology,context:EvaluationContext,observeTiming?:(step:CommunicationTimingArithmetic)=>void):CommunicationAttempt{
+export function evaluateCommunication(input:CommunicationDefinition,inputScope:MetricScope,tensors:TensorSpec[],inputTopology:DeviceTopology,context:EvaluationContext,observeTiming?:(step:CommunicationTimingArithmetic)=>void,observeEndpoints?:CommunicationEndpointObserver):CommunicationAttempt{
   const diagnostics:Diagnostic[]=[];
   try{
     const c=CommunicationDefinition.parse(input),scope=MetricScope.parse(inputScope),topology=DeviceTopology.parse(inputTopology),group=topology.groups.find(g=>g.groupId===c.groupId);
@@ -26,7 +27,14 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
       const layoutGroup=topology.groups.find(g=>g.groupId===endpoint.distribution.groupId);
       if(!layoutGroup||canonical([...layoutGroup.members].sort())!==canonical([...group.members].sort()))throw new FormulaError('invalid_distribution','通信端点布局必须覆盖同一组实际设备；不同组名称可以复用同一设备');
     }
-    const from=partitionTensor(source,c.source.distribution,topology,context),to=partitionTensor(destination,c.destination.distribution,topology,context);
+    const pageDevices=observeEndpoints?(c.perDevicePayloads?.map(payload=>payload.deviceId)??members).slice(observeEndpoints.start,observeEndpoints.start+observeEndpoints.limit):undefined;
+    function partitionObserver(side:CommunicationEndpointSide):PartitionPageObserver|undefined{
+      if(!observeEndpoints||!pageDevices)return;
+      const deviceIds=new Set(sendRecv?pageDevices.filter(id=>id===(side==='source'?sender:receiver)):pageDevices);
+      return {deviceIds,record:(operation,deviceId)=>observeEndpoints.record(side,operation,deviceId)};
+    }
+    const from=partitionTensor(source,c.source.distribution,topology,context,partitionObserver('source'));
+    const to=partitionTensor(destination,c.destination.distribution,topology,context,partitionObserver('destination'));
     if(from.status==='unavailable'||to.status==='unavailable')return CommunicationAttempt.parse({status:'unavailable',diagnostics:[...(from.status==='unavailable'?from.diagnostics.map(d=>({...d,diagnosticId:'source-'+d.diagnosticId})):[]),...(to.status==='unavailable'?to.diagnostics.map(d=>({...d,diagnosticId:'destination-'+d.diagnosticId})):[])]});
     const dims=(s:typeof from.result.globalShape)=>s.map(a=>({axisId:a.axisId,size:a.size}));
     if(canonical(dims(from.result.globalShape))!==canonical(dims(to.result.globalShape)))throw new FormulaError('invalid_shape','通信前后逻辑张量维度必须一致；布局变换不隐式执行 reshape');

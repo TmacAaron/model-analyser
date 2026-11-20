@@ -36,6 +36,39 @@ it('connects the configured gather formula to real M/N values and the transfer a
  await expect(replayCommunicationCostSource({...fixed,selector:{...fixed.selector,index:99}})).rejects.toThrow('通信序号');
 });
 
+it('replays distinct effective endpoint layouts even when gather uses the same tensor ID on both ends',async()=>{
+ const project=makeSerialGatherProject(c01Project()),scenario=project.scenarios[0]!,gather=scenario.parallelPlan.communications[0]!;
+ scenario.bindings=[{parameterKey:'N',value:{kind:'integer',value:9}}];
+ for(const assignment of scenario.parallelPlan.assignments)for(const tensor of assignment.tensorDistributions){
+  if(tensor.distribution.kind==='sharded')tensor.distribution.policy={kind:'padded'};
+ }
+ if(gather.source.distribution.kind!=='sharded')throw Error('Missing gather source shard');
+ gather.source.distribution.policy={kind:'padded'};
+ const group=scenario.deviceTopology.groups[0]!;
+ const alias='destination-layout';
+ scenario.deviceTopology.groups.push({...structuredClone(group),groupId:alias});
+ gather.destination.distribution.groupId=alias;
+ const fixed={...await request(project,'groupSendBytes'),proofVersion:3 as const};
+ const report=await replayCommunicationCostSource(fixed);
+ expect(report).toMatchObject({schemaVersion:3,summary:{groupSend:{quantity:{value:72}}},endpointLayouts:{
+  source:{tensorId:'Y',groupId:'tp',kind:'sharded',coverage:'padded',placementCount:2},
+  destination:{tensorId:'Y',groupId:alias,kind:'replicated',coverage:'exact',placementCount:2},
+  devices:[{deviceId:'gpu0',source:{logicalElements:20,allocatedElements:20},destination:{logicalElements:36,allocatedElements:36}},
+   {deviceId:'gpu1',source:{logicalElements:16,allocatedElements:20,slices:[{axisId:'row',start:0,end:4},{axisId:'col',start:5,end:9,paddedExtent:5}]},
+    destination:{logicalElements:36,allocatedElements:36}}],
+ }});
+ expect(report.endpointLayouts?.devices[1]?.source?.operations).toContainEqual(expect.objectContaining({kind:'axis',axisId:'col',method:'padded',extent:9,start:5,end:9,logical:4,allocated:5,mesh:{axisId:'tp',width:2,rank:1}}));
+ expect(report.endpointLayouts?.source.operations).toContainEqual(expect.objectContaining({kind:'elements',scope:'global',value:36}));
+ expect(await verifyCommunicationCostSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const modified=structuredClone(report);
+ modified.endpointLayouts!.devices[1]!.source!.slices[1]!.start=4;
+ await expect(verifyCommunicationCostSourceReport(modified)).rejects.toThrow('固定输入复算不同');
+ const task={taskId:'endpoints',phase:'communication_cost_source',request:fixed};
+ const reply={taskId:task.taskId,phase:task.phase,status:'available',report};
+ expect(readCommunicationSourceReply(reply,task)).toEqual(reply);
+ expect(()=>readCommunicationSourceReply({...reply,report:{...report,endpointLayouts:undefined}},task)).toThrow('端点布局');
+});
+
 it('binds a plan message to the winning root parameter when the workload has the same name and value',async()=>{
  const project=makeSerialGatherProject(c01Project()),scenario=project.scenarios[0]!,model=project.assetSnapshots.find(asset=>asset.assetId===scenario.model.assetId);
  if(!model||scenario.workload.kind!=='decode')throw Error('Missing plan communication fixture');
@@ -113,6 +146,13 @@ it('binds only the displayed devices on later pages while preserving the whole g
  ]);
  expect(await verifyCommunicationCostSourceReport(last)).toEqual(last);
  await expect(replayCommunicationCostSource({...fixed,page:2})).rejects.toThrow('页不存在');
+
+ communication.perDevicePayloads.reverse();
+ const reordered={...await request(project,'groupSendBytes'),proofVersion:3 as const};
+ const firstLayout=await replayCommunicationCostSource(reordered),lastLayout=await replayCommunicationCostSource({...reordered,page:1});
+ expect(firstLayout.endpointLayouts?.devices.map(row=>row.deviceId)).toEqual(members.slice(1).reverse());
+ expect(lastLayout.endpointLayouts?.devices).toMatchObject([{deviceId:'gpu0',source:{logicalElements:8},destination:{logicalElements:168}}]);
+ expect(lastLayout.summary.groupSend).toMatchObject({quantity:{value:188,unit:'byte'}});
 });
 
 it('shows graph-native role binding then actual bandwidth and latency overrides',async()=>{
@@ -154,13 +194,19 @@ it('preserves nonuniform diagnostics, per-rank factors, ordered totals, and max-
 
 it('counts only the explicit send_recv endpoints and keeps fixed seconds separate from HBM',async()=>{
  const {project}=await makeNamedParallelProject('pp2'),fixed=await request(project,'groupSendBytes');
- const report=await replayCommunicationCostSource(fixed);
+ const report=await replayCommunicationCostSource({...fixed,proofVersion:3});
  expect(report.operation).toBe('send_recv');
  expect(report.uniformMessages?.count).toBe(1);
  expect(report.items.map(row=>row.role).sort()).toEqual(['receiver','sender']);
  const sender=report.items.find(row=>row.role==='sender'),receiver=report.items.find(row=>row.role==='receiver');
  expect(sender?.receive).toMatchObject({quantity:{value:0}});
  expect(receiver?.send).toMatchObject({quantity:{value:0}});
+ const source=report.endpointLayouts?.devices.find(row=>row.deviceId===sender?.deviceId);
+ const destination=report.endpointLayouts?.devices.find(row=>row.deviceId===receiver?.deviceId);
+ expect(source?.source).toMatchObject({deviceId:sender?.deviceId});
+ expect(source?.destination).toBeUndefined();
+ expect(destination?.source).toBeUndefined();
+ expect(destination?.destination).toMatchObject({deviceId:receiver?.deviceId});
 });
 
 it('replays an actual Decode step, including a custom timing formula and fixed zero override',async()=>{

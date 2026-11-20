@@ -1,4 +1,5 @@
-import type {AssetRef,CommunicationDefinition,NodeId,Quantity,Scenario} from '@model-analyser/contracts';
+import type {AssetRef,CommunicationDefinition,DeviceId,NodeId,Quantity,Scenario} from '@model-analyser/contracts';
+import type {PartitionOperation} from './layout-observation.js';
 import type {ParameterCaptureTrace} from './parameter-observation.js';
 
 export type BoundCollectiveObservation={
@@ -17,9 +18,15 @@ export type CommunicationPlanObservation={
  overrides:CommunicationTimingOverride[];timing?:CommunicationTimingArithmetic;
 };
 
+export type CommunicationEndpointSide='source'|'destination';
+export type CommunicationEndpointObserver={
+ start:number;limit:number;record:(side:CommunicationEndpointSide,operation:PartitionOperation,deviceId:DeviceId|undefined)=>void;
+};
+
 export type CommunicationPlanObserver={
  index:number;nativeNodeId?:NodeId;record:(observation:CommunicationPlanObservation)=>void;
  bindings?:(trace:ParameterCaptureTrace)=>void;
+ endpoints?:CommunicationEndpointObserver;
 };
 
 /** Preserve actual evaluated values, including a declared prototype-like parameter key. */

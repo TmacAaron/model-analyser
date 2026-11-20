@@ -32,6 +32,14 @@ test('drills from a serial communication barrier to the native equation and vali
  await expect(communication).toContainText('32 ÷ 2000 = 0.016 s');
  await expect(communication).toContainText('0.016 + 0.001 = 0.017 s');
  await expect(communication).toContainText('1000 byte/s · 0.001 s/轮 → 2000 byte/s');
+ const endpoints=communication.getByRole('region',{name:'通信端点布局'});
+ await expect(endpoints).toContainText('源端 Y · 分片');
+ await expect(endpoints).toContainText('目标端 Yg · 复制');
+ const gpu1=communication.getByRole('article').filter({has:page.getByRole('heading',{name:'gpu1',exact:true})});
+ const source=gpu1.locator('details').filter({has:page.locator('summary').filter({hasText:'源端布局'})});
+ await source.locator('summary').click();
+ await expect(source).toContainText('[4, 8) · 有效 4 · 分配 4');
+ await expect(gpu1.locator('summary').filter({hasText:'目标端布局'})).toContainText('32 个有效元素 · 32 个分配元素');
  await communication.getByText('统一消息的公式与组总量',{exact:true}).click();
  await expect(communication).toContainText('rows * cols');
  const bindings=communication.getByRole('region',{name:'实际参数绑定链'});
@@ -41,7 +49,7 @@ test('drills from a serial communication barrier to the native equation and vali
  await communication.getByRole('button',{name:'导出此页通信来源',exact:true}).click();
  const file=await(await download).path();if(!file)throw Error('Missing communication export');
  const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
- expect(JSON.parse(cli.stdout)).toMatchObject({kind:'communication_cost_source',schemaVersion:2,operation:'all_gather',quantity:{value:.017,unit:'second'},parameterBindingGraph:{complete:true,roots:4}});
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'communication_cost_source',schemaVersion:3,operation:'all_gather',quantity:{value:.017,unit:'second'},parameterBindingGraph:{complete:true,roots:4}});
 });
 
 test('switches the actual Decode workload binding for a nonuniform communication',async({page})=>{
@@ -49,6 +57,7 @@ test('switches the actual Decode workload binding for a nonuniform communication
  const declaration=scenario.parallelPlan.communications[0]!;
  if(scenario.workload.kind!=='decode'||declaration.sendBytesPerMember.kind!=='formula')throw Error('Missing Decode communication fixture');
  scenario.workload={...scenario.workload,contextTokensPerRequest:2,queryTokensPerRequest:1,steps:3};
+ scenario.bindings=[...scenario.bindings.filter(item=>item.parameterKey!=='M'),{parameterKey:'M',value:{kind:'symbol',name:'contextTokensPerRequest'}}];
  const dynamic=structuredClone(declaration.sendBytesPerMember);
  dynamic.call.bindings['rows']={kind:'symbol',name:'contextTokensPerRequest'};
  declaration.perDevicePayloads=scenario.deviceTopology.devices.map((device,index)=>({deviceId:device.deviceId,
@@ -66,6 +75,8 @@ test('switches the actual Decode workload binding for a nonuniform communication
  await expect(communication.locator('article').filter({hasText:'gpu0'})).toContainText('发送量 × 4 = 64 byte');
  await expect(communication.locator('article').filter({hasText:'gpu1'})).toContainText('16 + 48 = 64 byte');
  await expect(communication).toContainText('64 ÷ 1000 = 0.064 s');
+ const endpoints=communication.getByRole('region',{name:'通信端点布局'});
+ await expect(endpoints).toContainText('row=2 × col=8');
  const context=communication.getByRole('row').filter({hasText:'contextTokensPerRequest'});
  await expect(context).toContainText('2 count');
  await steps.selectOption('2');
@@ -73,4 +84,5 @@ test('switches the actual Decode workload binding for a nonuniform communication
  await expect(communication).toContainText('组总发送 80 byte');
  await expect(communication.locator('article').filter({hasText:'gpu1'})).toContainText('32 + 48 = 80 byte');
  await expect(communication).toContainText('128 ÷ 1000 = 0.128 s');
+ await expect(endpoints).toContainText('row=4 × col=8');
 });
