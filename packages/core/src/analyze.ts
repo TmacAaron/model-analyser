@@ -17,6 +17,7 @@ import { validateResult } from '../../contracts/src/result-validation.js';
 import { analyzeDistributedScenario } from './distributed-analysis.js';
 import { ENGINE_VERSION } from './version.js';
 import { analyzeDecodeSequence } from './decode.js';
+import {moduleCostInputs} from './aggregate-members.js';
 
 export { ENGINE_VERSION } from './version.js';
 export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext):Promise<AnalysisAttempt>{
@@ -63,7 +64,8 @@ export async function analyzeScenario(input:Scenario,library:AssetDocument[],ste
       if(evaluated.cost.hbmBytes.status==='available')evaluated.cost.hbmBytes.basis='estimated';
       const cost=aggregateCosts([evaluated.cost],nodeScope,factory);nodes.push({nodeId,cost});definitions.set(nodeId,node.body.cost);
     }
-    const total=aggregateCosts(nodes.map(n=>n.cost),scope,metrics),modules:AnalysisResult['modules']=resolved.containers.filter(c=>c.nodeId!=='$model').map(c=>({nodeId:c.nodeId,leafNodeIds:c.leafNodeIds,cost:aggregateCosts(c.leafNodeIds.map(id=>{const node=nodes.find(n=>n.nodeId===id);if(!node)throw new FormulaError('missing_reference','容器叶节点成本缺失');return node.cost;}),{...scope,target:{kind:'module',nodeId:c.nodeId}},new MetricFactory(diagnostics,{...provenance,parameterSources:targetParameterSources(resolved,c.nodeId,true)},scenario.scenarioId))}));
+    const nodeById=new Map(nodes.map(node=>[node.nodeId,node]));
+    const total=aggregateCosts(nodes.map(n=>n.cost),scope,metrics),modules:AnalysisResult['modules']=resolved.containers.filter(c=>c.nodeId!=='$model').map(c=>({nodeId:c.nodeId,leafNodeIds:c.leafNodeIds,cost:aggregateCosts(moduleCostInputs(c.leafNodeIds,nodeById,[]).costs,{...scope,target:{kind:'module',nodeId:c.nodeId}},new MetricFactory(diagnostics,{...provenance,parameterSources:targetParameterSources(resolved,c.nodeId,true)},scenario.scenarioId))}));
     const schedule:AnalysisResult['schedule']=[];let time=0,known=true;
     for(const node of nodes){if(node.cost.seconds.status==='unavailable'){known=false;continue;}if(!known)continue;const end=time+node.cost.seconds.quantity.value;if(!Number.isFinite(end)||(node.cost.seconds.quantity.value>0&&end===time)){metrics.unavailable('numeric_overflow','累计时间线溢出或无法表示非零区间');known=false;continue;}schedule.push({nodeId:node.nodeId,deviceScope:{kind:'per_device',deviceId:device.deviceId},streamId:'serial',startSeconds:time,endSeconds:end});time=end;}
     if(!known&&total.seconds.status==='available')total.seconds=metrics.unavailable('incomplete_serial_execution','串行时刻无法完整表示，不能报告完整跨度');
