@@ -15,7 +15,7 @@ import { collectivePorts } from '../../contracts/src/collective.js';
 import { bindNativeCommunication,nativeBindingIssues } from '../../contracts/src/parallel-bindings.js';
 import {communicationSymbols,type BoundCollectiveObservation} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
-import type {LayoutDeclaration,LayoutObjectObserver} from './layout-observation.js';
+import type {LayoutDeclaration,LayoutObjectObserver,RepeatCountObservation,ShapeDeclaration} from './layout-observation.js';
 
 type Node=GraphTemplate['nodes'][number];
 type Port=GraphTemplate['inputs'][number];
@@ -58,6 +58,8 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     const nodeExpansions=new Map<string,Expansion>();
     const parameterCapture=observer?.bindings?new ParameterCapture(observer.nodeId,observer.bindingNodes):undefined;
     const storageInputs=observer?.cost?new Map<string,InstantiatedStorageCapture>():undefined;
+    const layoutTrace=observer?.layoutObject,derived=layoutTrace?.derived;
+    const tensorDeclarations=derived?new Map<TensorId,ShapeDeclaration>():undefined;
     const deferredStates:{state:GraphTemplate['states'][number];local:GraphTemplate['states'][number];path:string;bound:boolean}[]=[];
     const controlPairs:[NodeId,NodeId,GraphTemplate['dependencies'][number]['kind']][]=[];
     const collectivePlacements:{node:Node;parentPath:string;after:NodeId[];before:NodeId[]}[]=[];
@@ -103,9 +105,8 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     function materialize(source:Frame,path:string,symbols:Record<string,Quantity>,external:Map<string,TensorId>,stateBindings:Map<string,StateId>,owner:AssetDocument){
       const tensorMap=new Map<string,TensorId>(),storageMap=new Map<string,StorageId>(),stateMap=new Map<string,StateId>();
-      const trace=observer?.layoutObject;
       function observeObject(object:LayoutDeclaration['object']){
-        trace?.record(structuredClone({object,nodeId:NodeId.parse(path||'$model'),asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},symbols:communicationSymbols(symbols)}));
+        layoutTrace?.record?.(structuredClone({object,nodeId:NodeId.parse(path||'$model'),asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},symbols:communicationSymbols(symbols)}));
       }
       const bindStorage=(local:string,target:StorageId)=>{const canonical=canonicalStorage(target),prior=storageMap.get(local);if(prior&&canonicalStorage(prior)!==canonical)throw new FormulaError('invalid_state_binding',`同一本地存储绑定不同对象 ${local}`);storageMap.set(local,canonical);};
       for(const local of source.states){const parentId=stateBindings.get(local.stateId);if(parentId){const parent=stateById.get(parentId);if(!parent||parent.stateKind!==local.stateKind||parent.storageIds.length!==local.storageIds.length)throw new FormulaError('invalid_state_binding','状态类型或存储数量不兼容');const policy=local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy;if(canonical(policy)!==canonical(parent.updatePolicy)||(local.allocationBasis??'context_boundary')!==(parent.allocationBasis??'context_boundary'))throw new FormulaError('invalid_state_binding','状态更新/分配时点约束不兼容');stateMap.set(local.stateId,parentId);local.storageIds.forEach((id,i)=>{const target=parent.storageIds[i];if(!target)throw new FormulaError('invalid_state_binding','状态存储缺失');bindStorage(id,target);});}else stateMap.set(local.stateId,StateId.parse(objectId(path,local.stateId)));}
@@ -120,13 +121,15 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
           const parent=storageById.get(id);if(parent&&parent.sharingDomain!==s.sharingDomain)throw new FormulaError('invalid_state_binding','存储共享域不兼容');continue;
         }
         const target=s.allocation.kind==='alias'?storageMap.get(s.allocation.targetStorageId):undefined;if(s.allocation.kind==='alias'&&!target)throw new FormulaError('missing_reference','alias 目标缺失');addStorage({...s,storageId:id,allocation:target?{kind:'alias',targetStorageId:target}:s.allocation});const original=source.storages[index],bindingFrame=parameterCapture?.frame(symbols);if(storageInputs&&original)storageInputs.set(id,{storage:{...original,storageId:id,allocation:target?{kind:'alias',targetStorageId:target}:original.allocation},symbols:parameterCapture?.symbolsSnapshot(symbols)??symbols,asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},...(bindingFrame?{bindingFrame}:{})});
-        if(original&&trace?.target.kind==='storage'&&trace.target.storageId===id)observeObject({kind:'storage',storage:original});
+        if(original&&layoutTrace?.target.kind==='storage'&&layoutTrace.target.storageId===id)observeObject({kind:'storage',storage:original});
       }
       for(const s of evaluatedStorages){const target=storageMap.get(s.storageId);if(!target)throw new FormulaError('missing_reference','存储映射缺失');const local=allocateStorage(s.storageId,evaluatedStorages,context({})),parent=allocateStorage(target,graph.storages,context({}));if(local.totalBytes.status!=='available'||parent.totalBytes.status!=='available')throw new FormulaError('invalid_shape','存储分配不可用');if(local.totalBytes.quantity.value>parent.totalBytes.quantity.value)throw new FormulaError('invalid_state_binding','绑定存储容量不足');}
       for(const t of source.tensors)if(!tensorMap.has(t.tensorId)){
         const id=TensorId.parse(objectId(path,t.tensorId)),storageId=storageMap.get(t.storageId);if(!storageId)throw new FormulaError('missing_reference',`张量存储缺失 ${t.storageId}`);
         tensorMap.set(t.tensorId,id);addTensor({...t,tensorId:id,storageId,shape:shape(t.shape,symbols)});
-        if(trace?.target.kind==='tensor'&&trace.target.tensorId===id)observeObject({kind:'tensor',tensor:t});
+        if(tensorDeclarations)tensorDeclarations.set(id,{asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},
+          nodeId:NodeId.parse(path||'$model'),shape:t.shape,symbols});
+        if(layoutTrace?.target.kind==='tensor'&&layoutTrace.target.tensorId===id)observeObject({kind:'tensor',tensor:t});
       }
       for(const local of source.states){const stateId=stateMap.get(local.stateId);if(!stateId)throw new FormulaError('missing_reference','状态映射缺失');const bound=stateBindings.has(local.stateId);let state=stateById.get(stateId);
         if(!state){const storageIds=local.storageIds.map(id=>{const mapped=storageMap.get(id);if(!mapped)throw new FormulaError('missing_reference','状态存储缺失');return mapped;});state={...local,stateId,storageIds,creator:{kind:'initialized'},readers:[],writers:[],updatePolicy:local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy};stateById.set(stateId,state);graph.states.push(state);}
@@ -168,6 +171,8 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
       const stateBindings=new Map<string,StateId>();for(const s of node.stateBindings){const parent=parentStates.get(s.parentStateId);if(!parent)throw new FormulaError('missing_reference','父状态不存在');if(stateBindings.has(s.localStateId))throw new FormulaError('duplicate_id','状态绑定重复');stateBindings.set(s.localStateId,parent);}
       if(intrinsic&&stateBindings.size)throw new FormulaError('invalid_state_binding','内联叶节点通过父图存储和实际端口引用状态，不能绑定未声明的子状态');
       const count=node.repeat?numericValue(node.repeat.count,'count',context(parentSymbols),true):1;
+      const repeatCount:RepeatCountObservation|undefined=derived&&node.repeat?{axisId:node.repeat.axis,expression:node.repeat.count,nodeId:NodeId.parse(parentPath||'$model'),
+        symbols:communicationSymbols(parentSymbols),value:count}:undefined;
       if(count<1||count>limits.maxNodes)throw new FormulaError('expansion_limit','repeat 次数必须为正且不超过节点预算');
       if(node.repeat?.wiring==='independent'&&node.repeat.carry.length)throw new FormulaError('invalid_repeat','independent 不允许 carry');
       if(node.repeat&&Object.hasOwn(parentSymbols,node.repeat.axis))throw new FormulaError('invalid_repeat','repeat 局部索引不能覆盖已有参数');
@@ -184,13 +189,27 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
           for(const output of source.outputs)if(node.repeat.wiring==='independent'||i<count-1){const originalId=bindings.get(output.portId),original=originalId?tensorById.get(originalId):undefined;if(!original)throw new FormulaError('missing_reference','repeat 输出张量不存在');
             const local=source.tensors.find(t=>t.tensorId===output.tensorId),localShape=local?shape(local.shape,bound.symbols):node.repeat.wiring==='independent'?original.shape.filter(a=>a.axisId!==node.repeat?.axis):original.shape;
             const id=TensorId.parse(objectId(instancePath,'$output:'+output.portId));let storageId=original.storageId;
+            let disposition:'shared_stack'|'new_buffer'|'in_place'='shared_stack';
             if(node.repeat.wiring==='chain'){
               const carry=node.repeat.carry.find(c=>c.outputPortId===output.portId),inputId=carry?bindings.get(carry.inputPortId):undefined,input=inputId?tensorById.get(inputId):undefined;
               const inPlace=input&&canonicalStorage(input.storageId)===canonicalStorage(original.storageId);
+              disposition=inPlace?'in_place':'new_buffer';
               if(!inPlace){storageId=StorageId.parse(objectId(instancePath,'$output:'+output.portId));const originalStorage=storageById.get(original.storageId);if(!originalStorage)throw new FormulaError('missing_reference','repeat 输出存储缺失');addStorage({...originalStorage,storageId,allocation:{kind:'tensor',shape:localShape,dtype:original.dtype}});}
             }
             else {const repeatAxis=original.shape.find(a=>a.axisId===node.repeat?.axis);if(!repeatAxis||repeatAxis.size.kind!=='literal'||repeatAxis.size.quantity.value!==count||canonical(shapeValues(original.shape.filter(a=>a.axisId!==node.repeat?.axis)))!==canonical(shapeValues(localShape)))throw new FormulaError('invalid_repeat','independent 输出必须显式包含 repeat 轴且其他维度匹配');}
             addTensor({...original,tensorId:id,storageId,shape:localShape});external.set(output.portId,id);
+            if(derived&&layoutTrace&&repeatCount){
+              const parentDeclaration=tensorDeclarations?.get(original.tensorId);
+              const declaration:ShapeDeclaration|undefined=local?{asset:{assetId:target.assetId,revision:target.revision,kind:target.definition.kind},
+                nodeId:NodeId.parse(instancePath),shape:local.shape,symbols:bound.symbols}
+                :parentDeclaration?{...parentDeclaration,shape:node.repeat.wiring==='independent'?parentDeclaration.shape.filter(axis=>axis.axisId!==repeatCount.axisId):parentDeclaration.shape}:undefined;
+              if(declaration)tensorDeclarations?.set(id,declaration);
+              const wanted=layoutTrace.target.kind==='tensor'?layoutTrace.target.tensorId===id:disposition==='new_buffer'&&layoutTrace.target.storageId===storageId;
+              if(wanted)derived(structuredClone({kind:'repeat_instance',wiring:node.repeat.wiring,repeatNodeId:NodeId.parse(path),instanceNodeId:NodeId.parse(instancePath),instanceIndex:i,
+                tensorId:id,storageId,portId:output.portId,parentTensorId:original.tensorId,parentStorageId:original.storageId,disposition,count:repeatCount,shape:localShape,
+                shapeMethod:local?'declared_port':node.repeat.wiring==='independent'?'parent_axis_projection':'parent_shape',
+                ...(declaration?{declaration:{...declaration,symbols:communicationSymbols(declaration.symbols)}}:{})}));
+            }
           }
         }
         let exp:Expansion;
@@ -232,6 +251,19 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
           const view=endpoints(id,inputPorts,[{portId:'out',tensorId:outputId}],new Map([...inputPorts.map(p=>[p.tensorId,p.tensorId] as const),[outputId,outputId]]),true);
           appendNode({nodeId:id,name:'Repeat output view',phases:[phase],portBindings:[...inputPorts.map(({portId,tensorId})=>({portId,tensorId})),{portId:'out',tensorId:outputId}],stateBindings:[],body:{kind:'opaque',inputs:inputPorts.map(({portId,tensorId})=>({portId,tensorId})),outputs:[{portId:'out',tensorId:outputId}],cost:{compute:[],memoryAccess:[],temporaryStorageIds:[],timing:{kind:'fixed',seconds:0,description:'Metadata-only stacked view; no data copy or extra arithmetic'}}}});
           for(const p of inputPorts){const target=view.inputs.get(p.portId);if(!target)throw new FormulaError('invalid_repeat','view 输入缺失');wire(p.from,target);}const from=view.outputs.get('out');if(!from)throw new FormulaError('invalid_repeat','view 输出缺失');wire(from,to);allLeaves.push(id);
+          if(derived&&layoutTrace&&repeatCount){
+            const output=tensorById.get(outputId);
+            const wanted=layoutTrace.target.kind==='tensor'?layoutTrace.target.tensorId===outputId:output&&canonicalStorage(output.storageId)===layoutTrace.target.storageId;
+            if(output&&wanted){
+              const inputs=inputPorts.map((port,instanceIndex)=>{
+                const tensor=tensorById.get(port.tensorId);
+                if(!tensor)throw new FormulaError('invalid_repeat','堆叠视图输入张量缺失');
+                return {instanceIndex,tensorId:tensor.tensorId,storageId:tensor.storageId,shape:tensor.shape};
+              });
+              derived(structuredClone({kind:'repeat_stack',viewNodeId:id,repeatNodeId:NodeId.parse(path),tensorId:outputId,storageId:canonicalStorage(output.storageId),
+                portId:p.portId,count:repeatCount,shape:output.shape,inputs}));
+            }
+          }
         }else {const from=instances.at(-1)?.outputs.get(p.portId);if(!from)throw new FormulaError('invalid_repeat','chain 输出缺失');wire(from,to);}
       }
       outer.leaves=allLeaves;containers.push({nodeId:NodeId.parse(path),name:node.name,asset:{assetId:target.assetId,revision:target.revision,kind:target.definition.kind},leafNodeIds:allLeaves});nodeExpansions.set(path,outer);return outer;

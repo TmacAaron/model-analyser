@@ -11,7 +11,8 @@ import {namespaceDiagnostics} from './decode.js';
 import {explainValue,evaluateValue} from './formula.js';
 import {ENGINE_VERSION} from './version.js';
 import type {AllocationObservation} from './storage.js';
-import type {LayoutDeclaration,LayoutRecipe,LayoutRuleEvidence,PartitionOperation,StorageLayoutOrigin} from './layout-observation.js';
+import {captureLayoutBindings,layoutBindingReads,type LayoutBindingRead,type LayoutFrame} from './layout-parameter-evidence.js';
+import type {DerivedLayoutObservation,LayoutDeclaration,LayoutRecipe,LayoutRuleEvidence,PartitionOperation,StorageLayoutOrigin} from './layout-observation.js';
 import type {QuantizationObservation} from './quantization-observation.js';
 
 export const LayoutSourceSelector=z.discriminatedUnion('kind',[
@@ -19,7 +20,7 @@ export const LayoutSourceSelector=z.discriminatedUnion('kind',[
  z.strictObject({kind:z.literal('storage'),storageId:StorageId,deviceId:DeviceId}),
 ]);
 export type LayoutSourceSelector=z.infer<typeof LayoutSourceSelector>;
-export const LayoutSourceRequest=LeafCostSourceRequest.omit({selector:true,metric:true}).extend({selector:LayoutSourceSelector});
+export const LayoutSourceRequest=LeafCostSourceRequest.omit({selector:true,metric:true}).extend({selector:LayoutSourceSelector,proofVersion:z.literal(2).optional()});
 export type LayoutSourceRequest=z.input<typeof LayoutSourceRequest>;
 const pageSize=20;
 
@@ -31,7 +32,9 @@ function deviceDistribution(distribution:TensorDistribution,deviceId:DeviceId){
  return distribution;
 }
 type Distribution=ReturnType<typeof deviceDistribution>;
-type FormulaEntry={field:string;expression:ValueExpr;expected:ValueExpr;symbols:Record<string,Quantity>};
+type FormulaEntry={field:string;expression:ValueExpr;expected:ValueExpr;symbols:Record<string,Quantity>;frames?: (symbol:string)=>LayoutFrame|undefined};
+type DerivedInstance=Extract<DerivedLayoutObservation,{kind:'repeat_instance'}>;
+type DerivedStack=Extract<DerivedLayoutObservation,{kind:'repeat_stack'}>;
 type QuantizationDecision=Extract<QuantizationObservation,{kind:'rule_decision'}>;
 type LayoutItem=
  |{kind:'rule';rule:Omit<LayoutRuleEvidence,'declared'|'effective'>&{declared:Distribution;effective:Distribution}}
@@ -40,6 +43,9 @@ type LayoutItem=
  |{kind:'partition';operation:PartitionOperation}
  |{kind:'allocation';operation:AllocationObservation}
  |{kind:'copies';perCopyBytes:number;copies:number;totalBytes:number}
+ |(Omit<DerivedInstance,'count'|'declaration'>&{repeatAxisId:string;repeatCount:number;declaration?:Pick<NonNullable<DerivedInstance['declaration']>,'asset'|'nodeId'>})
+ |(Omit<DerivedStack,'count'|'inputs'>&{repeatAxisId:string;repeatCount:number})
+ |(DerivedStack['inputs'][number]&{kind:'repeat_member';viewNodeId:NodeId})
  |{kind:'quantization';nodeId:NodeId;winners:QuantizationDecision['winners'];losers:QuantizationDecision['losers']};
 
 function sameQuantity(quantity:Quantity,expected:Quantity){
@@ -48,26 +54,29 @@ function sameQuantity(quantity:Quantity,expected:Quantity){
 
 export async function replayLayoutSource(input:unknown){
  const request=LayoutSourceRequest.parse(input),{scenario,assets,stepContext,selector,engineVersion,inputHash,page}=request;
+ const extended=request.proofVersion===2;
  const {deviceId}=selector;
  if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1)throw Error('设备布局来源需要单个实际 Decode 步骤');
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('原设备布局的固定输入、步骤或引擎版本不同');
- const recipes:LayoutRecipe[]=[],declarations:LayoutDeclaration[]=[],quantizationEvents:QuantizationObservation[]=[];
+ const recipes:LayoutRecipe[]=[],declarations:LayoutDeclaration[]=[],quantizationEvents:QuantizationObservation[]=[],derivations:DerivedLayoutObservation[]=[];
  let quantizationTruncated=false;
  const attempt=await resolveParallelPlan(scenario,assets,stepContext,{layout:{
   target:selector,record:record=>recipes.push(record),declaration:record=>declarations.push(record),
+  ...(extended?{derived:(record:DerivedLayoutObservation)=>derivations.push(record)}:{}),
   ...(selector.kind==='storage'?{quantization:{storageIds:new Set([selector.storageId]),record:event=>{quantizationEvents.push(event);},truncated:()=>{quantizationTruncated=true;}}}:{}),
  }});
  if(attempt.status!=='available'||attempt.result.inputHash!==inputHash||attempt.result.engineVersion!==engineVersion)throw Error('原设备布局未能按固定输入复算');
  const recipe=recipes[0],declaration=declarations[0];
  if(!recipe||recipes.length!==1||recipe.kind!==selector.kind||declarations.length>1)throw Error('原张量或规范存储不存在或作用域不唯一');
- const {assets:library}=calculationInput(scenario,assets),context={symbols:recipe.symbols,assets:library},partitionEvents:PartitionOperation[]=[],allocationEvents:AllocationObservation[]=[];
+ const {scenario:effectiveScenario,assets:library}=calculationInput(scenario,assets),context={symbols:recipe.symbols,assets:library},partitionEvents:PartitionOperation[]=[],allocationEvents:AllocationObservation[]=[];
  const partition={deviceId,record:(operation:PartitionOperation)=>partitionEvents.push(operation)};
  const formulas:FormulaEntry[]=[];
- function axes(field:string,source:Shape,expected:Shape,symbols:Record<string,Quantity>){
+ const lexicalFrame=(nodeId:NodeId)=>():LayoutFrame=>({kind:'asset',nodeId});
+ function axes(field:string,source:Shape,expected:Shape,symbols:Record<string,Quantity>,frames?:FormulaEntry['frames']){
   for(const axis of source){
    const effective=expected.find(a=>a.axisId===axis.axisId);
    if(!effective)throw Error('原布局轴缺少稳定映射 '+axis.axisId);
-   formulas.push({field:field+' · '+axis.axisId,expression:axis.size,expected:effective.size,symbols});
+   formulas.push({field:field+' · '+axis.axisId,expression:axis.size,expected:effective.size,symbols,...(frames?{frames}:{})});
   }
  }
 
@@ -94,7 +103,7 @@ export async function replayLayoutSource(input:unknown){
   if(!p)throw Error('张量分布未使用所选设备');
   tensorEvidence={globalShape:recorded.partition.globalShape,logicalShape:p.logicalShape,allocatedShape:p.allocatedShape,logicalElements:p.logicalElements,allocatedElements:p.allocatedElements,
    copies:p.copies,assignmentIndices:recorded.assignmentIndices,overriddenIndices:recorded.overriddenIndices,coverage:recorded.partition.coverage};
-  if(declaration?.object.kind==='tensor')axes('原张量维度',declaration.object.tensor.shape,recorded.partition.globalShape,declaration.symbols);
+  if(declaration?.object.kind==='tensor')axes('原张量维度',declaration.object.tensor.shape,recorded.partition.globalShape,declaration.symbols,lexicalFrame(declaration.nodeId));
  }else if(recipe.kind==='storage'&&selector.kind==='storage'){
   const recorded=attempt.result.storageAllocations.find(row=>row.storageId===selector.storageId);
   if(!recorded||canonical(recorded)!==canonical(recipe.row))throw Error('规范存储或实际分布不同');
@@ -116,8 +125,8 @@ export async function replayLayoutSource(input:unknown){
   const ids=new Set([...p.totalBytes.diagnosticIds,...p.allocation.totalBytes.diagnosticIds]);
   diagnostics=attempt.result.diagnostics.filter(d=>ids.has(d.diagnosticId));
   const original=declaration?.object.kind==='storage'?declaration.object.storage.allocation:undefined,effective=recipe.storage.allocation,inputAllocation=recipe.override?.before??effective;
-  if(declaration&&original?.kind==='bytes'&&inputAllocation.kind==='bytes')formulas.push({field:'声明字节数',expression:original.value,expected:inputAllocation.value,symbols:declaration.symbols});
-  if(declaration&&original?.kind==='tensor'&&inputAllocation.kind==='tensor')axes('原存储维度',original.shape,inputAllocation.shape,declaration.symbols);
+  if(declaration&&original?.kind==='bytes'&&inputAllocation.kind==='bytes')formulas.push({field:'声明字节数',expression:original.value,expected:inputAllocation.value,symbols:declaration.symbols,frames:lexicalFrame(declaration.nodeId)});
+  if(declaration&&original?.kind==='tensor'&&inputAllocation.kind==='tensor')axes('原存储维度',original.shape,inputAllocation.shape,declaration.symbols,lexicalFrame(declaration.nodeId));
   const winning=decisions.find(d=>d.winners.length),ruleIndex=winning?.winners[0]?.ruleIndex;
   const bound=quantizationEvents.find(event=>event.kind==='specification_bound'&&event.nodeId===winning?.nodeId&&event.ruleIndex===ruleIndex);
   const specification=inputAllocation.kind==='tensor'?inputAllocation.quantization:undefined;
@@ -129,10 +138,13 @@ export async function replayLayoutSource(input:unknown){
     stage:elided?'elided':recipe.override?'overridden':'effective',...(winning&&ruleIndex!==undefined?{ruleIndex,nodeId:winning.nodeId}:{})};
    if(!elided&&!recipe.override){
     const raw=recipe.quantization?(bound?.kind==='specification_bound'?bound.raw:undefined):original?.kind==='tensor'?original.quantization:undefined;
-    const lexical=recipe.quantization?Object.fromEntries(quantizationEvents.flatMap(event=>event.kind==='scope_assignment'&&event.nodeId===winning?.nodeId&&event.ruleIndex===ruleIndex?[[event.assignment.name,event.assignment.quantity] as const]:[])):declaration?.symbols??{};
+    const assignments=quantizationEvents.flatMap(event=>event.kind==='scope_assignment'&&event.nodeId===winning?.nodeId&&event.ruleIndex===ruleIndex?[event.assignment]:[]);
+    const lexical=recipe.quantization?Object.fromEntries(assignments.map(assignment=>[assignment.name,assignment.quantity])):declaration?.symbols??{};
+    const quantizationFrames=new Map<string,LayoutFrame>(assignments.map(({name,source})=>[name,source.kind==='parameter'?{kind:'asset',nodeId:source.parameter.nodeId}:{kind:'workload'}]));
+    const frames=recipe.quantization?(name:string)=>quantizationFrames.get(name):declaration?lexicalFrame(declaration.nodeId):undefined;
     for(const auxiliary of raw?.auxiliaries??[]){
      const active=specification.auxiliaries.find(entry=>entry.name===auxiliary.name);
-     if(auxiliary.count.kind==='formula'&&active?.count.kind==='formula')formulas.push({field:'量化辅助项 '+auxiliary.name+' 个数',expression:auxiliary.count.value,expected:active.count.value,symbols:lexical});
+     if(auxiliary.count.kind==='formula'&&active?.count.kind==='formula')formulas.push({field:'量化辅助项 '+auxiliary.name+' 个数',expression:auxiliary.count.value,expected:active.count.value,symbols:lexical,...(frames?{frames}:{})});
     }
    }
   }
@@ -140,7 +152,33 @@ export async function replayLayoutSource(input:unknown){
 
  const distribution=deviceDistribution(effectiveDistribution,deviceId);
  const allocatedShape=storageEvidence?.allocatedShape??tensorEvidence?.allocatedShape;
- if(distribution.kind==='manual'&&distribution.member&&allocatedShape)axes('设备手工分配维度',distribution.member.localShape,allocatedShape,recipe.symbols);
+ if(distribution.kind==='manual'&&distribution.member&&allocatedShape){
+  const rootKeys=new Set(recipe.rootParameterKeys);
+  axes('设备手工分配维度',distribution.member.localShape,allocatedShape,recipe.symbols,name=>
+   rootKeys.has(name)?{kind:'asset',nodeId:NodeId.parse('$model')}:typeof Reflect.get(effectiveScenario.workload,name)==='number'?{kind:'workload'}:undefined);
+ }
+ const derivedItems:LayoutItem[]=[];
+ for(const derivation of derivations){
+  const {count}=derivation,summary={repeatAxisId:count.axisId,repeatCount:count.value};
+  formulas.push({field:'重复次数 · '+derivation.repeatNodeId,expression:count.expression,expected:{kind:'literal',quantity:{value:count.value,unit:'count'}},
+   symbols:count.symbols,frames:lexicalFrame(count.nodeId)});
+  if(recipe.kind==='tensor'&&canonical(derivation.shape)!==canonical(recipe.tensor.shape))throw Error('派生张量形状与实际分布输入不同');
+  if(derivation.kind==='repeat_instance'){
+   const {count:_count,declaration:source,...instance}=derivation;
+   if(recipe.kind==='storage'){
+    const allocation=recipe.override?.before??recipe.storage.allocation;
+    if(allocation.kind!=='tensor'||canonical(allocation.shape)!==canonical(instance.shape))throw Error('派生中间缓冲的分配形状不同');
+   }
+   if(source)axes('实例输出维度',source.shape,instance.shape,source.symbols,lexicalFrame(source.nodeId));
+   derivedItems.push({...instance,...summary,...(source?{declaration:{asset:source.asset,nodeId:source.nodeId}}:{})});
+  }else{
+   const {count:_count,inputs,...stack}=derivation;
+   const axis=stack.shape.find(axis=>axis.axisId===count.axisId);
+   if(inputs.length!==count.value||axis?.size.kind!=='literal'||axis.size.quantity.value!==count.value)throw Error('实际堆叠轴与输入切片数量不同');
+   derivedItems.push({...stack,...summary});
+   for(const input of inputs)derivedItems.push({kind:'repeat_member',viewNodeId:stack.viewNodeId,...input});
+  }
+ }
  const ruleItems=recipe.rules.map(rule=>({kind:'rule' as const,rule:{...rule,declared:deviceDistribution(rule.declared,deviceId),effective:deviceDistribution(rule.effective,deviceId)}}));
  const candidates=[...ruleItems,...origins.map(origin=>({kind:'origin' as const,origin:{...origin,distribution:deviceDistribution(origin.distribution,deviceId)}}))];
  const numeric:LayoutItem[]=[
@@ -148,32 +186,34 @@ export async function replayLayoutSource(input:unknown){
   ...allocationEvents.map(operation=>({kind:'allocation' as const,operation})),...(copies?[copies]:[]),
  ];
  const quantizationItems=decisions.map(({nodeId,winners,losers})=>({kind:'quantization' as const,nodeId,winners,losers}));
- const start=page*pageSize,componentCount=numeric.length+formulas.length+candidates.length+quantizationItems.length;
+ const start=page*pageSize,componentCount=numeric.length+derivedItems.length+formulas.length+candidates.length+quantizationItems.length;
  if(page>0&&start>=componentCount)throw Error('设备布局来源页不存在');
- const items:LayoutItem[]=[];
+ const items:LayoutItem[]=[],reads:LayoutBindingRead[]=[];
  let index=0;
- for(const item of numeric)if(index++>=start&&items.length<pageSize)items.push(item);
+ for(const item of [...derivedItems,...numeric])if(index++>=start&&items.length<pageSize)items.push(item);
  for(const entry of formulas)if(index++>=start&&items.length<pageSize){
   const formula=explainValue(entry.expression,entry.symbols,library);
   sameQuantity(formula.quantity,evaluateValue(entry.expected,recipe.symbols,library));
   items.push({kind:'formula',field:entry.field,formula});
+  if(extended&&entry.frames)reads.push(...layoutBindingReads(formula.proof,entry.field,entry.frames));
  }
  for(const item of [...candidates,...quantizationItems])if(index++>=start&&items.length<pageSize)items.push(item);
  const group=recipe.topology.groups.find(g=>g.groupId===effectiveDistribution.groupId);
  if(!group)throw Error('实际分布组缺失');
+ const parameterBindings=reads.length?captureLayoutBindings(effectiveScenario,library,stepContext,reads):undefined;
  const evidence={distribution,deviceId,group:{groupId:group.groupId,memberCount:group.members.length,
   ...(group.mesh?{axes:group.mesh.axes,coordinates:group.mesh.coordinates.find(c=>c.deviceId===deviceId)?.coordinates??[]}:{} )},
   syntheticBaseline:recipe.syntheticBaseline,origin:declaration?{asset:declaration.asset,nodeId:declaration.nodeId}:null,
   ...(scenario.parallelPlan.generatedFrom?{preset:scenario.parallelPlan.generatedFrom}:{}),
   ...(storageEvidence?{storage:storageEvidence}:{}),...(tensorEvidence?{tensor:tensorEvidence}:{}),
-  allocationTruncated,quantizationTruncated,items,diagnostics};
+  allocationTruncated,quantizationTruncated,items,diagnostics,...(parameterBindings?{parameterBindings}:{})};
  jsonBytes(evidence,8*1024*1024);
- return {kind:'layout_source' as const,schemaVersion:1 as const,inputHash,engineVersion,selector,page,pageSize,componentCount,...evidence,request};
+ return {kind:'layout_source' as const,schemaVersion:extended?2 as const:1 as const,inputHash,engineVersion,selector,page,pageSize,componentCount,...evidence,request};
 }
 
 export type LayoutSourceReport=Awaited<ReturnType<typeof replayLayoutSource>>;
 export async function verifyLayoutSourceReport(input:unknown){
- const saved=z.object({kind:z.literal('layout_source'),schemaVersion:z.literal(1),request:LayoutSourceRequest}).passthrough().parse(input);
+ const saved=z.object({kind:z.literal('layout_source'),schemaVersion:z.union([z.literal(1),z.literal(2)]),request:LayoutSourceRequest}).passthrough().parse(input);
  const report=await replayLayoutSource(saved.request);
  if(stableStringify(saved)!==stableStringify(report))throw Error('布局来源报告与固定输入复算不同');
  return report;

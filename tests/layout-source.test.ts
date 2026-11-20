@@ -5,6 +5,7 @@ import {readLayoutSourceReply} from '../apps/web/src/layout-source-task.js';
 import {makeLocalGemmProject} from '../scripts/local-gemm-project.js';
 import {makeFusedProject} from '../scripts/fused-project.js';
 import {c01Project} from './model-fixtures.js';
+import {repeatLayoutProject} from './repeat-layout-fixture.js';
 
 const gpu0=DeviceId.parse('gpu0'),gpu1=DeviceId.parse('gpu1'),nodeId=NodeId.parse('module/op'),root=NodeId.parse('$model');
 const gemm=()=>makeLocalGemmProject(c01Project());
@@ -82,6 +83,11 @@ it('replays manual copies, per-copy padding, bit packing, auxiliary formulas and
  expect(items.length).toBeGreaterThan(20);
  const second=await replayLayoutSource({...fixed,page:1});
  expect(await verifyLayoutSourceReport(JSON.parse(JSON.stringify(second)))).toEqual(second);
+ const withBindings=await replayLayoutSource({...fixed,page:1,proofVersion:2});
+ expect(withBindings.parameterBindings?.roots).toContainEqual(expect.objectContaining({
+  target:'量化辅助项 formula 个数',name:'N',frameId:JSON.stringify(['asset','module/op']),
+ }));
+ expect(withBindings.parameterBindings?.complete).toBe(true);
 });
 
 it('shows the actual backing capacity check and a zero-byte override after quantization',async()=>{
@@ -131,4 +137,38 @@ it('binds the layout report to the actual Decode step identity',async()=>{
  expect(report).toMatchObject({request:{stepContext:{index:1}},tensor:{logicalElements:16}});
  await expect(replayLayoutSource({...fixed,stepContext:{...step.result.stepContext,index:0}})).rejects.toThrow('版本不同');
  await expect(replayLayoutSource({...fixed,scenario})).rejects.toThrow('单个实际 Decode');
+});
+
+it('traces independent slices and the actual stack, including the selected instance and parent parameter frames',async()=>{
+ const project=repeatLayoutProject('independent'),instance=NodeId.parse('block[1]'),derived=TensorId.parse('block[1]::%24output%3Ay');
+ const fixed=await request(project,{kind:'tensor',nodeId:instance,tensorId:derived,deviceId:gpu0});
+ const report=await replayLayoutSource({...fixed,proofVersion:2});
+ expect(report).toMatchObject({schemaVersion:2,tensor:{logicalElements:4},origin:null});
+ expect(report.items[0]).toMatchObject({kind:'repeat_instance',tensorId:derived,storageId:'sY',instanceNodeId:instance,instanceIndex:1,shapeMethod:'declared_port',disposition:'shared_stack',repeatCount:3});
+ expect(report.items.find(item=>item.kind==='formula'&&item.field.startsWith('实例输出维度'))).toMatchObject({formula:{quantity:{value:4},proof:{symbol:'D'}}});
+ const graph=report.parameterBindings;
+ expect(graph).toMatchObject({scope:'actual_layout_parameter_context',complete:true});
+ expect(graph?.roots).toContainEqual(expect.objectContaining({name:'D',frameId:JSON.stringify(['asset','block[1]'])}));
+ expect(graph?.nodes).toContainEqual(expect.objectContaining({kind:'repeat_index',name:'layer',value:{kind:'number',value:1}}));
+ expect(graph?.nodes).toContainEqual(expect.objectContaining({kind:'override',name:'Width',value:{kind:'integer',value:4}}));
+ const stack=await replayLayoutSource({...await request(project,storage('sY',gpu0)),proofVersion:2});
+ expect(stack.items[0]).toMatchObject({kind:'repeat_stack',viewNodeId:'block/$outputs:y',tensorId:'Y',repeatAxisId:'layer',repeatCount:3});
+ expect(stack.items.filter(item=>item.kind==='repeat_member').map(item=>[item.instanceIndex,item.storageId])).toEqual([[0,'sY'],[1,'sY'],[2,'sY']]);
+ expect(stack.storage?.totalBytes).toBe(24);
+ const old=await replayLayoutSource(fixed);
+ expect(old.schemaVersion).toBe(1);
+ expect(old.items.some(item=>item.kind==='repeat_instance')).toBe(false);
+ expect(await verifyLayoutSourceReport(JSON.parse(JSON.stringify(old)))).toEqual(old);
+ expect(await verifyLayoutSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const task={taskId:'layout-v2',phase:'layout_source',request:{...fixed,proofVersion:2 as const}};
+ expect(()=>readLayoutSourceReply({...task,status:'available',report:old},task)).toThrow('固定输入或设备不同');
+});
+
+it('uses the actual storage branch for chain output buffers and in-place chain outputs',async()=>{
+ const buffer=StorageId.parse('block[0]::%24output%3Ay');
+ const allocated=await replayLayoutSource({...await request(repeatLayoutProject('chain'),storage(buffer,gpu0)),proofVersion:2});
+ expect(allocated.items[0]).toMatchObject({kind:'repeat_instance',disposition:'new_buffer',instanceIndex:0,storageId:buffer,parentStorageId:'sY'});
+ expect(allocated.storage?.totalBytes).toBe(8);
+ const view=await replayLayoutSource({...await request(repeatLayoutProject('chain',true),{kind:'tensor',nodeId:NodeId.parse('block[0]'),tensorId:TensorId.parse(buffer),deviceId:gpu0}),proofVersion:2});
+ expect(view.items[0]).toMatchObject({kind:'repeat_instance',disposition:'in_place',storageId:'sX',parentStorageId:'sX'});
 });

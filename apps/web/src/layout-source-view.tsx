@@ -1,9 +1,11 @@
 import {useMemo,useState} from 'react';
+import type {Shape} from '@model-analyser/contracts';
 import type {LayoutSourceReport,LayoutSourceRequest,LayoutSourceSelector} from '@model-analyser/core';
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import {FormulaProof} from './declaration-source-view.js';
 import {readLayoutSourceReply} from './layout-source-task.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
+import {ParameterBindingProof} from './parameter-binding-view.js';
 
 export type LayoutSourceAnchor=Pick<LayoutSourceRequest,'scenario'|'assets'|'inputHash'|'engineVersion'|'stepContext'>;
 
@@ -17,7 +19,7 @@ export function LayoutSourceView({anchor,selector}:{anchor:LayoutSourceAnchor;se
  const selectorKey=canonical(selector),identity=useMemo(()=>({}),[selectorKey,anchor.scenario,anchor.assets,anchor.inputHash,anchor.engineVersion,anchor.stepContext]);
  const [open,setOpen]=useState(false),[cursor,setCursor]=useState({owner:identity,page:0});
  const page=cursor.owner===identity?cursor.page:0;
- const request=useMemo<LayoutSourceRequest>(()=>({...anchor,selector,page}),[identity,page]);
+ const request=useMemo<LayoutSourceRequest>(()=>({...anchor,selector,page,proofVersion:2}),[identity,page]);
  const {state,cancel,retry}=useCostSourceWorker(open,request,'layout_source',readLayoutSourceReply);
  const storage=selector.kind==='storage',label=storage?'逐卡分配推导':'逐卡张量布局推导';
  return <section className="layout-source declaration-source" aria-label={label}>
@@ -37,6 +39,9 @@ const methodNames={whole:'完整维度',manual:'手工指定',explicit:'显式�
 const ruleStates={selected:'生效',equivalent:'同级等价',overridden:'被覆盖'};
 const originLabels={explicit_storage:'显式存储分布',inferred_from_tensor:'由张量分布推导',verified_backing:'显式底层分配核对'};
 const quantizationStage={effective:'参与当前分配',overridden:'随后被字节数覆盖',elided:'随后取消物化'};
+const disposition={shared_stack:'共享堆叠底层存储',in_place:'复用同一底层存储',new_buffer:'新建链式中间缓冲'};
+const shapeMethod={declared_port:'采用实例端口声明',parent_axis_projection:'从父张量移除重复轴',parent_shape:'沿用父张量形状'};
+const dimensions=(shape:Shape)=>shape.map(axis=>axis.axisId+'='+ (axis.size.kind==='literal'?axis.size.quantity.value:'表达式')).join(' × ')||'标量';
 
 function LayoutProof({report}:{report:LayoutSourceReport}){
  const {selector,storage,tensor,group,origin,distribution}=report;
@@ -46,7 +51,7 @@ function LayoutProof({report}:{report:LayoutSourceReport}){
   {group.axes&&<p>{group.axes.map((axis,index)=>axis.axisId+' '+(group.coordinates?.[index]??'—')+'/'+axis.size).join(' · ')}</p>}
   {report.syntheticBaseline&&<p>单设备完整对象布局，由当前分析生成。</p>}
   {report.preset&&<p>来自并行预设 {report.preset.presetId}</p>}
-  {origin?<p>原对象声明 <code>{origin.asset.assetId}@r{origin.asset.revision}</code> · {origin.nodeId}</p>:<p>使用展开图中对象的生效维度。</p>}
+  {origin?<p>原对象声明 <code>{origin.asset.assetId}@r{origin.asset.revision}</code> · {origin.nodeId}</p>:<p>展开图中的派生对象。</p>}
   {tensor&&<p>已复核 {tensor.logicalElements} 个有效元素 · {tensor.allocatedElements} 个分配元素 · {tensor.copies} 份</p>}
   {storage&&<>
    <p>{storage.totalBytes===undefined?'本卡分配不可用':`已复核分配 ${storage.totalBytes} byte`}{storage.perCopyBytes===undefined?'':` · 每副本 ${storage.perCopyBytes} byte × ${storage.copies}`}</p>
@@ -57,6 +62,7 @@ function LayoutProof({report}:{report:LayoutSourceReport}){
   {(report.allocationTruncated||report.quantizationTruncated)&&<p>来源记录达到预算，实际分配已完整复算。</p>}
   {report.diagnostics.map(d=> <p key={d.diagnosticId}>{d.message}</p>)}
   {report.items.map((item,index)=><article className="storage-access-item" key={index}><Term item={item}/></article>)}
+  {report.parameterBindings&&<ParameterBindingProof graph={report.parameterBindings}/>}
  </div>;
 }
 
@@ -85,6 +91,18 @@ function Term({item}:{item:LayoutSourceReport['items'][number]}){
  }
  case 'origin':return <><h5>{originLabels[item.origin.kind]} · {item.origin.objectId}</h5><p>{item.origin.nodeId} · {layouts[item.origin.distribution.kind]} · {item.origin.indices.map(index=>'#'+(index+1)).join('、')}</p>
   {item.origin.capacity&&<p>局部需要 {item.origin.capacity.requiredBytes} byte ≤ 底层已分配 {item.origin.capacity.backingBytes} byte</p>}</>;
+ case 'repeat_instance':return <>
+  <h5>{disposition[item.disposition]} · 实例 {item.instanceIndex+1}/{item.repeatCount}</h5>
+  <p><code>{item.instanceNodeId}</code> · 输出端口 {item.portId} · {shapeMethod[item.shapeMethod]} · {dimensions(item.shape)}</p>
+  <p>父张量 <code>{item.parentTensorId}</code> · 底层存储 <code>{item.parentStorageId}</code> → <code>{item.storageId}</code></p>
+  {item.declaration&&<p>维度声明 <code>{item.declaration.asset.assetId}@r{item.declaration.asset.revision}</code> · {item.declaration.nodeId}</p>}
+ </>;
+ case 'repeat_stack':return <>
+  <h5>堆叠输出 · {item.repeatCount} 个实际切片</h5>
+  <p><code>{item.viewNodeId}</code> · 重复轴 {item.repeatAxisId} · {dimensions(item.shape)}</p>
+  <p>共享底层存储 <code>{item.storageId}</code> · 视图只建立连接</p>
+ </>;
+ case 'repeat_member':return <><h5>堆叠切片 {item.instanceIndex+1}</h5><p><code>{item.tensorId}</code> · {dimensions(item.shape)} · <code>{item.storageId}</code></p></>;
  case 'formula':return <><h5>{item.field}</h5><FormulaProof proof={item.formula.proof}/>{item.formula.truncated&&<p>公式记录达到预算，值已按完整表达式复算。</p>}</>;
  case 'partition':{
   const {operation}=item;

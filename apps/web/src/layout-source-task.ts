@@ -11,8 +11,10 @@ export function readLayoutSourceReply(value:unknown,task:Omit<LayoutSourceTask,'
  if(!object(value)||value['taskId']!==task.taskId||value['phase']!==task.phase)throw Error('布局来源回复的任务身份有误');
  if(value['status']==='error'&&typeof value['message']==='string')return value as LayoutSourceReply;
  const report=value['report'],request=task.request,page=request.page??0;
- if(value['status']!=='available'||!object(report)||report['schemaVersion']!==1||report['kind']!=='layout_source'||report['inputHash']!==request.inputHash||report['engineVersion']!==request.engineVersion||report['page']!==page||canonical(report['selector'])!==canonical(request.selector))throw Error('布局来源回复与当前固定输入或设备不同');
+ if(value['status']!=='available'||!object(report)||report['schemaVersion']!==(request.proofVersion??1)||report['kind']!=='layout_source'||report['inputHash']!==request.inputHash||report['engineVersion']!==request.engineVersion||report['page']!==page||canonical(report['selector'])!==canonical(request.selector))throw Error('布局来源回复与当前固定输入或设备不同');
  const count=report['componentCount'];
  if(report['pageSize']!==20||typeof count!=='number'||!Number.isSafeInteger(count)||count<page*20||!Array.isArray(report['items'])||report['items'].length!==Math.min(20,count-page*20))throw Error('布局来源回复超过分页范围');
+ const bindings=report['parameterBindings'];
+ if(bindings!==undefined&&(!object(bindings)||!Array.isArray(bindings['nodes'])||bindings['nodes'].length>256||!Array.isArray(bindings['roots'])||bindings['roots'].length>256||!Array.isArray(bindings['candidates'])||bindings['candidates'].length>256))throw Error('布局来源回复超过参数证据预算');
  return value as LayoutSourceReply;
 }

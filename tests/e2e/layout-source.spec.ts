@@ -5,6 +5,7 @@ import {promisify} from 'node:util';
 import {NodeId,StorageId,QuantizedStorageSpec} from '@model-analyser/contracts';
 import {makeLocalGemmProject} from '../../scripts/local-gemm-project.js';
 import {c01Project} from '../model-fixtures.js';
+import {repeatLayoutProject} from '../repeat-layout-fixture.js';
 
 test('opens the tail shard and packed storage from its actual bindings and exports the device allocation',async({page})=>{
  const project=makeLocalGemmProject(c01Project()),scenario=project.scenarios[0]!;
@@ -46,4 +47,33 @@ test('opens the tail shard and packed storage from its actual bindings and expor
  const direct=inspector.getByRole('region',{name:'逐卡分配推导'});
  await direct.getByRole('button',{name:'复核此卡的分配推导',exact:true}).click();
  await expect(direct).toContainText('已复核分配 22 byte');
+});
+
+test('explains the repeated view and its parent parameter on the canonical storage report',async({page})=>{
+ const project=repeatLayoutProject('independent');
+ project.projectId=randomUUID();
+ await page.goto('/');
+ await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'repeat-layout.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+ await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+ await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();
+ await expect(page.locator('.analysis-cards')).toBeVisible();
+ const inspector=page.locator('.cost-source-inspector');
+ await inspector.locator(':scope > summary').click();
+ await inspector.getByLabel('成本来源范围',{exact:true}).selectOption('storage:sY');
+ const source=inspector.getByRole('region',{name:'逐卡分配推导'});
+ await source.getByRole('button',{name:'复核此卡的分配推导',exact:true}).click();
+ await expect(source).toContainText('堆叠输出 · 3 个实际切片');
+ await expect(source).toContainText('共享底层存储 sY');
+ await expect(source).toContainText('已复核分配 24 byte');
+ const bindings=source.getByRole('region',{name:'实际参数绑定链'});
+ await expect(bindings).toContainText('重复次数 · block');
+ await expect(bindings).toContainText('Width');
+ await expect(bindings).toContainText('4 count');
+ const wait=page.waitForEvent('download');
+ await source.getByRole('button',{name:'导出此页布局来源',exact:true}).click();
+ const file=await(await wait).path();
+ if(!file)throw Error('Missing repeat layout proof');
+ const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'layout_source',schemaVersion:2,selector:{kind:'storage',storageId:'sY'},totalBytes:24});
 });

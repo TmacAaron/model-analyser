@@ -1,4 +1,4 @@
-import type {AssetRef,DeviceId,DeviceTopology,NodeId,ParallelResolution,Quantity,ResolvedGraph,Scenario,StorageId,StorageSpec,TensorDistribution,TensorId,TensorSpec} from '@model-analyser/contracts';
+import type {AssetRef,DeviceId,DeviceTopology,NodeId,ParallelResolution,Quantity,ResolvedGraph,Scenario,Shape,StorageId,StorageSpec,TensorDistribution,TensorId,TensorSpec,ValueExpr} from '@model-analyser/contracts';
 import type {QuantizationObserver,StorageOverrideObservation} from './quantization-observation.js';
 
 export type PartitionOperation=
@@ -12,7 +12,15 @@ export type LayoutDeclaration={
  asset:AssetRef;nodeId:NodeId;symbols:Record<string,Quantity>;
  object:{kind:'tensor';tensor:TensorSpec}|{kind:'storage';storage:StorageSpec};
 };
-export type LayoutObjectObserver={target:LayoutTarget;record:(declaration:LayoutDeclaration)=>void};
+export type ShapeDeclaration={asset:AssetRef;nodeId:NodeId;shape:Shape;symbols:Record<string,Quantity>};
+export type RepeatCountObservation={axisId:string;expression:ValueExpr;nodeId:NodeId;symbols:Record<string,Quantity>;value:number};
+type RepeatOutput={repeatNodeId:NodeId;tensorId:TensorId;storageId:StorageId;portId:string;count:RepeatCountObservation;shape:Shape};
+export type DerivedLayoutObservation=RepeatOutput&(
+ {kind:'repeat_instance';wiring:'independent'|'chain';instanceNodeId:NodeId;instanceIndex:number;parentTensorId:TensorId;parentStorageId:StorageId;
+  disposition:'shared_stack'|'new_buffer'|'in_place';shapeMethod:'declared_port'|'parent_axis_projection'|'parent_shape';declaration?:ShapeDeclaration}
+ |{kind:'repeat_stack';viewNodeId:NodeId;inputs:{instanceIndex:number;tensorId:TensorId;storageId:StorageId;shape:Shape}[]}
+);
+export type LayoutObjectObserver={target:LayoutTarget;record?:(declaration:LayoutDeclaration)=>void;derived?:(record:DerivedLayoutObservation)=>void};
 
 export type LayoutRuleEvidence={
  kind:'tensor'|'storage';nodeId:NodeId;objectId:string;ownerNodeId:NodeId;
@@ -23,12 +31,12 @@ export type StorageLayoutOrigin={
  kind:'explicit_storage'|'inferred_from_tensor'|'verified_backing';nodeId:NodeId;objectId:string;distribution:TensorDistribution;indices:number[];
  capacity?:{requiredBytes:number;backingBytes:number};
 };
-type RecipeBase={topology:DeviceTopology;symbols:Record<string,Quantity>;rules:LayoutRuleEvidence[];syntheticBaseline:boolean};
+type RecipeBase={topology:DeviceTopology;symbols:Record<string,Quantity>;rules:LayoutRuleEvidence[];syntheticBaseline:boolean;rootParameterKeys?:string[]};
 export type LayoutRecipe=RecipeBase&(
  {kind:'tensor';tensor:TensorSpec;row:ParallelResolution['tensorLayouts'][number]}
  |{kind:'storage';storage:StorageSpec;row:ParallelResolution['storageAllocations'][number];namespace:string;origins:StorageLayoutOrigin[];override?:StorageOverrideObservation;elidedBy?:NodeId;quantization?:ResolvedGraph['quantizationApplications'][number]}
 );
 export type LayoutPlanObserver={layout:{
  target:LayoutTarget;record:(recipe:LayoutRecipe)=>void;
- declaration?:(declaration:LayoutDeclaration)=>void;quantization?:QuantizationObserver;
+ declaration?:(declaration:LayoutDeclaration)=>void;quantization?:QuantizationObserver;derived?:(record:DerivedLayoutObservation)=>void;
 }};

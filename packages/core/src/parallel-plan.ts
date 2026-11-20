@@ -48,7 +48,8 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       :nativeNodeId?{nodeId:nativeNodeId,collective:(record:BoundCollectiveObservation)=>captures.push(record)}
       :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}
       :layoutObserver?{nodeId:layoutObserver.target.kind==='tensor'?layoutObserver.target.nodeId:'$model',
-        ...(layoutObserver.declaration?{layoutObject:{target:layoutObserver.target,record:layoutObserver.declaration}}:{}),
+        ...(layoutObserver.declaration||layoutObserver.derived?{layoutObject:{target:layoutObserver.target,
+          ...(layoutObserver.declaration?{record:layoutObserver.declaration}:{}),...(layoutObserver.derived?{derived:layoutObserver.derived}:{})}}:{}),
         ...(layoutObserver.quantization?{quantization:layoutObserver.quantization}:{})}:undefined;
     const expanded=instantiateModel(scenario,assets,undefined,stepContext,instantiated);if(expanded.status==='unavailable')return ParallelResolutionAttempt.parse(expanded);
     const resolved=expanded.resolved,graph=resolved.graph;diagnostics.push(...expanded.diagnostics);
@@ -228,7 +229,8 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     }
     const storageAllocations:ParallelResolution['storageAllocations']=[...storageGroups].map(([storageId,g])=>{const s=graph.storages.find(s=>s.storageId===storageId);if(!s)throw new FormulaError('missing_reference','规范分配存储缺失');return {storageId:StorageId.parse(storageId),category:s.category,aliasIds:graph.storages.filter(s=>canonicalStorage(s.storageId)===storageId).map(s=>s.storageId).sort(),nodeIds:[...g.nodeIds].sort(),assignmentIndices:[...g.indices].sort((a,b)=>a-b),allocation:g.allocation};});
     if(layoutObserver){
-      const {target}=layoutObserver,base={topology:scenario.deviceTopology,symbols:communicationSymbols(symbols),rules:layoutRules,syntheticBaseline:!!singleDeviceBaseline};
+      const {target}=layoutObserver,base={topology:scenario.deviceTopology,symbols:communicationSymbols(symbols),rules:layoutRules,syntheticBaseline:!!singleDeviceBaseline,
+        ...(layoutObserver.derived?{rootParameterKeys:resolved.parameters.filter(p=>p.nodeId==='$model'&&(p.value.kind==='integer'||p.value.kind==='number')).map(p=>p.parameterKey)}:{})};
       if(target.kind==='tensor'){
         const tensor=graph.tensors.find(t=>t.tensorId===target.tensorId),row=tensorLayouts.find(t=>t.nodeId===target.nodeId&&t.tensorId===target.tensorId);
         if(tensor&&row)layoutObserver.record(structuredClone({...base,kind:'tensor',tensor,row}));
