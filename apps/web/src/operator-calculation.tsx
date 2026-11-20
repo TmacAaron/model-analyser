@@ -38,14 +38,14 @@ const recurrence:Algorithm={
   ],
 };
 
-function deepSeekV4Algorithm(localId:string):Algorithm|undefined {
-  if(localId.endsWith('-rmsnorm')||/^(main|index)-norm$/.test(localId)){
+function deepSeekV4Algorithm(localId:string,v41=false,ratio='4'):Algorithm|undefined {
+  if(localId.endsWith('-rmsnorm')||/^(main|index|index-key)-norm$/.test(localId)){
     if(localId==='q-head-rmsnorm')return {name:'逐头 RMS 归一化',steps:[
       {label:'按每个查询头计算归一化系数',equation:'r = rsqrt(mean(q²) + 10⁻⁶)'},
       {label:'缩放该查询头的全部维度',equation:'y = q · r'},
     ]};
     const axis=localId==='q-rmsnorm'?'查询低秩维度':/^(kv|main|index)-/.test(localId)?'潜向量维度':'隐藏维度';
-    return rmsNorm(axis,'10⁻⁶');
+    return rmsNorm(axis,v41?'10⁻²⁰':'10⁻⁶');
   }
   if(localId.endsWith('-rope'))return {name:'部分 RoPE',steps:[
     {label:'在向量末尾的 R 个维度内做相邻配对',equation:'(a, b) = (x[D − R + 2j], x[D − R + 2j + 1])'},
@@ -66,15 +66,31 @@ function deepSeekV4Algorithm(localId:string):Algorithm|undefined {
   ]};
   if(localId==='index-topk')return {name:'CSA 索引选择',steps:[
     {label:'汇总各头对候选压缩行的带权得分',equation:'sⱼ = Σₕ wₕ · ReLU(qₕ · kⱼ)'},
-    {label:'在已完成且因果可见的压缩行中选择候选',equation:'indices = TopK(s, min(K, ⌊L / 4⌋))'},
+    {label:'在已完成且因果可见的压缩行中选择候选',equation:'indices = TopK(s, min(K, ⌊L / '+ratio+'⌋))'},
+  ]};
+  if(localId==='candidate-blocks')return {name:'CSA2 两级筛选',steps:[
+    {label:'按块取最高位置分数，并保留最新可见块',equation:'block_score = max(position_scores)'},
+    {label:'选出候选块并发布位置掩码供后续索引层复用',equation:'mask = expand(TopK(block_score, K_blocks))'},
+  ]};
+  if(localId==='engram-hash')return {name:'Engram n-gram 哈希',steps:[
+    {label:'取规范化 token 与最多三个历史 token，序列边界用 pad 补齐',equation:'x₀, x₁, x₂, x₃'},
+    {label:'对每层逐阶更新异或哈希，再以各表的质数和偏移计算行号',
+      equation:'hₙ = ⊕ᵢ (xᵢ · mᵢ),  id = (hₙ mod pₙ) + offsetₙ'},
+  ]};
+  if(localId==='engram-gate'||localId==='engram-inject')return {name:'Engram 残差注入',steps:[
+    {label:'每条残差流沿隐藏维计算归一化键查询内积',equation:'sⱼ = ⟨RMSNorm(xⱼ), RMSNorm(kⱼ)⟩ / √H'},
+    {label:'应用带符号平方根和 sigmoid，将共享值写入该残差流',
+      equation:'yⱼ = xⱼ + σ(sign(sⱼ) · √max(|sⱼ|, 10⁻⁶)) · v'},
   ]};
   return undefined;
 }
 
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
-  if(asset.revision===1&&(id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
-    const algorithm=deepSeekV4Algorithm(localId),filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':'model.py';
+  const v41=id==='builtin:model:deepseek-v4.1-flash'||id.startsWith('builtin:module:deepseek-v41-block-');
+  if(asset.revision===1&&(v41||id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
+    const algorithm=deepSeekV4Algorithm(localId,v41,v41?(id.includes('-r2-')?'2':'1'):'4');
+    const filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':localId==='engram-hash'?'engram.py':'model.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }

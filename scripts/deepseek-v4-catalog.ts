@@ -3,8 +3,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeDeepSeekV4Assets } from './deepseek-v4-model.js';
+import { makeDeepSeekV41Assets } from './deepseek-v41-model.js';
 
-const assets = makeDeepSeekV4Assets();
+const v41 = process.argv.includes('--v41');
+const assets = v41 ? makeDeepSeekV41Assets() : makeDeepSeekV4Assets();
 assert.deepEqual(validateAssets(assets), []);
 const write = process.argv.includes('--write');
 for (const asset of assets) {
@@ -17,4 +19,4 @@ for (const asset of assets) {
     await writeFile(filename, JSON.stringify(asset, null, 2) + '\n', { flag: 'wx' });
   }
 }
-console.log('Verified ' + assets.length + ' DeepSeek-V4 Flash assets.');
+console.log('Verified ' + assets.length + ' DeepSeek-' + (v41 ? 'V4.1' : 'V4') + ' Flash assets.');

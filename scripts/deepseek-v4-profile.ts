@@ -12,15 +12,13 @@ export const deepSeekV4Sources: AssetDocument['sources'] = [
   { kind: 'note', text: 'Sparse attention uses a materialized rectangular score and probability reference, with exact useful causal pair counts. Weight traffic assumes each active routed expert is read once and uses an upper bound on distinct experts. Nonlinear, selection, fake quantization and Sinkhorn use explicit operation proxies. MTP, kernel scheduling, data-dependent sparsity, YaRN table generation and distributed layout are outside this preset.' },
 ];
 
-function lockedJson(filename: string, expected: string): Record<string, unknown> {
-  const contents = readFileSync(new URL('../references/models/deepseek-v4/' + filename, import.meta.url));
+export function lockedJson(filename: string, expected: string, folder = 'deepseek-v4'): Record<string, unknown> {
+  const contents = readFileSync(new URL('../references/models/' + folder + '/' + filename, import.meta.url));
   if (createHash('sha256').update(contents).digest('hex') !== expected) throw Error('DeepSeek-V4 source changed: ' + filename);
   return JSON.parse(contents.toString('utf8')) as Record<string, unknown>;
 }
 
-export function loadDeepSeekV4() {
-  const config = lockedJson('config.json', 'b628e63398a645abc711d92207f8737dd8140f7a4ef1e0a5b3616019e0ddd818');
-  const reference = lockedJson('inference-config.json', '6cc6f816ca73a8d38750194e330398e4f6955b4b45f674f7d29c96da14ccb733');
+export function deepSeekAttentionDimensions(config: Record<string, unknown>, reference: Record<string, unknown>) {
   const aliases = {
     H: ['hidden_size', 'dim'], V: ['vocab_size', 'vocab_size'], I: ['moe_intermediate_size', 'moe_inter_dim'],
     D: ['head_dim', 'head_dim'], R: ['qk_rope_head_dim', 'rope_head_dim'], N: ['num_attention_heads', 'n_heads'],
@@ -29,13 +27,19 @@ export function loadDeepSeekV4() {
     IK: ['index_topk', 'index_topk'], E: ['n_routed_experts', 'n_routed_experts'], K: ['num_experts_per_tok', 'n_activated_experts'],
     HC: ['hc_mult', 'hc_mult'], SI: ['hc_sinkhorn_iters', 'hc_sinkhorn_iters'],
   } as const;
-  const dimensions = Object.fromEntries(Object.entries(aliases).map(([name, [published, runtime]]) => {
+  return Object.fromEntries(Object.entries(aliases).map(([name, [published, runtime]]) => {
     const value = config[published];
     if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1 || value !== reference[runtime]) {
       throw Error('DeepSeek-V4 dimension mismatch: ' + published);
     }
     return [name, value];
   }));
+}
+
+export function loadDeepSeekV4() {
+  const config = lockedJson('config.json', 'b628e63398a645abc711d92207f8737dd8140f7a4ef1e0a5b3616019e0ddd818');
+  const reference = lockedJson('inference-config.json', '6cc6f816ca73a8d38750194e330398e4f6955b4b45f674f7d29c96da14ccb733');
+  const dimensions = deepSeekAttentionDimensions(config, reference);
   const periods = 20;
   const ratios = [0, 0, 4, ...Array.from({ length: periods }, () => [128, 4]).flat(), 0];
   const matches = (sequence: number[], input: unknown) =>

@@ -1,7 +1,7 @@
 import { applyTotalPeakOverrides } from './memory-peak-overrides.js';
 import { theoreticalPeak,preTotalPeak } from '../../contracts/src/memory-peak-validation.js';
 import { modelAssumptions } from './model-context.js';
-import { AnalysisAttempt,AnalysisResult,SingleStepAnalysisResult,Scenario,MemoryPeak,CostResult,NodeId,metricFor,type AssetDocument,type DecodeStepContext,type DecodeSequence,type DecodeStateTransition,type MetricValue,type Diagnostic,type MetricScope,type StateId,type StorageId,type DeviceId,type ResolvedGraph,type MemoryPeakEstimate,type StorageSpec,type Shape } from '@model-analyser/contracts';
+import { AnalysisAttempt,AnalysisResult,Scenario,MemoryPeak,CostResult,NodeId,metricFor,type AssetDocument,type DecodeStepContext,type DecodeSequence,type DecodeStateTransition,type MetricValue,type Diagnostic,type MetricScope,type StateId,type StorageId,type DeviceId,type ResolvedGraph,type MemoryPeakEstimate,type SingleStepAnalysisResult,type StorageSpec,type Shape } from '@model-analyser/contracts';
 import { instantiateModel } from './instantiate.js';
 import { resolveParallelPlan } from './parallel-plan.js';
 import { allocateStorage } from './storage.js';
@@ -17,8 +17,31 @@ import {logicalWorkRows} from './logical-work-members.js';
 import {stateTokenRange} from '../../contracts/src/state-range.js';
 
 export const MAX_DECODE_STEPS=256;
+/** A validated provenance contains no diagnostic IDs. Preserve untouched evidence when assigning step IDs. */
 export function namespaceDiagnostics<T>(value:T,prefix:string):T{
-  const visit=(v:unknown):unknown=>Array.isArray(v)?v.map(visit):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='diagnosticId'&&typeof x==='string'?prefix+x:k==='diagnosticIds'&&Array.isArray(x)?x.map(id=>prefix+String(id)):visit(x)])):v;
+  function visit(v:unknown):unknown{
+    if(!v||typeof v!=='object')return v;
+    let result:object=v;
+    if(Array.isArray(v)){
+      let changed:unknown[]|undefined;
+      for(const [i,item] of v.entries()){
+        const next=visit(item);
+        if(next!==item){changed??=v.slice();changed[i]=next;}
+      }
+      if(changed)result=changed;
+    }else{
+      const source=v as Record<string,unknown>;
+      let changed:Record<string,unknown>|undefined;
+      for(const [key,item] of Object.entries(source)){
+        const next=key==='diagnosticId'&&typeof item==='string'?prefix+item:
+          key==='diagnosticIds'&&Array.isArray(item)?(item.length?item.map(id=>prefix+String(id)):item):
+          key==='provenance'||key==='provenancePool'?item:visit(item);
+        if(next!==item){changed??={...source};changed[key]=next;}
+      }
+      if(changed)result=changed;
+    }
+    return result;
+  }
   return visit(value) as T;
 }
 const exact=(n:number)=>{if(!Number.isSafeInteger(n)||n<0)throw new FormulaError('decode_context_overflow','decode 上下文/版本必须为非负安全整数');return n;};
@@ -48,7 +71,9 @@ export async function analyzeDecodeSequence(base:Scenario,assets:AssetDocument[]
     }
     for(let index=0;index<w.steps;index++){const priorRows=new Map(carriedRows);
       const contextBefore=exact(w.contextTokensPerRequest+index*w.queryTokensPerRequest),contextAfter=exact(contextBefore+w.queryTokensPerRequest),evaluatedContext=mode==='fixed_context'?w.contextTokensPerRequest:contextBefore,s=Scenario.parse({...base,workload:{...w,steps:1,contextTokensPerRequest:evaluatedContext}}),context:DecodeStepContext={index,parentInputHash:inputHash,carriedStateIds:[...allStates.keys()].sort()},attempt=await run(s,assets,context);
-      if(attempt.status==='unavailable')return namespaceDiagnostics(attempt,`decode-step-${index}::`);const result=namespaceDiagnostics(SingleStepAnalysisResult.parse(attempt.result),`decode-step-${index}::`);diagnostics.push(...result.diagnostics);totalNodes+=result.nodes.length;if(totalNodes>100000)throw new FormulaError('decode_expansion_limit','全部 decode 步骤超过 100000 个叶事件预算');
+      if(attempt.status==='unavailable')return namespaceDiagnostics(attempt,`decode-step-${index}::`);
+      if(attempt.result.decode)throw new FormulaError('invalid_decode_step','逐步分析结果包含嵌套 Decode 序列');
+      const result=namespaceDiagnostics(attempt.result,`decode-step-${index}::`);diagnostics.push(...result.diagnostics);totalNodes+=result.nodes.length;if(totalNodes>100000)throw new FormulaError('decode_expansion_limit','全部 decode 步骤超过 100000 个叶事件预算');
       const before=await frame(s,context,result),afterScenario=Scenario.parse({...s,workload:{...s.workload,contextTokensPerRequest:mode==='fixed_context'?evaluatedContext:contextAfter}}),stateIds=before.resolved.graph.states.map(s=>s.stateId).sort();if(index&&canonical(stateIds)!==canonical([...allStates.keys()].sort()))throw new FormulaError('decode_state_identity_changed','跨步状态身份发生改变，必须使用稳定状态/存储版本');const after=mode!=='fixed_context'&&before.resolved.graph.states.some(state=>(state.allocationBasis??'context_boundary')!=='step_end')?await frame(afterScenario,{...context,index:index+1,carriedStateIds:stateIds}):before,transitions:DecodeStateTransition[]=[],reserves=new Map<string,{before:MetricValue;after:MetricValue;reserved:MetricValue;deviceId:DeviceId}>();
       for(const state of before.resolved.graph.states){const allocationBasis=state.allocationBasis??'context_boundary',endFrame=allocationBasis==='step_end'?before:after,next=endFrame.resolved.graph.states.find(s=>s.stateId===state.stateId);if(!next||canonical(state.storageIds.map(before.canonical).sort())!==canonical(next.storageIds.map(endFrame.canonical).sort())||state.updatePolicy.kind!==next.updatePolicy.kind)throw new FormulaError('decode_state_identity_changed','状态 backing/更新类型不能随步骤隐式改变 '+state.stateId);
         const version=allStates.get(state.stateId)??0,dynamic=state.updatePolicy.kind!=='static';if(dynamic&&!state.writers.length&&state.creator.kind!=='node')throw new FormulaError('missing_decode_state_writer','更新状态必须声明实际 writer：'+state.stateId);if(!dynamic&&state.writers.length)throw new FormulaError('static_decode_state_writer','static 状态不能声明逐步写入 '+state.stateId);const afterVersion=dynamic?exact(version+1):version;
@@ -70,7 +95,7 @@ export async function analyzeDecodeSequence(base:Scenario,assets:AssetDocument[]
     for(const [id,m] of memoryByDevice){const theoretical=theoryByDevice.get(id);if(theoretical){if(preTotalPeak(m).moduleOverrides)memoryByDevice.set(id,MemoryPeak.parse({...m,sequenceTheoretical:theoretical}));else if(m.totalOverride)memoryByDevice.set(id,MemoryPeak.parse({...m,totalOverride:{...m.totalOverride,theoretical}}));}}
     const logicalRows=steps.flatMap(s=>logicalWorkRows(s.result)),targets=[...new Set(logicalRows.map(r=>canonical(r.scope.target)))],logicalCompute=targets.map(target=>{const rows=logicalRows.filter(r=>canonical(r.scope.target)===target),scope=rows[0]?.scope;if(!scope)throw Error('Missing logical scope');const empty=metrics.available(0,'byte'),zero=metrics.available(0,'second'),cost=sum(rows.map(r=>({scope:r.scope,compute:r.compute,logicalReadBytes:metricFor('byte').parse(empty),logicalWriteBytes:metricFor('byte').parse(empty),hbmBytes:metricFor('byte').parse(empty),communications:[],seconds:metricFor('second').parse(zero)})),{...scope,deviceIds:[...new Set(rows.flatMap(r=>r.scope.deviceIds))]});return {scope:cost.scope,compute:cost.compute};}),fusedMemberNodeIds=[...new Set(steps.flatMap(s=>(s.result.fusions??[]).flatMap(f=>f.evaluation.application.memberNodeIds)))],unmeasurableTargetIds=[...fusedMemberNodeIds.map(id=>'node:'+id),...moduleIds.filter(id=>steps.some(s=>{const m=s.result.modules.find(m=>m.nodeId===id);return m&&(s.result.fusions??[]).some(f=>f.evaluation.application.memberNodeIds.some(id=>m.leafNodeIds.includes(id))&&!f.evaluation.application.memberNodeIds.every(id=>m.leafNodeIds.includes(id)));})).map(id=>'module:'+id)];
     if(mode==='fixed_context')diagnostics.push({diagnosticId:'decode-fixed-context',severity:'warning',code:'fixed_context_approximation',message:'用户显式选择固定上下文近似：工作量/状态容量按初始上下文重复，不代表真实增长过程。',location:{kind:'scenario',scenarioId:base.scenarioId}});
-    const result=AnalysisResult.parse({engineVersion:first.engineVersion,inputHash,scenarioId:base.scenarioId,phase:'decode',scope,nodes,modules,total,memory:[...memoryByDevice.values()],schedule,roofline:[],decode:{baseScenario:base,mode,allocationStrategy:'in_place_reserve_max',logicalCompute,unmeasurableTargetIds,fusedMemberNodeIds,steps},diagnostics});const issues=validateResult(result);return issues.length?AnalysisAttempt.parse({status:'unavailable',diagnostics:issues}):AnalysisAttempt.parse({status:'available',result});
+    const result=AnalysisResult.parse({engineVersion:first.engineVersion,inputHash,scenarioId:base.scenarioId,phase:'decode',scope,nodes,modules,total,memory:[...memoryByDevice.values()],schedule,roofline:[],decode:{baseScenario:base,mode,allocationStrategy:'in_place_reserve_max',logicalCompute,unmeasurableTargetIds,fusedMemberNodeIds,steps},diagnostics});const issues=validateResult(result);return issues.length?AnalysisAttempt.parse({status:'unavailable',diagnostics:issues}):{status:'available',result};
   }catch(e){diagnostics.push({diagnosticId:'decode-failure',severity:'error',code:e instanceof FormulaError?e.code:'invalid_decode_sequence',message:e instanceof Error?e.message:'decode 序列计算失败',location:{kind:'scenario',scenarioId:base.scenarioId}});return AnalysisAttempt.parse({status:'unavailable',diagnostics});}
 }
 

@@ -37,6 +37,7 @@ export async function scanFiles(root:string,builtinRoot:string,scope:'all'|'revi
   async function header<T extends z.ZodType,S>(file:string,schema:T,project:(value:z.infer<T>)=>S):Promise<S>{return cache?cache.read(Object.is(schema,ProjectDocument)?'project':Object.is(schema,ProjectDraft)?'project-draft':'asset-draft',file,schema,project,fresh):project(await readContract(file,schema));}
   function checkIdentity(id:string,name:string,label:string){if(storageKey(id)+'.json'!==name)throw new StoreError('validation',label+' ID 与文件名不一致');}
   const revisions:AssetDocument[]=[];
+  const byIdentity=new Map<string,AssetDocument>();
   const sources=new Map<string,{file:string;origin:'builtin'|'user';format:'json'|'yaml'}>();
   const blocked=new Set<string>();
   const identity=(a:AssetDocument)=>`${a.assetId}@${a.revision}`;
@@ -45,16 +46,29 @@ export async function scanFiles(root:string,builtinRoot:string,scope:'all'|'revi
   const attempt=async<T>(file:string,fn:()=>Promise<T>):Promise<T|undefined>=>{try{return await fn();}catch(e){issue(file,e);return undefined;}};
   const entries=async(dir:string)=>{try{return (await readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name));}catch(e){if(!missing(e))issue(dir,e);return [];}};
   function add(asset:AssetDocument,file:string,origin:'builtin'|'user') {
-    const key=identity(asset),prior=revisions.find(a=>identity(a)===key);
+    const key=identity(asset),prior=byIdentity.get(key);
     if(prior){blocked.add(key);report.issues.push({file:display(file),code:'conflict',message:`同 ID 同修订存在多个权威定义文件：${key}${canonical(prior)!==canonical(asset)?'，内容不同':''}`});return;}
-    revisions.push(asset);sources.set(key,{file,origin,format:/\.ya?ml$/i.test(file)?'yaml':'json'});
+    byIdentity.set(key,asset);revisions.push(asset);sources.set(key,{file,origin,format:/\.ya?ml$/i.test(file)?'yaml':'json'});
   }
-  const builtin=async(dir:string)=>{for(const entry of await entries(dir)){
-    const file=join(dir,entry.name);if(entry.isDirectory())await builtin(file);else if(entry.isFile()&&/\.(json|ya?ml)$/i.test(entry.name)){
-      const asset=await attempt(file,()=>readContract(file,AssetDocument));if(asset)add(asset,file,'builtin');
+  const builtinFiles:string[]=[];
+  async function collectBuiltins(dir:string){
+    for(const entry of await entries(dir)){
+      const file=join(dir,entry.name);
+      if(entry.isDirectory())await collectBuiltins(file);
+      else if(entry.isFile()&&/\.(json|ya?ml)$/i.test(entry.name))builtinFiles.push(file);
     }
-  }};
-  await builtin(builtinRoot);
+  }
+  await collectBuiltins(builtinRoot);
+  const batchSize=16;
+  for(let start=0;start<builtinFiles.length;start+=batchSize){
+    const files=builtinFiles.slice(start,start+batchSize);
+    const results=await Promise.allSettled(files.map(file=>readContract(file,AssetDocument)));
+    // Report results in traversal order even when disk reads finish in a different order.
+    for(const [index,result] of results.entries()){
+      const file=files[index]!;
+      if(result.status==='fulfilled')add(result.value,file,'builtin');else issue(file,result.reason);
+    }
+  }
   const heads=new Map<string,number>();
   for(const entry of await entries(join(root,'assets','user')))if(entry.isDirectory()){
     const dir=join(root,'assets','user',entry.name),headFile=join(dir,'head.json');

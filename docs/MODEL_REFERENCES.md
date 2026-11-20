@@ -77,6 +77,16 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 `npm run reference:deepseek-v4` 校验两份原始配置摘要和内置资产。固定来源为 [模型配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/config.json)、[推理配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/config.json)、[解码器实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py)和 [Sinkhorn 内核](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/kernel.py)。
 
+## DeepSeek-V4.1-Flash
+
+内置预设按发布的 40 层主文本解码器展开。前两层使用局部滑窗；第 2–19 层采用 R2 分组，第 20–39 层采用 R1。层号从 0 开始。第 2、8、14、20 层各自写入一组共享 KV 和索引 K。第 24、28、32、36 层重新评分时读取第 20 层的索引 K 和候选掩码。其他复用层读取对应索引源选择好的位置。两条 Hyper-Connections 路径传递实际残差和下一子层的混合系数。
+
+第 1、14 层通过 Engram 向各自的残差流注入查表结果。两张 FP8 表与 E8M0 scale 合计 202,758,032,400 B。当前理论权重合计 1,307,953,639,888 B，由 BF16 矩阵基线、源码中的 FP32 权重及 Engram 表组成。文本路径采用发布的专家选择规则。图像专用分支、DSpark、采样、发布检查点的大矩阵 FP8／FP4，以及实际稀疏内核和多卡分片需要各自的配置。
+
+每请求的滑窗、全局 KV 和索引缓存为 `2 × [40 × 128 × 512 + (3 × floor(L / 2) + L) × (512 + 128)]` B。固定状态另含三组 R2 的 FP32 压缩缓冲和 Engram 的 INT64 历史区；历史区按配置的上下文容量预留。容量预算在当前非 KV 峰值下计算，跨层复用只保留一次物理分配。索引计算先对可用位置求完整分数，再应用候选掩码。
+
+`npm run reference:deepseek-v41` 校验发布配置及内置资产。固定来源为 [模型配置](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/config.json)、[推理配置](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/config.json)、[主解码器](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)和 [Engram 哈希](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/engram.py)。
+
 ## Qwen3.5-397B-A17B 与 Qwen3.8-27B
 
 两个文本解码器都采用三个 Gated DeltaNet 层接一个 Gated GQA 层的周期。进入周期可查看 DeltaNet、GQA、各自的外部投影及 residual。397B 使用带独立门控的 Shared Expert 和 Top-10 Routed Experts，27B 使用 Dense SwiGLU。

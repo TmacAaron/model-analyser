@@ -1,0 +1,99 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v41:181e2ed116f8b37b",
+  "revision": 1,
+  "name": "2 * B * Q * N * D * (min(W, C + Q) + min(IK, floor((C + Q) / 2))) [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/kernel.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/engram.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Main text backbone. Large matrices use a BF16 reference except source FP32 operations and the explicitly stored FP8 Engram table with E8M0 scales. Checkpoint FP8/FP4 MoE and projection kernels, vision, DSpark, sampling and parallel layouts need separate configurations."
+    },
+    {
+      "kind": "note",
+      "text": "BF16 attention caches represent active batch lanes in the reference fake-quant path. Physical cache grows by completed groups and preserves all provisioned local windows. The Engram token history reserves its configured context length; its precomputed token map uses the released embedding vocabulary as an upper bound."
+    },
+    {
+      "kind": "note",
+      "text": "CSA2 runs full index dot products before applying the candidate mask, as in the reference implementation. Sparse attention, hash, nonlinear and selection work use explicit analytical operation/traffic proxies. Pair counts use the published candidate dimensions and assume enough candidate entries for final Top-K; logical query chunks extend the reference initial prefill and single-token decode."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "C": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "D": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "IK": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "N": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "W": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * Q * N * D * (min(W, C + Q) + min(IK, floor((C + Q) / 2)))",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

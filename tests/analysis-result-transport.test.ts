@@ -1,6 +1,7 @@
 import {expect,it} from 'vitest';
 import {analyzeScenario} from '@model-analyser/core';
 import {encodeAnalysisCompletion,readAnalysisCompletion} from '../apps/web/src/analysis-result-transport.js';
+import {makeDecodeProject} from '../scripts/decode-project.js';
 import {c01Project} from './model-fixtures.js';
 
 async function analyzed(){
@@ -40,4 +41,17 @@ it('rejects corrupted and ambiguous wire payloads',async()=>{
   expect(()=>readAnalysisCompletion({...identity,payload:invalidUtf8},9)).toThrow('无法读取');
   expect(()=>readAnalysisCompletion({...identity,payload:new TextEncoder().encode('{').buffer},9)).toThrow('无法读取');
   expect(()=>readAnalysisCompletion({...identity,payload:invalidUtf8,attempt},9)).toThrow('无效结果');
+});
+
+it('pools repeated Decode provenance and restores exact evidence for every metric',async()=>{
+  const project=makeDecodeProject(c01Project()),attempt=await analyzeScenario(project.scenarios[0]!,project.assetSnapshots);
+  if(attempt.status!=='available'||!attempt.result.decode)throw Error('Missing Decode fixture');
+  const reply=encodeAnalysisCompletion(attempt,19);
+  if(!('payload'in reply)||reply.encoding!=='decode-provenance.1')throw Error('Missing pooled transport');
+  expect(reply.payload.byteLength).toBeLessThan(new TextEncoder().encode(JSON.stringify(attempt)).byteLength);
+  expect(readAnalysisCompletion(reply,19)).toStrictEqual(attempt);
+  const packet=JSON.parse(new TextDecoder().decode(reply.payload));
+  packet.attempt.result.total.seconds.provenance=packet.provenance.length;
+  const broken={...reply,payload:new TextEncoder().encode(JSON.stringify(packet)).buffer};
+  expect(()=>readAnalysisCompletion(broken,19)).toThrow('无法读取');
 });

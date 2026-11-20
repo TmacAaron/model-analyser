@@ -80,7 +80,7 @@ export async function analyzeScenario(input:Scenario,library:AssetDocument[],ste
     const memoryEvidence:MemoryEvidence[]=[];
     const memory=applyTotalPeakOverrides([serialMemory(resolved,order,schedule,device.deviceId,hardware.capacityBytes,metrics,evidence=>memoryEvidence.push(evidence),assets)],resolved,scenario,assets,diagnostics)[0],roofline=nodes.flatMap(n=>{const definition=definitions.get(n.nodeId);if(!definition)throw new FormulaError('missing_reference','Roofline 缺少成本定义');return rooflinePoints(n.cost,definition,hardware,nodeMetrics.get(n.nodeId)??metrics);});
     const result=AnalysisResult.parse({parameterTrace:resolved.parameters,...(stepContext?{stepContext}:{}),engineVersion:ENGINE_VERSION,inputHash:await computeInputHash(scenario,assets,stepContext),scenarioId:scenario.scenarioId,phase:resolved.phase,scope,quantizationApplications:resolved.quantizationApplications,nodes,modules,total,memoryEvidence,memory:[memory],schedule,roofline,diagnostics});
-    const issues=validateResult(result);if(issues.length)return AnalysisAttempt.parse({status:'unavailable',diagnostics:issues});return AnalysisAttempt.parse({status:'available',result});
+    const issues=validateResult(result);if(issues.length)return AnalysisAttempt.parse({status:'unavailable',diagnostics:issues});return {status:'available',result};
   }catch(e){diagnostics.push({diagnosticId:'analysis-failure',severity:'error',code:e instanceof FormulaError?e.code:'invalid_input',message:e instanceof Error?e.message:'分析失败',location:{kind:'file',name:'analysis'}});return AnalysisAttempt.parse({status:'unavailable',diagnostics});}
 }
 

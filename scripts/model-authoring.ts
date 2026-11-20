@@ -51,10 +51,11 @@ export class GraphAuthor {
   module(id:string,name:string,asset:AssetDocument,input:string,output:string,parameters:ParameterDef[],repeat?:GraphTemplate['nodes'][number]['repeat']){
     this.modulePorts(id,name,asset,{x:input},{y:output},parameters,repeat);
   }
-  modulePorts(id:string,name:string,asset:AssetDocument,inputs:Record<string,string>,outputs:Record<string,string>,parameters:ParameterDef[],repeat?:GraphTemplate['nodes'][number]['repeat']){
+  modulePorts(id:string,name:string,asset:AssetDocument,inputs:Record<string,string>,outputs:Record<string,string>,parameters:ParameterDef[],
+    repeat?:GraphTemplate['nodes'][number]['repeat'],stateBindings:GraphTemplate['nodes'][number]['stateBindings']=[]){
     const nodeId=NodeId.parse(id),inputPorts=Object.entries(inputs),outputPorts=Object.entries(outputs);
     const portBindings=[...inputPorts,...outputPorts].map(([portId,tensorId])=>({portId,tensorId:TensorId.parse(tensorId)}));
-    this.graph.nodes.push({nodeId,name,phases:['prefill','decode'],portBindings,stateBindings:[],...(repeat?{repeat}:{}),body:{kind:'module',asset:ref(asset),bindings:parameters.map(p=>({parameterKey:p.key,value:symbol(p.key)}))}});
+    this.graph.nodes.push({nodeId,name,phases:['prefill','decode'],portBindings,stateBindings,...(repeat?{repeat}:{}),body:{kind:'module',asset:ref(asset),bindings:parameters.map(p=>({parameterKey:p.key,value:symbol(p.key)}))}});
     for(const [portId,input] of inputPorts){
       const from=this.producers.get(input);if(!from)throw Error('Missing module input '+input);
       this.graph.edges.push({edgeId:id+'-in'+(portId==='x'?'':'-'+portId),from,to:{kind:'node',nodeId,portId},tensorId:TensorId.parse(input)});

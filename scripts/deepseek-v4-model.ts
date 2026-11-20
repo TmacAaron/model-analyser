@@ -1,20 +1,20 @@
 import { AssetDocument, type GraphTemplate, type Shape, type ValueExpr } from '@model-analyser/contracts';
-import { Equations, GraphAuthor, fp32, int64, symbol } from './model-authoring.js';
+import { Equations, GraphAuthor, bf16, fp32, int64, symbol } from './model-authoring.js';
 import { addV4Attention, int32, sequence, vectorWork, weight } from './deepseek-v4-attention.js';
 import { deepSeekV4Sources, loadDeepSeekV4 } from './deepseek-v4-profile.js';
 
 type Axis = [string, Shape[number]['semantic'], string];
 type Parameter = AssetDocument['parameters'][number];
-const token: Axis[] = [['b', 'batch', 'B'], ['q', 'token', 'Q']];
-const hidden = sequence('H');
-const residual: Axis[] = [...token, ['r', 'custom', 'HC'], ['d', 'hidden', 'H']];
+export const token: Axis[] = [['b', 'batch', 'B'], ['q', 'token', 'Q']];
+export const hidden = sequence('H');
+export const residual: Axis[] = [...token, ['r', 'custom', 'HC'], ['d', 'hidden', 'H']];
 const repeat = (count: ValueExpr): NonNullable<GraphTemplate['nodes'][number]['repeat']> => ({
   axis: 'layer', count, wiring: 'chain', carry: [{ inputPortId: 'x', outputPortId: 'y' }],
 });
-const parameter = (key: string, value: number, min = 1): Parameter =>
+export const parameter = (key: string, value: number, min = 1): Parameter =>
   ({ key, name: key, type: 'integer', unit: 'count', min, default: { kind: 'integer', value } });
 
-function hyperPre(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string) {
+export function hyperCoefficients(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string) {
   const n = (suffix: string) => prefix + '-hc-' + suffix;
   const mix = 'HC * (HC + 2)';
   weight(graph, n('fn'), [mix, 'HC * H'], fp32);
@@ -28,23 +28,32 @@ function hyperPre(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string) {
   graph.node(n('sinkhorn'), 'Pre/post gates and Sinkhorn residual mixing',
     [n('mixes'), n('scale'), n('base')], [n('pre'), n('post'), n('comb')],
     vectorWork('B * Q * (14 * HC + 2 * HC * HC + (3 + 4 * SI) * HC * HC)'));
+}
+
+export function hyperInput(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string, pre: string, v41 = false) {
+  const n = (suffix: string) => prefix + '-hc-' + suffix;
   graph.tensor(n('reduced'), hidden);
-  graph.node(n('reduce'), 'Reduce hyper-connection streams', [stream, n('pre')], [n('reduced')], vectorWork('B * Q * H * (2 * HC - 1)'));
+  graph.node(n('reduce'), 'Reduce hyper-connection streams', [stream, pre], [n('reduced')], vectorWork('B * Q * H * (2 * HC - 1)'));
   const norm = prefix + '-norm-weight', output = prefix + '-input';
-  weight(graph, norm, ['H'], fp32);
+  weight(graph, norm, ['H'], v41 ? bf16 : fp32);
   graph.tensor(output, hidden);
   graph.node(prefix + '-rmsnorm', prefix === 'attn' ? 'Attention input RMSNorm' : 'MoE input RMSNorm',
     [n('reduced'), norm], [output], vectorWork('5 * B * Q * H'));
 }
 
-function hyperPost(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string, branch: string, output: string) {
+function hyperPre(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string) {
+  hyperCoefficients(graph, prefix, stream);
+  hyperInput(graph, prefix, stream, prefix + '-hc-pre');
+}
+
+export function hyperPost(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string, branch: string, output: string) {
   graph.tensor(output, residual);
   graph.node(prefix + '-hc-merge', 'Expand branch and mix residual streams',
     [stream, branch, prefix + '-hc-post', prefix + '-hc-comb'], [output],
     vectorWork('B * Q * H * HC * (2 * HC + 1)'));
 }
 
-function addV4Moe(graph: GraphAuthor, hashRoute: boolean) {
+export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false) {
   const routedShape = (width: string): Axis[] => [...token, ['e', 'expert', 'K'], ['d', 'hidden', width]];
   weight(graph, 'router-weight', ['H', 'E']);
   graph.tensor('router-raw', sequence('E'), { dtype: fp32 });
@@ -64,7 +73,7 @@ function addV4Moe(graph: GraphAuthor, hashRoute: boolean) {
   }
   graph.tensor('route-weights', sequence('K'), { dtype: fp32 });
   graph.node('route-normalize', 'Normalize selected original scores and apply route scale',
-    ['affinities', 'selected-experts'], ['route-weights'], vectorWork('3 * B * Q * K'),
+    ['affinities', 'selected-experts'], ['route-weights'], vectorWork(v41 ? 'B * Q * (3 * K + 1)' : '3 * B * Q * K'),
     { accessBytes: { affinities: '4 * B * Q * K' } });
   graph.tensor('dispatched', routedShape('H'));
   graph.node('route-dispatch', 'Dispatch tokens to selected experts', ['ffn-input', 'selected-experts'], ['dispatched']);

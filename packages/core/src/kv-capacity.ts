@@ -105,7 +105,8 @@ function tokensAtState(state:StateSpec,scenario:Scenario,step:NonNullable<Analys
 
 function rowsForState(state:StateSpec):SlotRows|undefined{
   const policy=state.updatePolicy;
-  if(policy.kind==='append')return policy.tokensPerRow?{kind:'grouped',tokensPerRow:policy.tokensPerRow}:undefined;
+  if(policy.kind==='append')return policy.tokensPerRow!==undefined&&policy.tokensPerRow>1
+    ?{kind:'grouped',tokensPerRow:policy.tokensPerRow}:undefined;
   if(policy.kind==='windowed'&&policy.reserveFullWindow&&policy.window.kind==='literal'){
     return {kind:'fixed',rows:policy.window.quantity.value};
   }
@@ -178,8 +179,9 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
         if(rule?.kind==='grouped')groupSizes.add(rule.tokensPerRow);
         if(rule?.kind==='fixed')fixedWindows.add(rule.rows);
       }
-      if(groupSizes.size||fixedWindows.size)rowProfile={groupSizes:[...groupSizes].sort((a,b)=>a-b),
-        fixedWindows:[...fixedWindows].sort((a,b)=>a-b),includesIndexer:states.some(state=>state.stateKind==='indexer')};
+      const includesIndexer=states.some(state=>state.stateKind==='indexer');
+      if(groupSizes.size||fixedWindows.size||includesIndexer)rowProfile={groupSizes:[...groupSizes].sort((a,b)=>a-b),
+        fixedWindows:[...fixedWindows].sort((a,b)=>a-b),includesIndexer};
       if(graph.states.filter(state=>!isKv(state)).some(state=>state.storageIds.some(id=>ids.has(backing(id,storages)))))throw Error('KV 与其他持久状态共享存储，无法独立调整缓存长度。');
       if(!matchesBatch||reference===undefined)throw Error('缓存没有统一的每请求 token 轴和批大小。');
       const limits:DeviceBudget[]=rows.map(device=>{
