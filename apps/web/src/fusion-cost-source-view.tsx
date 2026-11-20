@@ -6,6 +6,7 @@ import {readFusionSourceReply} from './fusion-source-task.js';
 import {FormulaProof} from './declaration-source-view.js';
 import {PagedTimingDag} from './leaf-timing-source-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
+import {ParameterBindingProof} from './parameter-binding-view.js';
 
 const operations={
  sum_devices:'按设备累加物理成本',sum_device_terms:'按成员顺序累加，再计入附加成本',max_devices:'取最慢参与设备的耗时',
@@ -13,6 +14,7 @@ const operations={
  roofline_override:'按设备的融合后成本计算整体 Roofline',stream_span:'多流调度的实际融合跨度',
 };
 const operandLabels={device:'设备',member:'成员',extra:'附加成本',barrier:'屏障',barrier_rank:'屏障设备'};
+type NavigateOperand=(term:FusionSourceOperand,selector?:FusionCostSelector)=>(()=>void)|undefined;
 
 function save(report:FusionCostSourceReport){
  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
@@ -22,7 +24,7 @@ function save(report:FusionCostSourceReport){
 
 export function FusionCostSourceView({metric,selector,result,scenario,assets,step,goTo}:{
  metric:MetricValue;selector:FusionCostSelector;result:AnalysisResult;scenario:Scenario;assets:AssetDocument[];step:number|undefined;
- goTo:(term:FusionSourceOperand)=>(()=>void)|undefined;
+ goTo:NavigateOperand;
 }){
  const selectorKey=canonical(selector),identity=useMemo(()=>({}),[selectorKey,metric,result,scenario,assets,step]);
  const [open,setOpen]=useState(false),[cursor,setCursor]=useState({owner:identity,page:0});
@@ -31,15 +33,16 @@ export function FusionCostSourceView({metric,selector,result,scenario,assets,ste
   const actualStep=step===undefined?undefined:result.decode?.steps.find(item=>item.index===step);
   if(result.decode&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,
+   ...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,retry,cancel}=useCostSourceWorker(open,request,'fusion_cost_source',readFusionSourceReply);
  return <section className="fusion-cost-source declaration-source" aria-label="融合运算来源">
   {!open?<button onClick={()=>{setCursor({owner:identity,page:0});setOpen(true);}}>复核此融合的实际运算</button>:
    !request?<p role="status">请选择一个实际 Decode 步骤。</p>:
    state.status==='running'?<><p role="status">正在后台复核融合运算…</p><button onClick={cancel}>取消融合来源复核</button></>:
-   state.status==='available'?<><FusionProof key={selectorKey+':'+page} report={state.report} goTo={term=>{
-    const navigate=goTo(term);
+   state.status==='available'?<><FusionProof key={selectorKey+':'+page} report={state.report} goTo={(term,operandSelector)=>{
+    const navigate=goTo(term,operandSelector);
     if(!navigate)return;
     return ()=>{setOpen(false);navigate();};
    }}/><div className="button-row">
@@ -50,8 +53,9 @@ export function FusionCostSourceView({metric,selector,result,scenario,assets,ste
  </section>;
 }
 
-function FusionProof({report,goTo}:{report:FusionCostSourceReport;goTo:(term:FusionSourceOperand)=>(()=>void)|undefined}){
+function FusionProof({report,goTo}:{report:FusionCostSourceReport;goTo:NavigateOperand}){
  const {scope}=report.selector,{metric,streamSpan,overrideFormula,dag,selectedTimeStrategy}=report;
+ const operandsByNode=new Map(report.rooflineOperands?.map(item=>[item.timingNodeId,item]));
  return <div className="storage-access-proof">
   <h5>{operations[report.operation]}</h5>
   <p>{report.groupId} · {scope.aggregation==='per_device'?scope.deviceIds[0]:'设备组'} · {report.memberCount} 个数学步骤 · 第 {report.page+1} 页</p>
@@ -65,7 +69,16 @@ function FusionProof({report,goTo}:{report:FusionCostSourceReport;goTo:(term:Fus
   {report.operation==='fixed_override'&&selectedTimeStrategy.kind==='override'&&selectedTimeStrategy.timing.kind==='fixed'&&<p>生效固定耗时 {selectedTimeStrategy.timing.seconds} s · {selectedTimeStrategy.timing.description}</p>}
   {overrideFormula&&<FormulaProof proof={overrideFormula.proof}/>}
   {overrideFormula?.truncated&&<p>公式展开达到记录预算，指标已按完整公式复算。</p>}
-  {dag&&<details><summary>查看融合 Roofline 计算步骤</summary><p>{dag.completeTiming?'按融合后的各计算分类与 HBM 字节计算设备耗时。':'Roofline 链含求值诊断或达到记录上限。'}</p><PagedTimingDag dag={dag} pageSize={report.pageSize}/></details>}
+  {report.parameterBindings&&(report.parameterBindings.roots.length>0||!report.parameterBindings.complete)&&<ParameterBindingProof graph={report.parameterBindings}/>}
+  {dag&&<details><summary>查看融合 Roofline 计算步骤</summary>
+   <p>{dag.completeTiming?'按融合后的各计算分类与 HBM 字节计算设备耗时。':'Roofline 链含求值诊断或达到记录上限。'}</p>
+   <PagedTimingDag dag={dag} pageSize={report.pageSize} renderOperand={node=>{
+    const item=operandsByNode.get(node.id),target=item?.selector.scope.target,deviceId=item?.selector.scope.deviceIds[0];
+    if(!item||target?.kind!=='node'||deviceId===undefined)return;
+    const navigate=goTo({kind:'device',nodeId:target.nodeId,deviceId,quantity:item.quantity},item.selector);
+    return navigate&&<button onClick={navigate}>{item.selector.field==='hbmBytes'?'查看本卡 HBM 来源':'查看本卡执行工作量来源'}</button>;
+   }}/>
+  </details>}
   {report.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>)}
   {report.items.map((item,index)=><article className="storage-access-item" key={index}>{'resourceRemoved'in item?
    <><h5>移除 {item.kind==='access'?item.mode==='read'?'读取':'写入':'临时存储'} · {item.nodeId}</h5><p><code>{item.canonicalStorageId}</code>{item.kind==='access'?' · '+item.accessId:''}</p></>:

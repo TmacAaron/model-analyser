@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {ComputeClass,MetricScope,type DeviceId,type LocalDeviceCost,type MetricValue,type NodeId,type Quantity,type StorageId} from '@model-analyser/contracts';
+import {ComputeClass,MetricScope,type CostResult,type DeviceId,type LocalDeviceCost,type MetricValue,type NodeId,type Quantity,type StorageId} from '@model-analyser/contracts';
 import {canonical} from '../../contracts/src/validation.js';
 import {jsonBytes} from '../../contracts/src/json-size.js';
 import {LeafCostSourceRequest} from './leaf-cost-context.js';
@@ -7,15 +7,17 @@ import {computeInputHash,stableStringify} from './input-hash.js';
 import {analyzeScenario,ENGINE_VERSION} from './analyze.js';
 import {namespaceDiagnostics} from './decode.js';
 import {explainValue} from './formula.js';
+import {fusionParameterBindingGraph,parameterReads} from './parameter-binding-graph.js';
 import type {FusionDeclaration} from './fusion-observation.js';
-import type {TimingDag} from './timing-dag.js';
+import type {ParameterCaptureTrace} from './parameter-observation.js';
+import {unpack,type TimingDag} from './timing-dag.js';
 
 export const FusionCostSelector=z.strictObject({
  scope:MetricScope,field:z.enum(['hbmBytes','logicalReadBytes','logicalWriteBytes','usefulOperations','executedOperations','seconds']),
  computeClass:ComputeClass.optional(),
 });
 export type FusionCostSelector=z.infer<typeof FusionCostSelector>;
-export const FusionCostSourceRequest=LeafCostSourceRequest.extend({selector:FusionCostSelector,decodeFrame:z.literal(true).optional()});
+export const FusionCostSourceRequest=LeafCostSourceRequest.extend({selector:FusionCostSelector,decodeFrame:z.literal(true).optional(),proofVersion:z.literal(2).optional()});
 export type FusionCostSourceRequest=z.input<typeof FusionCostSourceRequest>;
 
 const pageSize=20;
@@ -32,6 +34,7 @@ export type FusionSourceOperand={
 type ElidedAllocation={kind:'elided_allocation';storageId:StorageId;deviceId:DeviceId;quantity?:Quantity;diagnosticIds?:string[]};
 type FusionSourceItem=FusionSourceOperand|(FusionDeclaration['removed'][number]&{resourceRemoved:true})|ElidedAllocation;
 type Operation='sum_devices'|'sum_device_terms'|'max_devices'|'sum_member_barriers'|'fixed_override'|'formula_override'|'roofline_override'|'stream_span';
+type RooflineOperand={timingNodeId:string;quantity:Quantity;selector:FusionCostSelector};
 
 function operand(identity:Pick<FusionSourceOperand,'kind'|'nodeId'|'deviceId'|'computeIndex'>,metric:MetricValue):FusionSourceOperand{
  return {...identity,...(metric.status==='available'?{quantity:metric.quantity}:{}),...(metric.diagnosticIds.length?{diagnosticIds:metric.diagnosticIds}:{})};
@@ -57,8 +60,30 @@ function maximum(items:FusionSourceOperand[]){
  return max;
 }
 
+function usedRooflineOperands(dag:TimingDag,cost:CostResult){
+ const operands:RooflineOperand[]=[];
+ for(const node of dag.nodes){
+  const source=node.source;
+  if(source?.['kind']!=='metric_boundary')continue;
+  const boundary=source['field'];
+  let metric:MetricValue,selector:FusionCostSelector;
+  if(boundary==='hbmBytes'){
+   metric=cost.hbmBytes;selector={scope:cost.scope,field:'hbmBytes'};
+  }else{
+   const index=source['evaluationIndex'];
+   const segment=typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?cost.compute[index]:undefined;
+   if(!segment||boundary!=='compute['+JSON.stringify(String(index))+'].executedOperations')throw Error('融合 Roofline 的计算分类位置不同');
+   metric=segment.executedOperations;selector={scope:cost.scope,field:'executedOperations',computeClass:segment.computeClass};
+  }
+  if(metric.status!=='available'||metric.quantity.unit!==node.unit||metric.quantity.value!==unpack(node.value))throw Error('融合 Roofline 读取值与同设备的实际指标不同');
+  operands.push({timingNodeId:node.id,quantity:metric.quantity,selector});
+ }
+ return operands;
+}
+
 export async function replayFusionCostSource(input:unknown){
  const request=FusionCostSourceRequest.parse(input),{scenario,assets,stepContext,selector,page,inputHash,engineVersion}=request;
+ const extended=request.proofVersion===2;
  const {scope,field,computeClass}=selector;
  if(scope.target.kind!=='node'||!['per_device','group_total'].includes(scope.aggregation))throw Error('请选择实际融合节点或融合设备范围');
  const nodeId=scope.target.nodeId,deviceId=scope.aggregation==='per_device'?scope.deviceIds[0]:undefined;
@@ -68,9 +93,13 @@ export async function replayFusionCostSource(input:unknown){
  if(request.decodeFrame&&!stepContext)throw Error('融合成本缺少实际 Decode 上下文');
  const prefix=request.decodeFrame&&stepContext?`decode-step-${stepContext.index}::`:undefined;
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('融合固定输入、实际步骤或引擎版本不匹配');
+ const authored=scenario.fusionGroups.find(group=>'$fusion:'+encodeURIComponent(group.groupId)===nodeId);
+ const captureBindings=extended&&field==='seconds'&&deviceId!==undefined&&authored?.timeStrategy.kind==='override'&&authored.timeStrategy.timing.kind==='custom_formula';
  const declarations:FusionDeclaration[]=[],timings:TimingDag[]=[];
+ let bindingTrace:ParameterCaptureTrace|undefined;
  const replay=await analyzeScenario(scenario,assets,stepContext,{fusion:{
   nodeId,declaration:record=>declarations.push(record),
+  ...(captureBindings?{bindings:(trace:ParameterCaptureTrace)=>{bindingTrace=trace;}}:{}),
   ...(field==='seconds'&&deviceId!==undefined?{timing:{deviceId,record:dag=>timings.push(dag)}}:{}),
  }});
  if(replay.status!=='available'||replay.result.inputHash!==inputHash||replay.result.engineVersion!==engineVersion)throw Error('原融合分析身份不匹配或不能复算');
@@ -87,8 +116,7 @@ export async function replayFusionCostSource(input:unknown){
  const metric=scopedMetric(selectedCost);
  if(!metric||stableStringify(prefix?namespaceDiagnostics(metric,prefix):metric)!==stableStringify(request.metric))throw Error('原融合指标、单位或诊断不同');
  const members=new Map(layout.localCosts.nodes.map(n=>[n.nodeId,n.placement]));
- const authored=scenario.fusionGroups.find(g=>g.groupId===application.groupId);
- if(!authored)throw Error('缺少原融合声明');
+ if(!authored||authored.groupId!==application.groupId)throw Error('缺少原融合声明');
  let operation:Operation,overrideFormula:ReturnType<typeof explainValue>|undefined,streamSpan:{startSeconds?:number;endSeconds?:number;streamId?:string}|undefined;
  let dag:TimingDag|undefined;
  const contributions:FusionSourceOperand[]=[];
@@ -186,19 +214,31 @@ export async function replayFusionCostSource(input:unknown){
  const hardware=deviceId===undefined?undefined:scenario.deviceTopology.devices.find(d=>d.deviceId===deviceId)?.hardware;
  const selectedTimeStrategy=application.timeStrategy;
  const extraDevices=evaluation.extraPerDevice.filter(row=>row.outcome.status==='available').map(row=>row.deviceId);
+ let parameterBindings:ReturnType<typeof fusionParameterBindingGraph>|undefined;
+ if(extended&&overrideFormula){
+  const frames=declaration.parameterFrames?.root;
+  if(!bindingTrace||!frames)throw Error('未采集到整体融合耗时的实际参数域');
+  const reads=parameterReads(overrideFormula.proof,(name,quantity)=>{
+   const frameId=Object.hasOwn(frames,name)?frames[name]:undefined;
+   return {name,quantity,target:'整体融合耗时',frameId:frameId??'unrecorded-fusion-frame'};
+  });
+  parameterBindings=fusionParameterBindingGraph({...bindingTrace,truncated:bindingTrace.truncated||overrideFormula.truncated},assets,reads);
+ }
+ const rooflineOperands=extended&&dag?usedRooflineOperands(dag,selectedCost):undefined;
  const evidence={operation,metric,items,diagnostics,groupId:application.groupId,owner:application.ownerNodeId,extraNodeId:application.extraNodeId,
   memberCount:application.memberNodeIds.length,eliminatedTensorCount:application.eliminatedTensorIds.length,removedCount:removed.length,
   ...(application.origin?{origin:application.origin}:{}),selectedTimeStrategy,extraDevices,
   ...(hardware?{hardware}:{}),...(dag?{dag}:{}),...(streamSpan?{streamSpan}:{}),...(overrideFormula?{overrideFormula}:{})};
  jsonBytes(evidence,8*1024*1024);
- return {kind:'fusion_cost_source' as const,schemaVersion:1 as const,selector,inputHash,engineVersion,page,pageSize,componentCount:count,
-  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),request};
+ return {kind:'fusion_cost_source' as const,schemaVersion:extended?2 as const:1 as const,selector,inputHash,engineVersion,page,pageSize,componentCount:count,
+  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(parameterBindings?{parameterBindings}:{}),
+  ...(rooflineOperands?{rooflineOperands}:{}),request};
 }
 
 export type FusionCostSourceReport=Awaited<ReturnType<typeof replayFusionCostSource>>;
 
 export async function verifyFusionCostSourceReport(input:unknown){
- const saved=z.object({kind:z.literal('fusion_cost_source'),schemaVersion:z.literal(1),request:FusionCostSourceRequest}).passthrough().parse(input);
+ const saved=z.object({kind:z.literal('fusion_cost_source'),schemaVersion:z.union([z.literal(1),z.literal(2)]),request:FusionCostSourceRequest}).passthrough().parse(input);
  const report=await replayFusionCostSource(saved.request);
  if(stableStringify(saved)!==stableStringify(report))throw Error('融合来源报告与固定输入复算不同');
  return report;

@@ -2,7 +2,7 @@ import { useDisplayUnits } from './display-units.js';
 import { useDeferredValue,useEffect,useMemo,useRef,useState } from 'react';
 import type { AnalysisResult,AssetDocument,Scenario } from '@model-analyser/contracts';
 
-import type {FusionSourceOperand,LogicalWorkSourceMember} from '@model-analyser/core';
+import type {FusionCostSelector,FusionSourceOperand,LogicalWorkSourceMember} from '@model-analyser/core';
 import { LeafCostSourceView } from './leaf-cost-source-view.js';
 import {AggregateCostSourceView,type AggregateSourceMember} from './aggregate-cost-source-view.js';
 import {CommunicationCostSourceView} from './communication-cost-source-view.js';
@@ -39,13 +39,15 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
   const aggregate=targetId==='model'||targetId.startsWith('module:')||!!result.decode&&step==='aggregate'&&targetId.startsWith('node:')?metric?.aggregateSelector:undefined;
   const communication=value&&metric?.communicationSelector?<CommunicationCostSourceView metric={value} selector={metric.communicationSelector} result={result} scenario={scenario} assets={assets} step={proofStep}/>:undefined;
   const local=value&&metric?.localSelector?<LocalCostSourceView metric={value} selector={metric.localSelector} result={result} scenario={scenario} assets={assets} step={proofStep}/>:undefined;
-  function goToFusionTerm(term:FusionSourceOperand){
-   const source=metric?.fusionSelector;
+  function goToFusionTerm(term:FusionSourceOperand,operandSelector?:FusionCostSelector){
+   const source=operandSelector??metric?.fusionSelector;
    if(!source||term.deviceId===undefined)return;
    const id=term.kind==='device'?fusionDeviceId(term.nodeId,term.deviceId):localId(term.nodeId,term.deviceId);
    const matching=index?.targets.get(id)?.readMetrics().find(m=>{
     const candidate=m.fusionSelector??m.localSelector;
-    return candidate?.field===source.field&&canonical(candidate.computeClass)===canonical(source.computeClass)&&(term.computeIndex===undefined||m.localSelector?.computeIndex===term.computeIndex);
+    return candidate?.field===source.field&&canonical(candidate.computeClass)===canonical(source.computeClass)&&
+     (!operandSelector||canonical(candidate.scope)===canonical(operandSelector.scope))&&
+     (term.computeIndex===undefined||m.localSelector?.computeIndex===term.computeIndex);
    });
    if(matching)return ()=>{setTarget(id);setMetric(matching.id);setQuery('');};
   }

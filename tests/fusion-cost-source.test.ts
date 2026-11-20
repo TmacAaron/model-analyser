@@ -4,6 +4,7 @@ import {analyzeScenario,replayFusionCostSource,replayLocalCostSource,verifyFusio
 import {makeFusedProject} from '../scripts/fused-project.js';
 import {readFusionSourceReply} from '../apps/web/src/fusion-source-task.js';
 import {c01Project} from './model-fixtures.js';
+import {scopedFusionTimingProject} from './fusion-timing-fixture.js';
 
 const gpu0=DeviceId.parse('gpu0'),gpu1=DeviceId.parse('gpu1');
 const roofline={kind:'roofline_bound' as const,computeEfficiency:1,memoryEfficiency:1,computeMemoryOverlap:'ideal' as const,launchSeconds:0};
@@ -119,6 +120,7 @@ it('verifies fixed, custom formula and Roofline overrides as whole-group device 
  const p=makeFusedProject(c01Project(),true),s=p.scenarios[0]!,group=s.fusionGroups[0]!;
  const initial=await replayFusionCostSource(await request(p,'seconds',gpu0));
  expect(initial).toMatchObject({operation:'fixed_override',metric:{quantity:{value:.5}}});
+ expect(initial.schemaVersion).toBe(1);
  expect(initial.items.every(item=>'resourceRemoved'in item||item.kind==='elided_allocation')).toBe(true);
  const formula=AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:'test:fusion:time',revision:1,name:'Fusion timing fixture',parameters:[],tags:[],sources:[],definition:{kind:'formula',formula:{inputs:{n:{unit:'count',integerRequired:true}},expression:'n * 0.25',output:{unit:'second',integerRequired:false,nonNegative:true},description:'Synthetic fixed rate'}}});
  p.assetSnapshots.push(formula);
@@ -126,10 +128,54 @@ it('verifies fixed, custom formula and Roofline overrides as whole-group device 
  const modeled=await replayFusionCostSource(await request(p,'seconds',gpu0));
  expect(modeled).toMatchObject({operation:'formula_override',metric:{quantity:{value:.25}},overrideFormula:{proof:{bindings:[{quantity:{value:1},proof:{symbol:'N'}}]}}});
  group.timeStrategy={kind:'override',description:'Explicit whole Roofline',timing:roofline};
- const report=await replayFusionCostSource(await request(p,'seconds',gpu0));
+ const report=await replayFusionCostSource({...await request(p,'seconds',gpu0),proofVersion:2});
  expect(report).toMatchObject({operation:'roofline_override',dag:{root:'timing.seconds',completeTiming:true}});
  expect(report.dag?.nodes).toContainEqual(expect.objectContaining({id:'hbm.work',value:4}));
  expect(report.dag?.nodes).toContainEqual(expect.objectContaining({id:'compute["0"].work',value:6}));
+ expect(report.rooflineOperands).toMatchObject([
+  {timingNodeId:'compute["0"].work',quantity:{value:6,unit:'operation'},selector:{field:'executedOperations',computeClass:expect.any(Object),scope:report.selector.scope}},
+  {timingNodeId:'hbm.work',quantity:{value:4,unit:'byte'},selector:{field:'hbmBytes',scope:report.selector.scope}},
+ ]);
+ const altered=structuredClone(report);
+ altered.rooflineOperands![0]!.selector.field='usefulOperations';
+ await expect(verifyFusionCostSourceReport(altered)).rejects.toThrow('固定输入复算不同');
+});
+
+it('traces the actual fusion preset scope and workload on the third Decode step',async()=>{
+ const project=scopedFusionTimingProject();
+ const fixed={...await request(project,'seconds',gpu0,2),proofVersion:2 as const};
+ const report=await replayFusionCostSource(fixed),graph=report.parameterBindings!;
+ expect(report).toMatchObject({schemaVersion:2,operation:'formula_override',metric:{quantity:{value:.012,unit:'second'}},origin:{scopeNodeId:'A'},request:{stepContext:{index:2}}});
+ expect(graph).toMatchObject({scope:'actual_fusion_parameter_context',complete:true});
+ expect(graph.roots).toMatchObject([{name:'B',frameId:'["asset","A"]'},{name:'C',frameId:'["asset","A"]'}]);
+ expect(graph.nodes.find(row=>row.id===graph.roots[0]?.nodeId)).toMatchObject({value:{value:3},source:{kind:'node_override'}});
+ expect(graph.candidates).toContainEqual(expect.objectContaining({parameterKey:'B',status:'winning',overrideIndex:0}));
+ expect(graph.nodes).toContainEqual(expect.objectContaining({name:'contextTokensPerRequest',kind:'workload',value:{kind:'number',value:4},unit:'count'}));
+ expect(await verifyFusionCostSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const altered=structuredClone(report);
+ altered.parameterBindings!.roots[0]!.frameId='["asset","$model"]';
+ await expect(verifyFusionCostSourceReport(altered)).rejects.toThrow('固定输入复算不同');
+ const first=await replayFusionCostSource({...await request(project,'seconds',gpu0,0),proofVersion:2});
+ expect(first.metric).toMatchObject({quantity:{value:.006}});
+});
+
+it('keeps equal-valued Roofline operands attached to their original compute classes',async()=>{
+ const project=makeFusedProject(c01Project(),true),scenario=project.scenarios[0]!,group=scenario.fusionGroups[0]!;
+ const hardware=project.assetSnapshots.find(asset=>asset.assetId===scenario.deviceTopology.devices[0]?.hardware.assetId);
+ const segment=group.extraCost.compute[0];
+ if(!segment||hardware?.definition.kind!=='hardware')throw Error('Missing Roofline fixture');
+ const capability=hardware.definition.hardware.computeCapabilities[0];
+ if(!capability)throw Error('Missing calculation capacity');
+ const vectorClass={...segment.computeClass,resource:'vector' as const};
+ group.extraCost.compute.push({...segment,computeClass:vectorClass,segmentId:'vector-extra',
+  executedOperations:{kind:'literal',quantity:{value:6,unit:'operation'}}});
+ hardware.definition.hardware.computeCapabilities.push({...capability,computeClass:vectorClass});
+ group.timeStrategy={kind:'override',description:'The full device Roofline',timing:roofline};
+ const report=await replayFusionCostSource({...await request(project,'seconds',gpu0),proofVersion:2});
+ expect(report.rooflineOperands?.filter(item=>item.selector.field==='executedOperations')).toMatchObject([
+  {timingNodeId:'compute["0"].work',quantity:{value:6,unit:'operation'},selector:{computeClass:segment.computeClass}},
+  {timingNodeId:'compute["1"].work',quantity:{value:6,unit:'operation'},selector:{computeClass:vectorClass}},
+ ]);
 });
 
 it('uses the scheduled fusion span on an actual Decode step and checks reply identity',async()=>{

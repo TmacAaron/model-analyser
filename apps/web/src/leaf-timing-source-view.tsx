@@ -1,5 +1,5 @@
 import type {ExactLeafSourceReport,TimingNode} from '@model-analyser/core';
-import {useState} from 'react';
+import {useState,type ReactNode} from 'react';
 import {StorageAccessProof} from './storage-access-source-view.js';
 import {FormulaProof} from './declaration-source-view.js';import {LeafExpressionItems} from './leaf-expression-items.js';
 const operations:Record<TimingNode['operation'],string>={input:'实际输入',literal:'常量',return:'返回',zero_when_work_zero:'工作量为零，直接返回',multiply:'乘',divide:'除',log:'log',subtract:'减',exp:'exp',sum:'加',max:'max'};
@@ -16,10 +16,11 @@ export function LeafTimingProof({report}:{report:Extract<ExactLeafSourceReport,{
 }
 
 type TimingDag=Extract<ExactLeafSourceReport,{kind:'leaf_timing_source'}>['dag'];
-export function PagedTimingDag({dag,pageSize}:{dag:TimingDag;pageSize:number}){
+type RenderOperand=(node:TimingNode)=>ReactNode;
+export function PagedTimingDag({dag,pageSize,renderOperand}:{dag:TimingDag;pageSize:number;renderOperand?:RenderOperand|undefined}){
  const [page,setPage]=useState(0);
  return <>
-  <TimingDagPage dag={dag} page={page} pageSize={pageSize}/>
+  <TimingDagPage dag={dag} page={page} pageSize={pageSize} renderOperand={renderOperand}/>
   <div className="button-row">
    {page>0&&<button onClick={()=>setPage(n=>n-1)}>上一页 Roofline 步骤</button>}
    {(page+1)*pageSize<Math.max(dag.nodes.length,dag.guards.length)&&<button onClick={()=>setPage(n=>n+1)}>下一页 Roofline 步骤</button>}
@@ -27,10 +28,10 @@ export function PagedTimingDag({dag,pageSize}:{dag:TimingDag;pageSize:number}){
  </>;
 }
 
-export function TimingDagPage({dag,page,pageSize}:{dag:TimingDag;page:number;pageSize:number}){
+export function TimingDagPage({dag,page,pageSize,renderOperand}:{dag:TimingDag;page:number;pageSize:number;renderOperand?:RenderOperand|undefined}){
  const start=page*pageSize,nodes=dag.nodes.slice(start,start+pageSize),guards=dag.guards.slice(start,start+pageSize),ordinal=new Map(dag.nodes.map((node,index)=>[node.id,index+1]));
  return <>
- <table className="timing-operation-table"><caption>实际耗时运算 · {dag.nodes.length} 条有界记录</caption><colgroup><col style={{width:'12%'}}/><col style={{width:'27%'}}/><col style={{width:'27%'}}/><col style={{width:'34%'}}/></colgroup><thead><tr><th>步骤</th><th>运算</th><th>结果</th><th>来源</th></tr></thead><tbody>{nodes.map(node=><tr key={node.id}><td>#{ordinal.get(node.id)}</td><td>{operations[node.operation]}{node.inputs.length?'（'+node.inputs.map(id=>'#'+ordinal.get(id)).join(', ')+'）':''}</td><td>{String(node.value)} <small>{units[node.unit]??node.unit}</small></td><td>{origin(node)}</td></tr>)}</tbody></table>
+ <table className="timing-operation-table"><caption>实际耗时运算 · {dag.nodes.length} 条有界记录</caption><colgroup><col style={{width:'12%'}}/><col style={{width:'27%'}}/><col style={{width:'27%'}}/><col style={{width:'34%'}}/></colgroup><thead><tr><th>步骤</th><th>运算</th><th>结果</th><th>来源</th></tr></thead><tbody>{nodes.map(node=><tr key={node.id}><td>#{ordinal.get(node.id)}</td><td>{operations[node.operation]}{node.inputs.length?'（'+node.inputs.map(id=>'#'+ordinal.get(id)).join(', ')+'）':''}</td><td>{String(node.value)} <small>{units[node.unit]??node.unit}</small></td><td>{origin(node)}{renderOperand?.(node)}</td></tr>)}</tbody></table>
  {!!nodes.length&&<details className="timing-field-identities"><summary>本页运算的原始字段身份</summary>{nodes.map(node=><p key={node.id}>#{ordinal.get(node.id)} · <code>{node.id}</code>{node.source?.['field']?' · '+node.source['field']:''}</p>)}</details>}
  {!!guards.length&&<details><summary>硬件能力匹配与效率检查</summary>{guards.map((guard,index)=><p key={start+index}>{guard['kind']==='compute_capability'?'计算段 '+guard['segmentId']:'HBM带宽'} · 精确匹配 {String(guard['matchingCount'])} 项 · 声明效率 {String(guard['declaredEfficiency'])}</p>)}</details>}
  </>;
