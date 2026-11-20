@@ -23,15 +23,17 @@ import { temporalMemory } from './temporal-memory.js';
 import {communicationSymbols,type BoundCollectiveObservation,type CommunicationPlanObserver,type CommunicationTimingArithmetic,type CommunicationTimingOverride} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
 import type {FusionPlanObserver} from './fusion-observation.js';
+import type {LayoutPlanObserver,LayoutRuleEvidence,StorageLayoutOrigin} from './layout-observation.js';
+import type {StorageOverrideObservation} from './quantization-observation.js';
 
 const MAX_PARALLEL_USES=20000;
 type Assignment=Scenario['parallelPlan']['assignments'][number];
-type Candidate<T>={nodeId:NodeId;id:string;index:number;priority:number;value:T;signature:string;originalId:string};
+type Candidate<T>={nodeId:NodeId;id:string;index:number;priority:number;value:T;signature:string;originalId:string;source?:Omit<LayoutRuleEvidence,'status'>};
 const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(root+'/')||id.startsWith(root+'[');
 const storageSignature=(p:StoragePartitionResult)=>canonical([...p.perDevice].sort((a,b)=>a.deviceId<b.deviceId?-1:1).map(d=>({deviceId:d.deviceId,copies:d.copies,payload:d.allocation.payloadBytes,auxiliaries:d.allocation.auxiliaryBytes,total:d.totalBytes})).map(d=>({...d,payload:d.payload.status==='available'?d.payload.quantity:d.payload,auxiliaries:d.auxiliaries.map(a=>({name:a.name,bytes:a.bytes.status==='available'?a.bytes.quantity:a.bytes})),total:d.total.status==='available'?d.total.quantity:d.total})));
 
 /** Resolve layouts and declared allocation totals; this is not a distributed schedule/peak. */
-export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:CommunicationPlanObserver|LocalPlanObserver|FusionPlanObserver):Promise<ParallelResolutionAttempt>{
+export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:CommunicationPlanObserver|LocalPlanObserver|FusionPlanObserver|LayoutPlanObserver):Promise<ParallelResolutionAttempt>{
   const diagnostics:Diagnostic[]=[];
   let location:Diagnostic['location']={kind:'file',name:'parallel-plan'};
   try{
@@ -41,9 +43,13 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const captures:BoundCollectiveObservation[]=[];
     const local=observer&&'localCost'in observer?observer:undefined,communication=observer&&'index'in observer?observer:undefined;
     const nativeNodeId=communication?.nativeNodeId,fusion=observer&&'fusion'in observer?observer.fusion:undefined;
+    const layoutObserver=observer&&'layout'in observer?observer.layout:undefined,layoutTarget=layoutObserver?.target;
     const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration}
       :nativeNodeId?{nodeId:nativeNodeId,collective:(record:BoundCollectiveObservation)=>captures.push(record)}
-      :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}:undefined;
+      :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}
+      :layoutObserver?{nodeId:layoutObserver.target.kind==='tensor'?layoutObserver.target.nodeId:'$model',
+        ...(layoutObserver.declaration?{layoutObject:{target:layoutObserver.target,record:layoutObserver.declaration}}:{}),
+        ...(layoutObserver.quantization?{quantization:layoutObserver.quantization}:{})}:undefined;
     const expanded=instantiateModel(scenario,assets,undefined,stepContext,instantiated);if(expanded.status==='unavailable')return ParallelResolutionAttempt.parse(expanded);
     const resolved=expanded.resolved,graph=resolved.graph;diagnostics.push(...expanded.diagnostics);
     modulePeakContexts(resolved,scenario,assets);
@@ -61,7 +67,15 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const ruleStorages=(n:typeof graph.nodes[number])=>n.body.kind==='opaque'&&n.body.localCost?[...('storageId' in n.body.localCost.participation?[n.body.localCost.participation.storageId]:[]),...n.body.localCost.bindings.flatMap(b=>'storageId' in b.source?[b.source.storageId]:[]),...n.body.localCost.cost.memoryAccess.map(a=>a.storageId),...n.body.localCost.cost.temporaryStorageIds]:[];
     const canonicalStorage=(inputId:string):StorageId=>{let id=inputId;const seen=new Set<string>();while(true){const storage=graph.storages.find(s=>s.storageId===id);if(!storage)throw new FormulaError('missing_reference',`布局缺少存储 ${id}`);if(storage.allocation.kind!=='alias')return storage.storageId;if(seen.has(id))throw new FormulaError('dependency_cycle','布局存储 alias 环');seen.add(id);id=storage.allocation.targetStorageId;}};
     const overriddenStorages=new Set<string>();
-    for(const o of scenario.numericOverrides)if(o.target.kind==='storage'&&o.field==='memory_bytes'){const id=canonicalStorage(o.target.storageId),s=graph.storages.find(s=>s.storageId===id);if(!s)throw new FormulaError('missing_reference','存储覆盖目标不存在');if(overriddenStorages.has(id))throw new FormulaError('invalid_override','同一规范存储的字节覆盖冲突');overriddenStorages.add(id);s.allocation={kind:'bytes',value:{kind:'literal',quantity:o.value}};}
+    let storageOverride:StorageOverrideObservation|undefined;
+    for(const [overrideIndex,o] of scenario.numericOverrides.entries())if(o.target.kind==='storage'&&o.field==='memory_bytes'){
+      const id=canonicalStorage(o.target.storageId),s=graph.storages.find(s=>s.storageId===id);
+      if(!s)throw new FormulaError('missing_reference','存储覆盖目标不存在');
+      if(overriddenStorages.has(id))throw new FormulaError('invalid_override','同一规范存储的字节覆盖冲突');
+      overriddenStorages.add(id);const before=s.allocation;
+      s.allocation={kind:'bytes',value:{kind:'literal',quantity:o.value}};
+      if(layoutTarget?.kind==='storage'&&layoutTarget.storageId===id)storageOverride={storageId:id,overrideIndex,override:o,before,after:s.allocation};
+    }
     const symbols:Record<string,Quantity>={};for(const [key,value] of Object.entries(scenario.workload))if(typeof value==='number')symbols[key]={value,unit:'count'};
     for(const p of resolved.parameters)if(p.nodeId==='$model'&&(p.value.kind==='integer'||p.value.kind==='number'))symbols[p.parameterKey]={value:p.value.value,unit:p.unit};
     const context={symbols,assets},tensorCandidates:Candidate<TensorPartitionResult>[]=[],storageCandidates:Candidate<StoragePartitionResult>[]=[],tensorCache=new Map<string,TensorPartitionResult>(),storageCache=new Map<string,StoragePartitionResult>();
@@ -92,26 +106,49 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     }
     function tensorPartition(id:string,d:TensorDistribution){const key=canonical([id,d]),cached=tensorCache.get(key);if(cached)return cached;const t=graph.tensors.find(t=>t.tensorId===id);if(!t)throw new FormulaError('missing_reference','分布张量不存在');const r=partitionTensor(t,d,scenario.deviceTopology,context);if(r.status==='unavailable')throw new FormulaError(r.diagnostics[0]?.code??'invalid_distribution',r.diagnostics.map(d=>d.message).join('; '));tensorCache.set(key,r.result);return r.result;}
     function rebase(value:unknown,prefix:string):unknown{if(value===null||typeof value!=='object')return value;if(Array.isArray(value))return value.map(v=>rebase(v,prefix));return Object.fromEntries(Object.entries(value).map(([key,v])=>[key,key==='diagnosticId'&&typeof v==='string'?prefix+v:key==='diagnosticIds'&&Array.isArray(v)?v.map(id=>prefix+String(id)):rebase(v,prefix)]));}
-    function storagePartition(id:string,d:TensorDistribution){const key=canonical([id,d]),cached=storageCache.get(key);if(cached)return cached;const r=allocateDistributedStorage(StorageId.parse(id),graph.storages,d,scenario.deviceTopology,context);if(r.status==='unavailable')throw new FormulaError(r.diagnostics[0]?.code??'invalid_distribution',r.diagnostics.map(d=>d.message).join('; '));const result=StoragePartitionResult.parse(rebase(r.result,'layout-'+storageCache.size+'-'));if(elided.has(StorageId.parse(id))){const zero={status:'available' as const,quantity:{value:0,unit:'byte' as const},basis:'theoretical' as const,provenance:{assetRefs:resolved.assetRefs,formulaRefs:[],parameterSources:[],assumptions:['Validated fusion elides this canonical physical allocation. Partition shape remains logical; no allocation or auxiliary storage is materialized.']},diagnosticIds:[]};result.materialization='elided';for(const p of result.perDevice){p.allocation.payloadBytes=zero;p.allocation.auxiliaryBytes=[];p.allocation.totalBytes=zero;p.totalBytes=zero;p.allocation.diagnostics=[];}result.diagnostics=[];}diagnostics.push(...result.diagnostics);storageCache.set(key,result);return result;}
+    const storageNamespaces=new WeakMap<StoragePartitionResult,string>();
+    function storagePartition(id:string,d:TensorDistribution){const key=canonical([id,d]),cached=storageCache.get(key);if(cached)return cached;const r=allocateDistributedStorage(StorageId.parse(id),graph.storages,d,scenario.deviceTopology,context);if(r.status==='unavailable')throw new FormulaError(r.diagnostics[0]?.code??'invalid_distribution',r.diagnostics.map(d=>d.message).join('; '));const namespace='layout-'+storageCache.size+'-',result=StoragePartitionResult.parse(rebase(r.result,namespace));if(layoutTarget?.kind==='storage'&&layoutTarget.storageId===id)storageNamespaces.set(result,namespace);if(elided.has(StorageId.parse(id))){const zero={status:'available' as const,quantity:{value:0,unit:'byte' as const},basis:'theoretical' as const,provenance:{assetRefs:resolved.assetRefs,formulaRefs:[],parameterSources:[],assumptions:['Validated fusion elides this canonical physical allocation. Partition shape remains logical; no allocation or auxiliary storage is materialized.']},diagnosticIds:[]};result.materialization='elided';for(const p of result.perDevice){p.allocation.payloadBytes=zero;p.allocation.auxiliaryBytes=[];p.allocation.totalBytes=zero;p.totalBytes=zero;p.allocation.diagnostics=[];}result.diagnostics=[];}diagnostics.push(...result.diagnostics);storageCache.set(key,result);return result;}
     const storageLayoutSignatures=new Map<string,string>();
     function storageLayoutSignature(p:StoragePartitionResult){const key=canonical([p.canonicalStorageId,p.distribution]),prior=storageLayoutSignatures.get(key);if(prior)return prior;const s=graph.storages.find(s=>s.storageId===p.canonicalStorageId);if(!s||s.allocation.kind==='alias')throw new FormulaError('missing_reference','规范存储缺少分配');const a=s.allocation;
       const split=partitionTensor({tensorId:TensorId.parse('$storage:'+s.storageId),storageId:s.storageId,name:s.name,shape:a.kind==='tensor'?a.shape:[],dtype:a.kind==='tensor'?a.dtype:{category:'uint',bits:8,format:'u8'}},p.distribution,scenario.deviceTopology,context);if(split.status==='unavailable')throw new FormulaError('invalid_distribution','存储逻辑布局无法解析');const signature=tensorSignature(split.result);storageLayoutSignatures.set(key,signature);return signature;
+    }
+    const backingTensors=layoutTarget?.kind==='storage'?new Set(graph.tensors.filter(t=>canonicalStorage(t.storageId)===layoutTarget.storageId).map(t=>String(t.tensorId))):undefined;
+    function candidateSource(kind:'tensor'|'storage',nodeId:NodeId,target:Target,a:Assignment,index:number,entryIndex:number,priority:number,originalId:string,declared:TensorDistribution,effective:TensorDistribution){
+      const selected=kind==='tensor'&&(backingTensors?.has(target.id)||layoutTarget?.kind==='tensor'&&layoutTarget.nodeId===nodeId&&layoutTarget.tensorId===target.id)||
+        kind==='storage'&&layoutTarget?.kind==='storage'&&layoutTarget.storageId===target.id;
+      return selected?{source:{kind,nodeId,objectId:target.id,ownerNodeId:target.owner,index,entryIndex,priority,originalId,
+        selector:a.selector,declared,effective,axisMap:Object.fromEntries(target.axes)}}:{};
     }
     for(const [index,a] of scenario.parallelPlan.assignments.entries()){
       if(!a.phases.includes(resolved.phase))continue;
       location={kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'parallelPlan.assignments.'+index};
       const selected=select(a);
-      for(const entry of a.tensorDistributions)for(const target of targets('tensor',entry.tensorId,selected)){
+      for(const [entryIndex,entry] of a.tensorDistributions.entries())for(const target of targets('tensor',entry.tensorId,selected)){
         const d=mappedLayout(entry.distribution,target.axes),nodes=selected.selected.filter(id=>references(id,'tensor',target.id));if(!nodes.length)nodes.push(target.owner);
-        for(const nodeId of nodes){spend();tensorCandidates.push({nodeId,id:target.id,index,priority:a.selector.kind==='nodes'&&a.selector.nodeIds.includes(nodeId)&&leaves.has(nodeId)?2:1,get value(){return tensorPartition(target.id,d);},get signature(){return tensorSignature(this.value);},originalId:entry.tensorId});}
+        for(const nodeId of nodes){
+          spend();const priority=a.selector.kind==='nodes'&&a.selector.nodeIds.includes(nodeId)&&leaves.has(nodeId)?2:1;
+          tensorCandidates.push({nodeId,id:target.id,index,priority,get value(){return tensorPartition(target.id,d);},get signature(){return tensorSignature(this.value);},originalId:entry.tensorId,
+            ...candidateSource('tensor',nodeId,target,a,index,entryIndex,priority,entry.tensorId,entry.distribution,d)});
+        }
       }
-      for(const entry of a.storageDistributions)for(const target of targets('storage',entry.storageId,selected)){
+      for(const [entryIndex,entry] of a.storageDistributions.entries())for(const target of targets('storage',entry.storageId,selected)){
         const nodes=selected.selected.filter(id=>references(id,'storage',target.id));if(!nodes.length)nodes.push(target.owner);
-        for(const nodeId of nodes){spend();storageCandidates.push({nodeId,id:target.id,index,priority:a.selector.kind==='nodes'&&a.selector.nodeIds.includes(nodeId)&&leaves.has(nodeId)?2:1,get value(){return storagePartition(target.id,entry.distribution);},get signature(){return storageLayoutSignature(this.value);},originalId:entry.storageId});}
+        for(const nodeId of nodes){
+          spend();const priority=a.selector.kind==='nodes'&&a.selector.nodeIds.includes(nodeId)&&leaves.has(nodeId)?2:1;
+          storageCandidates.push({nodeId,id:target.id,index,priority,get value(){return storagePartition(target.id,entry.distribution);},get signature(){return storageLayoutSignature(this.value);},originalId:entry.storageId,
+            ...candidateSource('storage',nodeId,target,a,index,entryIndex,priority,entry.storageId,entry.distribution,entry.distribution)});
+        }
       }
     }
+    const layoutRules:LayoutRuleEvidence[]=[];
     function winners<T>(candidates:Candidate<T>[]){const grouped=new Map<string,Candidate<T>[]>();for(const c of candidates){const key=canonical([c.nodeId,c.id]);grouped.set(key,[...(grouped.get(key)??[]),c]);}
-      return [...grouped.values()].map(list=>{const priority=Math.max(...list.map(c=>c.priority)),top=list.filter(c=>c.priority===priority),first=top[0];if(!first)throw new FormulaError('invalid_distribution','布局候选为空');if(top.some(c=>c.signature!==first.signature))throw new FormulaError('ambiguous_distribution',`对象 ${first.id} 在节点 ${first.nodeId} 的同级范围有冲突布局；需显式叶节点覆盖或消除重叠`);return {first,indices:[...new Set(top.map(c=>c.index))].sort((a,b)=>a-b),overridden:[...new Set(list.filter(c=>c.priority<priority).map(c=>c.index))].sort((a,b)=>a-b)};});
+      return [...grouped.values()].map(list=>{
+        const priority=Math.max(...list.map(c=>c.priority)),top=list.filter(c=>c.priority===priority),first=top[0];
+        if(!first)throw new FormulaError('invalid_distribution','布局候选为空');
+        if(top.some(c=>c.signature!==first.signature))throw new FormulaError('ambiguous_distribution',`对象 ${first.id} 在节点 ${first.nodeId} 的同级范围有冲突布局；需显式叶节点覆盖或消除重叠`);
+        if(first.source)for(const c of list)if(c.source)layoutRules.push({...c.source,status:c===first?'selected':c.priority===priority?'equivalent':'overridden'});
+        return {first,indices:[...new Set(top.map(c=>c.index))].sort((a,b)=>a-b),overridden:[...new Set(list.filter(c=>c.priority<priority).map(c=>c.index))].sort((a,b)=>a-b)};
+      });
     }
     const tensorWinners=winners(tensorCandidates),storageWinners=winners(storageCandidates),tensorLayouts:ParallelResolution['tensorLayouts']=tensorWinners.map(w=>({nodeId:w.first.nodeId,tensorId:TensorId.parse(w.first.id),partition:w.first.value,assignmentIndices:w.indices,overriddenIndices:w.overridden}));
     const storageLayouts:ParallelResolution['storageLayouts']=storageWinners.map(w=>({nodeId:w.first.nodeId,storageId:StorageId.parse(w.first.id),distribution:w.first.value.distribution,assignmentIndices:w.indices,overriddenIndices:w.overridden}));
@@ -122,14 +159,28 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       const group=prior??{allocation:p,signature,nodeIds:new Set<NodeId>(),indices:new Set<number>(),aliases:new Set<StorageId>()};group.nodeIds.add(nodeId);indices.forEach(i=>group.indices.add(i));group.aliases.add(StorageId.parse(originalId));storageGroups.set(key,group);
     }
     const explicitStorageIds=new Set(storageWinners.map(w=>w.first.id));
-    for(const w of storageWinners)addStorage(w.first.id,w.first.value,w.first.nodeId,w.indices,w.first.originalId);
+    const storageOrigins:StorageLayoutOrigin[]=[];
+    const observedStorage=layoutTarget?.kind==='storage'?layoutTarget:undefined;
+    for(const w of storageWinners){
+      addStorage(w.first.id,w.first.value,w.first.nodeId,w.indices,w.first.originalId);
+      if(observedStorage?.storageId===w.first.id)storageOrigins.push({kind:'explicit_storage',nodeId:w.first.nodeId,objectId:w.first.id,distribution:w.first.value.distribution,indices:w.indices});
+    }
     for(const w of tensorWinners){const tensor=graph.tensors.find(t=>t.tensorId===w.first.id);if(!tensor)throw new FormulaError('missing_reference','张量分布对象缺失');const id=canonicalStorage(tensor.storageId),explicit=explicitStorageIds.has(id)?storageGroups.get(id):undefined;
       const storage=graph.storages.find(s=>s.storageId===id);if(!storage)throw new FormulaError('missing_reference','张量分布的底层存储缺失');
       const distribution=w.first.value.distribution;
       if((distribution.kind==='sharded'||distribution.kind==='manual')&&(storage.allocation.kind!=='tensor'||canonical(storage.allocation.shape)!==canonical(tensor.shape)))throw new FormulaError('ambiguous_storage_shape','张量视图与底层存储 shape 不同，不能自动从张量分片推断底层分配；请使用独立的明确张量存储');
       const inferred=storagePartition(id,distribution);
-      if(explicit){for(const local of inferred.perDevice){const backing=explicit.allocation.perDevice.find(d=>d.deviceId===local.deviceId);if(!backing||backing.totalBytes.status!=='available'||local.totalBytes.status!=='available'||backing.totalBytes.quantity.value<local.totalBytes.quantity.value)throw new FormulaError('insufficient_local_storage',`张量 ${tensor.tensorId} 的设备局部需求超出显式 backing 存储 ${id}`);}explicit.nodeIds.add(w.first.nodeId);w.indices.forEach(i=>explicit.indices.add(i));}
+      let capacity:StorageLayoutOrigin['capacity'];
+      if(explicit){
+        for(const local of inferred.perDevice){
+          const backing=explicit.allocation.perDevice.find(d=>d.deviceId===local.deviceId);
+          if(!backing||backing.totalBytes.status!=='available'||local.totalBytes.status!=='available'||backing.totalBytes.quantity.value<local.totalBytes.quantity.value)throw new FormulaError('insufficient_local_storage',`张量 ${tensor.tensorId} 的设备局部需求超出显式 backing 存储 ${id}`);
+          if(observedStorage?.storageId===id&&observedStorage.deviceId===local.deviceId)capacity={requiredBytes:local.totalBytes.quantity.value,backingBytes:backing.totalBytes.quantity.value};
+        }
+        explicit.nodeIds.add(w.first.nodeId);w.indices.forEach(i=>explicit.indices.add(i));
+      }
       else addStorage(id,inferred,w.first.nodeId,w.indices,tensor.storageId);
+      if(observedStorage?.storageId===id)storageOrigins.push({kind:explicit?'verified_backing':'inferred_from_tensor',nodeId:w.first.nodeId,objectId:tensor.tensorId,distribution,indices:w.indices,...(capacity?{capacity}:{})});
     }
     const communications:ParallelResolution['communications']=[];
     const allSelection={roots:[NodeId.parse('$model')],frames:resolved.objectBindings,selected:graph.nodes.map(n=>n.nodeId),inherited:new Set<NodeId>()};
@@ -176,6 +227,20 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       const categories=[...new Set(assigned.map(s=>s.category))],categoryBreakdown=categories.map(category=>({category,bytes:sumBytes(assigned.filter(s=>s.category===category).map(s=>s.bytes))}));deviceAllocations.push({deviceId:device.deviceId,categoryBreakdown,knownBytes:sumBytes(assigned.map(s=>s.bytes))});
     }
     const storageAllocations:ParallelResolution['storageAllocations']=[...storageGroups].map(([storageId,g])=>{const s=graph.storages.find(s=>s.storageId===storageId);if(!s)throw new FormulaError('missing_reference','规范分配存储缺失');return {storageId:StorageId.parse(storageId),category:s.category,aliasIds:graph.storages.filter(s=>canonicalStorage(s.storageId)===storageId).map(s=>s.storageId).sort(),nodeIds:[...g.nodeIds].sort(),assignmentIndices:[...g.indices].sort((a,b)=>a-b),allocation:g.allocation};});
+    if(layoutObserver){
+      const {target}=layoutObserver,base={topology:scenario.deviceTopology,symbols:communicationSymbols(symbols),rules:layoutRules,syntheticBaseline:!!singleDeviceBaseline};
+      if(target.kind==='tensor'){
+        const tensor=graph.tensors.find(t=>t.tensorId===target.tensorId),row=tensorLayouts.find(t=>t.nodeId===target.nodeId&&t.tensorId===target.tensorId);
+        if(tensor&&row)layoutObserver.record(structuredClone({...base,kind:'tensor',tensor,row}));
+      }else{
+        const storage=graph.storages.find(s=>s.storageId===target.storageId),row=storageAllocations.find(s=>s.storageId===target.storageId);
+        const elidedBy=resolved.fusionApplications.find(f=>f.eliminatedStorageIds.includes(target.storageId))?.nodeId;
+        const quantization=resolved.quantizationApplications.find(q=>q.storageId===target.storageId);
+        const namespace=row?storageNamespaces.get(row.allocation):undefined;
+        if(storage&&row&&namespace)layoutObserver.record(structuredClone({...base,kind:'storage',storage,row,namespace,origins:storageOrigins,
+          ...(storageOverride?{override:storageOverride}:{}),...(elidedBy?{elidedBy}:{}),...(quantization?{quantization}:{})}));
+      }
+    }
     const unassignedTensorUses=graph.nodes.filter(n=>n.body.kind!=='collective').flatMap(n=>[...new Set([...n.portBindings.map(p=>p.tensorId),...ruleTensors(n),...(resolved.objectBindings.find(b=>b.nodeId===n.nodeId)?.tensors.map(t=>t.tensorId)??[])])].filter(id=>!tensorLayouts.some(t=>t.nodeId===n.nodeId&&t.tensorId===id)).map(tensorId=>({nodeId:n.nodeId,tensorId})));
     const localCosts=evaluateDistributedCosts(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},diagnostics,singleDeviceBaseline,local?.localCost),fusions=evaluateFusions(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},localCosts,diagnostics,singleDeviceBaseline,fusion);
     const unassignedStorageIds=[...new Set(graph.storages.map(s=>canonicalStorage(s.storageId)))].filter(id=>!storageGroups.has(id));let execution:ParallelResolution['execution'],baseline:ParallelResolution['execution']|undefined;try{const runtime=fusionRuntime(resolved,scenario,tensorLayouts,localCosts,fusions,singleDeviceBaseline);const runtimeCommunications=communications.map(c=>({...c,evaluation:{...c.evaluation,definition:{...c.evaluation.definition,...(runtime.scenario.parallelPlan.communications[c.index]?.placement?{placement:runtime.scenario.parallelPlan.communications[c.index]?.placement}:{})}}}));if(scenario.executionPlan.kind==='streams'){const scheduled=buildStreamsExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},{resolved,tensorLayouts,localCosts,fusions,singleDeviceBaseline},assets,diagnostics);execution=scheduled.execution;baseline=scheduled.baseline;}else execution=buildSerialExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},diagnostics);fusionMemoryOrder(execution,fusions);}catch(e){const diagnosticId='fusion-execution-'+diagnostics.length;diagnostics.push({diagnosticId,severity:'error',code:e instanceof FormulaError?e.code:'invalid_fusion_execution',message:e instanceof Error?e.message:'融合执行边界不可用',location});execution={status:'unavailable',diagnosticIds:[diagnosticId]};}

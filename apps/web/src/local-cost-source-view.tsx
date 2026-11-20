@@ -6,6 +6,7 @@ import {readLocalSourceReply} from './local-source-task.js';
 import {FormulaProof} from './declaration-source-view.js';
 import {PagedTimingDag} from './leaf-timing-source-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
+import {LayoutSourceView,type LayoutSourceAnchor} from './layout-source-view.js';
 
 function save(report:LocalCostSourceReport){
  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
@@ -45,13 +46,21 @@ type Metric=Access['logical'];
 const show=(metric:Metric)=>metric.status==='available'?`${metric.quantity.value} ${metric.quantity.unit}`:'不可用';
 const shape=(axes:Shape)=>axes.map(a=>a.axisId+'='+ (a.size.kind==='literal'?a.size.quantity.value:'表达式')).join(' × ');
 
-function Allocation({value}:{value:DeviceAllocation}){
- return <p><code>{value.canonicalStorageId}</code> · {shape(value.allocatedShape)} · {show(value.allocation.totalBytes)}/副本 × {value.copies} = {show(value.totalBytes)}
- {value.assignmentIndices.length>0&&<small>分配规则 {value.assignmentIndices.map(i=>'#'+(i+1)).join('、')}</small>}</p>;
+type LayoutContext={nodeId:LocalCostSelector['nodeId'];deviceId:LocalCostSelector['deviceId'];anchor:LayoutSourceAnchor};
+function Allocation({value,layout}:{value:DeviceAllocation;layout:LayoutContext}){
+ return <>
+  <p><code>{value.canonicalStorageId}</code> · {shape(value.allocatedShape)} · {show(value.allocation.totalBytes)}/副本 × {value.copies} = {show(value.totalBytes)}
+   {value.assignmentIndices.length>0&&<small>分配规则 {value.assignmentIndices.map(i=>'#'+(i+1)).join('、')}</small>}
+  </p>
+  <LayoutSourceView anchor={layout.anchor} selector={{kind:'storage',storageId:value.canonicalStorageId,deviceId:layout.deviceId}}/>
+ </>;
 }
 
 function LocalProof({report}:{report:LocalCostSourceReport}){
  const {metric,participation,dag,trafficOverride}=report;
+ const {scenario,assets,inputHash,engineVersion,stepContext}=report.request,{nodeId,deviceId,fusionNodeId}=report.selector;
+ const fusionContext=fusionNodeId?scenario.fusionGroups.find(group=>'$fusion:'+encodeURIComponent(group.groupId)===fusionNodeId)?.extraLocalCost?.contextNodeId:undefined;
+ const layout={nodeId:fusionContext??nodeId,deviceId,anchor:{scenario,assets,inputHash,engineVersion,...(stepContext?{stepContext}:{})}};
  return <div className="storage-access-proof">
   <h5>{report.selector.nodeId} · {report.selector.deviceId}</h5>
   <p>{metric.status==='available'?'已复核逐卡指标 '+show(metric):'原逐卡指标不可用，保留诊断。'} · 第 {report.page+1} 页 · {report.componentCount} 项</p>
@@ -66,23 +75,24 @@ function LocalProof({report}:{report:LocalCostSourceReport}){
    <p>{dag.completeTiming?'已复核每段计算耗时、HBM 耗时与启动耗时。':'当前耗时链包含求值诊断或达到记录预算。'}</p>
    <PagedTimingDag dag={dag} pageSize={report.pageSize}/>
   </details>}
-  {report.items.map((item,i)=><article className="storage-access-item" key={i}><LocalTerm item={item} denominator={trafficOverride?.originalTotal}/></article>)}
+  {report.items.map((item,i)=><article className="storage-access-item" key={i}><LocalTerm item={item} denominator={trafficOverride?.originalTotal} layout={layout}/></article>)}
  </div>;
 }
 
-function LocalTerm({item,denominator}:{item:Item;denominator:number|undefined}){
+function LocalTerm({item,denominator,layout}:{item:Item;denominator:number|undefined;layout:LayoutContext}){
  switch(item.kind){
   case 'binding':return <>
    <h5>{item.binding.symbol} = {item.binding.quantity.value} {item.binding.quantity.unit}</h5>
-   {'tensor'in item&&item.tensor&&<><p><code>{item.tensor.tensorId}</code> · 逻辑 {shape(item.tensor.logicalShape)} · 分配 {shape(item.tensor.allocatedShape)} · {item.tensor.copies} 份</p>{item.tensor.slices.map(s=><p key={s.axisId}>{s.axisId} [{s.start}, {s.end})</p>)}</>}
-   {'storage'in item&&item.storage&&<Allocation value={item.storage}/>}
+   {'tensor'in item&&item.tensor&&<><p><code>{item.tensor.tensorId}</code> · 逻辑 {shape(item.tensor.logicalShape)} · 分配 {shape(item.tensor.allocatedShape)} · {item.tensor.copies} 份</p>{item.tensor.slices.map(s=><p key={s.axisId}>{s.axisId} [{s.start}, {s.end})</p>)}
+    <LayoutSourceView anchor={layout.anchor} selector={{kind:'tensor',tensorId:item.tensor.tensorId,nodeId:layout.nodeId,deviceId:layout.deviceId}}/></>}
+   {'storage'in item&&item.storage&&<Allocation value={item.storage} layout={layout}/>}
    <small>{item.binding.source.kind}{'basis'in item.binding.source?' · '+item.binding.source.basis:''}{'edge'in item.binding.source?' · '+item.binding.source.edge:''}</small>
   </>;
   case 'compute':return <><h5>{item.segmentId} · {item.field==='usefulOperations'?'有效工作':'执行工作'} · {show(item.metric)}</h5>{item.formula&&<FormulaProof proof={item.formula.proof}/>}</>;
   case 'access':return <>
    <h5>{item.accessId} · {item.mode==='read'?'读取':'写入'} · <code>{item.storageId}</code></h5>
    <p>逻辑流量 {show(item.logical)} · HBM {show(item.hbm)}</p>
-   {item.allocation&&<Allocation value={item.allocation}/>}
+   {item.allocation&&<Allocation value={item.allocation} layout={layout}/>}
    {item.accessKind==='storage_allocation'&&item.logicalFormula&&<p>passes = {item.logicalFormula.quantity.value}{item.logicalFormula.quantity.value===0?' · 无需读取分配字节':''}</p>}
    {item.replacement&&<p>按原逻辑流量 {item.replacement.originalBytes} / {denominator} 分摊，覆盖后 {item.replacement.replacementBytes} byte</p>}
    {item.logicalFormula&&<details><summary>逻辑流量公式</summary><FormulaProof proof={item.logicalFormula.proof}/></details>}

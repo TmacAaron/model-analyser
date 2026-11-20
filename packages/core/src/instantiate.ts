@@ -15,6 +15,7 @@ import { collectivePorts } from '../../contracts/src/collective.js';
 import { bindNativeCommunication,nativeBindingIssues } from '../../contracts/src/parallel-bindings.js';
 import {communicationSymbols,type BoundCollectiveObservation} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
+import type {LayoutDeclaration,LayoutObjectObserver} from './layout-observation.js';
 
 type Node=GraphTemplate['nodes'][number];
 type Port=GraphTemplate['inputs'][number];
@@ -30,7 +31,7 @@ const literal=(quantity:Quantity):ValueExpr=>({kind:'literal',quantity});
 /** Opt-in, selected-call capture before expressions are folded. Never serialized into results. */
 export type InstantiatedStorageCapture={storage:StorageSpec;symbols:Record<string,Quantity>;asset:AssetRef;bindingFrame?:string};
 export type InstantiatedCostCapture={nodeId:string;asset:AssetRef;cost:CostDefinition;symbols:Record<string,Quantity>;storageRefs:{localStorageId:string;storageId:string}[];storages:InstantiatedStorageCapture[];bindingContext?:{frameId?:string;trace:ParameterCaptureTrace}};
-export type InstantiationObserver={nodeId:string;declaration?:NonNullable<LocalPlanObserver['declaration']>;cost?:(record:InstantiatedCostCapture)=>void;collective?:(record:BoundCollectiveObservation)=>void;bindings?:boolean;bindingNodes?:readonly string[];bindingTraceReady?:(trace:ParameterCaptureTrace)=>void;quantization?:QuantizationObserver;fusion?:FusionDeclarationObserver};
+export type InstantiationObserver={nodeId:string;declaration?:NonNullable<LocalPlanObserver['declaration']>;cost?:(record:InstantiatedCostCapture)=>void;collective?:(record:BoundCollectiveObservation)=>void;bindings?:boolean;bindingNodes?:readonly string[];bindingTraceReady?:(trace:ParameterCaptureTrace)=>void;quantization?:QuantizationObserver;fusion?:FusionDeclarationObserver;layoutObject?:LayoutObjectObserver};
 
 /** Expand the selected phase into the same graph semantics; containers never carry a second cost. */
 export function instantiateModel(input:Scenario,library:AssetDocument[],limits={maxNodes:10000,maxDepth:64},stepInput?:DecodeStepContext,observer?:InstantiationObserver):InstantiationResult {
@@ -102,6 +103,10 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     function materialize(source:Frame,path:string,symbols:Record<string,Quantity>,external:Map<string,TensorId>,stateBindings:Map<string,StateId>,owner:AssetDocument){
       const tensorMap=new Map<string,TensorId>(),storageMap=new Map<string,StorageId>(),stateMap=new Map<string,StateId>();
+      const trace=observer?.layoutObject;
+      function observeObject(object:LayoutDeclaration['object']){
+        trace?.record(structuredClone({object,nodeId:NodeId.parse(path||'$model'),asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},symbols:communicationSymbols(symbols)}));
+      }
       const bindStorage=(local:string,target:StorageId)=>{const canonical=canonicalStorage(target),prior=storageMap.get(local);if(prior&&canonicalStorage(prior)!==canonical)throw new FormulaError('invalid_state_binding',`同一本地存储绑定不同对象 ${local}`);storageMap.set(local,canonical);};
       for(const local of source.states){const parentId=stateBindings.get(local.stateId);if(parentId){const parent=stateById.get(parentId);if(!parent||parent.stateKind!==local.stateKind||parent.storageIds.length!==local.storageIds.length)throw new FormulaError('invalid_state_binding','状态类型或存储数量不兼容');const policy=local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy;if(canonical(policy)!==canonical(parent.updatePolicy)||(local.allocationBasis??'context_boundary')!==(parent.allocationBasis??'context_boundary'))throw new FormulaError('invalid_state_binding','状态更新/分配时点约束不兼容');stateMap.set(local.stateId,parentId);local.storageIds.forEach((id,i)=>{const target=parent.storageIds[i];if(!target)throw new FormulaError('invalid_state_binding','状态存储缺失');bindStorage(id,target);});}else stateMap.set(local.stateId,StateId.parse(objectId(path,local.stateId)));}
       for(const id of stateBindings.keys())if(!source.states.some(s=>s.stateId===id))throw new FormulaError('missing_reference',`子定义未声明状态 ${id}`);
@@ -115,9 +120,14 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
           const parent=storageById.get(id);if(parent&&parent.sharingDomain!==s.sharingDomain)throw new FormulaError('invalid_state_binding','存储共享域不兼容');continue;
         }
         const target=s.allocation.kind==='alias'?storageMap.get(s.allocation.targetStorageId):undefined;if(s.allocation.kind==='alias'&&!target)throw new FormulaError('missing_reference','alias 目标缺失');addStorage({...s,storageId:id,allocation:target?{kind:'alias',targetStorageId:target}:s.allocation});const original=source.storages[index],bindingFrame=parameterCapture?.frame(symbols);if(storageInputs&&original)storageInputs.set(id,{storage:{...original,storageId:id,allocation:target?{kind:'alias',targetStorageId:target}:original.allocation},symbols:parameterCapture?.symbolsSnapshot(symbols)??symbols,asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},...(bindingFrame?{bindingFrame}:{})});
+        if(original&&trace?.target.kind==='storage'&&trace.target.storageId===id)observeObject({kind:'storage',storage:original});
       }
       for(const s of evaluatedStorages){const target=storageMap.get(s.storageId);if(!target)throw new FormulaError('missing_reference','存储映射缺失');const local=allocateStorage(s.storageId,evaluatedStorages,context({})),parent=allocateStorage(target,graph.storages,context({}));if(local.totalBytes.status!=='available'||parent.totalBytes.status!=='available')throw new FormulaError('invalid_shape','存储分配不可用');if(local.totalBytes.quantity.value>parent.totalBytes.quantity.value)throw new FormulaError('invalid_state_binding','绑定存储容量不足');}
-      for(const t of source.tensors){if(!tensorMap.has(t.tensorId)){const id=TensorId.parse(objectId(path,t.tensorId)),storageId=storageMap.get(t.storageId);if(!storageId)throw new FormulaError('missing_reference',`张量存储缺失 ${t.storageId}`);tensorMap.set(t.tensorId,id);addTensor({...t,tensorId:id,storageId,shape:shape(t.shape,symbols)});}}
+      for(const t of source.tensors)if(!tensorMap.has(t.tensorId)){
+        const id=TensorId.parse(objectId(path,t.tensorId)),storageId=storageMap.get(t.storageId);if(!storageId)throw new FormulaError('missing_reference',`张量存储缺失 ${t.storageId}`);
+        tensorMap.set(t.tensorId,id);addTensor({...t,tensorId:id,storageId,shape:shape(t.shape,symbols)});
+        if(trace?.target.kind==='tensor'&&trace.target.tensorId===id)observeObject({kind:'tensor',tensor:t});
+      }
       for(const local of source.states){const stateId=stateMap.get(local.stateId);if(!stateId)throw new FormulaError('missing_reference','状态映射缺失');const bound=stateBindings.has(local.stateId);let state=stateById.get(stateId);
         if(!state){const storageIds=local.storageIds.map(id=>{const mapped=storageMap.get(id);if(!mapped)throw new FormulaError('missing_reference','状态存储缺失');return mapped;});state={...local,stateId,storageIds,creator:{kind:'initialized'},readers:[],writers:[],updatePolicy:local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy};stateById.set(stateId,state);graph.states.push(state);}
         deferredStates.push({state,local,path,bound});
