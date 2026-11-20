@@ -22,6 +22,7 @@ import { buildStreamsExecution } from './streams.js';
 import { temporalMemory } from './temporal-memory.js';
 import {communicationSymbols,type BoundCollectiveObservation,type CommunicationPlanObserver,type CommunicationTimingArithmetic,type CommunicationTimingOverride} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
+import type {FusionPlanObserver} from './fusion-observation.js';
 
 const MAX_PARALLEL_USES=20000;
 type Assignment=Scenario['parallelPlan']['assignments'][number];
@@ -30,7 +31,7 @@ const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(
 const storageSignature=(p:StoragePartitionResult)=>canonical([...p.perDevice].sort((a,b)=>a.deviceId<b.deviceId?-1:1).map(d=>({deviceId:d.deviceId,copies:d.copies,payload:d.allocation.payloadBytes,auxiliaries:d.allocation.auxiliaryBytes,total:d.totalBytes})).map(d=>({...d,payload:d.payload.status==='available'?d.payload.quantity:d.payload,auxiliaries:d.auxiliaries.map(a=>({name:a.name,bytes:a.bytes.status==='available'?a.bytes.quantity:a.bytes})),total:d.total.status==='available'?d.total.quantity:d.total})));
 
 /** Resolve layouts and declared allocation totals; this is not a distributed schedule/peak. */
-export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:CommunicationPlanObserver|LocalPlanObserver):Promise<ParallelResolutionAttempt>{
+export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:CommunicationPlanObserver|LocalPlanObserver|FusionPlanObserver):Promise<ParallelResolutionAttempt>{
   const diagnostics:Diagnostic[]=[];
   let location:Diagnostic['location']={kind:'file',name:'parallel-plan'};
   try{
@@ -39,8 +40,10 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const invalid=validateScenario(scenario,assets).filter(d=>d.severity==='error'&&d.code!=='unresolved_partial');if(invalid.length)return ParallelResolutionAttempt.parse({status:'unavailable',diagnostics:invalid});
     const captures:BoundCollectiveObservation[]=[];
     const local=observer&&'localCost'in observer?observer:undefined,communication=observer&&'index'in observer?observer:undefined;
-    const nativeNodeId=communication?.nativeNodeId;
-    const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration}:nativeNodeId?{nodeId:nativeNodeId,collective:(record:BoundCollectiveObservation)=>captures.push(record)}:undefined;
+    const nativeNodeId=communication?.nativeNodeId,fusion=observer&&'fusion'in observer?observer.fusion:undefined;
+    const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration}
+      :nativeNodeId?{nodeId:nativeNodeId,collective:(record:BoundCollectiveObservation)=>captures.push(record)}
+      :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}:undefined;
     const expanded=instantiateModel(scenario,assets,undefined,stepContext,instantiated);if(expanded.status==='unavailable')return ParallelResolutionAttempt.parse(expanded);
     const resolved=expanded.resolved,graph=resolved.graph;diagnostics.push(...expanded.diagnostics);
     modulePeakContexts(resolved,scenario,assets);
@@ -174,7 +177,7 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     }
     const storageAllocations:ParallelResolution['storageAllocations']=[...storageGroups].map(([storageId,g])=>{const s=graph.storages.find(s=>s.storageId===storageId);if(!s)throw new FormulaError('missing_reference','规范分配存储缺失');return {storageId:StorageId.parse(storageId),category:s.category,aliasIds:graph.storages.filter(s=>canonicalStorage(s.storageId)===storageId).map(s=>s.storageId).sort(),nodeIds:[...g.nodeIds].sort(),assignmentIndices:[...g.indices].sort((a,b)=>a-b),allocation:g.allocation};});
     const unassignedTensorUses=graph.nodes.filter(n=>n.body.kind!=='collective').flatMap(n=>[...new Set([...n.portBindings.map(p=>p.tensorId),...ruleTensors(n),...(resolved.objectBindings.find(b=>b.nodeId===n.nodeId)?.tensors.map(t=>t.tensorId)??[])])].filter(id=>!tensorLayouts.some(t=>t.nodeId===n.nodeId&&t.tensorId===id)).map(tensorId=>({nodeId:n.nodeId,tensorId})));
-    const localCosts=evaluateDistributedCosts(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},diagnostics,singleDeviceBaseline,local?.localCost),fusions=evaluateFusions(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},localCosts,diagnostics,singleDeviceBaseline);
+    const localCosts=evaluateDistributedCosts(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},diagnostics,singleDeviceBaseline,local?.localCost),fusions=evaluateFusions(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},localCosts,diagnostics,singleDeviceBaseline,fusion);
     const unassignedStorageIds=[...new Set(graph.storages.map(s=>canonicalStorage(s.storageId)))].filter(id=>!storageGroups.has(id));let execution:ParallelResolution['execution'],baseline:ParallelResolution['execution']|undefined;try{const runtime=fusionRuntime(resolved,scenario,tensorLayouts,localCosts,fusions,singleDeviceBaseline);const runtimeCommunications=communications.map(c=>({...c,evaluation:{...c.evaluation,definition:{...c.evaluation.definition,...(runtime.scenario.parallelPlan.communications[c.index]?.placement?{placement:runtime.scenario.parallelPlan.communications[c.index]?.placement}:{})}}}));if(scenario.executionPlan.kind==='streams'){const scheduled=buildStreamsExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},{resolved,tensorLayouts,localCosts,fusions,singleDeviceBaseline},assets,diagnostics);execution=scheduled.execution;baseline=scheduled.baseline;}else execution=buildSerialExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},diagnostics);fusionMemoryOrder(execution,fusions);}catch(e){const diagnosticId='fusion-execution-'+diagnostics.length;diagnostics.push({diagnosticId,severity:'error',code:e instanceof FormulaError?e.code:'invalid_fusion_execution',message:e instanceof Error?e.message:'融合执行边界不可用',location});execution={status:'unavailable',diagnosticIds:[diagnosticId]};}
     const capturedMemory:MemoryEvidence[]=[];
     const memoryInput={storageAllocations,tensorLayouts,localCosts,communications,execution,unassignedStorageIds,fusions,singleDeviceBaseline},timed=scenario.executionPlan.kind==='streams'?temporalMemory(resolved,scenario,assets,memoryInput,diagnostics):undefined,memory=applyTotalPeakOverrides(timed?.memory??distributedSerialMemory(resolved,scenario,assets,memoryInput,diagnostics,evidence=>capturedMemory.push(evidence)),resolved,scenario,assets,diagnostics),serialBaseline=baseline?{execution:baseline,memory:applyTotalPeakOverrides(distributedSerialMemory(resolved,scenario,assets,{...memoryInput,execution:baseline},diagnostics),resolved,scenario,assets,diagnostics)}:undefined;

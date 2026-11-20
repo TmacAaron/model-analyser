@@ -2,16 +2,17 @@ import { useDisplayUnits } from './display-units.js';
 import { useEffect,useRef,useState } from 'react';
 import type { AnalysisResult,AssetDocument,MetricValue,Scenario } from '@model-analyser/contracts';
 
-import type { AggregateCostSelector,CommunicationCostSelector,LeafCostSelector,LocalCostSelector } from '@model-analyser/core';
+import type { AggregateCostSelector,CommunicationCostSelector,FusionCostSelector,FusionSourceOperand,LeafCostSelector,LocalCostSelector } from '@model-analyser/core';
 import { LeafCostSourceView } from './leaf-cost-source-view.js';
 import {AggregateCostSourceView,type AggregateSourceMember} from './aggregate-cost-source-view.js';
 import {CommunicationCostSourceView} from './communication-cost-source-view.js';
 import {LocalCostSourceView} from './local-cost-source-view.js';
+import {FusionCostSourceView} from './fusion-cost-source-view.js';
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import { ParameterValues } from './resolved-inspector-view.js';
 export type SourceSelection={targetId:string;metricId:string;step?:number;nonce:number};
 type Report=Pick<AnalysisResult,'total'|'nodes'|'modules'|'memory'|'fusions'|'distributed'|'diagnostics'|'parameterTrace'|'decode'>;
-type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector;localSelector?:LocalCostSelector};
+type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector;localSelector?:LocalCostSelector;fusionSelector?:FusionCostSelector};
 type Target={id:string;label:string;metrics:Metric[];local?:Pick<LocalCostSelector,'nodeId'|'deviceId'>};
 function metricIdentity(scope:AggregateCostSelector['scope']|undefined,field:AggregateCostSelector['field'],computeClass?:AggregateCostSelector['computeClass']){
  if(!scope)return {};
@@ -21,21 +22,31 @@ function metricIdentity(scope:AggregateCostSelector['scope']|undefined,field:Agg
 function computeMetrics(cost:Pick<Report['total'],'compute'> & Partial<Pick<Report['total'],'scope'>>):Metric[]{return cost.compute.flatMap((c,i)=>[{id:'useful:'+i,label:`${c.computeClass.resource} ${c.computeClass.multiplyDtype.format}/${c.computeClass.accumulateDtype.format} 有效工作`,value:c.usefulOperations,...metricIdentity(cost.scope,'usefulOperations',c.computeClass)},{id:'executed:'+i,label:`${c.computeClass.resource} ${c.computeClass.multiplyDtype.format}/${c.computeClass.accumulateDtype.format} 执行工作`,value:c.executedOperations,...metricIdentity(cost.scope,'executedOperations',c.computeClass)}]);}
 function costMetrics(cost:Report['total']):Metric[]{return [{id:'seconds',label:'理论耗时',value:cost.seconds,...metricIdentity(cost.scope,'seconds')},{id:'read',label:'逻辑读取',value:cost.logicalReadBytes,...metricIdentity(cost.scope,'logicalReadBytes')},{id:'write',label:'逻辑写入',value:cost.logicalWriteBytes,...metricIdentity(cost.scope,'logicalWriteBytes')},{id:'hbm',label:'估计 HBM',value:cost.hbmBytes,...metricIdentity(cost.scope,'hbmBytes')},...computeMetrics(cost),...cost.communications.flatMap((c,i)=>[{id:'send:'+i,label:`${c.groupId} ${c.operation} 每成员发送消息`,value:c.sendBytesPerMember},{id:'receive:'+i,label:`${c.groupId} ${c.operation} 每成员接收消息`,value:c.receiveBytesPerMember},{id:'algorithm:'+i,label:`${c.groupId} ${c.operation} 每成员算法流量`,value:c.algorithmTrafficBytesPerMember},{id:'group-send:'+i,label:`${c.groupId} ${c.operation} 组发送合计`,value:c.groupSendBytes},{id:'group-receive:'+i,label:`${c.groupId} ${c.operation} 组接收合计`,value:c.groupReceiveBytes}])];}
 const communicationFields:Record<string,CommunicationCostSelector['field']>={seconds:'seconds','send:0':'sendBytesPerMember','receive:0':'receiveBytesPerMember','algorithm:0':'algorithmTrafficBytesPerMember','group-send:0':'groupSendBytes','group-receive:0':'groupReceiveBytes'};
+const localId=(nodeId:string,deviceId:string)=>'local:'+JSON.stringify([nodeId,deviceId]);
+const fusionDeviceId=(nodeId:string,deviceId:string)=>'fusion-device:'+JSON.stringify([nodeId,deviceId]);
+function localTarget(cost:Report['total'],nodeId:LocalCostSelector['nodeId'],deviceId:LocalCostSelector['deviceId'],fusionNodeId?:LocalCostSelector['fusionNodeId']):Target{
+ const local={nodeId,deviceId};
+ const metrics=costMetrics(cost).map(metric=>{
+  if(!metric.selector)return metric;
+  const computeIndex=metric.selector.computeClass?Number(metric.id.split(':')[1]):undefined;
+  return {...metric,localSelector:{...metric.selector,...local,...(computeIndex===undefined?{}:{computeIndex}),...(fusionNodeId?{fusionNodeId}:{})}};
+ });
+ return {id:localId(nodeId,deviceId),label:(fusionNodeId?'融合附加 ':'局部 ')+nodeId+' / '+deviceId,metrics,local};
+}
+const fusionMetrics=(cost:Report['total'])=>costMetrics(cost).map(metric=>metric.aggregateSelector?{...metric,fusionSelector:metric.aggregateSelector}:metric);
 export function sourceTargets(report:Report):Target[]{
-  const result:Target[]=[{id:'model',label:report.distributed?'模型物理汇总':'模型汇总',metrics:costMetrics(report.total)},...report.modules.map(n=>({id:'module:'+n.nodeId,label:'模块 '+n.nodeId,metrics:costMetrics(n.cost)})),...report.nodes.map(n=>({id:'node:'+n.nodeId,label:'节点 '+n.nodeId,metrics:costMetrics(n.cost)})),...(report.fusions??[]).map(f=>({id:'fusion:'+f.evaluation.application.nodeId,label:'融合 '+f.evaluation.application.nodeId,metrics:costMetrics(f.cost)}))];
+  const result:Target[]=[{id:'model',label:report.distributed?'模型物理汇总':'模型汇总',metrics:costMetrics(report.total)},...report.modules.map(n=>({id:'module:'+n.nodeId,label:'模块 '+n.nodeId,metrics:costMetrics(n.cost)})),...report.nodes.map(n=>({id:'node:'+n.nodeId,label:'节点 '+n.nodeId,metrics:costMetrics(n.cost)}))];
+  for(const f of report.fusions??[]){
+    const {nodeId,extraNodeId}=f.evaluation.application;
+    result.push({id:'fusion:'+nodeId,label:'融合 '+nodeId,metrics:fusionMetrics(f.cost)});
+    for(const d of f.evaluation.perDevice)if(d.outcome.status==='available')result.push({id:fusionDeviceId(nodeId,d.deviceId),label:'融合 '+nodeId+' / '+d.deviceId,metrics:fusionMetrics(d.outcome.cost)});
+    for(const d of f.evaluation.extraPerDevice)if(d.outcome.status==='available')result.push(localTarget(d.outcome.cost,extraNodeId,d.deviceId,nodeId));
+  }
   report.memory.forEach((m,i)=>result.push({id:'memory:'+i,label:'生命周期显存 '+(m.deviceScope.kind==='per_device'?m.deviceScope.deviceId:m.deviceScope.deviceIds.join(', ')),metrics:[{id:'peak',label:'峰值（含显式覆盖）',value:m.peakBytes},...m.categoryBreakdown.map(c=>({id:c.category,label:c.category+' 峰值分解',value:c.bytes}))]}));
   (report.decode?.logicalCompute??report.distributed?.logicalCompute??[]).forEach((c,i)=>result.push({id:'logical:'+i,label:'逻辑有效汇总 '+(c.scope.target.kind==='model'?'模型':c.scope.target.nodeId),metrics:computeMetrics(c)}));
   const layout=report.distributed?.layout;
   if(layout){
-    for(const n of layout.localCosts.nodes)if(n.placement.kind==='placed')for(const d of n.placement.perDevice)if(d.outcome.status==='available'){
-      const local={nodeId:n.nodeId,deviceId:d.deviceId};
-      const metrics=costMetrics(d.outcome.cost).map(metric=>{
-        if(!metric.selector)return metric;
-        const computeIndex=metric.selector.computeClass?Number(metric.id.split(':')[1]):undefined;
-        return {...metric,localSelector:{...metric.selector,...local,...(computeIndex===undefined?{}:{computeIndex})}};
-      });
-      result.push({id:'local:'+JSON.stringify([n.nodeId,d.deviceId]),label:'局部 '+n.nodeId+' / '+d.deviceId,metrics,local});
-    }
+    for(const n of layout.localCosts.nodes)if(n.placement.kind==='placed')for(const d of n.placement.perDevice)if(d.outcome.status==='available')result.push(localTarget(d.outcome.cost,n.nodeId,d.deviceId));
     for(const s of layout.storageAllocations)result.push({id:'storage:'+s.storageId,label:'规范存储 '+s.storageId,metrics:s.allocation.perDevice.map(d=>({id:d.deviceId,label:d.deviceId+' 分配（非峰值）',value:d.totalBytes}))});
     for(const c of layout.communications){
       const metrics=costMetrics(c.evaluation.cost).map(metric=>{
@@ -63,6 +74,17 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
   const aggregate=targetId==='model'||targetId.startsWith('module:')||!!result.decode&&step==='aggregate'&&targetId.startsWith('node:')?metric?.aggregateSelector:undefined;
   const communication=value&&metric?.communicationSelector?<CommunicationCostSourceView metric={value} selector={metric.communicationSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)}/>:undefined;
   const local=value&&metric?.localSelector?<LocalCostSourceView metric={value} selector={metric.localSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)}/>:undefined;
+  function goToFusionTerm(term:FusionSourceOperand){
+   const source=metric?.fusionSelector;
+   if(!source||term.deviceId===undefined)return;
+   const id=term.kind==='device'?fusionDeviceId(term.nodeId,term.deviceId):localId(term.nodeId,term.deviceId);
+   const next=all.find(target=>target.id===id),matching=next?.metrics.find(m=>{
+    const candidate=m.fusionSelector??m.localSelector;
+    return candidate?.field===source.field&&canonical(candidate.computeClass)===canonical(source.computeClass)&&(term.computeIndex===undefined||m.localSelector?.computeIndex===term.computeIndex);
+   });
+   if(matching)return ()=>{setTarget(id);setMetric(matching.id);setQuery('');};
+  }
+  const fusion=value&&metric?.fusionSelector?<FusionCostSourceView metric={value} selector={metric.fusionSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} goTo={goToFusionTerm}/>:undefined;
   const devices=targetId.startsWith('node:')&&metric?.aggregateSelector?all.flatMap(item=>{
    if(item.local?.nodeId!==targetId.slice(5))return [];
    const matching=item.metrics.find(candidate=>candidate.localSelector?.field===metric.aggregateSelector?.field&&canonical(candidate.localSelector?.computeClass)===canonical(metric.aggregateSelector?.computeClass));
@@ -85,7 +107,7 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
     {result.decode&&<label>来源步骤<select aria-label="来源步骤" value={step} onChange={e=>setStep(e.target.value)}><option value="aggregate">完整序列汇总</option>{step!=='aggregate'&&!result.decode.steps.some(s=>String(s.index)===step)&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤 {s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}
     <div className="preset-fields"><label>查找范围<input aria-label="查找成本来源范围" value={query} onChange={e=>setQuery(e.target.value)}/></label><label>结果范围<select aria-label="成本来源范围" value={targetId} onChange={e=>{setTarget(e.target.value);const next=all.find(t=>t.id===e.target.value);setMetric(next?.metrics.find(m=>m.id===metricId)?.id??next?.metrics[0]?.id??'seconds');}}>{!target&&<option value={targetId} disabled>缺失范围 · {targetId}</option>}{options.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label><label>指标<select aria-label="成本来源指标" value={metricId} onChange={e=>setMetric(e.target.value)}>{!metric&&<option value={metricId} disabled>缺失指标 · {metricId}</option>}{target?.metrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label></div>
     {filtered.length>100&&<p>显示匹配的前 100/{filtered.length} 个范围；输入节点、存储或设备 ID 查看其余范围。</p>}
-    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{local??communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:devices.length?deviceChoices:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{local??communication??deviceChoices}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
+    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{fusion??local??communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:devices.length?deviceChoices:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{fusion??local??communication??deviceChoices}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
     <h4>当前方案数值覆盖声明 · {sourceScenario.numericOverrides.length}</h4>{sourceScenario.numericOverrides.length?<div className="analysis-table source-overrides"><table><thead><tr><th>来源 / 目标</th><th>字段 / 值</th><th>作者说明</th></tr></thead><tbody>{sourceScenario.numericOverrides.map((o,i)=><tr key={i}><td>numericOverrides #{i+1}<small>{JSON.stringify(o.target)}</small></td><td>{o.field}{o.parameterKey?' · '+o.parameterKey:''}<small>{o.value.value} {o.value.unit}</small></td><td>{o.description||'未附说明'}</td></tr>)}</tbody></table></div>:<p>当前方案没有数值覆盖。</p>}
     <details><summary>固定硬件规格与作者来源</summary>{sourceScenario.deviceTopology.devices.map(d=>{const a=assets.find(a=>a.assetId===d.hardware.assetId&&a.revision===d.hardware.revision);return <div key={d.deviceId}><h4>{d.deviceId} · {d.hardware.assetId}@r{d.hardware.revision}</h4><pre>{JSON.stringify(a?.definition,null,2)}</pre><pre>{JSON.stringify(a?.sources??[],null,2)}</pre></div>;})}</details>
   </div>;

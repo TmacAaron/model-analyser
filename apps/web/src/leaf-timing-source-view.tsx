@@ -1,4 +1,5 @@
 import type {ExactLeafSourceReport,TimingNode} from '@model-analyser/core';
+import {useState} from 'react';
 import {StorageAccessProof} from './storage-access-source-view.js';
 import {FormulaProof} from './declaration-source-view.js';import {LeafExpressionItems} from './leaf-expression-items.js';
 const operations:Record<TimingNode['operation'],string>={input:'实际输入',literal:'常量',return:'返回',zero_when_work_zero:'工作量为零，直接返回',multiply:'乘',divide:'除',log:'log',subtract:'减',exp:'exp',sum:'加',max:'max'};
@@ -15,6 +16,17 @@ export function LeafTimingProof({report}:{report:Extract<ExactLeafSourceReport,{
 }
 
 type TimingDag=Extract<ExactLeafSourceReport,{kind:'leaf_timing_source'}>['dag'];
+export function PagedTimingDag({dag,pageSize}:{dag:TimingDag;pageSize:number}){
+ const [page,setPage]=useState(0);
+ return <>
+  <TimingDagPage dag={dag} page={page} pageSize={pageSize}/>
+  <div className="button-row">
+   {page>0&&<button onClick={()=>setPage(n=>n-1)}>上一页 Roofline 步骤</button>}
+   {(page+1)*pageSize<Math.max(dag.nodes.length,dag.guards.length)&&<button onClick={()=>setPage(n=>n+1)}>下一页 Roofline 步骤</button>}
+  </div>
+ </>;
+}
+
 export function TimingDagPage({dag,page,pageSize}:{dag:TimingDag;page:number;pageSize:number}){
  const start=page*pageSize,nodes=dag.nodes.slice(start,start+pageSize),guards=dag.guards.slice(start,start+pageSize),ordinal=new Map(dag.nodes.map((node,index)=>[node.id,index+1]));
  return <>

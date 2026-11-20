@@ -10,6 +10,7 @@ import { topologicalOrder } from './graph.js';
 import { bindLocalCostRule } from './local-cost-rule.js';
 import { applyQuantization } from './quantization.js';
 import { applyFusion } from './fusion.js';
+import type {FusionDeclarationObserver} from './fusion-observation.js';
 import { collectivePorts } from '../../contracts/src/collective.js';
 import { bindNativeCommunication,nativeBindingIssues } from '../../contracts/src/parallel-bindings.js';
 import {communicationSymbols,type BoundCollectiveObservation} from './communication-observation.js';
@@ -29,7 +30,7 @@ const literal=(quantity:Quantity):ValueExpr=>({kind:'literal',quantity});
 /** Opt-in, selected-call capture before expressions are folded. Never serialized into results. */
 export type InstantiatedStorageCapture={storage:StorageSpec;symbols:Record<string,Quantity>;asset:AssetRef;bindingFrame?:string};
 export type InstantiatedCostCapture={nodeId:string;asset:AssetRef;cost:CostDefinition;symbols:Record<string,Quantity>;storageRefs:{localStorageId:string;storageId:string}[];storages:InstantiatedStorageCapture[];bindingContext?:{frameId?:string;trace:ParameterCaptureTrace}};
-export type InstantiationObserver={nodeId:string;declaration?:NonNullable<LocalPlanObserver['declaration']>;cost?:(record:InstantiatedCostCapture)=>void;collective?:(record:BoundCollectiveObservation)=>void;bindings?:boolean;bindingNodes?:readonly string[];bindingTraceReady?:(trace:ParameterCaptureTrace)=>void;quantization?:QuantizationObserver};
+export type InstantiationObserver={nodeId:string;declaration?:NonNullable<LocalPlanObserver['declaration']>;cost?:(record:InstantiatedCostCapture)=>void;collective?:(record:BoundCollectiveObservation)=>void;bindings?:boolean;bindingNodes?:readonly string[];bindingTraceReady?:(trace:ParameterCaptureTrace)=>void;quantization?:QuantizationObserver;fusion?:FusionDeclarationObserver};
 
 /** Expand the selected phase into the same graph semantics; containers never carry a second cost. */
 export function instantiateModel(input:Scenario,library:AssetDocument[],limits={maxNodes:10000,maxDepth:64},stepInput?:DecodeStepContext,observer?:InstantiationObserver):InstantiationResult {
@@ -247,7 +248,7 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     const {configMapping,configImport,fusionPresets,...validatedTemplate}=root;void configMapping;void configImport;void fusionPresets;const resolvedRoot={...validatedTemplate,parameters:[],definition:{...root.definition,workloadBindings:[],graph}},checked=validateAssets([resolvedRoot],[...assets.filter(a=>a.assetId!==root.assetId||a.revision!==root.revision),resolvedRoot]),errors=checked.filter(d=>d.severity==='error');if(errors.length)return InstantiationResult.parse({status:'unavailable',diagnostics:errors});diagnostics.push(...checked.filter(d=>d.severity!=='error'));
     topologicalOrder(graph);
-    const resolved=ResolvedGraph.parse({phase,graph,containers,parameters,assetRefs:[...references.values()],objectBindings,quantizationApplications:[],fusionApplications:[]});applyQuantization(resolved,scenario,assets,diagnostics,observer?.quantization);applyFusion(resolved,scenario,assets,diagnostics);if(parameterCapture)observer?.bindingTraceReady?.(parameterCapture.snapshot());return InstantiationResult.parse({status:'available',resolved,diagnostics});
+    const resolved=ResolvedGraph.parse({phase,graph,containers,parameters,assetRefs:[...references.values()],objectBindings,quantizationApplications:[],fusionApplications:[]});applyQuantization(resolved,scenario,assets,diagnostics,observer?.quantization);applyFusion(resolved,scenario,assets,diagnostics,observer?.fusion);if(parameterCapture)observer?.bindingTraceReady?.(parameterCapture.snapshot());return InstantiationResult.parse({status:'available',resolved,diagnostics});
   }catch(e){diagnostics.push({diagnosticId:'instantiation-error',severity:'error',code:e instanceof FormulaError?e.code:'invalid_graph',message:e instanceof Error?e.message:'模型实例化失败',location:{kind:'node',nodeId:NodeId.parse(cursor)}});return InstantiationResult.parse({status:'unavailable',diagnostics});}
 }
 

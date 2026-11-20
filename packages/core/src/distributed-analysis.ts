@@ -10,10 +10,11 @@ import { rooflinePoints } from './roofline.js';
 import { FormulaError } from './formula.js';
 import { ENGINE_VERSION } from './version.js';
 import {modelCostInputs,moduleCostInputs} from './aggregate-members.js';
+import type {FusionPlanObserver} from './fusion-observation.js';
 
 /** Explicit projection from physical local costs to group totals. Times are barriers, never device sums. */
-export async function analyzeDistributedScenario(scenario:Scenario,assets:AssetDocument[],stepContext?:DecodeStepContext):Promise<AnalysisAttempt>{
-  const attempt=await resolveParallelPlan(scenario,assets,stepContext);if(attempt.status==='unavailable')return AnalysisAttempt.parse(attempt);
+export async function analyzeDistributedScenario(scenario:Scenario,assets:AssetDocument[],stepContext?:DecodeStepContext,observer?:FusionPlanObserver):Promise<AnalysisAttempt>{
+  const attempt=await resolveParallelPlan(scenario,assets,stepContext,observer);if(attempt.status==='unavailable')return AnalysisAttempt.parse(attempt);
   const layout=attempt.result,diagnostics:Diagnostic[]=[...layout.diagnostics],expanded=instantiateModel(scenario,assets,undefined,stepContext);if(expanded.status==='unavailable')return AnalysisAttempt.parse(expanded);
   const resolved=expanded.resolved,allDevices=scenario.deviceTopology.devices.map(d=>d.deviceId),provenance={assetRefs:resolved.assetRefs,formulaRefs:resolved.assetRefs.filter(r=>r.kind==='formula'),parameterSources:resolved.parameters.map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),assumptions:[
     'Group totals sum explicitly evaluated physical work and traffic. Replicated local useful work is not the logical model numerator for MFU.',

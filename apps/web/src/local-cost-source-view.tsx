@@ -4,7 +4,7 @@ import type {LocalCostSelector,LocalCostSourceReport,LocalCostSourceRequest} fro
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import {readLocalSourceReply} from './local-source-task.js';
 import {FormulaProof} from './declaration-source-view.js';
-import {TimingDagPage} from './leaf-timing-source-view.js';
+import {PagedTimingDag} from './leaf-timing-source-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
 
 function save(report:LocalCostSourceReport){
@@ -51,12 +51,12 @@ function Allocation({value}:{value:DeviceAllocation}){
 }
 
 function LocalProof({report}:{report:LocalCostSourceReport}){
- const [timingPage,setTimingPage]=useState(0),{metric,participation,dag,trafficOverride}=report;
+ const {metric,participation,dag,trafficOverride}=report;
  return <div className="storage-access-proof">
   <h5>{report.selector.nodeId} · {report.selector.deviceId}</h5>
   <p>{metric.status==='available'?'已复核逐卡指标 '+show(metric):'原逐卡指标不可用，保留诊断。'} · 第 {report.page+1} 页 · {report.componentCount} 项</p>
   <p>{report.asset.assetId}@r{report.asset.revision} · {report.hardware.assetId}@r{report.hardware.revision}</p>
-  <p>{participation.kind==='complete_single_device'?'完整单设备采用全局叶方程':participation.kind==='tensor_layout'?'按张量 '+participation.tensorId+' 参与':'按存储 '+participation.storageId+' 参与'} · {report.deviceIds.length} 台参与设备</p>
+  <p>{participation.kind==='complete_single_device'?'完整单设备采用全局叶方程':participation.kind==='fusion_extra_device'?'融合组声明的设备附加方程':participation.kind==='tensor_layout'?'按张量 '+participation.tensorId+' 参与':'按存储 '+participation.storageId+' 参与'} · {report.deviceIds.length} 台参与设备</p>
   {report.description&&<p>{report.description}</p>}
   {!report.complete&&metric.status==='available'&&<p>当前表达式证据为分页或有界记录。按固定输入、完整参数与实际步骤复算原指标。</p>}
   {report.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>)}
@@ -64,11 +64,7 @@ function LocalProof({report}:{report:LocalCostSourceReport}){
   {report.timingOverrides.map(({index,override,change})=>change.kind==='timing'&&<p key={index}>耗时覆盖 #{index+1} · {override.field} = {override.value.value} {override.value.unit} · {change.before.kind} → {change.after.kind}</p>)}
   {dag&&<details><summary>查看当前设备的 Roofline 耗时运算</summary>
    <p>{dag.completeTiming?'已复核每段计算耗时、HBM 耗时与启动耗时。':'当前耗时链包含求值诊断或达到记录预算。'}</p>
-   <TimingDagPage dag={dag} page={timingPage} pageSize={report.pageSize}/>
-   <div className="button-row">
-    {timingPage>0&&<button onClick={()=>setTimingPage(n=>n-1)}>上一页 Roofline 步骤</button>}
-    {(timingPage+1)*report.pageSize<Math.max(dag.nodes.length,dag.guards.length)&&<button onClick={()=>setTimingPage(n=>n+1)}>下一页 Roofline 步骤</button>}
-   </div>
+   <PagedTimingDag dag={dag} pageSize={report.pageSize}/>
   </details>}
   {report.items.map((item,i)=><article className="storage-access-item" key={i}><LocalTerm item={item} denominator={trafficOverride?.originalTotal}/></article>)}
  </div>;

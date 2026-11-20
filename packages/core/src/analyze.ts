@@ -18,15 +18,16 @@ import { analyzeDistributedScenario } from './distributed-analysis.js';
 import { ENGINE_VERSION } from './version.js';
 import { analyzeDecodeSequence } from './decode.js';
 import {moduleCostInputs} from './aggregate-members.js';
+import type {FusionPlanObserver} from './fusion-observation.js';
 
 export { ENGINE_VERSION } from './version.js';
-export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext):Promise<AnalysisAttempt>{
+export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:FusionPlanObserver):Promise<AnalysisAttempt>{
   const diagnostics:Diagnostic[]=[];
   try{
     const pack=calculationInput(input,library),scenario=pack.scenario,assets=pack.assets;
     const invalid=validateScenario(scenario,assets).filter(d=>d.severity==='error');if(invalid.length)return AnalysisAttempt.parse({status:'unavailable',diagnostics:invalid});
     if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1){if(stepContext)throw new FormulaError('invalid_decode_step','序列不能嵌套逐步上下文');return await analyzeDecodeSequence(scenario,assets,analyzeScenario);}
-    if(scenario.modulePeakOverrides?.some(r=>r.phases.includes(scenario.workload.kind))||scenario.executionPlan.kind==='streams'||scenario.fusionGroups.length||scenario.deviceTopology.devices.length!==1||scenario.parallelPlan.assignments.length||scenario.parallelPlan.communications.length)return await analyzeDistributedScenario(scenario,assets,stepContext);
+    if(scenario.modulePeakOverrides?.some(r=>r.phases.includes(scenario.workload.kind))||scenario.executionPlan.kind==='streams'||scenario.fusionGroups.length||scenario.deviceTopology.devices.length!==1||scenario.parallelPlan.assignments.length||scenario.parallelPlan.communications.length)return await analyzeDistributedScenario(scenario,assets,stepContext,observer);
     const expanded=instantiateModel(scenario,assets,undefined,stepContext);if(expanded.status==='unavailable')return AnalysisAttempt.parse(expanded);
     const resolved=expanded.resolved;if(resolved.graph.nodes.some(n=>n.body.kind==='collective'))return await analyzeDistributedScenario(scenario,assets,stepContext);diagnostics.push(...expanded.diagnostics);
     const device=scenario.deviceTopology.devices[0];if(!device)throw new FormulaError('missing_reference','设备不存在');

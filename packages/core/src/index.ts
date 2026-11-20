@@ -41,3 +41,4 @@ export type {StorageAccessSource} from './storage-access-source.js';
 export * from './aggregate-cost-source.js';
 export * from './communication-cost-source.js';
 export * from './local-cost-source.js';
+export * from './fusion-cost-source.js';

@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {DeviceId,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
+import {DeviceId,NodeId,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
 import {canonical} from '../../contracts/src/validation.js';
 import {jsonBytes} from '../../contracts/src/json-size.js';
 import {LeafCostSelector,LeafCostSourceRequest} from './leaf-cost-context.js';
@@ -9,8 +9,9 @@ import {explainValue} from './formula.js';
 import {ENGINE_VERSION} from './version.js';
 import {namespaceDiagnostics} from './decode.js';
 import type {LocalCostDeclaration,LocalCostObservation} from './local-cost-observation.js';
+import type {FusionDeclaration} from './fusion-observation.js';
 
-export const LocalCostSelector=LeafCostSelector.extend({deviceId:DeviceId,computeIndex:z.number().int().nonnegative().optional()});
+export const LocalCostSelector=LeafCostSelector.extend({deviceId:DeviceId,computeIndex:z.number().int().nonnegative().optional(),fusionNodeId:NodeId.optional()});
 export type LocalCostSelector=z.infer<typeof LocalCostSelector>;
 export const LocalCostSourceRequest=LeafCostSourceRequest.extend({selector:LocalCostSelector,decodeFrame:z.literal(true).optional()});
 export type LocalCostSourceRequest=z.input<typeof LocalCostSourceRequest>;
@@ -26,25 +27,39 @@ function quantity(metric:ReturnType<typeof compact>,unit:Quantity['unit']){
 
 export async function replayLocalCostSource(input:unknown){
  const request=LocalCostSourceRequest.parse(input),{scenario,assets,selector,stepContext,inputHash,engineVersion,page}=request;
- const {nodeId,deviceId,field,computeIndex,computeClass,scope}=selector;
+ const {nodeId,deviceId,field,computeIndex,computeClass,scope,fusionNodeId}=selector;
  if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1)throw Error('局部成本来源需要选择一个实际 Decode 步骤');
  if(request.decodeFrame&&!stepContext)throw Error('局部成本缺少实际 Decode 步骤上下文');
  const diagnosticPrefix=request.decodeFrame&&stepContext?`decode-step-${stepContext.index}::`:undefined;
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('局部成本固定输入、实际步骤或引擎版本不匹配');
 
  const declarations=new Map<'local'|'global',LocalCostDeclaration>(),observations:LocalCostObservation[]=[];
- const replay=await resolveParallelPlan(scenario,assets,stepContext,{
-  localCost:{nodeId,deviceId,timing:field==='seconds',record:record=>observations.push(record)},
+ const fusionDeclarations:FusionDeclaration[]=[];
+ const localCost={nodeId,deviceId,timing:field==='seconds',record:(record:LocalCostObservation)=>observations.push(record)};
+ const replay=await resolveParallelPlan(scenario,assets,stepContext,fusionNodeId?{fusion:{
+  nodeId:fusionNodeId,extra:localCost,declaration:record=>fusionDeclarations.push(record),
+ }}:{
+  localCost,
   declaration:(record,kind)=>{if(declarations.has(kind))throw Error('成本声明身份不唯一');declarations.set(kind,record);},
  });
  if(replay.status!=='available'||replay.result.inputHash!==inputHash||replay.result.engineVersion!==engineVersion)throw Error('原局部布局身份不匹配或不能复算');
  const layout=replay.result,placed=layout.localCosts.nodes.find(n=>n.nodeId===nodeId)?.placement;
- const outcome=placed?.kind==='placed'?placed.perDevice.find(d=>d.deviceId===deviceId)?.outcome:undefined;
+ const fusion=fusionNodeId?layout.fusions.find(f=>f.application.nodeId===fusionNodeId&&f.application.extraNodeId===nodeId):undefined;
+ const deviceRows=fusionNodeId?fusion?.extraPerDevice:placed?.kind==='placed'?placed.perDevice:undefined;
+ const outcome=deviceRows?.find(d=>d.deviceId===deviceId)?.outcome;
  const observed=observations[0];
  if(outcome?.status!=='available'||!observed||observations.length!==1||stableStringify(outcome)!==stableStringify(observed.outcome)||canonical(outcome.cost.scope)!==canonical(scope))throw Error('原局部节点、设备、求值或完整范围不匹配');
- const declaration=declarations.get(observed.singleDeviceBaseline?'global':'local');
- const participation=observed.singleDeviceBaseline?{kind:'complete_single_device' as const}:observed.rule?.participation;
+ const authoredFusion=fusion?scenario.fusionGroups.find(g=>g.groupId===fusion.application.groupId):undefined;
+ const fusionDeclaration=fusionDeclarations[0];
+ const useLocalRule=!observed.singleDeviceBaseline&&!!observed.rule;
+ const declaration:LocalCostDeclaration|undefined=authoredFusion&&fusionDeclaration?{
+  asset:authoredFusion.origin?.asset??scenario.model,
+  cost:useLocalRule&&authoredFusion.extraLocalCost?authoredFusion.extraLocalCost.rule.cost:authoredFusion.extraCost,
+  symbols:useLocalRule?fusionDeclaration.extraLocalSymbols??{}:fusionDeclaration.symbols,
+ }:declarations.get(useLocalRule?'local':'global');
+ const participation=useLocalRule?observed.rule?.participation:fusion?{kind:'fusion_extra_device' as const}:observed.singleDeviceBaseline?{kind:'complete_single_device' as const}:undefined;
  if(!declaration||!participation)throw Error('缺少原局部方程和词法参数');
+ const layoutNodeId=useLocalRule&&fusion?fusion.application.extraLocalCost?.contextNodeId??nodeId:nodeId;
  const {cost}=outcome;
  const isCompute=field==='usefulOperations'||field==='executedOperations';
  if(isCompute!==(computeIndex!==undefined)||isCompute!==!!computeClass)throw Error('局部计算指标须指定原计算段序号和完整类别');
@@ -65,7 +80,7 @@ export async function replayLocalCostSource(input:unknown){
   const allocation=layout.storageAllocations.find(s=>s.storageId===storageId||s.aliasIds.some(id=>id===storageId));
   const device=allocation?.allocation.perDevice.find(d=>d.deviceId===deviceId);
   if(!allocation||!device)throw Error('缺少局部方程使用的设备存储分配');
-  const assignment=layout.storageLayouts.find(s=>s.nodeId===nodeId&&s.storageId===allocation.storageId);
+  const assignment=layout.storageLayouts.find(s=>s.nodeId===layoutNodeId&&s.storageId===allocation.storageId);
   return {storageId,canonicalStorageId:allocation.storageId,assignmentIndices:allocation.assignmentIndices,
    ...(assignment?{distribution:assignment.distribution,overriddenIndices:assignment.overriddenIndices}:{}),
    copies:device.copies,allocatedShape:device.allocatedShape,allocation:device.allocation,totalBytes:compact(device.totalBytes)};
@@ -73,7 +88,7 @@ export async function replayLocalCostSource(input:unknown){
  function bindingItem(binding:LocalCostObservation['outcome']['bindings'][number]){
   const {source}=binding;
   if(source.kind==='storage_bytes')return {kind:'binding' as const,binding,storage:storage(source.storageId)};
-  const rule=layout.tensorLayouts.find(t=>t.nodeId===nodeId&&t.tensorId===source.tensorId);
+  const rule=layout.tensorLayouts.find(t=>t.nodeId===layoutNodeId&&t.tensorId===source.tensorId);
   const device=rule?.partition.placements.find(p=>p.deviceId===deviceId);
   if(!rule||!device)throw Error('缺少局部方程读取的设备张量分布');
   const {logicalShape,allocatedShape,logicalElements,allocatedElements,slices,copies}=device;
@@ -107,9 +122,10 @@ export async function replayLocalCostSource(input:unknown){
  if(roofline&&cost.hbmBytes.status==='available'&&total!==cost.hbmBytes.quantity.value)throw Error('访问求和与局部 Roofline 的 HBM 操作数不同');
  if(trafficChange&&traffic&&trafficChange.operands.reduce((n,operand)=>n+operand.originalBytes,0)!==trafficChange.originalTotal)throw Error('原局部流量覆盖分母与访问项不同');
 
+ const authoredAccess=new Map(authored.memoryAccess.map(access=>[access.accessId,access]));
  function accessItem(index:number){
-  const source=authored.memoryAccess[index],access=effective.memoryAccess[index],term=accesses[index];
-  if(!source||!access||!term||source.accessId!==access.accessId||source.mode!==access.mode)throw Error('声明访问项的身份或顺序不同');
+  const access=effective.memoryAccess[index],term=accesses[index],source=access?authoredAccess.get(access.accessId):undefined;
+  if(!source||!access||!term||source.mode!==access.mode)throw Error('找不到生效访问项的原声明');
   const {logical,hbm}=term,replacement=trafficChange?.operands[index];
   let logicalFormula:ReturnType<typeof formula>|undefined,allocation:ReturnType<typeof storage>|undefined;
   if(logical.status==='available'){
