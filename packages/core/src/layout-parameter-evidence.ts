@@ -1,24 +1,18 @@
 import type {AssetDocument,NodeId,Scenario,DecodeStepContext} from '@model-analyser/contracts';
 import {instantiateModel} from './instantiate.js';
 import type {ValueEvaluationProof} from './formula.js';
-import {layoutParameterBindingGraph,type AdditionalParameterRoot} from './parameter-binding-graph.js';
+import {layoutParameterBindingGraph,parameterReads,type AdditionalParameterRoot} from './parameter-binding-graph.js';
 import {assetParameterFrameId,workloadParameterFrameId,type ParameterCaptureTrace} from './parameter-observation.js';
 
 export type LayoutFrame={kind:'asset';nodeId:NodeId}|{kind:'workload'};
 export type LayoutBindingRead=AdditionalParameterRoot&{frame?:LayoutFrame};
 
 export function layoutBindingReads(proof:ValueEvaluationProof,field:string,frameFor:(symbol:string)=>LayoutFrame|undefined){
- const parts=new Map<string,LayoutBindingRead>();
- function visit(node:ValueEvaluationProof){
-  if(node.kind==='symbol'&&node.symbol&&node.quantity){
-   const name=node.symbol,frame=frameFor(name);
-   const frameId=frame?.kind==='asset'?assetParameterFrameId(frame.nodeId):frame?.kind==='workload'?workloadParameterFrameId():'unrecorded-layout-frame';
-   parts.set(JSON.stringify([frameId,name]),{name,quantity:node.quantity,target:field,frameId,...(frame?{frame}:{})});
-  }
-  for(const binding of node.bindings??[])if(binding.proof)visit(binding.proof);
- }
- visit(proof);
- return [...parts.values()];
+ return parameterReads(proof,(name,quantity):LayoutBindingRead=>{
+  const frame=frameFor(name);
+  const frameId=frame?.kind==='asset'?assetParameterFrameId(frame.nodeId):frame?.kind==='workload'?workloadParameterFrameId():'unrecorded-layout-frame';
+  return {name,quantity,target:field,frameId,...(frame?{frame}:{})};
+ });
 }
 
 export function captureLayoutBindings(scenario:Scenario,assets:AssetDocument[],stepContext:DecodeStepContext|undefined,reads:readonly LayoutBindingRead[]){

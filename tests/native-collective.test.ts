@@ -1,6 +1,6 @@
 import { describe,it,expect } from 'vitest';
 import { NodeId,StorageId,TensorId,StateId,AssetDocument,DeviceId,MeasurementRecord,type MetricValue,type AnalysisAttempt } from '@model-analyser/contracts';
-import { instantiateModel,analyzeScenario,resolveParallelPlan,computeInputHash,searchCapacity,compareMeasurement } from '@model-analyser/core';
+import { instantiateModel,analyzeScenario,resolveParallelPlan,replayCommunicationCostSource,computeInputHash,searchCapacity,compareMeasurement } from '@model-analyser/core';
 import { validateAssets,validateProject,canonical } from '../packages/contracts/src/validation.js';
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { validateParallelResolution } from '../packages/contracts/src/parallel-validation.js';
@@ -36,6 +36,16 @@ describe('graph-native collective execution',()=>{
     const f=network(),inner=structuredClone(f.g);inner.tensors=inner.tensors.map(t=>({...t,shape:t.shape.map(a=>({...a,axisId:a.axisId==='row'?'r':'c'}))}));inner.storages=inner.storages.map(s=>s.allocation.kind==='tensor'?{...s,allocation:{...s.allocation,shape:s.allocation.shape.map(a=>({...a,axisId:a.axisId==='row'?'r':'c'}))}}:s);const n=inner.nodes[0];if(n?.body.kind!=='collective'||n.body.communication.source.distribution.kind!=='sharded')throw Error();n.body.communication.source.distribution.axes[0]!.tensorAxisId='c';
     const module=AssetDocument.parse({...f.model,assetId:'example:module:native-axis-map',definition:{kind:'module',graph:inner}});f.assets.push(module);f.g.nodes=[{nodeId:NodeId.parse('nested'),name:'Nested graph communication',phases:['decode'],portBindings:[...f.g.inputs,...f.g.outputs],stateBindings:[],body:{kind:'module',asset:{assetId:module.assetId,revision:1,kind:'module'},bindings:f.model.parameters.flatMap(p=>p.type==='integer'?[{parameterKey:p.key,value:{kind:'symbol',name:p.key}}]:[])}}];f.g.edges=[{edgeId:'in',from:{kind:'graph_input',portId:'x'},to:{kind:'node',nodeId:NodeId.parse('nested'),portId:'x'},tensorId:TensorId.parse('Y')},{edgeId:'out',from:{kind:'node',nodeId:NodeId.parse('nested'),portId:'y'},to:{kind:'graph_output',portId:'y'},tensorId:TensorId.parse('Yg')}];
     const r=report(await analyzeScenario(f.scenario,f.assets)),c=r.distributed?.layout.communications[0];expect(c?.origin).toEqual({kind:'graph',nodeId:'nested/gather-Y'});expect(c?.evaluation.definition.source).toMatchObject({tensorId:'Y',distribution:{axes:[{tensorAxisId:'col'}]}});expect(value(r.modules.find(m=>m.nodeId==='nested')?.cost.seconds)).toBeCloseTo(0.033,12);expect(r.total.communications).toHaveLength(1);expect(validateProject(f.project).filter(d=>d.severity==='error')).toEqual([]);
+    if(!c)throw Error('Missing nested collective');
+    const proof=await replayCommunicationCostSource({scenario:f.scenario,assets:f.assets,inputHash:r.inputHash,engineVersion:r.engineVersion,
+      selector:{index:c.index,nativeNodeId:NodeId.parse('nested/gather-Y'),scope:c.evaluation.cost.scope,field:'seconds'},metric:c.evaluation.cost.seconds,proofVersion:2});
+    const graph=proof.parameterBindings!,root=graph.roots.find(item=>item.name==='M'&&item.target==='每成员发送量'),parameter=graph.nodes.find(item=>item.id===root?.nodeId);
+    expect(graph.complete).toBe(true);
+    expect(root).toMatchObject({frameId:'["asset","nested"]'});
+    expect(parameter).toMatchObject({frameId:'["asset","nested"]',value:{value:4},source:{kind:'node_override',nodeId:'nested'}});
+    const parent=graph.nodes.find(item=>item.kind==='parameter'&&item.name==='M'&&item.frameId==='["asset","$model"]');
+    expect(parent?.value.value).toBe(4);
+    expect(graph.nodes).toContainEqual(expect.objectContaining({kind:'symbol',name:'M',inputs:[parent?.id]}));
   });
   it('resolves native partial reductions only after actual object/group binding',async()=>{
     const f=fixture();f.c.operation='all_reduce';f.c.source.distribution={kind:'partial',groupId:'tp',reduceOperation:'sum'};const a=f.scenario.parallelPlan.assignments[0];if(!a)throw Error();a.tensorDistributions=a.tensorDistributions.map(t=>t.tensorId==='Y'?{...t,distribution:{kind:'partial',groupId:'tp',reduceOperation:'sum'}}:{...t,distribution:{kind:'sharded',groupId:'tp',axes:[{tensorAxisId:t.tensorId==='X'?'col':'row',meshAxisId:'tp'}],policy:{kind:'even'}}});f.c.sendBytesPerMember={kind:'literal',quantity:{value:64,unit:'byte'}};f.c.receiveBytesPerMember={kind:'literal',quantity:{value:64,unit:'byte'}};const r=report(await analyzeScenario(f.scenario,f.assets));expect(value(r.total.seconds)).toBeCloseTo(2.625,12);expect(value(r.total.compute[0]?.executedOperations)).toBe(1024);expect(r.distributed?.layout.execution.status).toBe('available');expect(validateProject(f.project).some(d=>d.severity==='error')).toBe(false);
@@ -52,6 +62,16 @@ describe('graph-native collective execution',()=>{
   });
   it('binds repeat indices in native payload formulas before evaluating each communication instance',async()=>{
     const f=network(),formula=AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:'example:formula:repeat-network-bytes',revision:1,name:'Repeat payload',parameters:[],tags:[],sources:[{kind:'note',text:'Synthetic payload = repeat index + 1 bytes'}],definition:{kind:'formula',formula:{inputs:{i:{unit:'count',integerRequired:true,min:0}},expression:'i + 1',output:{unit:'byte',integerRequired:true,nonNegative:true},description:'Synthetic per-instance network payload'}}});f.assets.push(formula);const payload={kind:'formula' as const,call:{formula:{assetId:formula.assetId,revision:1,kind:'formula' as const},bindings:{i:{kind:'symbol' as const,name:'i'}}}};f.c.sendBytesPerMember=payload;f.c.receiveBytesPerMember=payload;f.node.repeat={axis:'i',count:{kind:'literal',quantity:{value:3,unit:'count'}},wiring:'chain',carry:[{inputPortId:'source',outputPortId:'destination'}]};expect(validateProject(f.project).filter(d=>d.severity==='error')).toEqual([]);const r=report(await analyzeScenario(f.scenario,f.assets));expect(r.distributed?.layout.communications.map(c=>value(c.evaluation.cost.communications[0]?.sendBytesPerMember))).toEqual([1,2,3]);expect(value(r.total.seconds)).toBeCloseTo(0.009,12);expect(r.nodes[0]?.cost.seconds.status==='available'&&r.nodes[0].cost.seconds.provenance.formulaRefs.some(ref=>ref.assetId===formula.assetId)).toBe(true);
+    const third=r.distributed?.layout.communications[2];
+    if(!third)throw Error('Missing third communication');
+    const proof=await replayCommunicationCostSource({scenario:f.scenario,assets:f.assets,inputHash:r.inputHash,engineVersion:r.engineVersion,
+      selector:{index:third.index,nativeNodeId:NodeId.parse('gather-Y[2]'),scope:third.evaluation.cost.scope,field:'sendBytesPerMember'},metric:third.evaluation.cost.communications[0]?.sendBytesPerMember,proofVersion:2});
+    const graph=proof.parameterBindings!;
+    expect(graph.complete).toBe(true);
+    expect(graph.roots).toHaveLength(2);
+    expect(graph.roots.every(item=>item.frameId==='["repeat","gather-Y[2]","i"]')).toBe(true);
+    expect(graph.nodes).toMatchObject([{kind:'repeat_index',name:'i',value:{value:2},unit:'count'}]);
+    expect(proof.uniformMessages?.send.quantity).toEqual({value:3,unit:'byte'});
   });
 });
 

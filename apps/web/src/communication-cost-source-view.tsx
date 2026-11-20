@@ -4,6 +4,7 @@ import type {CommunicationCostSelector,CommunicationCostSourceReport,Communicati
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import {readCommunicationSourceReply} from './communication-source-task.js';
 import {FormulaProof} from './declaration-source-view.js';
+import {ParameterBindingProof} from './parameter-binding-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
 
 function save(report:CommunicationCostSourceReport){
@@ -22,7 +23,8 @@ export function CommunicationCostSourceView({metric,selector,result,scenario,ass
   const actualStep=step===undefined?undefined:result.decode?.steps.find(item=>item.index===step);
   if(result.decode&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,...(frame.stepContext?{stepContext:frame.stepContext}:{})};
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,
+   ...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,cancel,retry}=useCostSourceWorker(open,request,'communication_cost_source',readCommunicationSourceReply);
  return <section className="communication-cost-source declaration-source" aria-label="通信运算来源">
@@ -78,6 +80,8 @@ function CommunicationProof({report}:{report:CommunicationCostSourceReport}){
    {item.sendFormula?.proof&&<FormulaProof proof={item.sendFormula.proof}/>}
    {item.receiveFormula?.proof&&<FormulaProof proof={item.receiveFormula.proof}/>}
   </article>)}
+  {report.parameterBindings&&(report.parameterBindings.roots.length>0||!report.parameterBindings.complete?
+   <ParameterBindingProof graph={report.parameterBindings}/>:<p>本页消息和耗时算式未读取参数。</p>)}
   {!report.complete&&<p>此页公式记录达到证据预算。</p>}
   {report.diagnostics.map(item=><p key={item.diagnosticId}>{item.message}</p>)}
  </div>;

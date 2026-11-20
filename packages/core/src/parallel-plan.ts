@@ -45,7 +45,11 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const nativeNodeId=communication?.nativeNodeId,fusion=observer&&'fusion'in observer?observer.fusion:undefined;
     const layoutObserver=observer&&'layout'in observer?observer.layout:undefined,layoutTarget=layoutObserver?.target;
     const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration}
-      :nativeNodeId?{nodeId:nativeNodeId,collective:(record:BoundCollectiveObservation)=>captures.push(record)}
+      :communication&&(nativeNodeId||communication.bindings)?{
+        nodeId:nativeNodeId??'$model',
+        ...(nativeNodeId?{collective:(record:BoundCollectiveObservation)=>captures.push(record)}:{}),
+        ...(communication.bindings?{bindings:true,bindingTraceReady:communication.bindings}:{}),
+      }
       :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}
       :layoutObserver?{nodeId:layoutObserver.target.kind==='tensor'?layoutObserver.target.nodeId:'$model',
         ...(layoutObserver.declaration||layoutObserver.derived?{layoutObject:{target:layoutObserver.target,
@@ -78,7 +82,11 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       if(layoutTarget?.kind==='storage'&&layoutTarget.storageId===id)storageOverride={storageId:id,overrideIndex,override:o,before,after:s.allocation};
     }
     const symbols:Record<string,Quantity>={};for(const [key,value] of Object.entries(scenario.workload))if(typeof value==='number')symbols[key]={value,unit:'count'};
-    for(const p of resolved.parameters)if(p.nodeId==='$model'&&(p.value.kind==='integer'||p.value.kind==='number'))symbols[p.parameterKey]={value:p.value.value,unit:p.unit};
+    const planParameterKeys:string[]|undefined=communication?.bindings&&!nativeNodeId?[]:undefined;
+    for(const p of resolved.parameters)if(p.nodeId==='$model'&&(p.value.kind==='integer'||p.value.kind==='number')){
+      symbols[p.parameterKey]={value:p.value.value,unit:p.unit};
+      planParameterKeys?.push(p.parameterKey);
+    }
     const context={symbols,assets},tensorCandidates:Candidate<TensorPartitionResult>[]=[],storageCandidates:Candidate<StoragePartitionResult>[]=[],tensorCache=new Map<string,TensorPartitionResult>(),storageCache=new Map<string,StoragePartitionResult>();
     let uses=0;const spend=()=>{if(++uses>MAX_PARALLEL_USES)throw new FormulaError('parallel_resolution_limit',`布局作用域解析最多 ${MAX_PARALLEL_USES} 项`);};
     function select(a:Assignment){const roots=a.selector.kind==='nodes'?a.selector.nodeIds:[a.selector.rootNodeId];for(const id of roots)if(!scopes.has(id))throw new FormulaError('empty_selector',`布局选择器未匹配当前阶段的节点 ${id}`);
@@ -210,7 +218,8 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       if(evaluation.status==='unavailable')throw new FormulaError(evaluation.diagnostics[0]?.code??'invalid_communication',evaluation.diagnostics.map(d=>d.message).join('; '));diagnostics.push(...evaluation.result.diagnostics);const native=nativeCommunications[index-planCommunicationCount];communications.push({index,...(native?{origin:{kind:'graph',nodeId:native.nodeId}}:{}),evaluation:evaluation.result});
       if(capture&&communication){
         const collective=captures.find(record=>record.nodeId===native?.nodeId);
-        communication.record(structuredClone({index,...(c.placement?.nodeId?{nodeId:c.placement.nodeId}:{}),...(collective?{collective}:{}),symbols:communicationSymbols(context.symbols),overrides:overrideTrace,...(timing?{timing}:{})}));
+        communication.record(structuredClone({index,...(c.placement?.nodeId?{nodeId:c.placement.nodeId}:{}),...(collective?{collective}:{}),
+          symbols:communicationSymbols(context.symbols),...(planParameterKeys?{planParameterKeys}:{}),overrides:overrideTrace,...(timing?{timing}:{})}));
       }
     }
     const warn=(code:string,message:string,nodeId:NodeId,severity:'warning'|'info'='warning')=>diagnostics.push({diagnosticId:'parallel-'+diagnostics.length,severity,code,message,location:{kind:'node',nodeId}});
