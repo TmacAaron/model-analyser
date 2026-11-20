@@ -4,9 +4,9 @@ import {AssetDocument,FusionGroup} from '@model-analyser/contracts';
 import {canonical} from '../packages/contracts/src/validation.js';
 import {canvasEditProject} from './canvas-fixtures.js';
 import {largeCanvasEditProject} from './canvas-edit-preparation-fixtures.js';
-import {evaluateCanvasEditTask,type CanvasEditTask} from '../apps/web/src/canvas-edit-worker.js';
+import {evaluateCanvasEditTask,type CanvasEditTask,type CanvasConnectionIntent} from '../apps/web/src/canvas-edit-worker.js';
 import {runCanvasEditTask} from '../apps/web/src/canvas-edit-task.js';
-function task():Extract<CanvasEditTask,{kind:'prepare'}>{const p=canvasEditProject(),s=p.scenarios[0]!,asset=p.assetSnapshots.find(a=>a.assetId===s.model.assetId)!;return {taskId:'test-task',kind:'prepare',project:p,modelRef:s.model,intent:{asset,fromId:'a',toId:'b',kind:'data',outputPort:'y',inputPort:'x'},library:[]};}
+function task():Extract<CanvasEditTask,{kind:'prepare'}>&{intent:CanvasConnectionIntent}{const p=canvasEditProject(),s=p.scenarios[0]!,asset=p.assetSnapshots.find(a=>a.assetId===s.model.assetId)!;return {taskId:'test-task',kind:'prepare',project:p,modelRef:s.model,intent:{asset,fromId:'a',toId:'b',kind:'data',outputPort:'y',inputPort:'x'},library:[]};}
 it('background preparation preserves immutable sources and fully validates both affected configurations before returning a publishable plan',async()=>{
  const t=task();t.project.scenarios.push({...structuredClone(t.project.scenarios[0]!),scenarioId:'second',name:'Second'});const before=canonical(t.project),r=evaluateCanvasEditTask(t);expect(r.reply.kind).toBe('prepared');expect(canonical(t.project)).toBe(before);if(r.reply.kind!=='prepared')throw Error();const {plan}=r.reply;expect(plan.project.scenarios[0]!.model).toEqual(plan.project.scenarios[1]!.model);expect(plan.project.assetSnapshots).toEqual(expect.arrayContaining(t.project.assetSnapshots));expect(plan.records).toHaveLength(2);for(const row of plan.records){expect(row.draftSaved).toBe(false);expect(row.committed).toBe(false);expect(row.draft.candidate).toEqual(row.asset);}for(const scenario of plan.project.scenarios){const a=await analyzeScenario(scenario,plan.project.assetSnapshots);expect(a.status).toBe('available');if(a.status==='available')expect(a.result.total.seconds).toMatchObject({status:'available',quantity:{value:2}});}
 });

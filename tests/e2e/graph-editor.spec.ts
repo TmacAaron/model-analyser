@@ -1,8 +1,10 @@
 import { test,expect,type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { AssetDocument,CommitResponse,ProjectDocument } from '@model-analyser/contracts';
+import { AssetDocument,CommitResponse,GraphTemplate,ProjectDocument } from '@model-analyser/contracts';
 import { makeUpgradeProject } from '../../scripts/upgrade-project.js';
 import { analyzeScenario } from '@model-analyser/core';
+import { canvasEditProject } from '../canvas-fixtures.js';
+import { opaqueNode,referencedNode } from '../../apps/web/src/graph-editing.js';
 
 test.setTimeout(60000);
 const editor=(page:Page)=>page.getByLabel('资产定义 JSON',{exact:true});
@@ -10,6 +12,80 @@ const status=(page:Page)=>page.locator('.editor:not(.project-editor) .save-state
 async function publish(page:Page,a:AssetDocument){const draftId=randomUUID(),draft={documentType:'asset_draft',schemaVersion:1,draftId,assetId:a.assetId,assetKind:a.definition.kind,baseRevision:null,draftGeneration:1,updatedAt:new Date().toISOString(),candidate:a};let response=await page.request.post('/api/v1/drafts',{data:{requestId:randomUUID(),draft}});expect(response.ok()).toBe(true);response=await page.request.post('/api/v1/commit',{data:{requestId:randomUUID(),draftId,draftGeneration:1,expectedRevision:null}});const body=await response.json() as {ok:boolean;data:unknown};expect(body.ok,JSON.stringify(body)).toBe(true);return CommitResponse.parse(body.data).asset;}
 async function read(page:Page,id:string){const response=await page.request.get('/api/v1/asset?id='+encodeURIComponent(id));return AssetDocument.parse((await response.json() as {data:unknown}).data);}
 async function newGraph(page:Page,kind:'module'|'model',name:string){await page.getByLabel('新资产类型',{exact:true}).selectOption(kind);await page.getByRole('button',{name:kind==='model'?'＋ 新建模型':'＋ 新建模块',exact:true}).click();await expect(status(page)).toContainText('草稿已保存');await expect(page.getByLabel('结构配置编辑器')).toBeVisible();await page.getByLabel('结构资产名称',{exact:true}).fill(name);}
+
+test('the canvas inserts and replaces fixed modules, edits their internal graph, and updates both configurations',async({page})=>{
+  const graph=GraphTemplate.parse({nodes:[],inputs:[],outputs:[],edges:[],dependencies:[],states:[],tensors:[],storages:[]});
+  const module=(name:string,child:GraphTemplate['nodes'][number])=>AssetDocument.parse({
+    documentType:'asset',schemaVersion:1,assetId:randomUUID(),revision:1,name,
+    tags:[],parameters:[],sources:[],definition:{kind:'module',graph:{...graph,nodes:[child]}},
+  });
+  const internal=await publish(page,module('Canvas reusable leaf',opaqueNode(graph)));
+  const wrapper=await publish(page,module('Canvas reusable wrapper',referencedNode(graph,internal)));
+  const project=canvasEditProject();
+  project.projectId=randomUUID();
+  project.scenarios.push({...structuredClone(project.scenarios[0]!),scenarioId:'other',name:'另一配置'});
+  const saved=async()=>ProjectDocument.parse((await (await page.request.get('/api/v1/project?id='+project.projectId)).json()).data);
+  const saveState=page.locator('.studio-save');
+  const openStructure=()=>page.getByRole('button',{name:'编辑结构',exact:true}).click();
+  const apply=()=>page.getByRole('button',{name:'应用结构修改',exact:true}).click();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'canvas-edit.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+  await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+  await expect(saveState).toContainText('修订 1');
+
+  await page.locator('[data-node-id="b"]').press('Space');
+  await openStructure();
+  const box=page.getByLabel('结构配置编辑器',{exact:true});
+  await expect(box.getByLabel('节点名称',{exact:true})).toHaveValue('Projection B');
+  await box.getByLabel('插入模块或算子',{exact:true}).selectOption(wrapper.assetId);
+  await box.getByRole('button',{name:'插入引用节点',exact:true}).click();
+  await expect(box.getByLabel('节点名称',{exact:true})).toHaveValue(wrapper.name);
+  await page.getByRole('button',{name:'推理配置',exact:true}).click();
+  await openStructure();
+  await expect(box.getByLabel('节点名称',{exact:true})).toHaveValue(wrapper.name);
+  expect((await saved()).projectRevision).toBe(1);
+  await apply();
+  await expect(saveState).toContainText('修订 2');
+  const afterInsert=await saved();
+  expect(afterInsert.assetSnapshots).toEqual(expect.arrayContaining([...project.assetSnapshots,internal,wrapper]));
+  expect(afterInsert.scenarios[0]!.model).toEqual(afterInsert.scenarios[1]!.model);
+
+  const wrapperNode=page.locator('[data-node-id="module_1"]');
+  await wrapperNode.press('Enter');
+  await expect(page.getByLabel('模块路径')).toContainText('module_1');
+  await openStructure();
+  await box.getByRole('button',{name:'添加自定义节点',exact:true}).click();
+  await box.getByLabel('节点名称',{exact:true}).fill('Local three-second step');
+  await box.getByLabel('自定义节点固定秒',{exact:true}).fill('3');
+  await apply();
+  await expect(saveState).toContainText('修订 3');
+  const afterEdit=await saved();
+  for(const scenario of afterEdit.scenarios){
+    const result=await analyzeScenario(scenario,afterEdit.assetSnapshots);
+    expect(result.status,JSON.stringify(result)).toBe('available');
+    if(result.status==='available')expect(result.result.total.seconds).toMatchObject({status:'available',quantity:{value:6}});
+  }
+  expect(await read(page,wrapper.assetId)).toEqual(wrapper);
+
+  await page.getByLabel('模块路径').getByRole('button').first().click();
+  await wrapperNode.press('Space');
+  await openStructure();
+  await box.getByLabel('插入模块或算子',{exact:true}).selectOption(internal.assetId);
+  await box.getByRole('button',{name:'替换所选引用',exact:true}).click();
+  await expect(box).toContainText(internal.assetId);
+  await apply();
+  await expect(saveState).toContainText('修订 4');
+  await box.getByLabel('删除节点 module_1',{exact:true}).click();
+  await page.getByRole('dialog',{name:'确认删除结构节点'}).getByRole('button',{name:'确认删除节点',exact:true}).click();
+  await apply();
+  await expect(saveState).toContainText('修订 5');
+  await expect(wrapperNode).toHaveCount(0);
+  await page.reload();
+  await expect(saveState).toContainText('修订 5');
+  const final=await saved();
+  expect(final.scenarios[0]!.model).toEqual(final.scenarios[1]!.model);
+  expect(final.assetSnapshots).toEqual(expect.arrayContaining(project.assetSnapshots));
+});
 
 test('table-created repeated modules bind parameters, persist and compute through a portable project and expandable hierarchy',async({page})=>{
   const suffix=randomUUID().slice(0,8),base=makeUpgradeProject().project,hardware=AssetDocument.parse({...base.assetSnapshots.find(a=>a.definition.kind==='hardware'),assetId:'table:hardware:'+suffix,name:'Table hardware '+suffix});await publish(page,hardware);await page.goto('/?legacy=1');await newGraph(page,'module','Table module '+suffix);const box=page.getByLabel('结构配置编辑器');await box.locator('.graph-parameters > summary').click();await box.getByRole('button',{name:'添加资产参数',exact:true}).click();await box.getByLabel('参数默认值 0',{exact:true}).fill('2');await box.getByRole('button',{name:'添加自定义节点',exact:true}).click();await box.getByLabel('节点名称',{exact:true}).fill('Repeated two seconds');await box.getByLabel('自定义节点固定秒',{exact:true}).fill('2');await box.getByLabel('重复节点',{exact:true}).check();await box.getByLabel('重复次数表达方式',{exact:true}).selectOption('symbol');await box.getByLabel('重复次数参数',{exact:true}).selectOption('P_1');await box.getByRole('button',{name:'添加自定义节点',exact:true}).click();await box.getByLabel('节点名称',{exact:true}).fill('Three-second tail');await box.getByLabel('自定义节点固定秒',{exact:true}).fill('3');await box.getByLabel('依赖起点',{exact:true}).selectOption('custom_1');await box.getByLabel('依赖终点',{exact:true}).selectOption('custom_2');await box.getByRole('button',{name:'添加依赖',exact:true}).click();await expect(status(page)).toContainText('已保存 · 修订');const module=AssetDocument.parse(JSON.parse(await editor(page).inputValue()) as unknown),savedModule=await read(page,module.assetId);
