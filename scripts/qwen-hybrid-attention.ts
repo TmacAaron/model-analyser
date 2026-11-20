@@ -72,11 +72,26 @@ export function addGatedAttention(graph: GraphAuthor) {
   });
 }
 
-export function addDeltaAttention(graph: GraphAuthor) {
+export function addDeltaAttention(graph: GraphAuthor, splitChannels = false) {
   const keyWidth = 'LK * DK', valueWidth = 'LV * DV', channels = '(2 * LK * DK + LV * DV)';
-  matrixWeight(graph, 'delta-qkv-weight', channels);
-  graph.tensor('delta-mixed', sequence('channels', channels));
-  graph.node('delta-qkv', 'Linear Q/K/V projection', ['normed', 'delta-qkv-weight'], ['delta-mixed'], {
+  // The checkpoint groups all Q rows before K and V. Model them as three
+  // independent head partitions so a rank owns the matching convolution channels.
+  const components = splitChannels ? [
+    { id: 'q', heads: 'LK', width: 'DK' }, { id: 'k', heads: 'LK', width: 'DK' }, { id: 'v', heads: 'LV', width: 'DV' },
+  ] : [{ id: '', heads: channels, width: '1' }];
+  const part = (component: (typeof components)[number]) => component.id ? '-' + component.id : '';
+  const mixed = (component: (typeof components)[number]) => 'delta-mixed' + part(component);
+  const qkvWeight = (component: (typeof components)[number]) => 'delta-qkv-weight' + part(component);
+  for (const component of components) {
+    if (splitChannels) {
+      graph.tensor(qkvWeight(component), [['head', 'head', component.heads], ['d', 'hidden', component.width], ['in', 'hidden', 'H']], { category: 'weight' });
+      graph.tensor(mixed(component), heads(component.heads, component.width));
+    } else {
+      matrixWeight(graph, qkvWeight(component), channels);
+      graph.tensor(mixed(component), sequence('channels', channels));
+    }
+  }
+  graph.node('delta-qkv', 'Linear Q/K/V projection', ['normed', ...components.map(qkvWeight)], components.map(mixed), {
     useful: '2 * B * Q * H * ' + channels,
   });
   for (const [id, resultName] of [['delta-output-gate', 'linear-z'], ['beta', 'beta-logits'], ['decay', 'decay-logits']] as const) {
@@ -88,21 +103,34 @@ export function addDeltaAttention(graph: GraphAuthor) {
     { useful: '2 * B * Q * H * ' + width });
   }
 
-  const convShape: Axis[] = [['b', 'batch', 'B'], ['channels', 'hidden', channels], ['window', 'custom', 'W']];
-  graph.tensor('conv-state', convShape, { category: 'state' });
-  graph.tensor('conv-next', convShape, { category: 'state', storageId: 'conv-state' });
-  graph.tensor('conv-weight', [['channels', 'hidden', channels], ['window', 'custom', 'W']], { category: 'weight' });
+  const convState = (component: (typeof components)[number]) => 'conv-state' + part(component);
+  const convNext = (component: (typeof components)[number]) => 'conv-next' + part(component);
+  const convWeight = (component: (typeof components)[number]) => 'conv-weight' + part(component);
+  const convRead: Record<string, string> = {};
+  for (const component of components) {
+    const weightShape: Axis[] = splitChannels ? [['head', 'head', component.heads], ['d', 'hidden', component.width]]
+      : [['channels', 'hidden', channels]];
+    weightShape.push(['window', 'custom', 'W']);
+    const convShape: Axis[] = [['b', 'batch', 'B'], ...weightShape];
+    graph.tensor(convState(component), convShape, { category: 'state' });
+    graph.tensor(convNext(component), convShape, { category: 'state', storageId: convState(component) });
+    graph.tensor(convWeight(component), weightShape, { category: 'weight' });
+    const count = splitChannels ? component.heads + ' * ' + component.width : channels;
+    convRead[convState(component)] = 'if(C > 0, 2 * B * ' + count + ' * W, 0)';
+  }
   for (const id of ['linear-query', 'linear-key']) graph.tensor(id, heads('LK', 'DK'));
   graph.tensor('linear-value', heads('LV', 'DV'));
   graph.node('convolve', 'Depthwise causal convolution, SiLU and Q/K/V split',
-    ['delta-mixed', 'conv-weight', 'conv-state'], ['linear-query', 'linear-key', 'linear-value', 'conv-next'],
+    [...components.map(mixed), ...components.map(convWeight), ...components.map(convState)],
+    ['linear-query', 'linear-key', 'linear-value', ...components.map(convNext)],
     { useful: 'B * Q * ' + channels + ' * (2 * W + 5)', computeClass: vector }, {
-      accessBytes: { 'conv-state': 'if(C > 0, 2 * B * ' + channels + ' * W, 0)' },
+      accessBytes: convRead,
     });
   graph.graph.states.push({
     stateId: StateId.parse('conv-history'), name: 'DeltaNet convolution history', stateKind: 'recurrent',
-    storageIds: [StorageId.parse('conv-state')], creator: { kind: 'initialized' }, allocationBasis: 'step_end',
-    readers: [statePort('convolve', 'conv-state')], writers: [statePort('convolve', 'conv-next')], updatePolicy: { kind: 'replace' },
+    storageIds: components.map(component => StorageId.parse(convState(component))), creator: { kind: 'initialized' }, allocationBasis: 'step_end',
+    readers: components.map(component => statePort('convolve', convState(component))),
+    writers: components.map(component => statePort('convolve', convNext(component))), updatePolicy: { kind: 'replace' },
   });
   for (const id of ['query-l2', 'key-l2']) graph.tensor(id, heads('LK', 'DK'), { dtype: fp32 });
   graph.node('qk-l2-norm', 'Q/K L2 normalize and scale query', ['linear-query', 'linear-key'], ['query-l2', 'key-l2'],

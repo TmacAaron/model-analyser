@@ -1,10 +1,12 @@
 import { expect, it } from 'vitest';
-import { analyzeScenario, estimateKvCapacity } from '@model-analyser/core';
+import { analyzeScenario, estimateKvCapacity, previewParallelPreset } from '@model-analyser/core';
 import type { MetricValue } from '@model-analyser/contracts';
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { validateProject } from '../packages/contracts/src/validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenHybridAssets } from '../scripts/qwen-hybrid-model.js';
+import { makeQwenHybridParallelAssets } from '../scripts/qwen-hybrid-parallel.js';
+import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 
 const cases = [
   { release: 'qwen35', name: 'Qwen3.5-397B-A17B', periods: 15, hidden: 4096, keyHeads: 2, queryHeads: 32, linearValueHeads: 64, experts: 512, ffn: 1024 },
@@ -77,3 +79,111 @@ it('grows only GQA storage across Decode calls while replacing the two fixed Del
     expect(after(cache)).toBe(2 * (3 + index) * expected.kvPerToken);
   }
 }, 45_000);
+
+function hybridCase(release: 'qwen35' | 'qwen38') {
+  const project = makeModelProject(makeQwenHybridParallelAssets(release), {
+    kind: 'prefill', batchSize: 2, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+  }, release);
+  const scenario = project.scenarios[0]!;
+  scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 1 } }];
+  return { scenario, assets: project.assetSnapshots };
+}
+
+async function previewHybrid(release: 'qwen35' | 'qwen38', degree: number, presetId: string) {
+  const { scenario, assets } = hybridCase(release);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId,
+    network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  return attempt.preview;
+}
+
+it('shards Qwen3.8 KV and all DeltaNet state channels on the same four attention ranks', async () => {
+  const fixture = cases[1], expected = ledger(fixture, 1);
+  const preview = await previewHybrid('qwen38', 4, 'tp-hybrid-attention');
+  const { scenario, assets } = preview;
+  expect(preview.communicationCount).toBe(4);
+  expect(preview.communications?.map(row => row.placement?.beforeNodeIds[0])).toEqual([
+    'decoder[0]/linear[0]/attention-residual', 'decoder[0]/linear[1]/attention-residual',
+    'decoder[0]/linear[2]/attention-residual', 'decoder[0]/full/attention-residual',
+  ]);
+  const { hidden, queryHeads, keyHeads, linearValueHeads } = fixture;
+  const value = linearValueHeads * 128, channels = 2 * 16 * 128 + value;
+  const shardedWeights = 2 * (3 * (hidden * (channels + 2 * value + 2 * linearValueHeads) + 4 * channels + 2 * linearValueHeads) +
+    hidden * 256 * (3 * queryHeads + 2 * keyHeads));
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(4).fill([
+    expected.weightBytes - 3 * shardedWeights / 4, (2 * expected.recurrentBytes + 6 * expected.kvPerToken) / 4,
+  ]));
+  const analyzed = await analyzeScenario(scenario, assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 4)));
+  expect(amount(analyzed.result.total.seconds)).toBeGreaterThan(0);
+  const layout = analyzed.result.distributed!.layout;
+  const local = (suffix: string) => layout.localCosts.nodes.find(row => row.nodeId.endsWith(suffix))?.placement;
+  const mixed = local('/linear[0]/delta-qkv'), conv = local('/linear[0]/convolve');
+  if (mixed?.kind !== 'placed' || conv?.kind !== 'placed') throw Error('Missing DeltaNet placement');
+  expect(mixed.perDevice.map(row => row.outcome.status === 'available' ? amount(row.outcome.cost.compute[0]?.usefulOperations) : -1))
+    .toEqual(Array(4).fill(2 * 2 * hidden * (channels / 4)));
+  expect(conv.perDevice.map(row => row.outcome.status === 'available' ? amount(row.outcome.cost.compute[0]?.usefulOperations) : -1))
+    .toEqual(Array(4).fill(2 * (channels / 4) * 13));
+  const capacity = await estimateKvCapacity(scenario, assets);
+  expect(capacity).toMatchObject({ status: 'available', report: { averageBytesPerToken: expected.kvPerToken,
+    shardedBytesPerToken: expected.kvPerToken / 4,
+    devices: Array(4).fill({ otherStateBytes: expected.recurrentBytes / 2 }),
+    budget: { status: 'available', more: Array(4).fill({ bytes: expected.kvPerToken / 2 }) },
+  } });
+  const decode = await analyzeScenario({ ...scenario, workload: {
+    kind: 'decode', batchSize: 2, queryTokensPerRequest: 1, contextTokensPerRequest: 2, steps: 2,
+  } }, assets);
+  if (decode.status !== 'available' || !decode.result.decode) throw Error('Missing distributed Decode result');
+  const steps = decode.result.decode.steps;
+  expect(steps.map(step => step.contextAfter)).toEqual([3, 4]);
+  for (const [index, step] of steps.entries()) {
+    const bytes = (kind: 'replace' | 'append') => step.stateTransitions.filter(state => state.policy.kind === kind)
+      .flatMap(state => state.storages).reduce((total, storage) => total + amount(storage.afterBytes), 0);
+    expect(bytes('replace')).toBe(2 * expected.recurrentBytes);
+    expect(bytes('append')).toBe(2 * (3 + index) * expected.kvPerToken);
+  }
+  const baseline = hybridCase('qwen38');
+  const unsupported = await previewParallelPreset({ ...bindDegreePool(baseline.scenario, 8), assets: baseline.assets,
+    presetId: 'tp-hybrid-attention', network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
+  expect(unsupported).toMatchObject({ status: 'unavailable' });
+}, 120_000);
+
+it('executes Qwen3.5 router selections on every expert TP rank but shards each expert intermediate', async () => {
+  const fixture = cases[0], expected = ledger(fixture, 1);
+  const preview = await previewHybrid('qwen35', 8, 'tp-routed-expert');
+  expect(preview.communicationCount).toBe(4);
+  expect(preview.communications?.every(row => row.placement?.beforeNodeIds[0]?.endsWith('/shared-add'))).toBe(true);
+  const expertWeights = 2 * 4 * 3 * fixture.hidden * fixture.ffn * fixture.experts;
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual(Array(8).fill(expected.weightBytes - 7 * expertWeights / 8));
+  const analyzed = await analyzeScenario(preview.scenario, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 4)));
+  expect(amount(analyzed.result.total.seconds)).toBeGreaterThan(0);
+  const costs = analyzed.result.distributed!.layout.localCosts;
+  const work = (suffix: string) => {
+    const placement = costs.nodes.find(row => row.nodeId.endsWith(suffix))?.placement;
+    if (placement?.kind !== 'placed') throw Error('Missing MoE placement');
+    return placement.perDevice.map(row => row.outcome.status === 'available' ? amount(row.outcome.cost.compute[0]?.usefulOperations) : -1);
+  };
+  expect(work('/full/topk')).toEqual(Array(8).fill(2 * fixture.experts * 10));
+  expect(work('/full/expert-gate-up')).toEqual(Array(8).fill(4 * 2 * 10 * fixture.hidden * fixture.ffn / 8));
+  expect(work('/full/combine')).toEqual(Array(8).fill(2 * 2 * 10 * fixture.hidden));
+  const budget = await estimateKvCapacity(preview.scenario, preview.assets);
+  expect(budget).toMatchObject({ status: 'available', report: {
+    averageBytesPerToken: 8 * expected.kvPerToken, replicatedBytesPerToken: expected.kvPerToken,
+  } });
+}, 120_000);
+
+it('matches whole-request DP and the shared-pool hybrid TP when degrees agree', async () => {
+  const { scenario, assets } = hybridCase('qwen35');
+  const presets = assets.find(asset => asset.assetId === scenario.model.assetId)?.parallelPresets ?? [];
+  expect(matchingParallelPresets({ ...serialDegrees, attentionDp: 2 }, presets, scenario).map(row => row.preset.presetId))
+    .toEqual(['dp-batch']);
+  expect(matchingParallelPresets({ ...serialDegrees, attentionTp: 2, moeTp: 2 }, presets, scenario).map(row => row.slots)).toEqual([2]);
+  expect(matchingParallelPresets({ ...serialDegrees, attentionTp: 2, moeTp: 4 }, presets, scenario)).toEqual([]);
+  const shared = await previewHybrid('qwen35', 2, 'tp-hybrid-attention-routed-expert');
+  expect(shared.communicationCount).toBe(8);
+  const dp = await previewHybrid('qwen38', 2, 'dp-batch');
+  expect(dp.communicationCount).toBe(0);
+  expect(dp.allocations.map(row => [row.weightBytes, row.stateBytes]))
+    .toEqual(Array(2).fill([ledger(cases[1], 1).weightBytes, ledger(cases[1], 1).recurrentBytes + 3 * ledger(cases[1], 1).kvPerToken]));
+}, 120_000);

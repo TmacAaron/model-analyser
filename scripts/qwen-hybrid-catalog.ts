@@ -3,18 +3,21 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeQwenHybridAssets } from './qwen-hybrid-model.js';
+import { makeQwenHybridParallelAssets } from './qwen-hybrid-parallel.js';
 
 const assets = new Map<string, AssetDocument>();
 for (const release of ['qwen35', 'qwen38'] as const) {
-  for (const asset of makeQwenHybridAssets(release)) {
-    const prior = assets.get(asset.assetId);
+  for (const asset of [...makeQwenHybridAssets(release), ...makeQwenHybridParallelAssets(release)]) {
+    const key = asset.assetId + '@' + asset.revision;
+    const prior = assets.get(key);
     if (prior) assert.equal(canonical(prior), canonical(asset), asset.assetId);
-    else assets.set(asset.assetId, asset);
+    else assets.set(key, asset);
   }
 }
 assert.deepEqual(validateAssets([...assets.values()]), []);
 for (const asset of assets.values()) {
-  const path = 'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') + '.json';
+  const path = 'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') +
+    (asset.revision === 2 ? '-r2' : '') + '.json';
   try {
     const saved = AssetDocument.parse(JSON.parse(await readFile(path, 'utf8')));
     assert.equal(canonical(saved), canonical(asset), path);

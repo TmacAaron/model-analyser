@@ -21,7 +21,8 @@ function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplat
   }
   const fullModelPresets = (model.assetId === 'builtin:model:qwen3-1.7b' && model.revision === 2) ||
     (model.assetId === 'builtin:model:qwen3-0.6b' && model.revision === 3) ||
-    (model.revision === 2 && (model.assetId === 'builtin:model:deepseek-v3' || model.assetId === 'builtin:model:deepseek-r1'));
+    (model.revision === 2 && ['builtin:model:deepseek-v3', 'builtin:model:deepseek-r1',
+      'builtin:model:qwen3.5-397b-a17b', 'builtin:model:qwen3.8-27b'].includes(model.assetId));
   const ownerId = preset.strategy === 'declared_plan' ? 'builtin:model:parallel-' + preset.presetId : 'builtin:model:gqa-distributed-reference';
   if (!fullModelPresets && (model.revision !== 1 || model.assetId !== ownerId)) return undefined;
   switch (preset.strategy) {

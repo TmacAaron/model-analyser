@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { makeModelProject } from '../../scripts/model-project.js';
+import { makeQwenHybridParallelAssets } from '../../scripts/qwen-hybrid-parallel.js';
 
 const selector = (id: string) => '[data-node-id="' + id + '"]';
 
@@ -26,7 +29,14 @@ test('opens both published Qwen hybrid models and displays KV separately from fi
   await page.locator(selector(layer + 'recurrent')).press('Space');
   await expect(page.getByRole('region', { name: 'Gated DeltaNet 计算步骤' })).toContainText('Sₜ = S̃ₜ + kₜ · δₜᵀ');
 
-  await models.selectOption('builtin:model:qwen3.8-27b');
+  // Use a separate baseline because a prior canvas test may save TP for this model.
+  const serial = makeModelProject(makeQwenHybridParallelAssets('qwen38'), {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 0,
+  }, 'Qwen3.8 serial baseline');
+  serial.projectId = randomUUID();
+  await page.getByLabel('导入模型工作区').setInputFiles({
+    name: 'qwen38-serial.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(serial)),
+  });
   await expect(page.locator('.canvas-breadcrumb')).toContainText('Qwen3.8-27B');
   await expect(page.locator('.studio-save')).toContainText('已保存');
   await expect(decoder).toContainText('16 ×');
