@@ -27,14 +27,23 @@ const glmGroups:AuthoredGroup[]=[
   {key:'attention',name:'GQA Attention',members:['rope','cache-update','expand-kv','qk','score-scale-cast','mask-softmax','probability-cast','av','o-proj']},
   {key:'ffn',name:'SwiGLU',members:['gate-up','silu','down']},
 ];
+const qwenHybridGqa:AuthoredGroup={key:'attention',name:'Gated GQA',members:['qk-norm-rope','cache-update','qk','softmax','av','output-gate','o-proj']};
+const qwenHybridDelta:AuthoredGroup={key:'attention',name:'Gated DeltaNet',members:['delta-output-gate-proj','beta-proj','decay-proj','convolve','qk-l2-norm','beta','decay','recurrent','value-norm-gate','delta-o-proj']};
+const qwenHybridMoe:AuthoredGroup[]=[
+  {key:'routed',name:'Routed Experts',members:['router','router-softmax','topk','route-renormalize','dispatch','expert-gate-up','expert-silu','expert-down','combine']},
+  {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down','shared-mix-proj','shared-gate']},
+];
+const qwenHybridDense:AuthoredGroup={key:'ffn',name:'SwiGLU',members:['ffn-gate-up','ffn-silu','ffn-down']};
 
 /** These memberships come from the fixed decoder templates. Arithmetic leaves keep their IDs. */
 export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):CanvasOperatorGroup[]{
   const container=resolved.containers.find(item=>item.nodeId===scope);
   if(!container)return [];
   const id=container.asset.assetId;
+  const hybrid=/^builtin:module:qwen-hybrid-(moe|dense)-(delta|gqa)$/.exec(id);
   const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
+    hybrid?[hybrid[2]==='delta'?qwenHybridDelta:qwenHybridGqa,...(hybrid[1]==='moe'?qwenHybridMoe:[qwenHybridDense])]:
     id==='builtin:module:deepseek-v3-absorbed-moe'?v3MoeGroups:
     /^builtin:module:deepseek-(v2-(expanded|absorbed)-(dense|moe)|v3-absorbed-dense)$/.test(id)?mlaGroups:[];
   if(!specs.length)return [];

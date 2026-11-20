@@ -1,0 +1,89 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:qwen-hybrid:7627eafd0ceaddc5",
+  "revision": 1,
+  "name": "2 * min(E, B * Q * K) * H * J [byte]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/resolve/6fe6a3a85cefe43a807df708dccc4e44b02e2955/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5_moe/modeling_qwen3_5_moe.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.8-27B/resolve/72a217afab8029b39e4af1c7273a829995a3dbaf/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5/modeling_qwen3_5.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Main text decoder only. The analytical profile uses the pinned Transformers full-attention sigmoid output gate in both releases, including Qwen3.8 whose config declares swish. Vision, MTP, training, runtime allocator and distributed execution are outside this scope."
+    },
+    {
+      "kind": "note",
+      "text": "Gated DeltaNet prefill and decode both use the serial recurrent equations for mathematical work. It is an authored idealized state-update/liveness ledger, not the chunk kernel, its scratch space, or an exact PyTorch allocation trace."
+    },
+    {
+      "kind": "note",
+      "text": "BF16 weights, activations, GQA KV and convolution history; FP32 recurrent matrices and explicit FP32 workspace. Norm, nonlinear, comparison and mask work use scalar proxies; casts, index routing implementation, rotary table creation and kernel-specific copies are excluded. Routed traffic uses the upper bound on distinct experts touched."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "E": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "H": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "J": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "K": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * min(E, B * Q * K) * H * J",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

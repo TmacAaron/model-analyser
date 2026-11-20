@@ -67,6 +67,22 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
 
+## Qwen3.5-397B-A17B 与 Qwen3.8-27B
+
+两个文本解码器都采用三个 Gated DeltaNet 层接一个 Gated GQA 层的周期。进入周期可查看 DeltaNet、GQA、各自的外部投影及 residual。397B 使用带独立门控的 Shared Expert 和 Top-10 Routed Experts，27B 使用 Dense SwiGLU。
+
+| 核对项 | Qwen3.5-397B-A17B | Qwen3.8-27B |
+| --- | ---: | ---: |
+| DeltaNet / GQA 层数 | 45 / 15 | 48 / 16 |
+| BF16 KV 每请求每 token | 30,720 B | 65,536 B |
+| 每请求固定 DeltaNet 状态 | 193,167,360 B | 154,927,104 B |
+
+KV 槽位计算只伸缩 GQA 的 K/V 张量。DeltaNet 的 BF16 卷积缓冲及 FP32 递推状态计入固定占用。预设按单卡 BF16 文本主解码器、串行递推方程和显式 attention 临时缓冲估算。视觉分支、MTP、实际 chunk 内核及分布式布局需要各自的定义。
+
+`npm run reference:qwen-hybrid` 核对两份原始配置的 SHA-256 与 61 份内置资产。数值测试从模型定义独立核对权重、缓存和实际 Decode 步骤，无需下载权重。
+
+固定来源包括 [397B 发布配置](https://huggingface.co/Qwen/Qwen3.5-397B-A17B/blob/6fe6a3a85cefe43a807df708dccc4e44b02e2955/config.json)、[27B 发布配置](https://huggingface.co/Qwen/Qwen3.8-27B/blob/72a217afab8029b39e4af1c7273a829995a3dbaf/config.json)与 Transformers v5.8.0 的 [MoE 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5_moe/modeling_qwen3_5_moe.py)和 [Dense 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5/modeling_qwen3_5.py)。
+
 ## 目标型号来源
 
 列表用于核对型号身份和后续建模来源。可计算的预设以已有固定资产及该型号的验收记录为准。
