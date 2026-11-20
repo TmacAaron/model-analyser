@@ -40,3 +40,4 @@ export * from './exact-storage-source.js';
 export type {StorageAccessSource} from './storage-access-source.js';
 export * from './aggregate-cost-source.js';
 export * from './communication-cost-source.js';
+export * from './local-cost-source.js';

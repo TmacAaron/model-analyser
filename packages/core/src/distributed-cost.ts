@@ -1,4 +1,7 @@
 import { modelAssumptions } from './model-context.js';
+import {observeCostTiming} from './timing-observer.js';
+import {communicationSymbols} from './communication-observation.js';
+import type {LocalAccessTerm,LocalCostOverride,LocalPlanObserver} from './local-cost-observation.js';
 import { DistributedCosts,CostDefinition,type ResolvedGraph,type Scenario,type AssetDocument,type ParallelResolution,type Diagnostic,type LocalDeviceCost,type LocalNodeEvaluation,type LocalCostRule,type Quantity,type MetricValue,type CostResult } from '@model-analyser/contracts';
 import { evaluateCost,memoryAccessBytes } from './cost.js';
 import { numericValue } from './storage.js';
@@ -10,7 +13,7 @@ type Layouts=Pick<ParallelResolution,'tensorLayouts'|'storageLayouts'|'storageAl
 export const LOCAL_COST_VERSION='0.1.0-local-cost.1';
 
 /** Evaluate explicitly declared local equations. No work/traffic division by card count. */
-export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[],layouts:Layouts,diagnostics:Diagnostic[],singleDeviceBaseline=false):DistributedCosts{
+export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[],layouts:Layouts,diagnostics:Diagnostic[],singleDeviceBaseline=false,observer?:LocalPlanObserver['localCost']):DistributedCosts{
   const assumptions=[
     'LocalCostRule explicitly binds useful logical dimensions separately from allocated/padded dimensions.',
     'Manual copies are exposed as bindings; compute and traffic are never multiplied implicitly.',
@@ -47,6 +50,8 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
       for(const o of overrides){if(fields.has(o.field))throw new FormulaError('invalid_override','同一局部成本字段存在重复覆盖');fields.add(o.field);}if(fields.has('fixed_seconds')&&(fields.has('compute_efficiency')||fields.has('memory_efficiency')))throw new FormulaError('invalid_override','局部固定耗时与效率覆盖不能同时应用');
       const perDevice:LocalDeviceCost[]=devices.map(deviceId=>{
         try{
+          const observe=observer?.nodeId===node.nodeId&&observer.deviceId===deviceId?observer:undefined;
+          const recordedOverrides:LocalCostOverride[]=[],accesses:LocalAccessTerm[]=[];
           const symbols:Record<string,Quantity>={},bindings:Extract<LocalDeviceCost['outcome'],{status:'available'}>['bindings']=[];
           for(const binding of singleDeviceBaseline?[]:rule?.bindings??[]){const source=binding.source;let quantity:Quantity;
             if(source.kind==='storage_bytes'){const local=storageLayout(source.storageId)?.allocation.perDevice.find(d=>d.deviceId===deviceId),metric=source.basis==='per_copy'?local?.allocation.totalBytes:local?.totalBytes;if(metric?.status!=='available')throw new FormulaError('missing_local_allocation',`节点 ${node.nodeId} 的 ${deviceId} 缺少 ${source.storageId} 的已知分配`);quantity=metric.quantity;}
@@ -61,16 +66,38 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
           const cost=CostDefinition.parse(singleDeviceBaseline?body.cost:rule?.cost);
           const storageBytes=new Map([...graphStorages.values()].flatMap(s=>{const local=storageLayout(s.storageId)?.allocation.perDevice.find(d=>d.deviceId===deviceId);return local?[[s.storageId,local.totalBytes] as const]:[];})),accessContext={symbols,assets,storageBytes};
           for(const id of [...cost.memoryAccess.map(a=>a.storageId),...cost.temporaryStorageIds])if(!storageLayout(id)?.allocation.perDevice.some(d=>d.deviceId===deviceId))throw new FormulaError('unplaced_storage_access',`节点 ${node.nodeId} 在 ${deviceId} 的访问/临时存储 ${id} 尚未配置分配`);
-          for(const o of overrides){if(o.field==='fixed_seconds')cost.timing={kind:'fixed',seconds:o.value.value,description:o.description??'Explicit per-local-node time override'};
+          for(const o of overrides){
+            const before=observe?{...cost.timing}:undefined;
+            if(o.field==='fixed_seconds')cost.timing={kind:'fixed',seconds:o.value.value,description:o.description??'Explicit per-local-node time override'};
             else if(o.field==='compute_efficiency'||o.field==='memory_efficiency'){if(cost.timing.kind!=='roofline_bound')throw new FormulaError('invalid_override','局部效率覆盖要求 roofline_bound');if(o.field==='compute_efficiency')cost.timing.computeEfficiency=o.value.value;else cost.timing.memoryEfficiency=o.value.value;}
-            else if(o.field==='traffic_bytes'){const total=cost.memoryAccess.reduce((n,a)=>n+memoryAccessBytes(a,accessContext),0);if(!Number.isFinite(total)||total<=0)throw new FormulaError('invalid_override','缺少局部读写比例，无法拆分流量覆盖');for(const a of cost.memoryAccess)a.logicalBytes={kind:'literal',quantity:{value:memoryAccessBytes(a,accessContext)/total*o.value.value,unit:'byte'}};}
+            else if(o.field==='traffic_bytes'){
+              const total=cost.memoryAccess.reduce((n,a)=>n+memoryAccessBytes(a,accessContext),0);
+              if(!Number.isFinite(total)||total<=0)throw new FormulaError('invalid_override','缺少局部读写比例，无法拆分流量覆盖');
+              const operands:Extract<LocalCostOverride['change'],{kind:'traffic'}>['operands']=[];
+              for(const [index,a] of cost.memoryAccess.entries()){
+                const originalBytes=memoryAccessBytes(a,accessContext),replacementBytes=originalBytes/total*o.value.value;
+                a.logicalBytes={kind:'literal',quantity:{value:replacementBytes,unit:'byte'}};
+                if(observe)operands.push({index,originalBytes,replacementBytes});
+              }
+              if(observe)recordedOverrides.push({index:scenario.numericOverrides.indexOf(o),override:o,change:{kind:'traffic',originalTotal:total,operands}});
+              continue;
+            }
             else throw new FormulaError('unsupported_override','局部成本尚未接入覆盖 '+o.field);
+            if(before)recordedOverrides.push({index:scenario.numericOverrides.indexOf(o),override:o,change:{kind:'timing',before,after:{...cost.timing}}});
           }
-          const device=scenario.deviceTopology.devices.find(d=>d.deviceId===deviceId),hardware=device?assets.find(a=>a.assetId===device.hardware.assetId&&a.revision===device.hardware.revision):undefined;if(hardware?.definition.kind!=='hardware')throw new FormulaError('missing_reference','局部成本设备硬件缺失');
+          const device=scenario.deviceTopology.devices.find(d=>d.deviceId===deviceId),hardware=device?assets.find(a=>a.assetId===device.hardware.assetId&&a.revision===device.hardware.revision):undefined;if(!device||hardware?.definition.kind!=='hardware')throw new FormulaError('missing_reference','局部成本设备硬件缺失');
           const relevantParameters=resolved.parameters.filter(p=>p.nodeId==='$model'||p.nodeId===node.nodeId||node.nodeId.startsWith(p.nodeId+'/')||node.nodeId.startsWith(p.nodeId+'['));
           const localProvenance={...provenance,parameterSources:[...relevantParameters.map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),...bindings.map(b=>({parameterKey:node.nodeId+':'+b.symbol,source:'local_'+b.source.kind}))],assumptions:[...assumptions,singleDeviceBaseline?'One physical device with complete replicated objects; use the declared global leaf equation exactly once.':rule?.description??'Missing local rule',...overrides.map(o=>`Explicit local override ${o.field}=${o.value.value} ${o.value.unit}`)]};
-          const evaluated=evaluateCost(cost,{phase:resolved.phase,target:{kind:'node',nodeId:node.nodeId},deviceIds:[deviceId],aggregation:'per_device'},{...accessContext,provenance:localProvenance},hardware.definition.hardware);diagnostics.push(...evaluated.diagnostics);if(evaluated.cost.hbmBytes.status==='available')evaluated.cost.hbmBytes.basis='estimated';
-          return {deviceId,outcome:{status:'available',bindings,cost:evaluated.cost}};
+          const scope={phase:resolved.phase,target:{kind:'node' as const,nodeId:node.nodeId},deviceIds:[deviceId],aggregation:'per_device' as const};
+          const context={...accessContext,provenance:localProvenance};
+          const terms=observe?{access:(index:number,logical:MetricValue,hbm:MetricValue)=>{accesses[index]={logical,hbm};}}:undefined;
+          const timed=observe?.timing&&cost.timing.kind==='roofline_bound'?observeCostTiming(cost,scope,context,hardware.definition.hardware,256,terms):undefined;
+          const evaluated=timed?.evaluation??evaluateCost(cost,scope,context,hardware.definition.hardware,undefined,terms);
+          diagnostics.push(...evaluated.diagnostics);
+          if(evaluated.cost.hbmBytes.status==='available')evaluated.cost.hbmBytes.basis='estimated';
+          const outcome={status:'available' as const,bindings,cost:evaluated.cost};
+          observe?.record(structuredClone({rule,singleDeviceBaseline,devices,outcome,effective:cost,symbols:communicationSymbols(symbols),hardware:device.hardware,accesses,overrides:recordedOverrides,...(timed?{timing:timed.dag}:{})}));
+          return {deviceId,outcome};
         }catch(e){return {deviceId,outcome:failure(e)};}
       });nodes.push({nodeId:node.nodeId,placement:{kind:'placed',perDevice}});
     }catch(e){nodes.push({nodeId:node.nodeId,placement:{kind:'unplaced',diagnosticIds:failure(e).diagnosticIds}});}

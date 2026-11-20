@@ -1,4 +1,5 @@
 import type {CostObserver,CostObservation,CostDurationOrigin} from './cost-observation.js';
+import type {LocalCostTerms} from './local-cost-observation.js';
 import { CostResult,type CostDefinition,type HardwareDefinition,type MetricScope,type Diagnostic,type Quantity,type MetricValue } from '@model-analyser/contracts';
 import { numericValue,type EvaluationContext } from './storage.js';
 import { FormulaError } from './formula.js';
@@ -17,7 +18,7 @@ export function evaluateAggregateTiming(cost:CostResult,timing:CostDefinition['t
 }
 
 /** Evaluate a single declared leaf cost; no implicit graph expansion, replication or fusion. */
-export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware?:HardwareDefinition,observe?:CostObserver):{cost:CostResult;diagnostics:Diagnostic[]} {
+export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware?:HardwareDefinition,observe?:CostObserver,terms?:LocalCostTerms):{cost:CostResult;diagnostics:Diagnostic[]} {
   const emit=observe?(event:CostObservation)=>observe(structuredClone(event)):undefined;
   const diagnostics:Diagnostic[]=[];
   const prefix=`cost-${scope.phase}-${scope.target.kind}${scope.target.kind==='model'?'':scope.target.nodeId}-${scope.deviceIds.join('|')}`;
@@ -47,13 +48,14 @@ export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:Evalu
     if(usefulOperations.status==='available'&&executedOperations.status==='available'&&executedOperations.quantity.value<usefulOperations.quantity.value)executedOperations=error('invalid_cost','执行工作量不得小于有效工作量');
     return {computeClass:c.computeClass,usefulOperations,executedOperations};
   });
-  const accesses=cost.memoryAccess.map(a=>{
+  const accesses=cost.memoryAccess.map((a,index)=>{
     const logical=attempt(()=>memoryAccessBytes(a,context),'byte');
     let hbm:MetricValue;const estimate=a.hbmEstimate;
     if(!estimate)hbm=error('missing_hbm_estimate',`访问 ${a.accessId} 未声明 HBM 估计`);
     else if(estimate.kind==='bytes')hbm=attempt(()=>numericValue(estimate.value,'byte',context),'byte');
     else if(logical.status==='unavailable')hbm=logical;
     else {const bytes=logical.quantity.value*estimate.value;hbm=logical.quantity.value>0&&estimate.value>0&&bytes===0?error('numeric_overflow','非零 HBM 估计下溢，不能报告为零'):metric(bytes,'byte');}
+    terms?.access?.(index,logical,hbm);
     return {mode:a.mode,logical,hbm};
   });
   const logicalReadBytes=sum(accesses.filter(a=>a.mode==='read').map(a=>a.logical),'byte'),logicalWriteBytes=sum(accesses.filter(a=>a.mode==='write').map(a=>a.logical),'byte'),hbmBytes=sum(accesses.map(a=>a.hbm),'byte');

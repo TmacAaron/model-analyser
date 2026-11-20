@@ -2,16 +2,17 @@ import { useDisplayUnits } from './display-units.js';
 import { useEffect,useRef,useState } from 'react';
 import type { AnalysisResult,AssetDocument,MetricValue,Scenario } from '@model-analyser/contracts';
 
-import type { AggregateCostSelector,CommunicationCostSelector,LeafCostSelector } from '@model-analyser/core';
+import type { AggregateCostSelector,CommunicationCostSelector,LeafCostSelector,LocalCostSelector } from '@model-analyser/core';
 import { LeafCostSourceView } from './leaf-cost-source-view.js';
 import {AggregateCostSourceView,type AggregateSourceMember} from './aggregate-cost-source-view.js';
 import {CommunicationCostSourceView} from './communication-cost-source-view.js';
+import {LocalCostSourceView} from './local-cost-source-view.js';
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import { ParameterValues } from './resolved-inspector-view.js';
 export type SourceSelection={targetId:string;metricId:string;step?:number;nonce:number};
 type Report=Pick<AnalysisResult,'total'|'nodes'|'modules'|'memory'|'fusions'|'distributed'|'diagnostics'|'parameterTrace'|'decode'>;
-type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector};
-type Target={id:string;label:string;metrics:Metric[]};
+type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector;localSelector?:LocalCostSelector};
+type Target={id:string;label:string;metrics:Metric[];local?:Pick<LocalCostSelector,'nodeId'|'deviceId'>};
 function metricIdentity(scope:AggregateCostSelector['scope']|undefined,field:AggregateCostSelector['field'],computeClass?:AggregateCostSelector['computeClass']){
  if(!scope)return {};
  const aggregateSelector={scope,field,...(computeClass?{computeClass}:{})};
@@ -26,7 +27,15 @@ export function sourceTargets(report:Report):Target[]{
   (report.decode?.logicalCompute??report.distributed?.logicalCompute??[]).forEach((c,i)=>result.push({id:'logical:'+i,label:'逻辑有效汇总 '+(c.scope.target.kind==='model'?'模型':c.scope.target.nodeId),metrics:computeMetrics(c)}));
   const layout=report.distributed?.layout;
   if(layout){
-    for(const n of layout.localCosts.nodes)if(n.placement.kind==='placed')for(const d of n.placement.perDevice)if(d.outcome.status==='available')result.push({id:'local:'+n.nodeId+':'+d.deviceId,label:'局部 '+n.nodeId+' / '+d.deviceId,metrics:costMetrics(d.outcome.cost)});
+    for(const n of layout.localCosts.nodes)if(n.placement.kind==='placed')for(const d of n.placement.perDevice)if(d.outcome.status==='available'){
+      const local={nodeId:n.nodeId,deviceId:d.deviceId};
+      const metrics=costMetrics(d.outcome.cost).map(metric=>{
+        if(!metric.selector)return metric;
+        const computeIndex=metric.selector.computeClass?Number(metric.id.split(':')[1]):undefined;
+        return {...metric,localSelector:{...metric.selector,...local,...(computeIndex===undefined?{}:{computeIndex})}};
+      });
+      result.push({id:'local:'+JSON.stringify([n.nodeId,d.deviceId]),label:'局部 '+n.nodeId+' / '+d.deviceId,metrics,local});
+    }
     for(const s of layout.storageAllocations)result.push({id:'storage:'+s.storageId,label:'规范存储 '+s.storageId,metrics:s.allocation.perDevice.map(d=>({id:d.deviceId,label:d.deviceId+' 分配（非峰值）',value:d.totalBytes}))});
     for(const c of layout.communications){
       const metrics=costMetrics(c.evaluation.cost).map(metric=>{
@@ -53,6 +62,15 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
   const resolved=resolveSourceSelection(result,step,targetId,metricId),{report,all,target,metric}=resolved,sourceScenario=resolved.scenario??scenario,filtered=all.filter(t=>(t.id+' '+t.label).toLowerCase().includes(query.toLowerCase())),visible=filtered.slice(0,100),options=target&&!visible.some(t=>t.id===targetId)?[target,...visible]:visible,value=metric?.value,provenance=value?.status==='available'?value.provenance:undefined,diagnostics=value?.diagnosticIds.map(id=>report?.diagnostics.find(d=>d.diagnosticId===id)?.message??id)??[];
   const aggregate=targetId==='model'||targetId.startsWith('module:')||!!result.decode&&step==='aggregate'&&targetId.startsWith('node:')?metric?.aggregateSelector:undefined;
   const communication=value&&metric?.communicationSelector?<CommunicationCostSourceView metric={value} selector={metric.communicationSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)}/>:undefined;
+  const local=value&&metric?.localSelector?<LocalCostSourceView metric={value} selector={metric.localSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)}/>:undefined;
+  const devices=targetId.startsWith('node:')&&metric?.aggregateSelector?all.flatMap(item=>{
+   if(item.local?.nodeId!==targetId.slice(5))return [];
+   const matching=item.metrics.find(candidate=>candidate.localSelector?.field===metric.aggregateSelector?.field&&canonical(candidate.localSelector?.computeClass)===canonical(metric.aggregateSelector?.computeClass));
+   return matching?[{id:item.id,deviceId:item.local.deviceId,metricId:matching.id}]:[];
+  }):[];
+  const deviceChoices=devices.length>0&&<div className="button-row">{devices.slice(0,20).map(device=><button key={device.id} onClick={()=>{
+   setTarget(device.id);setMetric(device.metricId);setQuery('');
+  }}>查看 {device.deviceId} 的局部方程</button>)}{devices.length>20&&<button onClick={()=>setQuery(targetId.slice(5))}>查找其余设备</button>}</div>;
   function navigate(member:AggregateSourceMember){
    const nextStep=member.step?String(member.step.index):step;
    const frame=nextStep==='aggregate'?result:result.decode?.steps.find(item=>String(item.index)===nextStep)?.result;
@@ -67,7 +85,7 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
     {result.decode&&<label>来源步骤<select aria-label="来源步骤" value={step} onChange={e=>setStep(e.target.value)}><option value="aggregate">完整序列汇总</option>{step!=='aggregate'&&!result.decode.steps.some(s=>String(s.index)===step)&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤 {s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}
     <div className="preset-fields"><label>查找范围<input aria-label="查找成本来源范围" value={query} onChange={e=>setQuery(e.target.value)}/></label><label>结果范围<select aria-label="成本来源范围" value={targetId} onChange={e=>{setTarget(e.target.value);const next=all.find(t=>t.id===e.target.value);setMetric(next?.metrics.find(m=>m.id===metricId)?.id??next?.metrics[0]?.id??'seconds');}}>{!target&&<option value={targetId} disabled>缺失范围 · {targetId}</option>}{options.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label><label>指标<select aria-label="成本来源指标" value={metricId} onChange={e=>setMetric(e.target.value)}>{!metric&&<option value={metricId} disabled>缺失指标 · {metricId}</option>}{target?.metrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label></div>
     {filtered.length>100&&<p>显示匹配的前 100/{filtered.length} 个范围；输入节点、存储或设备 ID 查看其余范围。</p>}
-    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{communication}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
+    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{local??communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:devices.length?deviceChoices:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{local??communication??deviceChoices}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
     <h4>当前方案数值覆盖声明 · {sourceScenario.numericOverrides.length}</h4>{sourceScenario.numericOverrides.length?<div className="analysis-table source-overrides"><table><thead><tr><th>来源 / 目标</th><th>字段 / 值</th><th>作者说明</th></tr></thead><tbody>{sourceScenario.numericOverrides.map((o,i)=><tr key={i}><td>numericOverrides #{i+1}<small>{JSON.stringify(o.target)}</small></td><td>{o.field}{o.parameterKey?' · '+o.parameterKey:''}<small>{o.value.value} {o.value.unit}</small></td><td>{o.description||'未附说明'}</td></tr>)}</tbody></table></div>:<p>当前方案没有数值覆盖。</p>}
     <details><summary>固定硬件规格与作者来源</summary>{sourceScenario.deviceTopology.devices.map(d=>{const a=assets.find(a=>a.assetId===d.hardware.assetId&&a.revision===d.hardware.revision);return <div key={d.deviceId}><h4>{d.deviceId} · {d.hardware.assetId}@r{d.hardware.revision}</h4><pre>{JSON.stringify(a?.definition,null,2)}</pre><pre>{JSON.stringify(a?.sources??[],null,2)}</pre></div>;})}</details>
   </div>;
