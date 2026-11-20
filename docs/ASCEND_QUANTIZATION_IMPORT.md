@@ -26,7 +26,7 @@
 
 [独立账本](../examples/ascend-quantization/reference.json)将其中一个Q字段映射到作者声明的小Qwen目标（H=4、2层）；使用显式假设的六项辅助布局，验证原BF16权重32B → 8bit payload16B + 辅助88B = 104B。辅助分项16+16+4+4+16+32B；这不是发布者权重dtype／shape证明，也不是量化必然节省空间的承诺。其余56,881个源条目完整保留，内部BF16工作不变；移除映射恢复原计算输入hash。
 
-四份可移植文件位于[examples/ascend-quantization](../examples/ascend-quantization/reference.json)：pending-project、confirmed-project、confirmed-result及reference。运行 `npm run reference:ascend` 重新生成、用Node SHA核对原文并执行独立标量断言；`npm run acceptance:ascend` 包含全部既有组合门禁。
+运行 `npm run reference:ascend` 可核对原文 SHA256、执行独立标量断言并生成可移植证据。待确认工作区、已确认工作区和完整结果写入 `_local/references/ascend-quantization/`，小型账本保存在 `examples/ascend-quantization/reference.json`。`npm run acceptance:ascend` 包含全部既有组合门禁。
 
 ## 限额与验证范围
 

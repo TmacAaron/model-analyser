@@ -2,14 +2,33 @@ import { it,expect } from 'vitest';
 import { ConfigurationFields,ProjectDocument,AssetDocument } from '@model-analyser/contracts';
 import { configurationDraft,writeConfigurationDraft,configurationFields,copyConfiguration,configurationDraftIsStale } from '../packages/contracts/src/configuration-edit.js';
 import { applyConfigurationEdit } from '../packages/core/src/configuration-edit.js';
+import { confirmAscendQuantization } from '../packages/core/src/ascend-quantization.js';
 import { analyzeScenario,computeInputHash } from '@model-analyser/core';
 import { validateProject } from '../packages/contracts/src/validation.js';
 import { c01Project } from './model-fixtures.js';
 import { makeLocalGemmProject } from '../scripts/local-gemm-project.js';
 import { makeSerialGatherProject } from '../scripts/serial-gather-project.js';
-import { readFileSync } from 'node:fs';
+import { validationAscend } from './model-validation-fixtures.js';
 
-it('retains confirmed Ascend origins and complete raw sources, and refuses orphaning their active rules through advanced edits',async()=>{const p=ProjectDocument.parse(JSON.parse(readFileSync('examples/ascend-quantization/confirmed-project.json','utf8')) as unknown),s=p.scenarios[0]!,d=configurationDraft(p,s.scenarioId),f=configurationFields(s);f.name+=' advanced';d.text=JSON.stringify(f);const next=await applyConfigurationEdit(writeConfigurationDraft(p,d),s.scenarioId);expect(next.quantizationSources).toEqual(p.quantizationSources);expect(next.scenarios[0]?.ascendQuantizationImports).toEqual(s.ascendQuantizationImports);expect(await computeInputHash(next.scenarios[0]!,next.assetSnapshots)).toBe(await computeInputHash(s,p.assetSnapshots));f.quantizationOverrides=[];d.text=JSON.stringify(f);await expect(applyConfigurationEdit(writeConfigurationDraft(p,d),s.scenarioId)).rejects.toThrow('已确认');});
+it('retains confirmed Ascend origins and complete raw sources, and refuses orphaning their active rules through advanced edits',async()=>{
+  const staged=validationAscend();
+  const pending=staged.scenarios[0]!;
+  const review=pending.ascendQuantizationImports![0]!;
+  const project=confirmAscendQuantization(staged,pending.scenarioId,review.importId,review.confirmationNote);
+  const scenario=project.scenarios[0]!;
+  const draft=configurationDraft(project,scenario.scenarioId);
+  const fields=configurationFields(scenario);
+  fields.name+=' advanced';
+  draft.text=JSON.stringify(fields);
+  const next=await applyConfigurationEdit(writeConfigurationDraft(project,draft),scenario.scenarioId);
+  expect(next.quantizationSources).toEqual(staged.quantizationSources);
+  expect(next.scenarios[0]?.ascendQuantizationImports).toEqual(scenario.ascendQuantizationImports);
+  expect(await computeInputHash(next.scenarios[0]!,next.assetSnapshots)).toBe(await computeInputHash(scenario,project.assetSnapshots));
+
+  fields.quantizationOverrides=[];
+  draft.text=JSON.stringify(fields);
+  await expect(applyConfigurationEdit(writeConfigurationDraft(project,draft),scenario.scenarioId)).rejects.toThrow('已确认');
+});
 
 it('keeps missing hardware capabilities explicitly unknown while rejecting unsupported complete decode workloads',async()=>{const p=c01Project(),s=p.scenarios[0]!,h=p.assetSnapshots.find(a=>a.definition.kind==='hardware')!;if(h.definition.kind!=='hardware')throw Error();h.definition.hardware.computeCapabilities=[];h.definition.hardware.memoryCapabilities=[];let d=configurationDraft(p,s.scenarioId),f=configurationFields(s);f.name+=' unknown capabilities';d.text=JSON.stringify(f);const next=await applyConfigurationEdit(writeConfigurationDraft(p,d),s.scenarioId),a=await analyzeScenario(next.scenarios[0]!,next.assetSnapshots);expect(a.status).toBe('available');if(a.status==='available')expect(a.result.total.seconds.status).toBe('unavailable');f=configurationFields(s);if(f.workload.kind!=='decode')throw Error();f.workload.steps=257;d=configurationDraft(p,s.scenarioId);d.text=JSON.stringify(f);await expect(applyConfigurationEdit(writeConfigurationDraft(p,d),s.scenarioId)).rejects.toThrow('256');});
 it('detects a model reference switch even when both models were already in the same unchanged snapshot set',()=>{let p=c01Project();const s=p.scenarios[0]!,model=p.assetSnapshots.find(a=>a.assetId===s.model.assetId)!;const alternate=AssetDocument.parse({...model,assetId:'alternate-model'});p.assetSnapshots.push(alternate);p=writeConfigurationDraft(p,configurationDraft(p,s.scenarioId));p.scenarios[0]!.model.assetId=alternate.assetId;expect(configurationDraftIsStale(p,p.configurationDrafts![0]!)).toBe(true);});
