@@ -82,7 +82,7 @@ export function ModelWorkspace(props:Props){
         <div hidden={panel!=='analysis'}><AnalysisView key={project.projectId+':'+s.scenarioId} focus={analysisFocus} scenario={s} assets={project.assetSnapshots} measurements={project.measurements} onMeasurement={m=>props.onProject({...project,measurements:[...project.measurements,m]})} onMeasurements={rows=>props.onProject({...project,measurements:mergeMeasurements(project.measurements,rows)})} autoRunKey={analysisRun} onResult={setResult}/></div>
         {panel==='advanced'&&<ConfigurationEditor key={project.projectId+':'+s.scenarioId} project={project} scenario={s} resolved={resolved} selection={selected.length?selected:[scope]} onProject={props.onProject}/>}
         {panel==='capacity'&&<CapacityView scenario={s} assets={project.assetSnapshots}/>}
-        {panel==='compare'&&<ScenarioComparisonView scenarios={configurations} assets={project.assetSnapshots}/>}
+        {panel==='compare'&&<ScenarioComparisonView scenarios={configurations} assets={project.assetSnapshots} focus={analysisFocus}/>}
         {panel==='connection'&&connection&&<CanvasConnectionEditor key={scope+':'+connection.from+':'+connection.to} source={scope==='$model'?model:project.assetSnapshots.find(a=>{const ref=resolved?.containers.find(c=>c.nodeId===scope)?.asset;return a.assetId===ref?.assetId&&a.revision===ref.revision;})} scope={scope} from={connection.from} to={connection.to} assets={project.assetSnapshots} onApply={props.onEditConnection}/>}
       </div>}
     </section></div>
