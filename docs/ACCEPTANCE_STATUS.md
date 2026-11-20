@@ -1,5 +1,7 @@
 # 阶段退出条件复核
 
+提交 `fccca98` 的干净 Windows 快照完成 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。903 项单元与契约测试、16 项 HTTP 测试、278 项 Chrome 回归、45 组运行基线、生产构建与参考复算全部通过。Chrome 已覆盖[画布结构编辑](CANVAS_WORKBENCH.md)，包括固定依赖插入、模块内部编辑、替换、删除和两配置重开。早期重跑遇到 CSA2 与 Compression 的测试时限，最终重跑保留原有采样和数值断言。
+
 提交 `d36b5ea` 的干净快照在 Windows 上通过完整 `npm run acceptance:storage-sources`。61 步全部退出成功，覆盖 45 组运行基线、903 项单元与契约测试、16 项 HTTP 测试、276 项 Chrome 回归、生产构建及全部参考复算。快照运行前无 `data/` 和本机参考缓存，固定模型、原始 ROCm CSV 及 Context／Pipeline 原文按原始字节核对。
 
 随后提交 `3f21989` 增加[画布内 Roofline 配置对比](SCENARIO_COMPARISON.md#roofline-对比)。最终生产构建及 Roofline／配置对比共 8 项专项 Chrome 测试通过，覆盖实际 Decode 步骤、设备范围对齐、原始指标来源及 JSON 导出。完整 61 步记录对应前一提交。其余原 PRD 要求按[剩余项](REMAINING_PRD.md)核对。

@@ -1,10 +1,10 @@
 import { MetricTarget,type AnalysisResult,type CostResult,type ResolvedGraph,type SingleStepAnalysisResult } from '@model-analyser/contracts';
-export type AnalysisFocus={key:string;label:string;target?:MetricTarget|undefined;reason?:string|undefined};
+export type AnalysisFocus={key:string;label:string;target?:MetricTarget|undefined;reason?:string|undefined;fusionMembers?:readonly string[]|undefined};
 export const targetId=(target:MetricTarget)=>target.kind==='model'?'model':target.kind+':'+target.nodeId;
 export function parseTarget(id:string):MetricTarget|undefined{const value=id==='model'?{kind:'model'}:id.startsWith('module:')?{kind:'module',nodeId:id.slice(7)}:id.startsWith('node:')?{kind:'node',nodeId:id.slice(5)}:undefined;const parsed=MetricTarget.safeParse(value);return parsed.success?parsed.data:undefined;}
-export const focusIdentity=(focus:AnalysisFocus|undefined)=>focus?JSON.stringify([focus.key,focus.target,focus.reason]):'standalone';
+export const focusIdentity=(focus:AnalysisFocus|undefined)=>focus?JSON.stringify([focus.key,focus.target,focus.reason,focus.fusionMembers]):'standalone';
 export function canvasAnalysisFocus(resolved:ResolvedGraph|undefined,scope:string,selected:string[],key:string):AnalysisFocus{
-  const identity=JSON.stringify([key,scope,selected]);if(selected.length>1){const members=new Set(selected.flatMap(id=>resolved?.containers.find(c=>c.nodeId===id)?.leafNodeIds??[id])),group=resolved?.fusionApplications.find(f=>f.memberNodeIds.length===members.size&&f.memberNodeIds.every(id=>members.has(id)));return group?{key:identity,label:'融合组 '+group.groupId,target:{kind:'node',nodeId:group.nodeId}}:{key:identity,label:selected.length+' 个选中节点',reason:'当前选择包含多个节点，请选择一个模块、算子或完整融合组查看对应结果。'};}
+  const identity=JSON.stringify([key,scope,selected]);if(selected.length>1){const members=new Set(selected.flatMap(id=>resolved?.containers.find(c=>c.nodeId===id)?.leafNodeIds??[id])),group=resolved?.fusionApplications.find(f=>f.memberNodeIds.length===members.size&&f.memberNodeIds.every(id=>members.has(id)));return group?{key:identity,label:'融合组 '+group.groupId,target:{kind:'node',nodeId:group.nodeId},fusionMembers:group.memberNodeIds}:{key:identity,label:selected.length+' 个选中节点',reason:'当前选择包含多个节点，请选择一个模块、算子或完整融合组查看对应结果。'};}
   const id=selected[0]??scope;if(id==='$model')return {key:identity,label:'整个模型',target:{kind:'model'}};
   const container=resolved?.containers.find(c=>c.nodeId===id),leaf=resolved?.graph.nodes.find(n=>n.nodeId===id),target=MetricTarget.safeParse({kind:container?'module':'node',nodeId:id});
   return target.success?{key:identity,label:container?.name??leaf?.name??id,target:target.data,...(!resolved?{reason:'模型结构尚未就绪，等待当前输入的解析结果。'}:{})}:{key:identity,label:id,reason:'选中目标的稳定路径无效。'};
