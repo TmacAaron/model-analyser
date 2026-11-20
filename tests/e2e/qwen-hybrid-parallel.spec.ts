@@ -3,8 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { ProjectDocument } from '@model-analyser/contracts';
 import { makeModelProject } from '../../scripts/model-project.js';
 import { makeQwenHybridAssets } from '../../scripts/qwen-hybrid-model.js';
+import { makeQwenHybridParallelAssets } from '../../scripts/qwen-hybrid-parallel.js';
 
-async function applyParallel(page: Page, area: 'Attention TP' | 'MoE TP', degree: number, communications: number) {
+async function applyParallel(page: Page, area: 'Attention TP' | 'MoE TP' | 'MoE EP', degree: number, communications: number) {
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await page.getByLabel(area, { exact: true }).fill(String(degree));
   const preview = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -59,6 +60,36 @@ test('Qwen3.5-397B expert TP fits the full BF16 text decoder and analyzes the re
   await expect(capacity).toContainText('每卡复制 30,720 B / token');
   await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
   await verifyAnalysis(page);
+});
+
+test('Qwen3.5-397B EP8 shards experts separately from the global TopK selection', async ({ page }) => {
+  test.setTimeout(360_000);
+  const project = makeModelProject(makeQwenHybridParallelAssets('qwen35'), {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 0,
+  }, 'Qwen3.5-397B EP');
+  project.projectId = randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({
+    name: 'qwen35-ep.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r3', exact: true }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');
+  await expect(page.locator('.device-settings')).toContainText('178.8139 GiB');
+  await applyParallel(page, 'MoE EP', 8, 60);
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('每卡复制 30,720 B / token', { timeout: 120_000 });
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
+  await verifyAnalysis(page);
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('8');
+  await expect(page.getByLabel('MoE TP', { exact: true })).toHaveValue('1');
+  await expect(page.getByRole('region', { name: '逻辑分片与通信' })).toContainText('按均衡路由估算负载');
 });
 
 test('updates a saved Qwen3.8 r1 workspace to r2 while keeping its workload and device', async ({ page }) => {

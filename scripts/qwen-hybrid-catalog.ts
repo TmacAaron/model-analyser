@@ -7,7 +7,8 @@ import { makeQwenHybridParallelAssets } from './qwen-hybrid-parallel.js';
 
 const assets = new Map<string, AssetDocument>();
 for (const release of ['qwen35', 'qwen38'] as const) {
-  for (const asset of [...makeQwenHybridAssets(release), ...makeQwenHybridParallelAssets(release)]) {
+  for (const asset of [...makeQwenHybridAssets(release), ...makeQwenHybridParallelAssets(release),
+    ...(release === 'qwen35' ? makeQwenHybridParallelAssets(release, 3) : [])]) {
     const key = asset.assetId + '@' + asset.revision;
     const prior = assets.get(key);
     if (prior) assert.equal(canonical(prior), canonical(asset), asset.assetId);
@@ -17,7 +18,7 @@ for (const release of ['qwen35', 'qwen38'] as const) {
 assert.deepEqual(validateAssets([...assets.values()]), []);
 for (const asset of assets.values()) {
   const path = 'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') +
-    (asset.revision === 2 ? '-r2' : '') + '.json';
+    (asset.revision > 1 ? '-r' + asset.revision : '') + '.json';
   try {
     const saved = AssetDocument.parse(JSON.parse(await readFile(path, 'utf8')));
     assert.equal(canonical(saved), canonical(asset), path);

@@ -61,7 +61,12 @@ export function partitionTensor(input:TensorSpec,layout:TensorDistribution,input
         const observedAxes=observeDevice?.(id)?new Map<string,PartitionOperation>():undefined;
         for(const {axis,meshAxis} of mappings){const extent=sizes[axis]??0,width=mesh.axes[meshAxis]?.size??1,rank=coordinate.coordinates[meshAxis]??0;let start:number,end:number,physical:number;
           if(policy.kind==='explicit'){const matches=policy.slices.filter(s=>s.deviceId===id&&s.axisId===original[axis]?.axisId),s=matches[0];if(matches.length!==1||!s||s.end<=s.start||s.end>extent)throw new FormulaError('invalid_distribution','显式切片重复、为空或超出逻辑维度');start=s.start;end=s.end;physical=end-start;}
-          else {if(policy.kind==='even'&&extent%width!==0)throw new FormulaError('invalid_distribution','均匀分片要求逻辑维度可整除 mesh 大小；请显式选择 padded 或切片');physical=Math.ceil(extent/width);start=Math.min(extent,rank*physical);end=Math.min(extent,start+physical);}
+          else if(policy.kind==='balanced'){
+            const base=Math.floor(extent/width),remainder=extent%width;
+            start=rank*base+Math.min(rank,remainder);
+            end=start+base+(rank<remainder?1:0);
+            physical=Math.ceil(extent/width);
+          }else {if(policy.kind==='even'&&extent%width!==0)throw new FormulaError('invalid_distribution','均匀分片要求逻辑维度可整除 mesh 大小；请显式选择填充或切片策略');physical=Math.ceil(extent/width);start=Math.min(extent,rank*physical);end=Math.min(extent,start+physical);}
           local[axis]=end-start;allocated[axis]=physical;slices[axis]={axisId:original[axis]?.axisId??'',start,end,paddedExtent:physical};
           const axisId=original[axis]?.axisId??'';
           observedAxes?.set(axisId,{kind:'axis',axisId,method:policy.kind,extent,start,end,logical:end-start,allocated:physical,mesh:{axisId:mesh.axes[meshAxis]?.axisId??'',width,rank}});
@@ -76,6 +81,7 @@ export function partitionTensor(input:TensorSpec,layout:TensorDistribution,input
         emit?.({kind:'explicit_coverage',rectangles:boxes.length,covered:volume,globalElements});
       }
     }
-    return TensorPartitionAttempt.parse({status:'available',result:{tensorId:tensor.tensorId,dtype:tensor.dtype,groupId:group.groupId,distribution,globalShape,coverage:distribution.kind==='manual'?'manual':distribution.kind==='partial'?'partial':distribution.kind==='sharded'&&distribution.policy.kind==='padded'?'padded':'exact',placements,diagnostics}});
+    const padded=distribution.kind==='sharded'&&(distribution.policy.kind==='padded'||distribution.policy.kind==='balanced');
+    return TensorPartitionAttempt.parse({status:'available',result:{tensorId:tensor.tensorId,dtype:tensor.dtype,groupId:group.groupId,distribution,globalShape,coverage:distribution.kind==='manual'?'manual':distribution.kind==='partial'?'partial':padded?'padded':'exact',placements,diagnostics}});
   }catch(e){diagnostics.push({diagnosticId:'partition-failure',severity:'error',code:e instanceof FormulaError?e.code:'invalid_distribution',message:e instanceof Error?e.message:'张量分布失败',location:{kind:'file',name:'tensor-partition'}});return TensorPartitionAttempt.parse({status:'unavailable',diagnostics});}
 }

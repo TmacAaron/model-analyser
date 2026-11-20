@@ -26,7 +26,7 @@ function expandPresetRules(preset:ParallelPresetTemplate,resolved:ResolvedGraph)
       for(const shard of rule.tensorShards){
         const entry=tensor(shard.tensorId),axis=entry.axes.find(axis=>axis.localAxisId===shard.axisId);
         if(!axis)throw Error('模块调用缺少分片轴 '+occurrence.nodeId+'/'+shard.tensorId+'.'+shard.axisId);
-        tensorShards.push({tensorId:entry.tensorId,axisId:axis.axisId});
+        tensorShards.push({...shard,tensorId:entry.tensorId,axisId:axis.axisId});
       }
       for(const reduction of rule.reductions)reductions.push({
         ...reduction,tensorId:tensor(reduction.tensorId).tensorId,
@@ -51,21 +51,24 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const expanded=instantiateModel(scenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
     if(preset.strategy!=='tensor_sharded'&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
     const {tensorShards:shardRules,reductions:reductionRules}=expandPresetRules(preset,expanded.resolved);
-    const shardIds=new Map<string,string>(),tensorsById=new Map(graph.tensors.map(tensor=>[tensor.tensorId,tensor]));
+    const shardIds=new Map<string,(typeof shardRules)[number]>(),tensorsById=new Map(graph.tensors.map(tensor=>[tensor.tensorId,tensor]));
     for(const rule of shardRules){
       if(shardIds.has(rule.tensorId))throw Error('预设重复声明张量分片 '+rule.tensorId);
       if(!tensorsById.get(rule.tensorId)?.shape.some(axis=>axis.axisId===rule.axisId))throw Error('预设张量/轴不在当前展开图中：'+rule.tensorId+'.'+rule.axisId);
-      shardIds.set(rule.tensorId,rule.axisId);
+      shardIds.set(rule.tensorId,rule);
     }
-    const replicated:TensorDistribution={kind:'replicated',groupId:group.groupId},shard=(axisId:string):TensorDistribution=>({kind:'sharded',groupId:group.groupId,axes:[{tensorAxisId:axisId,meshAxisId:request.meshAxisId}],policy:{kind:'even'}});
+    const replicated:TensorDistribution={kind:'replicated',groupId:group.groupId},shard=(axisId:string,kind:'even'|'balanced'='even'):TensorDistribution=>({kind:'sharded',groupId:group.groupId,axes:[{tensorAxisId:axisId,meshAxisId:request.meshAxisId}],policy:{kind}});
     const strategy=preset.strategy;
     function distribution(id:string,shape:typeof graph.tensors[number]['shape']):TensorDistribution {
-      const axisId=shardIds.get(id);if(axisId)return shard(axisId);
+      const rule=shardIds.get(id);if(rule)return shard(rule.axisId,rule.policy);
       if(strategy==='batch_sharded'){const axes=shape.filter(a=>a.semantic==='batch');if(axes.length>1)throw Error('DP 快捷预设不猜测多 batch 轴含义');const axis=axes[0];if(axis)return shard(axis.axisId);}
       return replicated;
     }
     const tensorStorages=new Set(graph.tensors.map(tensor=>tensor.storageId));
-    const plan:Scenario['parallelPlan']={assignments:[{selector:{kind:'subtree',rootNodeId:NodeId.parse('$model')},phases:preset.phases,tensorDistributions:graph.tensors.map(t=>({tensorId:t.tensorId,distribution:distribution(t.tensorId,t.shape)})),storageDistributions:graph.storages.filter(s=>!tensorStorages.has(s.storageId)).map(s=>({storageId:s.storageId,distribution:distribution(s.storageId,s.allocation.kind==='tensor'?s.allocation.shape:[])}))}],communications:[],assumptions:[`Generated from fixed model ${model.assetId}@${model.revision}, preset ${preset.presetId}. This records generation history; later manual edits remain explicit.`,preset.description,...preset.assumptions,`Group ${group.groupId}: ${degree} unique physical members. Even partitioning; incompatible extents are rejected.`,`Only declared localCost equations are evaluated; physical replicas may execute duplicate work. No implicit packing conversion, communication HBM/reduction arithmetic or staging allocation.`]};
+    const groupAssumptions=shardRules.some(rule=>rule.policy==='balanced')
+      ? 'Balanced axes spread the remainder over the first ranks and reserve ceil(extent / degree) slots per rank. Even axes require exact division.'
+      : 'Even partitioning; incompatible extents are rejected.';
+    const plan:Scenario['parallelPlan']={assignments:[{selector:{kind:'subtree',rootNodeId:NodeId.parse('$model')},phases:preset.phases,tensorDistributions:graph.tensors.map(t=>({tensorId:t.tensorId,distribution:distribution(t.tensorId,t.shape)})),storageDistributions:graph.storages.filter(s=>!tensorStorages.has(s.storageId)).map(s=>({storageId:s.storageId,distribution:distribution(s.storageId,s.allocation.kind==='tensor'?s.allocation.shape:[])}))}],communications:[],assumptions:[`Generated from fixed model ${model.assetId}@${model.revision}, preset ${preset.presetId}. This records generation history; later manual edits remain explicit.`,preset.description,...preset.assumptions,`Group ${group.groupId}: ${degree} unique physical members. ${groupAssumptions}`,`Only declared localCost equations are evaluated; physical replicas may execute duplicate work. No implicit packing conversion, communication HBM/reduction arithmetic or staging allocation.`]};
     const reductions=new Set<string>();for(const r of reductionRules){
       if(reductions.has(r.tensorId))throw Error('预设重复归约 '+r.tensorId);reductions.add(r.tensorId);
       if(!graph.tensors.some(t=>t.tensorId===r.tensorId)||!graph.nodes.some(n=>n.nodeId===r.producerNodeId)||r.consumerNodeIds.some(id=>!graph.nodes.some(n=>n.nodeId===id)))throw Error('归约的张量/生产者/消费者未出现在当前阶段');

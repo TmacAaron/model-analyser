@@ -4,7 +4,8 @@ import { symbol } from './model-authoring.js';
 export type AxisBinding = [parameter: string, tensorId: string, axisId: string];
 
 /** Generate explicit local equations from authored operand axes, preserving the global equations. */
-export function withLocalCost(graph: GraphTemplate, nodeAxes: Readonly<Record<string, AxisBinding[]>>, description: string): GraphTemplate {
+export function withLocalCost(graph: GraphTemplate, nodeAxes: Readonly<Record<string, AxisBinding[]>>, description: string,
+  logicalAccesses?: Readonly<Record<string, readonly string[]>>): GraphTemplate {
   const tensors = new Map(graph.tensors.map(tensor => [tensor.tensorId, tensor]));
   return { ...graph, nodes: graph.nodes.map(node => {
     if (node.body.kind !== 'opaque') return node;
@@ -42,7 +43,8 @@ export function withLocalCost(graph: GraphTemplate, nodeAxes: Readonly<Record<st
         memoryAccess: body.cost.memoryAccess.map(access => ({
           ...access,
           logicalBytes: access.logicalBytes.kind === 'storage_allocation'
-            ? access.logicalBytes : replace(access.logicalBytes, allocated),
+            ? access.logicalBytes : replace(access.logicalBytes,
+              logicalAccesses?.[node.nodeId]?.includes(access.accessId) ? logical : allocated),
         })),
       },
       description,

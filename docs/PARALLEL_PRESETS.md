@@ -22,6 +22,7 @@
 
 - Qwen3.5-397B-A17B r2 和 Qwen3.8-27B r2 支持 Attention TP 和请求 DP。默认配置的 Attention TP 分别可取 2 及 2／4，各卡保留完整的 KV 头与对应的查询组。DeltaNet 分别切分 Q、K、V 卷积通道、历史缓冲及 FP32 递推矩阵的值头。每层注意力输出在残差相加前执行一次 AllReduce。DP 按 batch 均分请求，各卡持有完整权重和本地请求的状态。
 - 397B 可单独设置 MoE TP。每张卡都接收相同的 Top-10 专家 ID 与归一化权重，切分每个路由专家的 gate、up 和 down 中间维度。每卡先加权合并路由贡献，AllReduce 之后再加入本卡完整的共享专家输出。默认专家中间维度为 1024，须整除 TP 度。60 层各插入一次归约。Attention TP 2 和 MoE TP 2 可以共用两张卡，两处归约各自保留。
+- 397B r3 支持 MoE EP。EP 8 时每卡驻留 512 个路由专家中的 64 个，每个 token 仍在 512 个专家里全局选 10 个。按均衡负载估算，八卡平均每卡 1.25 条有效路由，整数有效工作量按 `2、2、1、1、1、1、1、1` 记录。每卡按 2 个预留槽位估算填充后的执行量，权重读取按有效路由估算。真实路由量取决于选中专家的位置。各卡本地打包自己的路由，归约后再合并共享专家。Attention TP 2 和 MoE EP 2 也可共用两张卡。 [专家并行参考](https://github.com/huggingface/transformers/blob/506ac612812b9682dfcfea300b71c1b709cfbae0/docs/source/en/expert_parallelism.md)
 - 容量首页显示合计及均匀每卡分片或复制的 KV 开销。27B 的 Attention TP 4 总计 `65,536 B/token`，每卡分片 `16,384 B/token`，另有 `38,731,776 B` 的每请求固定 DeltaNet 状态。397B 的 MoE TP 8 复制注意力，每卡 `30,720 B/token`，总计 `245,760 B/token`。理论通信采用可编辑的带宽和延迟，通信本地 HBM 单独列为待核定。现有 r1 工作区可在「并行方式」切换到 r2。
 
 DeltaNet 分片参考了各 Q/K/V 投影和 depthwise 卷积的实际加载方式。成本继续采用串行递推算式与明示的 BF16／FP32 状态。397B 的 TopK 比较以标量向量吞吐估算。 [固定实现](https://github.com/vllm-project/vllm/blob/9a4930a797846e4d57af7f72df20d82acaeb9c10/vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py)

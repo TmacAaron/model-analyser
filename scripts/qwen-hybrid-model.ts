@@ -18,7 +18,8 @@ export function addSwiGlu(graph: GraphAuthor, width: string, prefix: string, inp
     { useful: '2 * B * Q * H * ' + width });
 }
 
-function addMoe(graph: GraphAuthor, shardIntermediate = false) {
+function addMoe(graph: GraphAuthor, revision: 1 | 2 | 3) {
+  const shardIntermediate = revision >= 2, packByOwner = revision === 3;
   matrixWeight(graph, 'router-weight', 'E');
   const routerShape: Axis[] = [['b', 'batch', 'B'], ['q', 'token', 'Q'], ['expert', 'expert', 'E']];
   const selected = 'if(K <= E, K, 1 / 0)';
@@ -36,26 +37,36 @@ function addMoe(graph: GraphAuthor, shardIntermediate = false) {
   graph.node('route-renormalize', 'Renormalize selected expert weights', ['topk-probabilities'], ['route-weights'],
     { useful: 'B * Q * (2 * K - 1)', computeClass: vector });
 
+  const slots = packByOwner ? 'RouteSlots' : 'K';
+  const ids = packByOwner ? 'owner-route-ids' : 'topk-indices';
+  const weights = packByOwner ? 'owner-route-weights' : 'route-weights';
   graph.tensor('expert-input', [...selectedShape, ['h', 'hidden', 'H']]);
-  graph.node('dispatch', 'Dispatch tokens to selected experts', ['ffn-input', 'topk-indices'], ['expert-input'], undefined,
-    { accessBytes: { 'ffn-input': '2 * B * Q * K * H' } });
+  if (packByOwner) {
+    graph.tensor(ids, selectedShape, { dtype: int64 });
+    graph.tensor(weights, selectedShape);
+  }
+  graph.node('dispatch', packByOwner ? 'Pack tokens and normalized routes by expert owner' : 'Dispatch tokens to selected experts',
+    ['ffn-input', 'topk-indices', ...(packByOwner ? ['route-weights'] : [])],
+    ['expert-input', ...(packByOwner ? [ids, weights] : [])], undefined,
+    { accessBytes: { 'ffn-input': '2 * B * Q * ' + slots + ' * H' } });
   // Keep gate and up paired when each rank owns a slice of the intermediate dimension.
   const gateUp: Axis[] = shardIntermediate ? [['gate-up', 'custom', '2'], ['i', 'hidden', 'J']] : [['i', 'hidden', '2 * J']];
   const weightGateUp: Axis[] = shardIntermediate ? gateUp : [['out', 'hidden', '2 * J']];
   graph.tensor('expert-gate-up-weight', [['expert', 'expert', 'E'], ...weightGateUp, ['in', 'hidden', 'H']], { category: 'weight' });
   graph.tensor('expert-gate-up', [...selectedShape, ...gateUp]);
-  graph.node('expert-gate-up', 'Routed SwiGLU gate and up projections', ['expert-input', 'expert-gate-up-weight'], ['expert-gate-up'],
-    { useful: '4 * B * Q * K * H * J' }, { accessBytes: { 'expert-gate-up-weight': '4 * min(E, B * Q * K) * H * J' } });
+  const ownerIds = packByOwner ? [ids] : [];
+  graph.node('expert-gate-up', 'Routed SwiGLU gate and up projections', ['expert-input', 'expert-gate-up-weight', ...ownerIds], ['expert-gate-up'],
+    { useful: '4 * B * Q * ' + slots + ' * H * J' }, { accessBytes: { 'expert-gate-up-weight': '4 * min(E, B * Q * ' + slots + ') * H * J' } });
   graph.tensor('expert-activation', [...selectedShape, ['i', 'hidden', 'J']]);
   graph.node('expert-silu', 'Routed SiLU(gate) × up', ['expert-gate-up'], ['expert-activation'],
-    { useful: '6 * B * Q * K * J', computeClass: vector });
+    { useful: '6 * B * Q * ' + slots + ' * J', computeClass: vector });
   graph.tensor('expert-down-weight', [['expert', 'expert', 'E'], ['out', 'hidden', 'H'], ['in', 'hidden', 'J']], { category: 'weight' });
   graph.tensor('expert-output', [...selectedShape, ['h', 'hidden', 'H']]);
-  graph.node('expert-down', 'Routed SwiGLU down projection', ['expert-activation', 'expert-down-weight'], ['expert-output'],
-    { useful: '2 * B * Q * K * H * J' }, { accessBytes: { 'expert-down-weight': '2 * min(E, B * Q * K) * H * J' } });
+  graph.node('expert-down', 'Routed SwiGLU down projection', ['expert-activation', 'expert-down-weight', ...ownerIds], ['expert-output'],
+    { useful: '2 * B * Q * ' + slots + ' * H * J' }, { accessBytes: { 'expert-down-weight': '2 * min(E, B * Q * ' + slots + ') * H * J' } });
   graph.tensor('routed-output', hidden);
-  graph.node('combine', 'Weighted routed expert sum', ['expert-output', 'route-weights', 'topk-indices'], ['routed-output'],
-    { useful: '2 * B * Q * K * H', computeClass: vector });
+  graph.node('combine', 'Weighted routed expert sum', ['expert-output', weights, ids], ['routed-output'],
+    { useful: '2 * B * Q * ' + slots + ' * H', computeClass: vector });
 
   addSwiGlu(graph, 'S', 'shared', 'ffn-input', 'shared-output');
   matrixWeight(graph, 'shared-mix-weight', '1');
@@ -75,14 +86,18 @@ const repeat = (count: string): GraphTemplate['nodes'][number]['repeat'] => ({
 const integer = (key: string, value: number, min = 1): AssetDocument['parameters'][number] =>
   ({ key, name: key, type: 'integer', unit: 'count', min, default: { kind: 'integer', value } });
 
-export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2 = 1): AssetDocument[] {
+export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2 | 3 = 1): AssetDocument[] {
   const profile = loadQwenHybrid(release);
+  if (revision === 3 && !profile.moe) throw Error('Owner-local expert slots require a MoE decoder');
   const parameters = [
     integer('B', 1), integer('Q', 1), integer('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => integer(key, value)),
   ];
   const dimensionParameters = [...parameters, integer('LinearCount', 3), integer('Periods', profile.periods)];
-  const equations = new Equations('builtin:formula:qwen-hybrid', dimensionParameters, hybridSources);
+  // Global equations still evaluate exactly K >= 1. An EP owner can receive zero of those routes.
+  const equations = new Equations('builtin:formula:qwen-hybrid',
+    revision === 3 ? [...dimensionParameters, integer('RouteSlots', 0, 0)] : dimensionParameters, hybridSources,
+    revision === 3 ? new Map([['RouteSlots', 'K']]) : undefined);
   const variant = profile.moe ? 'moe' : 'dense', modulePrefix = 'builtin:module:qwen-hybrid-' + variant + '-';
   const base = {
     documentType: 'asset', schemaVersion: 1, revision, tags: ['qwen', 'hybrid', 'text', 'bf16', variant],
@@ -97,7 +112,7 @@ export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2
     normWeight(graph, 'input-norm-weight', 'H');
     graph.tensor('normed', hidden);
     graph.node('input-norm', 'Input RMSNorm', ['x', 'input-norm-weight'], ['normed'], { useful: '5 * B * Q * H', computeClass: vector });
-    if (linear) addDeltaAttention(graph, revision === 2);
+    if (linear) addDeltaAttention(graph, revision >= 2);
     else addGatedAttention(graph);
     graph.tensor('attention-residual-output', hidden);
     graph.node('attention-residual', 'Attention residual add', ['x', 'attention-output'], ['attention-residual-output'],
@@ -106,7 +121,7 @@ export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2
     graph.tensor('ffn-input', hidden);
     graph.node('post-norm', 'Post-attention RMSNorm', ['attention-residual-output', 'post-norm-weight'], ['ffn-input'],
       { useful: '5 * B * Q * H', computeClass: vector });
-    if (profile.moe) addMoe(graph, revision === 2);
+    if (profile.moe) addMoe(graph, revision);
     else addSwiGlu(graph, 'I', 'ffn', 'ffn-input', 'ffn-output');
     graph.tensor('y', hidden);
     graph.node('ffn-residual', 'FFN residual add', ['attention-residual-output', 'ffn-output'], ['y'],

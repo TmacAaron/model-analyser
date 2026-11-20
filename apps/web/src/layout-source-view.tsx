@@ -35,7 +35,7 @@ export function LayoutSourceView({anchor,selector}:{anchor:LayoutSourceAnchor;se
 
 const layouts={replicated:'复制',partial:'待归约',sharded:'分片',manual:'手工分配'};
 const scopeNames={global:'全局元素',logical:'局部有效元素',allocated:'局部分配元素'};
-const methodNames={whole:'完整维度',manual:'手工指定',explicit:'显式切片',even:'均匀分片',padded:'填充分片'};
+const methodNames={whole:'完整维度',manual:'手工指定',explicit:'显式切片',even:'均匀分片',padded:'填充分片',balanced:'余数均摊并填充'};
 const ruleStates={selected:'生效',equivalent:'同级等价',overridden:'被覆盖'};
 const originLabels={explicit_storage:'显式存储分布',inferred_from_tensor:'由张量分布推导',verified_backing:'显式底层分配核对'};
 const quantizationStage={effective:'参与当前分配',overridden:'随后被字节数覆盖',elided:'随后取消物化'};
@@ -116,7 +116,8 @@ export function PartitionOperationProof({operation}:{operation:Extract<LayoutSou
  if(operation.kind==='explicit_coverage')return <p>{operation.rectangles} 个互斥分片坐标覆盖 {operation.covered}/{operation.globalElements} 个全局元素</p>;
  return <><h5>轴 {operation.axisId} · {methodNames[operation.method]}</h5>
   {operation.mesh&&<p>全局维度 {operation.extent} · mesh {operation.mesh.axisId} 坐标 {operation.mesh.rank} · 轴大小 {operation.mesh.width}</p>}
-  {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>每卡分配 ceil({operation.extent} ÷ {operation.mesh.width}) = {operation.allocated}</p>}
+  {(operation.method==='even'||operation.method==='padded'||operation.method==='balanced')&&operation.mesh&&<p>每卡分配 ceil({operation.extent} ÷ {operation.mesh.width}) = {operation.allocated}</p>}
   {(operation.method==='even'||operation.method==='padded')&&operation.mesh&&<p>起点 min({operation.extent}, {operation.mesh.rank} × {operation.allocated}) = {operation.start} · 终点 min({operation.extent}, {operation.start} + {operation.allocated}) = {operation.end}</p>}
+  {operation.method==='balanced'&&operation.mesh&&operation.extent!==undefined&&<p>每卡至少 {Math.floor(operation.extent/operation.mesh.width)} 个有效位置，前 {operation.extent%operation.mesh.width} 张卡各增加 1 个。</p>}
   <p>{operation.start===undefined?'手工尺寸':`[${operation.start}, ${operation.end})`} · 有效 {operation.logical} · 分配 {operation.allocated}</p></>;
 }

@@ -2,7 +2,7 @@ import type {AssetRef,DeviceId,DeviceTopology,NodeId,ParallelResolution,Quantity
 import type {QuantizationObserver,StorageOverrideObservation} from './quantization-observation.js';
 
 export type PartitionOperation=
- |{kind:'axis';axisId:string;method:'whole'|'manual'|'explicit'|'even'|'padded';logical:number;allocated:number;extent?:number;start?:number;end?:number;mesh?:{axisId:string;width:number;rank:number}}
+ |{kind:'axis';axisId:string;method:'whole'|'manual'|'explicit'|'even'|'padded'|'balanced';logical:number;allocated:number;extent?:number;start?:number;end?:number;mesh?:{axisId:string;width:number;rank:number}}
  |{kind:'elements';scope:'global'|'logical'|'allocated';dimensions:number[];value:number;emptyAxis?:number;products?:number[]}
  |{kind:'explicit_coverage';rectangles:number;covered:number;globalElements:number};
 type PartitionRecorder=(operation:PartitionOperation,deviceId?:DeviceId)=>void;

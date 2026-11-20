@@ -80,8 +80,8 @@ it('grows only GQA storage across Decode calls while replacing the two fixed Del
   }
 }, 45_000);
 
-function hybridCase(release: 'qwen35' | 'qwen38') {
-  const project = makeModelProject(makeQwenHybridParallelAssets(release), {
+function hybridCase(release: 'qwen35' | 'qwen38', revision: 2 | 3 = 2) {
+  const project = makeModelProject(makeQwenHybridParallelAssets(release, revision), {
     kind: 'prefill', batchSize: 2, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
   }, release);
   const scenario = project.scenarios[0]!;
@@ -89,8 +89,8 @@ function hybridCase(release: 'qwen35' | 'qwen38') {
   return { scenario, assets: project.assetSnapshots };
 }
 
-async function previewHybrid(release: 'qwen35' | 'qwen38', degree: number, presetId: string) {
-  const { scenario, assets } = hybridCase(release);
+async function previewHybrid(release: 'qwen35' | 'qwen38', degree: number, presetId: string, revision: 2 | 3 = 2) {
+  const { scenario, assets } = hybridCase(release, revision);
   const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId,
     network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
   if (attempt.status !== 'available') throw Error(attempt.message);
@@ -146,6 +146,58 @@ it('shards Qwen3.8 KV and all DeltaNet state channels on the same four attention
   const unsupported = await previewParallelPreset({ ...bindDegreePool(baseline.scenario, 8), assets: baseline.assets,
     presetId: 'tp-hybrid-attention', network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
   expect(unsupported).toMatchObject({ status: 'unavailable' });
+}, 120_000);
+
+it.each([8, 16])('retains ten logical routes with independently sharded expert weights at EP %i', async degree => {
+  const fixture = cases[0], expected = ledger(fixture, 1);
+  const preview = await previewHybrid('qwen35', degree, 'ep-routed', 3);
+  expect(preview.communicationCount).toBe(4);
+  expect(preview.communications?.every(row => row.placement?.beforeNodeIds[0]?.endsWith('/shared-add'))).toBe(true);
+  const expertWeightBytes = 2 * 4 * 3 * fixture.hidden * fixture.ffn * fixture.experts;
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(degree).fill([
+    expected.weightBytes - expertWeightBytes + expertWeightBytes / degree, 2 * expected.recurrentBytes + 6 * expected.kvPerToken,
+  ]));
+  const analyzed = await analyzeScenario(preview.scenario, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 4)));
+  expect(amount(analyzed.result.total.seconds)).toBeGreaterThan(0);
+  expect(validateResult(analyzed.result)).toEqual([]);
+  const { localCosts, tensorLayouts } = analyzed.result.distributed!.layout;
+  const layer = 'decoder[0]/full/';
+  const local = localCosts.nodes.find(node => node.nodeId === layer + 'expert-gate-up')?.placement;
+  if (local?.kind !== 'placed') throw Error('Missing EP local cost');
+  const routes = degree === 8 ? [2,2,1,1,1,1,1,1] : [...Array(10).fill(1), ...Array(6).fill(0)];
+  const slots = Math.ceil(10 / degree), perRoute = 4 * 2 * fixture.hidden * fixture.ffn;
+  const outcomes = local.perDevice.map(row => {
+    if (row.outcome.status !== 'available') throw Error('Missing EP rank cost');
+    return row.outcome.cost;
+  });
+  expect(outcomes.map(cost => amount(cost.compute[0]?.usefulOperations))).toEqual(routes.map(count => count * perRoute));
+  expect(outcomes.map(cost => amount(cost.compute[0]?.executedOperations))).toEqual(Array(degree).fill(slots * perRoute));
+  const reservedInputs = 2 * slots * (2 * fixture.hidden + 8);
+  expect(outcomes.map(cost => amount(cost.logicalReadBytes))).toEqual(routes.map(count => reservedInputs + count * perRoute));
+  const ids = tensorLayouts.find(row => row.nodeId === layer + 'expert-gate-up' && row.tensorId.endsWith('owner-route-ids'))?.partition;
+  expect(ids?.placements.map(rank => [rank.logicalElements, rank.allocatedElements])).toEqual(routes.map(count => [2 * count, 2 * slots]));
+  const weights = tensorLayouts.find(row => row.nodeId === layer + 'expert-gate-up' && row.tensorId.endsWith('expert-gate-up-weight'))?.partition;
+  expect(weights?.placements.at(-1)?.slices.find(slice => slice.axisId === 'expert')).toMatchObject({
+    start: fixture.experts - fixture.experts / degree, end: fixture.experts,
+  });
+  if (degree === 8) {
+    const budget = await estimateKvCapacity(preview.scenario, preview.assets);
+    expect(budget).toMatchObject({ status: 'available', report: {
+      averageBytesPerToken: 8 * expected.kvPerToken, replicatedBytesPerToken: expected.kvPerToken,
+    } });
+  }
+}, 120_000);
+
+it('uses two cards when Attention TP and MoE EP share the same two slots', async () => {
+  const { scenario, assets } = hybridCase('qwen35', 3);
+  const presets = assets[0]?.parallelPresets ?? [];
+  expect(matchingParallelPresets({ ...serialDegrees, moeEp: 8 }, presets, scenario).map(row => row.slots)).toEqual([8]);
+  expect(matchingParallelPresets({ ...serialDegrees, moeEp: 2, attentionTp: 2 }, presets, scenario).map(row => row.slots)).toEqual([2]);
+  const preview = await previewHybrid('qwen35', 2, 'tp-hybrid-attention-ep-routed', 3);
+  expect(preview.deviceIds).toHaveLength(2);
+  expect(preview.communicationCount).toBe(8);
+  expect(preview.communications?.filter(row => row.placement?.beforeNodeIds[0]?.endsWith('/attention-residual'))).toHaveLength(4);
 }, 120_000);
 
 it('executes Qwen3.5 router selections on every expert TP rank but shards each expert intermediate', async () => {

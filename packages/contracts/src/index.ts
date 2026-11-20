@@ -114,7 +114,7 @@ export const TensorDistribution = z.discriminatedUnion('kind',[
   z.strictObject({kind:z.literal('replicated'),groupId:Id}),
   z.strictObject({kind:z.literal('partial'),groupId:Id,reduceOperation:z.enum(['sum','max','min'])}),
   z.strictObject({kind:z.literal('sharded'),groupId:Id,axes:z.array(z.strictObject({tensorAxisId:Id,meshAxisId:Id})).min(1),
-    policy:z.discriminatedUnion('kind',[z.strictObject({kind:z.literal('even')}),z.strictObject({kind:z.literal('padded')}),
+    policy:z.discriminatedUnion('kind',[z.strictObject({kind:z.literal('even')}),z.strictObject({kind:z.literal('padded')}),z.strictObject({kind:z.literal('balanced')}),
       z.strictObject({kind:z.literal('explicit'),slices:z.array(z.strictObject({deviceId:DeviceId,axisId:Id,start:Natural,end:Natural}))})])}),
   z.strictObject({kind:z.literal('manual'),groupId:Id,members:z.array(z.strictObject({deviceId:DeviceId,localShape:Shape,copies:PositiveInt})),description:Id}),
 ]);
@@ -164,7 +164,7 @@ export const QuantizationApplication = z.strictObject({storageId:StorageId,categ
 export const ParallelPresetRecipe = z.strictObject({deviceSlots:z.array(DeviceId).min(1).max(64),groups:z.array(z.strictObject({groupId:Id,members:z.array(DeviceId).min(1),
   mesh:z.strictObject({axes:z.array(z.strictObject({axisId:Id,size:PositiveInt})),coordinates:z.array(z.strictObject({deviceId:DeviceId,coordinates:z.array(Natural)}))}).optional()})).min(1),
   plan:ParallelPlan.pick({assignments:true,communications:true,assumptions:true})});
-const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id});
+const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id,policy:z.literal('balanced').optional()});
 const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec});
 export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan']),phases:Phases,
   tensorShards:z.array(PresetTensorShard),

@@ -25,6 +25,19 @@ describe('logical tensor to physical device placement',()=>{
     expect(split(partitionTensor(tensor(1),sharded({kind:'padded'}),topology(4),context)).placements.map(p=>[p.logicalElements,p.allocatedElements])).toEqual([[1,1],[0,1],[0,1],[0,1]]);
     expect(split(partitionTensor(tensor(0),sharded(),topology(),context)).placements.every(p=>p.allocatedElements===0)).toBe(true);
   });
+  it('spreads a balanced remainder without inflating useful work or truncating padded slots',()=>{
+    const policy=sharded({kind:'balanced'}),devices=topology(8),observed:unknown[]=[];
+    const balanced=split(partitionTensor(tensor(10),policy,devices,context,{
+      deviceId:devices.devices[6]!.deviceId,record:operation=>observed.push(operation),
+    }));
+    expect(balanced.coverage).toBe('padded');
+    expect(balanced.placements.map(p=>[p.logicalElements,p.allocatedElements,p.slices[0]?.start,p.slices[0]?.end]))
+      .toEqual([[2,2,0,2],[2,2,2,4],[1,2,4,5],[1,2,5,6],[1,2,6,7],[1,2,7,8],[1,2,8,9],[1,2,9,10]]);
+    expect(observed).toContainEqual({kind:'axis',axisId:'n',method:'balanced',extent:10,logical:1,allocated:2,start:8,end:9,
+      mesh:{axisId:'tp',width:8,rank:6}});
+    expect(split(partitionTensor(tensor(2),policy,topology(4),context)).placements.map(p=>[p.logicalElements,p.allocatedElements]))
+      .toEqual([[1,1],[1,1],[0,1],[0,1]]);
+  });
   it('retains replicas along unused mesh axes, and reuses actual devices across differently named groups',()=>{
     const t=topology(4),g=t.groups[0];if(!g)throw Error();g.mesh={axes:[{axisId:'tp',size:2},{axisId:'dp',size:2}],coordinates:t.devices.map((d,i)=>({deviceId:d.deviceId,coordinates:[Math.floor(i/2),i%2]}))};
     const r=split(partitionTensor(tensor(),sharded(),t,context));expect(r.placements.map(p=>[p.deviceId,p.slices[0]?.start,p.logicalElements])).toEqual([['gpu0',0,4],['gpu1',0,4],['gpu2',4,4],['gpu3',4,4]]);
