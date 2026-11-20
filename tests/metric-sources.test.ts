@@ -8,7 +8,8 @@ import { c01Project } from './model-fixtures.js';
 import { makeMetricSourceProject,makeMetricCommunicationProject } from '../scripts/metric-source-project.js';
 import { makeDecodeProject } from '../scripts/decode-project.js';
 import { makeLocalGemmProject } from '../scripts/local-gemm-project.js';
-import { comparisonRows,comparisonMetricEvidence,comparisonDeltaEvidence } from '../apps/web/src/comparison-metrics.js';
+import { makeNativeCollectiveProject } from '../scripts/native-collective-project.js';
+import { comparisonRows,comparisonMetricEvidence,comparisonDeltaEvidence,comparisonCommunicationSource } from '../apps/web/src/comparison-metrics.js';
 import { modelComputeFrame } from '../apps/web/src/compute-source.js';
 import { ModelComputeSummary } from '../apps/web/src/model-compute-summary.js';
 import { ComparisonMetricSource } from '../apps/web/src/comparison-source-view.js';
@@ -58,7 +59,22 @@ describe('exact comparison and model compute sources',()=>{
   it('sums both real same-group communication events and retains an unavailable event without zero-filling',async()=>{
     const r=await comparison(makeMetricCommunicationProject(c01Project())),a=result(r),proof=comparisonMetricEvidence(r,'send:tp',0);
     expect(proof.kind).toBe('sum');if(proof.kind!=='sum')throw Error();expect(proof.parts).toHaveLength(2);expect(proof.parts.map(p=>p.metricId)).toEqual(['group-send:0','group-send:1']);expect(proof.sum).toBe(128);expect(proof.parts.map(p=>number(p.metric))).toEqual([64,64]);
+    expect(proof.parts.map(p=>comparisonCommunicationSource(a,p.eventIndex)?.targetId)).toEqual(['communication:0','communication:1']);
     const second=a.total.communications[1];if(!second)throw Error();second.groupSendBytes={status:'unavailable',diagnosticIds:[]};const partial=comparisonMetricEvidence(r,'send:tp',0);if(partial.kind!=='sum')throw Error();expect(partial.complete).toBe(false);expect(partial.sum).toBeUndefined();expect(partial.parts).toHaveLength(2);expect(comparisonRows(r).find(row=>row.key==='send:tp')?.values[0]).toBeUndefined();
+    expect(comparisonCommunicationSource(a,1)).toBeUndefined();
+  });
+  it('resolves repeated communication events by the actual Decode call',async()=>{
+    const p=makeNativeCollectiveProject(c01Project()),scenario=p.scenarios[0]!;
+    if(scenario.workload.kind!=='decode')throw Error('Expected Decode workload');
+    scenario.workload.steps=3;
+    const a=result(await comparison(duplicate(p)));
+    expect(a.total.communications).toHaveLength(3);
+    for(const [index,step] of a.decode!.steps.entries()){
+      const event=step.result.distributed?.layout.communications[0];
+      if(!event)throw Error('Expected actual communication');
+      expect(comparisonCommunicationSource(a,index)).toMatchObject({targetId:'communication:'+event.index,metricId:'group-send:0',step:step.index});
+    }
+    expect(comparisonCommunicationSource(a,3)).toBeUndefined();
   });
   it('uses fixed hardware revision/source for capacity and explicitly rejects missing or mismatched proof',async()=>{
     const r=await comparison(makeMetricSourceProject(c01Project())),proof=comparisonMetricEvidence(r,'capacity:gpu0',1);if(proof.kind!=='hardware')throw Error();expect(proof.recordedCapacity).toBe(128);expect(proof.matches).toBe(true);expect(proof.hardwareRef.assetId).toBe('example:hardware:metric-source128');

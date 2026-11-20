@@ -1,6 +1,7 @@
 import type { AnalysisResult,AssetDocument,AssetRef,MetricValue,ScenarioComparisonResult } from '@model-analyser/contracts';
 import { stableStringify } from '@model-analyser/core';
 import { computeClassLabel,modelComputeFrame } from './compute-source.js';
+import type { SourceSelection } from './cost-source-view.js';
 export type ComparisonRow={key:string;label:string;unit:string;values:(number|undefined)[]};
 const value=(m:MetricValue|undefined)=>m?.status==='available'?m.quantity.value:undefined;
 export function comparisonRows(report:ScenarioComparisonResult):ComparisonRow[]{
@@ -25,9 +26,10 @@ export function comparisonRows(report:ScenarioComparisonResult):ComparisonRow[]{
 }
 
 export type ComparisonMetricPart={targetId:string;metricId:string;label:string;metric:MetricValue};
+type CommunicationPart=ComparisonMetricPart&{eventIndex:number};
 export type ComparisonMetricEvidence=
   |{kind:'metric';parts:ComparisonMetricPart[]}
-  |{kind:'sum';parts:ComparisonMetricPart[];complete:boolean;sum:number|undefined}
+  |{kind:'sum';parts:CommunicationPart[];complete:boolean;sum:number|undefined}
   |{kind:'hardware';deviceId:string;hardwareRef:AssetRef;asset:AssetDocument|undefined;recordedCapacity:number|undefined;matches:boolean}
   |{kind:'missing';problem:string};
 
@@ -53,7 +55,7 @@ export function comparisonMetricEvidence(report:ScenarioComparisonResult,rowKey:
     return {kind:'hardware',deviceId,hardwareRef:device.hardware,asset,recordedCapacity:memory.capacityBytes,matches:memory.capacityBytes!==undefined&&asset?.definition.kind==='hardware'&&asset.definition.hardware.capacityBytes===memory.capacityBytes};
   }
   if(rowKey.startsWith('send:')){
-    const groupId=rowKey.slice(5),parts=result.total.communications.flatMap((c,index)=>c.groupId===groupId?[{targetId:'model',metricId:'group-send:'+index,label:'事件 #'+(index+1)+' · '+c.groupId+' · '+c.operation,metric:c.groupSendBytes}]:[]);
+    const groupId=rowKey.slice(5),parts=result.total.communications.flatMap((c,index)=>c.groupId===groupId?[{targetId:'model',metricId:'group-send:'+index,label:'事件 #'+(index+1)+' · '+c.groupId+' · '+c.operation,metric:c.groupSendBytes,eventIndex:index}]:[]);
     if(!parts.length)return missing();
     const known=parts.every(p=>p.metric.status==='available'),sum=known?parts.reduce((n,p)=>n+(p.metric.status==='available'?p.metric.quantity.value:0),0):undefined;
     return {kind:'sum',parts,complete:known&&sum!==undefined&&Number.isFinite(sum),sum:sum!==undefined&&Number.isFinite(sum)?sum:undefined};
@@ -61,6 +63,29 @@ export function comparisonMetricEvidence(report:ScenarioComparisonResult,rowKey:
   const seconds=rowKey.startsWith('module-seconds:'),hbm=rowKey.startsWith('module-hbm:');
   if(seconds||hbm){const id=rowKey.slice(seconds?15:11),module=result.modules.find(m=>m.nodeId===id);return metric('module:'+id,seconds?'seconds':'hbm','模块 '+id,module?(seconds?module.cost.seconds:module.cost.hbmBytes):undefined);}
   return missing();
+}
+
+export function comparisonCommunicationSource(result:AnalysisResult,eventIndex:number):SourceSelection|undefined{
+  const expected=result.total.communications[eventIndex];
+  if(!expected)return;
+
+  // Sequence totals concatenate each step's events in its original order.
+  let index=eventIndex,frame=result,step:number|undefined;
+  if(result.decode){
+    for(const call of result.decode.steps){
+      const count=call.result.total.communications.length;
+      if(index<count){frame=call.result;step=call.index;break;}
+      index-=count;
+    }
+    if(step===undefined)return;
+  }
+
+  // The model total follows layout order. Check the original event before using its layout identity.
+  const communications=frame.distributed?.layout.communications;
+  if(!communications||communications.length!==frame.total.communications.length)return;
+  const event=communications[index],record=event?.evaluation.cost.communications[0];
+  if(!event||!record||stableStringify(record)!==stableStringify(expected))return;
+  return {targetId:'communication:'+event.index,metricId:'group-send:0',nonce:0,...(step===undefined?{}:{step})};
 }
 
 export function comparisonDeltaEvidence(report:ScenarioComparisonResult,rowKey:string,entryIndex:number){

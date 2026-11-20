@@ -2,6 +2,7 @@ import { test,expect,type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ProjectDocument,Scenario,type ScenarioComparisonResult } from '@model-analyser/contracts';
+import { computeInputHash,verifyAggregateCostSourceReport } from '@model-analyser/core';
 import { c01Project } from '../model-fixtures.js';
 import { makeMetricSourceProject,makeMetricCommunicationProject } from '../../scripts/metric-source-project.js';
 import { makeDecodeProject } from '../../scripts/decode-project.js';
@@ -14,11 +15,43 @@ test('same-model canvas comparison opens the current value and both delta source
   const p=makeMetricSourceProject(c01Project());await open(page,p);const panel=await compare(page),id=p.scenarios[1]!.scenarioId,source=panel.locator('.comparison-metric-source');
   await panel.getByRole('button',{name:'查看指标来源 端到端理论跨度 · '+id,exact:true}).click();await expect(source.locator('.comparison-source-value')).toContainText('原始 5 second');await expect(source).toContainText('Current declared5seconds');await source.getByText('当前指标原始记录',{exact:true}).click();await expect(source.locator('.metric-source-raw pre')).toContainText('Current declared5seconds');await source.getByText('当前指标原始记录',{exact:true}).click();await source.locator('.memory-source-parameters > summary').click();await expect(source.locator('.memory-source-parameters .parameter-values')).toContainText('5 count');
   await panel.getByRole('button',{name:'查看差值来源 端到端理论跨度 · '+id,exact:true}).click();await expect(source.locator('.comparison-delta-proof')).toContainText('5 − 2 = 3 second');await expect(source.getByRole('article',{name:'基准指标依据',exact:true}).locator('.comparison-source-value')).toContainText('原始 2 second');await expect(source.getByRole('article',{name:'当前指标依据',exact:true}).locator('.comparison-source-value')).toContainText('原始 5 second');await page.screenshot({path:'test-results/canvas-comparison-delta-compact.png'});await source.getByText('展开基准公式、参数与假设',{exact:true}).click();await source.getByText('展开当前公式、参数与假设',{exact:true}).click();await expect(source.getByRole('article',{name:'基准指标依据',exact:true})).toContainText('Baseline declared2seconds');await expect(source.getByRole('article',{name:'当前指标依据',exact:true})).toContainText('Current declared5seconds');await page.screenshot({path:'test-results/canvas-comparison-delta-source.png'});
+  await panel.getByRole('button',{name:'查看指标来源 gpu0 生命周期峰值 · '+id,exact:true}).click();
+  await source.getByRole('button',{name:'打开当前显存峰值来源',exact:true}).click();
+  await source.getByRole('button',{name:'查看gpu0 峰值位置依据',exact:true}).click();
+  await expect(source.locator('.scalar-source-panel')).toContainText('gpu0 峰值位置');
   await panel.getByRole('button',{name:'查看指标来源 gpu0 硬件容量 · '+id,exact:true}).click();await expect(source).toContainText('example:hardware:metric-source128@r1');await expect(source).toContainText('固定声明 128 byte');await expect(source).toContainText('不是公式求值指标');
   await page.getByRole('button',{name:'显示单位设置',exact:true}).click();const dialog=page.getByRole('dialog',{name:'显示单位设置',exact:true});await dialog.getByLabel('时间显示单位',{exact:true}).selectOption('ms');await dialog.getByRole('button',{name:'关闭显示单位设置',exact:true}).click();await panel.getByRole('button',{name:'查看差值来源 端到端理论跨度 · '+id,exact:true}).click();await expect(source).toContainText('Δ 3,000 ms');await expect(source.locator('.comparison-delta-proof')).toContainText('3 second');
   const csv=await download(page,'导出方案结果 CSV','test-results/metric-source-comparison.csv');expect(csv).toContain('"5","3"');expect(csv).toContain('"second"');const before=JSON.parse(await download(page,'导出方案比较 JSON','test-results/metric-source-comparison.json')) as ScenarioComparisonResult;
   const formal=await page.request.get('/api/v1/project?id='+p.projectId);expect(ProjectDocument.parse((await formal.json()).data).scenarios).toEqual(p.scenarios);expect(ProjectDocument.parse((await formal.json()).data).projectRevision).toBe(1);
   await page.reload();await expect(page.getByLabel('当前模型',{exact:true})).toHaveValue(p.scenarios[0]!.model.assetId);await compare(page);await expect(source).toHaveCount(0);const after=JSON.parse(await download(page,'导出方案比较 JSON','test-results/metric-source-reopened.json')) as ScenarioComparisonResult;expect(after.entries.map(e=>e.analysis.status==='available'?e.analysis.result.inputHash:null)).toEqual(before.entries.map(e=>e.analysis.status==='available'?e.analysis.result.inputHash:null));
+});
+test('module time delta traces each fixed configuration through its own aggregate to the actual override',async({page})=>{
+  const p=makeMetricSourceProject(c01Project());
+  await open(page,p);
+  const panel=await compare(page),source=panel.getByRole('region',{name:'比较指标来源'});
+  await panel.getByRole('button',{name:'查看差值来源 模块 module 跨度 · '+p.scenarios[1]!.scenarioId,exact:true}).click();
+  const baseline=source.getByRole('article',{name:'基准指标依据'}),current=source.getByRole('article',{name:'当前指标依据'});
+  await expect(source.locator('.comparison-delta-proof')).toContainText('5 − 2 = 3 second');
+  for(const [side,label,value,index] of [[baseline,'基准',2,0],[current,'当前',5,1]] as const){
+    await side.getByRole('button',{name:'打开'+label+'成本运算来源',exact:true}).click();
+    await expect(side.getByLabel('成本来源范围',{exact:true})).toHaveValue('module:module');
+    await side.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
+    const aggregate=side.getByRole('region',{name:'聚合运算来源'});
+    await expect(aggregate).toContainText(`0 + ${value} = ${value} second`);
+    const pending=page.waitForEvent('download');
+    await aggregate.getByRole('button',{name:'导出此页聚合来源',exact:true}).click();
+    const file=await (await pending).path();
+    if(!file)throw Error('Missing comparison aggregate export');
+    const report=await verifyAggregateCostSourceReport(JSON.parse(readFileSync(file,'utf8')));
+    expect(report.request.inputHash).toBe(await computeInputHash(p.scenarios[index]!,p.assetSnapshots));
+    expect(report.metric.quantity).toEqual({value,unit:'second'});
+  }
+  await current.getByRole('button',{name:'查看此项来源',exact:true}).click();
+  await expect(current.getByLabel('成本来源范围',{exact:true})).toHaveValue('node:module/op');
+  await current.getByRole('button',{name:'复核此叶指标的精确表达式',exact:true}).click();
+  await expect(current.getByRole('region',{name:'实际耗时覆盖'})).toContainText('Current declared5seconds');
+  await expect(baseline.getByRole('region',{name:'聚合运算来源'})).toContainText('0 + 2 = 2 second');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
 });
 test('mixed-class model overview opens vector and matrix values separately instead of linking the class count to the first metric',async({page})=>{
   await open(page,makeMetricSourceProject(c01Project(),true));await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();const panel=page.locator('.analysis-panel'),summary=panel.locator('.model-compute-summary'),source=panel.locator('.cost-source-inspector');await expect(summary).toContainText('2 个计算分类');await expect(summary.getByRole('button',{name:'查看有效工作量来源',exact:true})).toHaveCount(0);
@@ -27,9 +60,31 @@ test('mixed-class model overview opens vector and matrix values separately inste
 });
 test('same-group communications expose both actual event components and allow selecting the second source without changing the sum',async({page})=>{
   const p=makeMetricCommunicationProject(c01Project());await open(page,p);const panel=await compare(page),source=panel.locator('.comparison-metric-source');await panel.getByRole('button',{name:'查看指标来源 tp 通信 group send（多事件累计） · '+p.scenarios[0]!.scenarioId,exact:true}).click();await expect(source.locator('.comparison-source-value')).toContainText('原始 128 byte');await expect(source.locator('ol li')).toHaveCount(2);await expect(source.locator('ol li').nth(0)).toContainText('64 B');await expect(source.locator('ol li').nth(1)).toContainText('64 B');await source.locator('ol li').nth(1).getByRole('button').click();await expect(source).toContainText('model / group-send:1');await expect(source.locator('.memory-allocation-metric')).toContainText('原始 64 byte');await expect(source).toContainText('原始合计：128 byte');await page.screenshot({path:'test-results/canvas-communication-sum-source.png'});
+  await source.getByRole('button',{name:'打开当前通信事件来源',exact:true}).click();
+  await expect(source.getByLabel('成本来源范围',{exact:true})).toHaveValue('communication:1');
+  await source.getByRole('button',{name:'复核此通信的实际运算',exact:true}).click();
+  await expect(source.getByRole('region',{name:'通信运算来源'})).toContainText('配置通信 #1');
+  await expect(source.getByRole('region',{name:'通信运算来源'})).toContainText('已复核原指标 64 byte');
+  await source.getByRole('button',{name:/^事件 #1 · tp/}).click();
+  await expect(source.getByRole('region',{name:'通信运算来源'})).toHaveCount(0);
+  await source.getByRole('button',{name:'打开当前通信事件来源',exact:true}).click();
+  await expect(source.getByLabel('成本来源范围',{exact:true})).toHaveValue('communication:0');
 });
 test('whole decode sequence comparison retains12 operations and explains per-call parameter evidence without silently selecting step3',async({page})=>{
   const p=makeDecodeProject(c01Project()),s=p.scenarios[0]!;p.scenarios.push(Scenario.parse({...s,scenarioId:s.scenarioId+':copy',name:'Decode copy'}));await open(page,p);const panel=await compare(page),row=panel.locator('.comparison-results > .analysis-table tbody tr').filter({hasText:'模型有效 float matrix'});await expect(row).toHaveCount(1);await row.locator('td').nth(1).getByRole('button',{name:/^查看指标来源/}).click();const source=panel.locator('.comparison-metric-source');await expect(source.locator('.comparison-source-value')).toContainText('原始 12 operation');await expect(source).toContainText('整个Decode序列汇总');await source.locator('.memory-source-parameters > summary').click();await expect(source.locator('.memory-source-parameters')).toContainText('序列汇总涉及不同实际调用');await expect(source).not.toContainText('此旧结果没有实际参数记录');
+  await panel.getByRole('button',{name:'查看指标来源 模型 HBM 流量（缺项不补零） · '+s.scenarioId,exact:true}).click();
+  await source.getByRole('button',{name:'打开当前成本运算来源',exact:true}).click();
+  await expect(source.getByLabel('来源步骤',{exact:true})).toHaveValue('aggregate');
+  const aggregate=source.getByRole('region',{name:'聚合运算来源'});
+  await aggregate.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
+  await expect(aggregate).toContainText('已复核原指标 24 byte');
+  const third=aggregate.locator('article').filter({hasText:'步骤 3'});
+  await expect(third).toContainText('14 + 10 = 24 byte');
+  await third.getByRole('button',{name:'查看此项来源',exact:true}).click();
+  await expect(source.getByLabel('来源步骤',{exact:true})).toHaveValue('2');
+  await aggregate.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
+  await expect(aggregate).toContainText('已复核原指标 10 byte');
+  await expect(source.locator('.comparison-source-value')).toContainText('原始 24 byte');
 });
 test('a fresh comparison run invalidates an already opened exact source until a value in the new report is clicked',async({page})=>{
   const p=makeMetricSourceProject(c01Project());await open(page,p);const panel=await compare(page),button=panel.getByRole('button',{name:'查看差值来源 端到端理论跨度 · '+p.scenarios[1]!.scenarioId,exact:true}),source=panel.locator('.comparison-metric-source');await button.click();await expect(source).toHaveCount(1);await panel.getByRole('button',{name:'计算方案比较',exact:true}).click();await expect(panel.locator('.comparison-results')).toContainText('方案比较完成');await expect(source).toHaveCount(0);await button.click();await expect(source.locator('.comparison-delta-proof')).toContainText('5 − 2 = 3 second');await source.getByRole('button',{name:'关闭比较指标来源',exact:true}).click();await expect(source).toHaveCount(0);
