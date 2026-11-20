@@ -49,8 +49,17 @@ export class GraphAuthor {
     this.graph.nodes.push({nodeId:NodeId.parse(id),name,phases:['prefill','decode'],portBindings:ports,stateBindings:[],body:{kind:'opaque',inputs:this.ports(inputs),outputs:this.ports(outputs),cost}});this.connect(id,inputs,outputs);
   }
   module(id:string,name:string,asset:AssetDocument,input:string,output:string,parameters:ParameterDef[],repeat?:GraphTemplate['nodes'][number]['repeat']){
-    this.graph.nodes.push({nodeId:NodeId.parse(id),name,phases:['prefill','decode'],portBindings:[{portId:'x',tensorId:TensorId.parse(input)},{portId:'y',tensorId:TensorId.parse(output)}],stateBindings:[],...(repeat?{repeat}:{}),body:{kind:'module',asset:ref(asset),bindings:parameters.map(p=>({parameterKey:p.key,value:symbol(p.key)}))}});
-    const from=this.producers.get(input);if(!from)throw Error('Missing module input');this.graph.edges.push({edgeId:id+'-in',from,to:{kind:'node',nodeId:NodeId.parse(id),portId:'x'},tensorId:TensorId.parse(input)});this.producers.set(output,{kind:'node',nodeId:NodeId.parse(id),portId:'y'});
+    this.modulePorts(id,name,asset,{x:input},{y:output},parameters,repeat);
+  }
+  modulePorts(id:string,name:string,asset:AssetDocument,inputs:Record<string,string>,outputs:Record<string,string>,parameters:ParameterDef[],repeat?:GraphTemplate['nodes'][number]['repeat']){
+    const nodeId=NodeId.parse(id),inputPorts=Object.entries(inputs),outputPorts=Object.entries(outputs);
+    const portBindings=[...inputPorts,...outputPorts].map(([portId,tensorId])=>({portId,tensorId:TensorId.parse(tensorId)}));
+    this.graph.nodes.push({nodeId,name,phases:['prefill','decode'],portBindings,stateBindings:[],...(repeat?{repeat}:{}),body:{kind:'module',asset:ref(asset),bindings:parameters.map(p=>({parameterKey:p.key,value:symbol(p.key)}))}});
+    for(const [portId,input] of inputPorts){
+      const from=this.producers.get(input);if(!from)throw Error('Missing module input '+input);
+      this.graph.edges.push({edgeId:id+'-in'+(portId==='x'?'':'-'+portId),from,to:{kind:'node',nodeId,portId},tensorId:TensorId.parse(input)});
+    }
+    for(const [portId,output] of outputPorts)this.producers.set(output,{kind:'node',nodeId,portId});
   }
   private connect(id:string,inputs:string[],outputs:string[]){for(const tensor of inputs){const from=this.producers.get(tensor);if(from)this.graph.edges.push({edgeId:id+'-in-'+tensor,from,to:{kind:'node',nodeId:NodeId.parse(id),portId:tensor},tensorId:TensorId.parse(tensor)});}for(const tensor of outputs)this.producers.set(tensor,{kind:'node',nodeId:NodeId.parse(id),portId:tensor});}
 }

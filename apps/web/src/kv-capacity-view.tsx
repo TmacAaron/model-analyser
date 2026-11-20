@@ -27,20 +27,26 @@ function KvPhysicalDevices({report}:{report:KvCapacityReport}){
 }
 
 function KvSummary({report}:{report:KvCapacityReport}){
-  const display=useDisplayUnits(),{budget}=report;
+  const display=useDisplayUnits(),{budget,rowProfile}=report;
   return <>
     <div className="kv-budget-cards">
       <div className="metric-card"><span>KV 显存预算</span>
-        <strong>{budget.status==='available'?integer.format(budget.tokensPerRequest)+' token / 请求':budget.status==='no_room'?'0 token / 请求':'无法计算'}</strong>
+        <strong>{budget.status==='available'?integer.format(budget.tokensPerRequest)+' token / 请求':budget.status==='no_room'?'0 token / 请求':budget.status==='fixed'?'固定窗口':'无法计算'}</strong>
         {budget.status==='available'&&<small>当前 batch {report.batchSize} · 约束设备 {budget.limitingDeviceIds.join('、')}</small>}
       </div>
       <div className="metric-card"><span>当前 KV 平均占用</span>
-        <strong>{report.averageBytesPerToken===undefined?'—':bytesPerToken.format(report.averageBytesPerToken)+' B / token'}</strong>
+        <strong>{report.averageBytesPerToken===undefined?'—':
+          (Number.isInteger(report.averageBytesPerToken)?integer:bytesPerToken).format(report.averageBytesPerToken)+' B / token'}</strong>
         {report.currentKvBytes!==undefined&&<small>所有物理设备合计 {display.bytes(report.currentKvBytes)}{report.referenceTokensPerRequest!==undefined&&' · 每请求 '+integer.format(report.referenceTokensPerRequest)+' token'}</small>}
       </div>
     </div>
     {budget.status==='unavailable'&&<p className="scope-note">{budget.reason}</p>}
-    {budget.status==='no_room'&&<p className="scope-note">设备 {budget.limitingDeviceIds.join('、')} 的非 KV 峰值已经超过显存上限。</p>}
+    {budget.status==='no_room'&&<p className="scope-note">设备 {budget.limitingDeviceIds.join('、')} 的{budget.reason==='non_kv'?'非 KV 峰值':'固定缓存与非 KV 占用'}已经超过显存上限。</p>}
+    {rowProfile&&<p className="scope-note">{[
+      rowProfile.fixedWindows.length>0?'固定窗口 '+rowProfile.fixedWindows.join(' / ')+' token':'',
+      rowProfile.groupSizes.length>0?'每 '+rowProfile.groupSizes.join(' / ')+' 个 token 生成一行压缩缓存':'',
+      rowProfile.includesIndexer?'含索引缓存':'',
+    ].filter(Boolean).join(' · ')}</p>}
     {report.stateCount>0&&<>
       <p className="scope-note">
         平均占用按全批实际缓存 token 和所有物理副本计算。

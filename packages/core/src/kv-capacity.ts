@@ -1,9 +1,9 @@
 import type { AnalysisResult,AssetDocument,DecodeStateTransition,MemoryPeak,ResolvedGraph,Scenario,StorageId,StorageSpec } from '@model-analyser/contracts';
 import { analyzeScenario } from './analyze.js';
-import { calculationInput } from './input-hash.js';
+import { calculationInput,stableStringify } from './input-hash.js';
 import { instantiateModel } from './instantiate.js';
 import { applyStorageAllocationOverrides } from './storage-allocation-overrides.js';
-import { solveKvSlots,type DeviceBudget,type SlotStorage } from './kv-capacity-slots.js';
+import { slotRows,solveKvSlots,type DeviceBudget,type SlotRows,type SlotStorage } from './kv-capacity-slots.js';
 
 type DeviceLimit={deviceId:string;capacityBytes:number};
 type DeviceRow=DeviceLimit&{
@@ -25,6 +25,7 @@ export type KvCapacityReport={
   decodeStep?:number|undefined;
   currentKvBytes?:number|undefined;
   averageBytesPerToken?:number|undefined;
+  rowProfile?:{groupSizes:number[];fixedWindows:number[];includesIndexer:boolean};
   devices:DeviceRow[];
   budget:Budget;
 };
@@ -98,8 +99,17 @@ function tokensAtState(state:StateSpec,scenario:Scenario,step:NonNullable<Analys
   const raw=state.allocationBasis==='step_end'?add(past,workload.queryTokensPerRequest):
     step&&workload.kind==='decode'&&workload.approximation!=='fixed_context'?step.contextAfter:past;
   if(state.updatePolicy.kind==='append')return raw;
-  if(state.updatePolicy.kind==='windowed'&&state.updatePolicy.window.kind==='literal')return Math.min(raw,state.updatePolicy.window.quantity.value);
+  if(state.updatePolicy.kind==='windowed'&&state.updatePolicy.window.kind==='literal')return state.updatePolicy.reserveFullWindow?raw:Math.min(raw,state.updatePolicy.window.quantity.value);
   return undefined;
+}
+
+function rowsForState(state:StateSpec):SlotRows|undefined{
+  const policy=state.updatePolicy;
+  if(policy.kind==='append')return policy.tokensPerRow?{kind:'grouped',tokensPerRow:policy.tokensPerRow}:undefined;
+  if(policy.kind==='windowed'&&policy.reserveFullWindow&&policy.window.kind==='literal'){
+    return {kind:'fixed',rows:policy.window.quantity.value};
+  }
+  throw Error('窗口或覆盖式缓存需要独立的容量规则。');
 }
 
 /** Report resident cache allocations and a KV-only slot budget on the current physical layout. */
@@ -114,7 +124,9 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     const graph=expanded.resolved.graph;
     applyStorageAllocationOverrides(graph.storages,active.numericOverrides);
     const storages=new Map(graph.storages.map(row=>[row.storageId,row]));
-    const isKv=(state:StateSpec)=>state.stateKind==='kv'||state.stateKind==='latent';
+    const isKv=(state:StateSpec)=>state.stateKind==='kv'||state.stateKind==='latent'||
+      state.stateKind==='window'&&state.updatePolicy.kind==='windowed'&&state.updatePolicy.reserveFullWindow||
+      state.stateKind==='indexer'&&state.updatePolicy.kind==='append'&&state.updatePolicy.tokensPerRow!==undefined;
     const states=graph.states.filter(isKv),ids=new Set(states.flatMap(state=>state.storageIds.map(id=>backing(id,storages))));
     const devices=active.deviceTopology.devices.map(device=>{
       const asset=pack.assets.find(asset=>asset.assetId===device.hardware.assetId&&asset.revision===device.hardware.revision);
@@ -147,10 +159,27 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     });
     const batchTokens=reference===undefined?0:reference*batchSize;
     const averageBytesPerToken=currentKvBytes!==undefined&&matchesBatch&&Number.isSafeInteger(batchTokens)&&batchTokens>0?currentKvBytes/batchTokens:undefined;
-    let budget:Budget;
+    let budget:Budget,rowProfile:KvCapacityReport['rowProfile'];
     try{
       if(!states.length)throw Error('此模型在当前阶段没有声明 KV 或 MLA latent 缓存。');
-      if(states.some(state=>state.updatePolicy.kind!=='append'))throw Error('窗口或覆盖式缓存需要独立的容量规则。');
+      const rules=new Map<StorageId,SlotRows|undefined>();
+      for(const state of states){
+        const rule=rowsForState(state);
+        for(const storageId of state.storageIds){
+          const id=backing(storageId,storages);
+          if(rules.has(id)&&stableStringify(rules.get(id)??null)!==stableStringify(rule??null)){
+            throw Error('共享缓存声明了不同的分组或窗口规则。');
+          }
+          rules.set(id,rule);
+        }
+      }
+      const groupSizes=new Set<number>(),fixedWindows=new Set<number>();
+      for(const rule of rules.values()){
+        if(rule?.kind==='grouped')groupSizes.add(rule.tokensPerRow);
+        if(rule?.kind==='fixed')fixedWindows.add(rule.rows);
+      }
+      if(groupSizes.size||fixedWindows.size)rowProfile={groupSizes:[...groupSizes].sort((a,b)=>a-b),
+        fixedWindows:[...fixedWindows].sort((a,b)=>a-b),includesIndexer:states.some(state=>state.stateKind==='indexer')};
       if(graph.states.filter(state=>!isKv(state)).some(state=>state.storageIds.some(id=>ids.has(backing(id,storages)))))throw Error('KV 与其他持久状态共享存储，无法独立调整缓存长度。');
       if(!matchesBatch||reference===undefined)throw Error('缓存没有统一的每请求 token 轴和批大小。');
       const limits:DeviceBudget[]=rows.map(device=>{
@@ -161,14 +190,14 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
       const profile:SlotStorage[]=specs.map(spec=>{
         const allocation=spec.allocation;
         if(allocation.kind!=='tensor')throw Error('缓存使用固定或自定义字节公式，缺少可伸缩张量分配。');
-        const axes=allocation.shape.filter(axis=>axis.semantic==='token'),token=axes[0];
-        if(!token||axes.length!==1||extent(token)!==reference)throw Error('缓存 '+spec.storageId+' 的物理长度与逻辑 token 不是一一对应。');
+        const axes=allocation.shape.filter(axis=>axis.semantic==='token'),token=axes[0],rule=rules.get(spec.storageId);
+        if(!token||axes.length!==1||extent(token)!==slotRows(reference,rule))throw Error('缓存 '+spec.storageId+' 的物理长度与声明的 token 分配规则不符。');
         if(allocation.shape.some(axis=>axis!==token&&(!extent(axis)||!Number.isSafeInteger(extent(axis)))))throw Error('缓存含有未知或空的非 token 维度。');
         const distribution=allocations.get(spec.storageId);
         if(layout&&!distribution)throw Error('缓存缺少已解析的分片规则。');
         // The execution planner replicates the complete object onto a synthetic one-card group.
         // The slot solver can size the exact same object on that card without the synthetic group.
-        return {spec:{...spec,allocation},tokenAxis:token.axisId,...(distribution&&!layout?.singleDeviceBaseline?{distribution}:{})};
+        return {spec:{...spec,allocation},tokenAxis:token.axisId,...(rule?{rows:rule}:{}),...(distribution&&!layout?.singleDeviceBaseline?{distribution}:{})};
       });
       budget=solveKvSlots(profile,active.deviceTopology,limits,reference);
     }catch(error){
@@ -176,7 +205,7 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     }
     return {status:'available',report:{inputHash:result.inputHash,scenarioId:result.scenarioId,phase:result.phase,batchSize,
       stateCount:states.length,storageCount:ids.size,referenceTokensPerRequest:reference,decodeStep:step?.index,
-      currentKvBytes,averageBytesPerToken,devices:rows,budget}};
+      currentKvBytes,averageBytesPerToken,devices:rows,budget,...(rowProfile?{rowProfile}:{})}};
   }catch(error){
     return {status:'unavailable',message:error instanceof Error?error.message:'无法计算当前配置的 KV 容量。'};
   }

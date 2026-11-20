@@ -81,7 +81,8 @@ export const StateSpec = z.strictObject({stateId:StateId,name:Id,stateKind:z.enu
   allocationBasis:z.enum(['context_boundary','step_end']).optional(),
   storageIds:z.array(StorageId).min(1),creator:z.union([NodePort,z.strictObject({kind:z.literal('initialized')})]),readers:z.array(NodePort),writers:z.array(NodePort),
   updatePolicy:z.discriminatedUnion('kind',[
-    z.strictObject({kind:z.literal('append')}),z.strictObject({kind:z.literal('windowed'),window:ValueExpr}),
+    z.strictObject({kind:z.literal('append'),tokensPerRow:PositiveInt.min(2).optional()}),
+    z.strictObject({kind:z.literal('windowed'),window:ValueExpr,reserveFullWindow:z.literal(true).optional()}),
     z.strictObject({kind:z.literal('replace')}),z.strictObject({kind:z.literal('static')}),
   ]),
 });

@@ -137,4 +137,23 @@ describe('KV capacity',()=>{
     ],4);
     expect(result).toMatchObject({status:'available',tokensPerRequest:6,stride:2,limitingDeviceIds:['gpu0'],more:[{bytes:2},{bytes:2}]});
   });
+
+  it('uses grouped cache plateaus and preserves the entire fixed ring reservation',()=>{
+    const topology=DeviceTopology.parse({devices:[{deviceId:'gpu0',hardware:{assetId:'example:hardware',revision:1,kind:'hardware'}}],groups:[]});
+    const storage=(storageId:string,length:number)=>{
+      const spec=StorageSpec.parse({storageId,name:storageId,category:'state',sharingDomain:'request',
+        allocation:{kind:'tensor',shape:[
+          {axisId:'t',semantic:'token',size:{kind:'literal',quantity:{value:length,unit:'count'}}},
+          {axisId:'d',semantic:'hidden',size:{kind:'literal',quantity:{value:2,unit:'count'}}},
+        ],dtype:{category:'float',bits:16,format:'bf16'}}});
+      if(spec.allocation.kind!=='tensor')throw Error('Missing test tensor');
+      return {...spec,allocation:spec.allocation};
+    };
+    const ring={spec:storage('ring',2),tokenAxis:'t',rows:{kind:'fixed',rows:2}} as const;
+    const rows=[ring,{spec:storage('latent',0),tokenAxis:'t',rows:{kind:'grouped',tokensPerRow:4}} as const];
+    const device={deviceId:'gpu0',capacityBytes:26,nonKvBytes:10,currentKvBytes:8};
+    expect(solveKvSlots(rows,topology,[device],3)).toMatchObject({status:'available',tokensPerRequest:11,more:[{bytes:4}]});
+    expect(solveKvSlots(rows,topology,[{...device,capacityBytes:17}],3)).toMatchObject({status:'no_room',reason:'fixed_cache'});
+    expect(solveKvSlots([ring],topology,[device],3)).toMatchObject({status:'fixed',more:[{bytes:0}]});
+  });
 });

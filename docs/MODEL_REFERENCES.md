@@ -67,6 +67,16 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
 
+## DeepSeek-V4-Flash
+
+画布从两层滑窗加哈希路由开始，随后是一层 CSA 加哈希路由，以及 20 个 HCA → CSA 周期。主解码器共 43 层，含 21 层 CSA、20 层 HCA。CSA 使用 4 token 分组和独立索引，HCA 使用 128 token 分组，两类都保留 128 token 的局部窗口。进入 block 可查看投影、Hyper-Connections 的原始残差流，以及 Routed Experts 和 Shared Expert 的分支与汇合。
+
+每请求的 BF16 缓存字节按 `2 × [43 × 128 × 512 + 21 × floor(L / 4) × (512 + 128) + 20 × floor(L / 128) × 512]` 计算。公式分别计入固定滑窗、CSA 潜向量与索引、HCA 潜向量。池化的 FP32 值与得分缓冲另占 12,206,080 B／请求。容量固定当前推理配置的理论非 KV 峰值，并按显存上限及缓存量化计算 token 槽位。平均占用随当前长度变化，分组完成时才增加一行。
+
+此预设采用主文本解码器的大矩阵 BF16 参考口径和推理源码中的 FP32 特定权重，包含 570,412,548,444 B 张量权重。发布检查点的 FP8／FP4 权重、MTP、具体稀疏内核和多卡局部规则需要对应配置。稀疏注意力以显式分数矩形估算临时缓冲，非线性及选择开销使用分项近似。默认 80 GB 单卡会显示零槽位与单 token 缓存平均占用。
+
+`npm run reference:deepseek-v4` 校验两份原始配置摘要和内置资产。固定来源为 [模型配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/config.json)、[推理配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/config.json)、[解码器实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py)和 [Sinkhorn 内核](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/kernel.py)。
+
 ## Qwen3.5-397B-A17B 与 Qwen3.8-27B
 
 两个文本解码器都采用三个 Gated DeltaNet 层接一个 Gated GQA 层的周期。进入周期可查看 DeltaNet、GQA、各自的外部投影及 residual。397B 使用带独立门控的 Shared Expert 和 Top-10 Routed Experts，27B 使用 Dense SwiGLU。

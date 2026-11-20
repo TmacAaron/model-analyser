@@ -1,0 +1,79 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v4:00e4272385fd0baa",
+  "revision": 1,
+  "name": "3 * B * Q * N * R [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/kernel.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Main text decoder only. Large matrices are modeled at BF16 with FP32 accumulation. Reference FP32 compressor, hyper-connection, router and output projections use the generic FP32 compute ceiling. The release checkpoint uses FP8 and routed FP4; its physical weights, quantization kernels and auxiliary scales require their own configuration."
+    },
+    {
+      "kind": "note",
+      "text": "BF16 window, compressed latent and indexer caches use active batch lanes, a provisioned local ring and completed global rows. Compressor value and score buffers are FP32. The causal equations support a logical query chunk after past tokens; the release reference uses an initial prefill followed by one-token calls."
+    },
+    {
+      "kind": "note",
+      "text": "Sparse attention uses a materialized rectangular score and probability reference, with exact useful causal pair counts. Weight traffic assumes each active routed expert is read once and uses an upper bound on distinct experts. Nonlinear, selection, fake quantization and Sinkhorn use explicit operation proxies. MTP, kernel scheduling, data-dependent sparsity, YaRN table generation and distributed layout are outside this preset."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "N": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "R": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "3 * B * Q * N * R",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

@@ -38,8 +38,46 @@ const recurrence:Algorithm={
   ],
 };
 
+function deepSeekV4Algorithm(localId:string):Algorithm|undefined {
+  if(localId.endsWith('-rmsnorm')||/^(main|index)-norm$/.test(localId)){
+    if(localId==='q-head-rmsnorm')return {name:'逐头 RMS 归一化',steps:[
+      {label:'按每个查询头计算归一化系数',equation:'r = rsqrt(mean(q²) + 10⁻⁶)'},
+      {label:'缩放该查询头的全部维度',equation:'y = q · r'},
+    ]};
+    const axis=localId==='q-rmsnorm'?'查询低秩维度':/^(kv|main|index)-/.test(localId)?'潜向量维度':'隐藏维度';
+    return rmsNorm(axis,'10⁻⁶');
+  }
+  if(localId.endsWith('-rope'))return {name:'部分 RoPE',steps:[
+    {label:'在向量末尾的 R 个维度内做相邻配对',equation:'(a, b) = (x[D − R + 2j], x[D − R + 2j + 1])'},
+    {label:localId==='output-rope'?'用位置角的共轭做逆旋转':'按对应位置角旋转',
+      equation:localId==='output-rope'?'(a′, b′) = (ac + bs, bc − as)':'(a′, b′) = (ac − bs, as + bc)'},
+  ]};
+  if(localId.endsWith('-hc-sinkhorn'))return {name:'Hyper-Connections Sinkhorn',steps:[
+    {label:'按通道计算分支输入与输出的门控',equation:'pre = σ(s₀m₀ + b₀) + ε,  post = 2σ(s₁m₁ + b₁)'},
+    {label:'对残差混合矩阵按行做 softmax',equation:'A = softmax_row(s₂m₂ + b₂) + ε'},
+    {label:'先做列归一化，再交替做行、列归一化',equation:'Aᵢⱼ ← Aᵢⱼ / (Σᵢ Aᵢⱼ + ε)'},
+  ]};
+  if(localId.endsWith('-hc-merge'))return {name:'Hyper-Connections 残差混合',steps:[
+    {label:'用分支输出与原始残差流生成每条新残差流',equation:'yⱼ = postⱼ · branch + Σᵢ Aᵢⱼ · residualᵢ'},
+  ]};
+  if(localId.endsWith('-pool'))return {name:'门控分组压缩',steps:[
+    {label:'沿分组 token 轴给每个特征计算权重',equation:'αₜ,ᵈ = softmaxₜ(gₜ,ᵈ + APEₜ,ᵈ)'},
+    {label:'把分组内的值向量汇聚成一条缓存',equation:'zᵈ = Σₜ αₜ,ᵈ · vₜ,ᵈ'},
+  ]};
+  if(localId==='index-topk')return {name:'CSA 索引选择',steps:[
+    {label:'汇总各头对候选压缩行的带权得分',equation:'sⱼ = Σₕ wₕ · ReLU(qₕ · kⱼ)'},
+    {label:'在已完成且因果可见的压缩行中选择候选',equation:'indices = TopK(s, min(K, ⌊L / 4⌋))'},
+  ]};
+  return undefined;
+}
+
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
+  if(asset.revision===1&&(id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
+    const algorithm=deepSeekV4Algorithm(localId),filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':'model.py';
+    const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
+    return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
+  }
   const hybrid=asset.revision===1&&/^builtin:(module:qwen-hybrid-(moe|dense)-(delta|gqa)|model:qwen3\.(5-397b-a17b|8-27b))$/.test(id);
   const family = hybrid?'qwen-hybrid':asset.revision <= 3 && /^builtin:(module:qwen3-decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
     : asset.revision === 1 && /^builtin:(module:glm4-decoder|model:glm-4-9b)$/.test(id) ? 'glm'

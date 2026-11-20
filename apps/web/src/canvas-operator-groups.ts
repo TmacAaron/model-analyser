@@ -34,6 +34,20 @@ const qwenHybridMoe:AuthoredGroup[]=[
   {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down','shared-mix-proj','shared-gate']},
 ];
 const qwenHybridDense:AuthoredGroup={key:'ffn',name:'SwiGLU',members:['ffn-gate-up','ffn-silu','ffn-down']};
+const v4Compressor=['value-proj','score-proj','pending','pool','norm','rope','write'];
+function deepSeekV4Groups(ratio:string):AuthoredGroup[]{
+  const mode=ratio==='4'?'CSA · R4':ratio==='128'?'HCA · R128':'滑窗注意力';
+  return [
+    {key:'attention',name:mode,members:['q-head-rmsnorm','q-rope','kv-rmsnorm','kv-rope','window-fake-quant','window-write',
+      ...['main','index'].flatMap(prefix=>v4Compressor.map(operation=>prefix+'-'+operation)),
+      'index-query','index-query-rope','index-weight','index-score','index-reduce','index-topk',
+      'sparse-qk','sink-softmax','sparse-av','output-rope','group-output-proj','output-proj']},
+    ...['attn','ffn'].map(prefix=>({key:prefix+'-hc',name:'Hyper-Connections',members:['mix','sinkhorn','reduce'].map(operation=>prefix+'-hc-'+operation)})),
+    {key:'routed',name:'Routed Experts',members:['router','router-affinity','hash-experts','route-bias','route-topk','route-normalize',
+      'route-dispatch','routed-gate-proj','routed-up-proj','routed-swiglu','routed-down-proj','route-combine']},
+    {key:'shared',name:'Shared Expert',members:['shared-gate-proj','shared-up-proj','shared-swiglu','shared-down-proj']},
+  ];
+}
 
 /** These memberships come from the fixed decoder templates. Arithmetic leaves keep their IDs. */
 export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):CanvasOperatorGroup[]{
@@ -41,9 +55,11 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
   if(!container)return [];
   const id=container.asset.assetId;
   const hybrid=/^builtin:module:qwen-hybrid-(moe|dense)-(delta|gqa)$/.exec(id);
+  const deepSeekV4=/^builtin:module:deepseek-v4-decoder-(0|4|128)(-hash)?$/.exec(id);
   const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
     hybrid?[hybrid[2]==='delta'?qwenHybridDelta:qwenHybridGqa,...(hybrid[1]==='moe'?qwenHybridMoe:[qwenHybridDense])]:
+    deepSeekV4?deepSeekV4Groups(deepSeekV4[1]!):
     id==='builtin:module:deepseek-v3-absorbed-moe'?v3MoeGroups:
     /^builtin:module:deepseek-(v2-(expanded|absorbed)-(dense|moe)|v3-absorbed-dense)$/.test(id)?mlaGroups:[];
   if(!specs.length)return [];
