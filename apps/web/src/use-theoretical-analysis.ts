@@ -1,6 +1,8 @@
 import {useEffect,useRef,useState} from 'react';
-import {AnalysisAttempt,type AnalysisResult,type AssetDocument,type Scenario} from '@model-analyser/contracts';
+import type {AnalysisAttempt,AnalysisResult,AssetDocument,Scenario} from '@model-analyser/contracts';
+import {ENGINE_VERSION,hashCanonicalInput} from '@model-analyser/core';
 import {analysisExportFilename,type AnalysisExportRequest,type AnalysisExportSelection} from './analysis-export.js';
+import {readAnalysisCompletion} from './analysis-result-transport.js';
 import type {AnalysisWorkerRequest} from './analysis-worker.js';
 
 export type AnalysisExportState={owner:AnalysisResult;selection:AnalysisExportSelection}&(
@@ -22,7 +24,7 @@ function downloadBlob(blob:Blob,name:string){
 }
 
 export function useTheoreticalAnalysis(scenario:Scenario,assets:AssetDocument[],key:string){
-  const worker=useRef<Worker|null>(null),completed=useRef(false),latest=useRef(key),exportId=useRef(0),activeExport=useRef<ActiveExport|undefined>(undefined);
+  const worker=useRef<Worker|null>(null),completed=useRef(false),latest=useRef(key),analysisId=useRef(0),exportId=useRef(0),activeExport=useRef<ActiveExport|undefined>(undefined);
   latest.current=key;
   const [cached,setCached]=useState<{key:string;attempt:AnalysisAttempt}>(),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [exportState,setExportState]=useState<AnalysisExportState>();
@@ -62,6 +64,7 @@ export function useTheoreticalAnalysis(scenario:Scenario,assets:AssetDocument[],
 
   function run(){
     stop();setBusy(true);setCached(undefined);setError('');setExportState(undefined);
+    const taskId=++analysisId.current,expectedHash=hashCanonicalInput(key).catch(()=>undefined);
     let instance:Worker|undefined;
     const current=()=>instance!==undefined&&worker.current===instance&&latest.current===key;
     let awaitingAnalysis=true;
@@ -71,6 +74,27 @@ export function useTheoreticalAnalysis(scenario:Scenario,assets:AssetDocument[],
       else setError('分析失败，请检查配置或缩小展开规模');
       setBusy(false);stop();
     };
+    async function receiveAnalysis(data:unknown){
+      try{
+        const attempt=readAnalysisCompletion(data,taskId);
+        if(attempt.status==='available'){
+          const {result}=attempt,hash=await expectedHash;
+          if(!current())return;
+          if(!hash||result.inputHash!==hash||result.engineVersion!==ENGINE_VERSION||
+            result.scenarioId!==scenario.scenarioId||result.phase!==scenario.workload.kind){
+            throw Error('分析结果与当前配置、输入哈希或引擎版本不同，请重新计算');
+          }
+        }
+        setCached({key,attempt});
+        if(attempt.status==='available')completed.current=true;
+        else stop();
+      }catch(e){
+        if(!current())return;
+        setError(e instanceof Error?e.message:'分析线程返回了无效结果');
+        stop();
+      }
+      setBusy(false);
+    }
     try{
       instance=new Worker(new URL('./analysis-worker.ts',import.meta.url),{type:'module'});worker.current=instance;
       instance.onmessage=({data}:MessageEvent<unknown>)=>{
@@ -82,16 +106,11 @@ export function useTheoreticalAnalysis(scenario:Scenario,assets:AssetDocument[],
           return;
         }
         awaitingAnalysis=false;
-        const parsed=AnalysisAttempt.safeParse(data);
-        if(parsed.success)setCached({key,attempt:parsed.data});
-        else setError('分析线程返回了无效结果');
-        setBusy(false);
-        if(!parsed.success||parsed.data.status!=='available')stop();
-        else completed.current=true;
+        void receiveAnalysis(data);
       };
       instance.onerror=onError;
       instance.onmessageerror=onError;
-      instance.postMessage({kind:'analyze',scenario,assets} satisfies AnalysisWorkerRequest);
+      instance.postMessage({kind:'analyze',taskId,scenario,assets} satisfies AnalysisWorkerRequest);
     }catch(e){stop();setBusy(false);setError(e instanceof Error?e.message:'分析失败');}
   }
   function cancel(){stop();setBusy(false);setError('分析已取消');}

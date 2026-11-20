@@ -10,7 +10,7 @@ import { targetCost,targetProblem,targetId,sourceTargetId,type AnalysisFocus } f
 import { useMeasurementComparisons } from './use-measurement-comparisons.js';
 import { useDisplayUnits } from './display-units.js';
 import { peakLocation,PeakOverrideNote } from './memory-peak-view.js';
-import { useEffect,useRef,useState } from 'react';
+import { useEffect,useMemo,useRef,useState } from 'react';
 import { MeasurementRecord,NodeId,type Scenario,type AssetDocument,type AnalysisResult,type MetricValue } from '@model-analyser/contracts';
 import { calculationInput,stableStringify } from '@model-analyser/core';
 import { SerialExecutionView } from './serial-execution-view.js';
@@ -66,7 +66,10 @@ function Roofline({result,assets}:{result:AnalysisResult;assets:AssetDocument[]}
 export function AnalysisView({scenario,assets,measurements,onMeasurement,onMeasurements,autoRunKey,onResult,focus}:{scenario:Scenario;assets:AssetDocument[];measurements:MeasurementRecord[];onMeasurement:(record:MeasurementRecord)=>void;onMeasurements:(records:MeasurementRecord[])=>void;autoRunKey?:number;focus?:AnalysisFocus|undefined;onResult?:(result:AnalysisResult|null)=>void}){
   const display=useDisplayUnits(),show=display.metric;
 
-  let key:string;try{key=calculationInput(scenario,assets).canonicalInput;}catch{key=stableStringify({scenario,assets});}
+  const key=useMemo(()=>{
+    try{return calculationInput(scenario,assets).canonicalInput;}
+    catch{return stableStringify({scenario,assets});}
+  },[scenario,assets]);
   const analysis=useTheoreticalAnalysis(scenario,assets,key),{attempt,result,busy,error,previous,run,cancel,exportFile,exportState}=analysis;
   useEffect(()=>{onResult?.(result);},[result,onResult]);
   useEffect(()=>{if(autoRunKey)run();},[autoRunKey]);

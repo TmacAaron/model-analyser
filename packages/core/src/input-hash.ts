@@ -37,4 +37,11 @@ export function calculationInput(input:Scenario,library:AssetDocument[]):{scenar
   const canonicalInput=stableStringify({scenario:{...scenarioInput,numericOverrides:scenario.numericOverrides.map(({description,...o})=>{void description;return o;}),fusionGroups:scenario.fusionGroups.map(g=>({...g,extraCost:cost(g.extraCost),...(g.extraLocalCost?{extraLocalCost:{...g.extraLocalCost,rule:localCost(g.extraLocalCost.rule)}}:{}),timeStrategy:g.timeStrategy.kind==='sum_members'?g.timeStrategy:{kind:'override',timing:timing(g.timeStrategy.timing)}}))},assets:assets.map(assetInput)});
   return {scenario,assets:completeAssetSnapshots(assets,pool),canonicalInput};
 }
-export async function computeInputHash(scenario:Scenario,assets:AssetDocument[],stepContext?:DecodeStepContext):Promise<string>{const base=calculationInput(scenario,assets).canonicalInput,input=stepContext?stableStringify({input:base,stepContext:DecodeStepContext.parse(stepContext)}):base;const hash=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return [...new Uint8Array(hash)].map(byte=>byte.toString(16).padStart(2,'0')).join('');}
+export async function hashCanonicalInput(input:string):Promise<string>{
+  const hash=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));
+  return [...new Uint8Array(hash)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+export async function computeInputHash(scenario:Scenario,assets:AssetDocument[],stepContext?:DecodeStepContext):Promise<string>{
+  const base=calculationInput(scenario,assets).canonicalInput;
+  return hashCanonicalInput(stepContext?stableStringify({input:base,stepContext:DecodeStepContext.parse(stepContext)}):base);
+}
