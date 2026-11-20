@@ -4,21 +4,41 @@ export type CanvasNode={id:string;name:string;kind:'module'|'operator'|'communic
 export type CanvasEdge={id:string;from:string;to:string;kind:'data'|'control'|'synchronization';tensorIds:string[]};
 export type CanvasGraph={nodes:CanvasNode[];edges:CanvasEdge[]};
 const within=(id:string,parent:string)=>parent==='$model'||id.startsWith(parent+'/')||id.startsWith(parent+'[');
+function hasVisibleAncestor(id:string,scopedIds:ReadonlySet<string>){
+  for(let index=1;index<id.length;index++){
+    if((id[index]==='/'||id[index]==='[')&&scopedIds.has(id.slice(0,index)))return true;
+  }
+  return false;
+}
 /** Collapse only containment, then project real dependencies onto the visible children. */
 export function projectCanvasGraph(resolved:ResolvedGraph,scope='$model',communications:Scenario['parallelPlan']['communications']=[],expandOperatorCalls=false):CanvasGraph{
   // A repeat is one navigation entry. Show its first actual invocation, never a wall of copies.
-  const first=[...resolved.containers,...resolved.graph.nodes].find(c=>c.nodeId===scope+'[0]');
-  if(first&&!expandOperatorCalls)return projectCanvasGraph(resolved,first.nodeId,communications);
-  const containers=[...new Map(resolved.containers.filter(c=>c.nodeId!=='$model'&&!resolved.graph.nodes.some(n=>n.nodeId===c.nodeId)).map(c=>[c.nodeId,c])).values()],direct=containers.filter(c=>within(c.nodeId,scope)&&c.nodeId!==scope&&!containers.some(p=>p.nodeId!==scope&&p.nodeId!==c.nodeId&&within(p.nodeId,scope)&&within(c.nodeId,p.nodeId)));
+  const firstId=scope+'[0]';
+  if(!expandOperatorCalls&&(resolved.containers.some(c=>c.nodeId===firstId)||resolved.graph.nodes.some(n=>n.nodeId===firstId)))return projectCanvasGraph(resolved,firstId,communications);
+  const expandedLeafIds=new Set(resolved.graph.nodes.map(node=>node.nodeId));
+  const scoped=new Map(resolved.containers.filter(c=>c.nodeId!=='$model'&&c.nodeId!==scope&&within(c.nodeId,scope)&&!expandedLeafIds.has(c.nodeId)).map(c=>[c.nodeId,c]));
+  const scopedIds=new Set<string>(scoped.keys());
+  const direct=[...scoped.values()].filter(c=>!hasVisibleAncestor(c.nodeId,scopedIds));
   const nodes:CanvasNode[]=direct.map(c=>({id:c.nodeId,name:c.name,kind:'module',leafIds:[...c.leafNodeIds]}));
-  for(const n of resolved.graph.nodes)if((n.nodeId===scope||within(n.nodeId,scope))&&!direct.some(c=>c.leafNodeIds.includes(n.nodeId)))nodes.push({id:n.nodeId,name:n.name,kind:n.body.kind==='collective'?'communication':'operator',leafIds:[n.nodeId],...(n.body.kind==='collective'?{communication:n.body.communication}:{})});
+  const collapsedLeaves=new Set(direct.flatMap(container=>container.leafNodeIds));
+  for(const n of resolved.graph.nodes)if((n.nodeId===scope||within(n.nodeId,scope))&&!collapsedLeaves.has(n.nodeId))nodes.push({id:n.nodeId,name:n.name,kind:n.body.kind==='collective'?'communication':'operator',leafIds:[n.nodeId],...(n.body.kind==='collective'?{communication:n.body.communication}:{})});
   const repeatCounts=new Map<string,Set<string>>();for(const c of [...resolved.containers,...resolved.graph.nodes]){const match=/^(.*)\[\d+\]$/.exec(c.nodeId);if(match){const ids=repeatCounts.get(match[1]!)??new Set<string>();ids.add(c.nodeId);repeatCounts.set(match[1]!,ids);}}for(const node of nodes){const count=repeatCounts.get(node.id)?.size;if(count)node.repeatCount=count;}
-  const owner=new Map(nodes.flatMap(n=>n.leafIds.map(id=>[id,n.id] as const))),edges=new Map<string,CanvasEdge>();
+  const owner=new Map<string,string>(),edges=new Map<string,CanvasEdge>();
+  for(const node of nodes)for(const leafId of node.leafIds)owner.set(leafId,node.id);
+  const visibleIds=new Set(nodes.map(node=>node.id));
   const add=(id:string,from:string,to:string,kind:CanvasEdge['kind'],tensorId?:string)=>{const a=owner.get(from),b=owner.get(to);if(!a||!b||a===b)return;const key=JSON.stringify([a,b,kind]),old=edges.get(key);if(old){if(tensorId&&!old.tensorIds.includes(tensorId))old.tensorIds.push(tensorId);}else edges.set(key,{id,from:a,to:b,kind,tensorIds:tensorId?[tensorId]:[]});};
   for(const e of resolved.graph.edges)if(e.from.kind==='node'&&e.to.kind==='node')add(e.edgeId,e.from.nodeId,e.to.nodeId,'data',e.tensorId);
   // Preserve actual tensors crossing this view, including the residual input that
   // bypasses normalization/attention. Boundary identity is the canonical tensor ID.
-  const boundary=(direction:'input'|'output',tensorId:string)=>{const id='$'+direction+':'+tensorId;if(!nodes.some(n=>n.id===id)){const tensor=resolved.graph.tensors.find(t=>t.tensorId===tensorId);nodes.push({id,name:tensor?.name??tensorId,kind:'boundary',boundary:direction,leafIds:[]});}return id;};
+  const tensorNames=new Map(resolved.graph.tensors.map(tensor=>[tensor.tensorId as string,tensor.name]));
+  const boundary=(direction:'input'|'output',tensorId:string)=>{
+    const id='$'+direction+':'+tensorId;
+    if(!visibleIds.has(id)){
+      visibleIds.add(id);
+      nodes.push({id,name:tensorNames.get(tensorId)??tensorId,kind:'boundary',boundary:direction,leafIds:[]});
+    }
+    return id;
+  };
   for(const e of resolved.graph.edges){const from=e.from.kind==='node'?owner.get(e.from.nodeId):undefined,to=e.to.kind==='node'?owner.get(e.to.nodeId):undefined;
     if(!from&&to){const id=boundary('input',e.tensorId);edges.set('$input:'+e.edgeId,{id:'$input:'+e.edgeId,from:id,to,kind:'data',tensorIds:[e.tensorId]});}
     if(from&&!to){const id=boundary('output',e.tensorId);edges.set('$output:'+e.edgeId,{id:'$output:'+e.edgeId,from,to:id,kind:'data',tensorIds:[e.tensorId]});}
