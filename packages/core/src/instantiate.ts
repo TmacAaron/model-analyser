@@ -1,13 +1,14 @@
 import {ParameterCapture} from './parameter-capture.js';
 import type {ParameterCaptureTrace} from './parameter-observation.js';
 import type {QuantizationObserver} from './quantization-observation.js';
-import { AssetDocument,GraphTemplate,InstantiationResult,NodeId,StorageId,TensorId,StateId,Scenario,ResolvedGraph,DecodeStepContext,type AssetRef,type Quantity,type ValueExpr,type CostDefinition,type StorageSpec,type ResolvedParameter } from '@model-analyser/contracts';
+import { AssetDocument,GraphTemplate,InstantiationResult,NodeId,StorageId,TensorId,StateId,Scenario,ResolvedGraph,DecodeStepContext,type AssetRef,type Quantity,type ValueExpr,type CostDefinition,type StorageSpec,type ResolvedParameter,type ModelWeightExecution } from '@model-analyser/contracts';
 import { bindParameters } from './parameters.js';
 import { evaluateValue,FormulaError } from './formula.js';
 import { allocateStorage,bindAllocationAccess,numericValue } from './storage.js';
 import { canonical,collectRefs,validateAssets } from '../../contracts/src/validation.js';
 import { topologicalOrder } from './graph.js';
 import { bindLocalCostRule } from './local-cost-rule.js';
+import { quantizedExecutionBody } from '../../contracts/src/quantized-execution.js';
 import { applyQuantization } from './quantization.js';
 import { applyFusion } from './fusion.js';
 import type {FusionDeclarationObserver} from './fusion-observation.js';
@@ -50,7 +51,25 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     track(scenario.quantizationOverrides);
     track(scenario.fusionGroups);
     const root=lookup(scenario.model);if(root.definition.kind!=='model')throw new FormulaError('reference_kind_mismatch','根资产必须为 model');track(root.definition,[root.assetId+'@'+root.revision]);
-    const templateIssues=validateAssets([root],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
+    const executionProfiles:AssetDocument[]=[],executionByModule=new Map<string,Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>>();
+    for(const [ruleIndex,rule] of scenario.quantizationOverrides.entries()){
+      if(!rule.preset)continue;
+      const preset=lookup(rule.preset),profile=preset.definition.kind==='quantization'?preset.definition.modelWeights:undefined;
+      if(!profile?.moduleRules.some(section=>section.execution?.length))continue;
+      if(profile.model.assetId!==scenario.model.assetId||profile.model.revision!==scenario.model.revision)throw new FormulaError('incompatible_model_weight_profile','量化执行预设须使用对应的固定模型版本');
+      executionProfiles.push(preset);
+      for(const section of profile.moduleRules){
+        const key=section.module.assetId+'@'+section.module.revision;
+        const recipes=executionByModule.get(key)??new Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>();
+        for(const recipe of section.execution??[]){
+          if(recipes.has(recipe.nodeId))throw new FormulaError('ambiguous_quantized_execution','一个算子只可使用一个量化执行预设 '+recipe.nodeId);
+          recipes.set(recipe.nodeId,{ruleIndex,recipe});
+        }
+        if(recipes.size)executionByModule.set(key,recipes);
+      }
+    }
+    const templateIssues=validateAssets([root,...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
+    const executionInputs:{nodeId:string;ruleIndex:number;weights:StorageId[];activation:StorageId}[]=[];
     const graph:GraphTemplate={inputs:[],outputs:[],nodes:[],edges:[],dependencies:[],tensors:[],storages:[],states:[]};
     const containers:ResolvedGraph['containers']=[],parameters:ResolvedParameter[]=[],objectBindings:ResolvedGraph['objectBindings']=[];
     const ports=new Map<string,WirePort>(),incoming=new Map<string,string[]>(),outgoing=new Map<string,string[]>();
@@ -230,7 +249,21 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
           exp=endpoints(instancePath,source.inputs,source.outputs,tensorMap,true);const portsResolved=(items:Port[])=>items.map(p=>({...p,tensorId:tensorMap.get(p.tensorId)??p.tensorId}));
           const ruleTensors=new Map(parentTensors);for(const [id,target] of tensorMap)ruleTensors.set(id,target);const sourceTensors=owner.definition.kind==='model'||owner.definition.kind==='module'?owner.definition.graph.tensors:[];
           let resolvedBody:Node['body'];
-          if(body.kind==='opaque')resolvedBody={kind:'opaque',inputs:portsResolved(body.inputs),outputs:portsResolved(body.outputs),cost:cost(body.cost,scope,costStorages,instancePath,owner),...(body.localCost?{localCost:localRule(body.localCost,scope,sourceTensors,ruleTensors,costStorages,instancePath,owner)}:{})};
+          if(body.kind==='opaque'){
+            const execution=executionByModule.get(owner.assetId+'@'+owner.revision)?.get(node.nodeId);
+            const definition=execution?quantizedExecutionBody(body,execution.recipe):body;
+            if(execution){
+              const inputId=ruleTensors.get(execution.recipe.activation.tensorId),activation=inputId?tensorById.get(inputId):undefined;
+              if(!activation)throw new FormulaError('invalid_quantized_execution','量化执行缺少激活输入 '+instancePath);
+              const weights=execution.recipe.weights.map(id=>{
+                const storage=costStorages.get(id);
+                if(!storage)throw new FormulaError('invalid_quantized_execution','量化执行缺少权重 '+instancePath+'/'+id);
+                return canonicalStorage(storage);
+              });
+              executionInputs.push({nodeId:instancePath,ruleIndex:execution.ruleIndex,weights,activation:canonicalStorage(activation.storageId)});
+            }
+            resolvedBody={kind:'opaque',inputs:portsResolved(definition.inputs),outputs:portsResolved(definition.outputs),cost:cost(definition.cost,scope,costStorages,instancePath,owner),...(definition.localCost?{localCost:localRule(definition.localCost,scope,sourceTensors,ruleTensors,costStorages,instancePath,owner)}:{})};
+          }
           else {
             const c=scenario.parallelPlan.nativeBindings?bindNativeCommunication(body.communication,scenario.parallelPlan.nativeBindings):body.communication,endpoint=(e:typeof c.source)=>{const tensorId=ruleTensors.get(e.tensorId),original=sourceTensors.find(t=>t.tensorId===e.tensorId),actual=tensorId?tensorById.get(tensorId):undefined;if(!tensorId||!original||!actual)throw new FormulaError('missing_reference','collective 端点张量不存在');const axis=(id:string)=>{const index=original.shape.filter(a=>!(node.repeat?.wiring==='independent'&&c.destination.tensorId===e.tensorId&&a.axisId===node.repeat.axis)).findIndex(a=>a.axisId===id),mapped=actual.shape[index]?.axisId;if(index<0||!mapped)throw new FormulaError('missing_reference','collective 轴映射缺失 '+id);return mapped;},d=e.distribution;return {tensorId,distribution:d.kind==='sharded'?{...d,axes:d.axes.map(a=>({...a,tensorAxisId:axis(a.tensorAxisId)})),policy:d.policy.kind==='explicit'?{...d.policy,slices:d.policy.slices.map(s=>({...s,axisId:axis(s.axisId)}))}:d.policy}:d.kind==='manual'?{...d,members:d.members.map(m=>({...m,localShape:shape(m.localShape,scope).map(a=>({...a,axisId:axis(a.axisId)}))}))}:d};};
             if(c.placement&&(c.placement.nodeId!==node.nodeId||!c.placement.phases.includes(phase)))throw new FormulaError('invalid_communication_placement','collective placement 必须匹配本地节点 ID 和当前阶段');
@@ -300,7 +333,21 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     const {configMapping,configImport,fusionPresets,...validatedTemplate}=root;void configMapping;void configImport;void fusionPresets;const resolvedRoot={...validatedTemplate,parameters:[],definition:{...root.definition,workloadBindings:[],graph}},checked=validateAssets([resolvedRoot],[...assets.filter(a=>a.assetId!==root.assetId||a.revision!==root.revision),resolvedRoot]),errors=checked.filter(d=>d.severity==='error');if(errors.length)return InstantiationResult.parse({status:'unavailable',diagnostics:errors});diagnostics.push(...checked.filter(d=>d.severity!=='error'));
     topologicalOrder(graph);
-    const resolved=ResolvedGraph.parse({phase,graph,containers,parameters,assetRefs:[...references.values()],objectBindings,quantizationApplications:[],fusionApplications:[]});applyQuantization(resolved,scenario,assets,diagnostics,observer?.quantization);applyFusion(resolved,scenario,assets,diagnostics,observer?.fusion);if(parameterCapture)observer?.bindingTraceReady?.(parameterCapture.snapshot());return InstantiationResult.parse({status:'available',resolved,diagnostics});
+    const resolved=ResolvedGraph.parse({phase,graph,containers,parameters,assetRefs:[...references.values()],objectBindings,quantizationApplications:[],fusionApplications:[]});
+    applyQuantization(resolved,scenario,assets,diagnostics,observer?.quantization,executionInputs.length>0);
+    if(executionInputs.length){
+      const applications=new Map(resolved.quantizationApplications.map(application=>[application.storageId,application]));
+      const storages=new Map(resolved.graph.storages.map(storage=>[storage.storageId,storage]));
+      for(const input of executionInputs){
+        const activation=storages.get(input.activation)?.allocation;
+        if(activation?.kind!=='tensor'||activation.quantization||input.weights.some(id=>!applications.get(id)?.assignmentIndices.includes(input.ruleIndex))){
+          throw new FormulaError('incompatible_quantized_execution','算子的发布权重或动态量化输入已被覆盖 '+input.nodeId);
+        }
+      }
+    }
+    applyFusion(resolved,scenario,assets,diagnostics,observer?.fusion);
+    if(parameterCapture)observer?.bindingTraceReady?.(parameterCapture.snapshot());
+    return InstantiationResult.parse({status:'available',resolved,diagnostics});
   }catch(e){diagnostics.push({diagnosticId:'instantiation-error',severity:'error',code:e instanceof FormulaError?e.code:'invalid_graph',message:e instanceof Error?e.message:'模型实例化失败',location:{kind:'node',nodeId:NodeId.parse(cursor)}});return InstantiationResult.parse({status:'unavailable',diagnostics});}
 }
 

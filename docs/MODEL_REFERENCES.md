@@ -103,9 +103,11 @@ KV 槽位计算只伸缩 GQA 的 K/V 张量。DeltaNet 的 BF16 卷积缓冲及 
 
 397B r3 增加 MoE EP。512 个路由专家按其全局编号均分到卡，每个 token 的 TopK 仍为 10。逐卡路由成本按均衡负载估算。 [并行口径](PARALLEL_PRESETS.md#qwen35-与-qwen38-混合注意力全模型)
 
-397B r4 的「量化」可以切换官方 FP8 权重。E4M3 权重按 128×128 矩阵块存放，每块一个 BF16 `weight_scale_inv`。注意力投影、路由专家和共享专家矩阵按该格式计入逐卡分配和读取。Embedding、LM head、路由器、共享专家的门控、DeltaNet 卷积及 a/b 投影保留 BF16。DeltaNet 的 `A_log` 和门控归一化权重按 FP32 计入。KV 容量继续使用原模型的 BF16 缓存。矩阵计算仍使用该图声明的 BF16 理论算力，动态激活量化及转换开销需要执行规则。 [官方 FP8 配置](https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/config.json) · [官方权重索引](https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/model.safetensors.index.json)
+397B r4 的「量化」提供「官方 FP8 权重」和「FP8 执行」。两种模式都按发布格式计算注意力投影、路由专家和共享专家矩阵的空间与读量。E4M3 权重按 128×128 矩阵块存放，每块一个 BF16 `weight_scale_inv`。Embedding、LM head、路由器、共享专家的门控、DeltaNet 卷积及 a/b 投影采用 BF16。DeltaNet 的 `A_log` 和门控归一化权重按 FP32 计入。 [官方 FP8 配置](https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/config.json) · [官方权重索引](https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/model.safetensors.index.json)
 
-`npm run reference:qwen-hybrid` 核对三份发布配置、FP8 结构摘要及 88 份内置资产。FP8 摘要根据完整索引统计各类张量，并用五个分片的头部抽查 dtype、缩放网格与矩阵形状。Git 保存配置和摘要。数值测试独立核对权重、缓存、实际 Decode 步骤和逐卡成本。 [精简 FP8 元数据](../references/models/qwen-hybrid/qwen35-fp8-weight-manifest.json)
+- 「官方 FP8 权重」沿用 BF16 矩阵算力。「FP8 执行」对这些投影使用 E4M3FN 矩阵乘法和 FP32 累加。每个输入行沿收缩维每 128 个值生成一个动态 FP32 缩放。设逐卡分配的输入、输出元素数为 `N`、`O`，收缩宽度为 `F`，转换近似为 `6N + (N/F) ceil(F/128)` 次向量操作，块缩放及累加近似为 `3O ceil(F/128)` 次向量操作。该理论预设把中间量保留在片上。输出、通信和 BF16 KV 使用各自声明的格式。设备缺少对应 FP8 算力时，显存和算量仍可计算。 [vLLM 动态分组缩放](https://docs.vllm.ai/en/v0.15.0/api/vllm/model_executor/layers/quantization/utils/quant_utils/#vllm.model_executor.layers.quantization.utils.quant_utils.kDynamic128Scale)
+
+`npm run reference:qwen-hybrid` 核对三份发布配置、FP8 结构摘要及 97 份内置资产。FP8 摘要根据完整索引统计各类张量，并用五个分片的头部抽查 dtype、缩放网格与矩阵形状。Git 保存配置和摘要。数值测试独立核对权重、缓存、实际 Decode 步骤和逐卡成本。 [精简 FP8 元数据](../references/models/qwen-hybrid/qwen35-fp8-weight-manifest.json)
 
 固定来源包括 [397B 发布配置](https://huggingface.co/Qwen/Qwen3.5-397B-A17B/blob/6fe6a3a85cefe43a807df708dccc4e44b02e2955/config.json)、[27B 发布配置](https://huggingface.co/Qwen/Qwen3.8-27B/blob/72a217afab8029b39e4af1c7273a829995a3dbaf/config.json)与 Transformers v5.8.0 的 [MoE 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5_moe/modeling_qwen3_5_moe.py)和 [Dense 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5/modeling_qwen3_5.py)。
 

@@ -34,7 +34,7 @@ function resolveWeightTargets(profile:WeightProfile,resolved:ResolvedGraph,scena
 }
 
 /** Transform only the expanded copy. A canonical physical allocation cannot have two incompatible formats. */
-export function applyQuantization(resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[],diagnostics:Diagnostic[],observer?:QuantizationObserver):void{
+export function applyQuantization(resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[],diagnostics:Diagnostic[],observer?:QuantizationObserver,hasExecution=false):void{
   const emit=quantizationEmitter(observer);
   const rules=scenario.quantizationOverrides;if(!rules.length)return;
   for(const rule of rules){const issue=quantizationRuleIssues(rule,assets,scenario.model)[0];if(issue)throw new FormulaError(issue.code,issue.message);}
@@ -75,9 +75,12 @@ export function applyQuantization(resolved:ResolvedGraph,scenario:Scenario,asset
     const allocation=allocateStorage(storage.storageId,graph.storages,{symbols:{},assets},observer?.storageIds.has(storage.storageId)&&emit?event=>emit({kind:'allocation_operation',storageId:storage.storageId,phase:'after',event}):undefined);if(allocation.totalBytes.status==='unavailable')throw new FormulaError('invalid_quantization',allocation.diagnostics.map(d=>d.message).join('; '));
     const assignmentIndices=[...new Set(decisions.flatMap(d=>d.winners.map(w=>w.index)))].sort((a,b)=>a-b),overriddenIndices=[...new Set(decisions.flatMap(d=>d.losers.map(w=>w.index)))].sort((a,b)=>a-b),allocationOverride=scenario.numericOverrides.find(o=>o.target.kind==='storage'&&o.field==='memory_bytes'&&canonicalStorage(o.target.storageId)===storage.storageId),allocationOverridden=allocationOverride!==undefined;
     resolved.quantizationApplications.push({storageId:storage.storageId,category,nodeIds:contexts,assignmentIndices,overriddenIndices,shape,dtype,beforeBytes:before.totalBytes.quantity.value,afterBytes:allocation.totalBytes.quantity.value,specification,...(previousSpecification?{previousSpecification}:{}),allocationOverridden,...(assignmentIndices.some(i=>rules[i]?.importOrigin)?{importOrigins:assignmentIndices.flatMap(i=>rules[i]?.importOrigin?[rules[i].importOrigin]:[])}:{}),...(allocationOverride?{allocationOverrideBytes:allocationOverride.value.value}:{})});applied++;const application=resolved.quantizationApplications.at(-1);if(application&&observer?.storageIds.has(storage.storageId))emit?.({kind:'storage_applied',storageId:storage.storageId,storage,application,allocation});
-    diagnostics.push({diagnosticId:'quantization-'+diagnostics.length,severity:'info',code:allocationOverridden?'quantization_allocation_overridden':'quantization_applied',message:storage.storageId+' · '+specification.payloadBits+' bit · 规则 '+assignmentIndices.map(i=>'#'+(i+1)).join(', ')+(allocationOverridden?'；显式 memory_bytes 覆盖最终分配，packing/辅助项不再推导':'；ComputeClass 和显式流量/通信方程保持作者定义'),location:{kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'quantizationOverrides'}});
+    diagnostics.push({diagnosticId:'quantization-'+diagnostics.length,severity:'info',code:allocationOverridden?'quantization_allocation_overridden':'quantization_applied',message:storage.storageId+' · '+specification.payloadBits+' bit · 规则 '+assignmentIndices.map(i=>'#'+(i+1)).join(', ')+(allocationOverridden?'；显式 memory_bytes 覆盖最终分配，packing/辅助项不再推导':hasExecution?'；算子精度和转换按固定执行预设':'；ComputeClass 和显式流量/通信方程保持作者定义'),location:{kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'quantizationOverrides'}});
   }
   for(const s of selections)for(const id of s.storageIds??s.targets?.keys()??[])if(!matchedTargets.has(JSON.stringify([s.index,id])))throw new FormulaError('empty_quantization_storage','精确存储未在该规则的节点范围/类别中匹配 '+id);
   if(!applied)throw new FormulaError('empty_quantization','量化选择范围未匹配对应类别的物理存储');
-  diagnostics.push({diagnosticId:'quantization-'+diagnostics.length,severity:'warning',code:'quantization_compute_unchanged',message:'量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。',location:{kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'quantizationOverrides'}});
+  diagnostics.push({diagnosticId:'quantization-'+diagnostics.length,...(hasExecution?
+    {severity:'info' as const,code:'quantization_execution_applied',message:'已应用固定量化执行规则，算子转换、计算类别和通信按各自声明求值。'}:
+    {severity:'warning' as const,code:'quantization_compute_unchanged',message:'量化覆盖只改变存储分配；计算类别、通信 payload 和转换开销必须由节点/方程显式声明，不按位宽猜测吞吐。'}),
+    location:{kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'quantizationOverrides'}});
 }

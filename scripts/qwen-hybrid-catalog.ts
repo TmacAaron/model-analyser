@@ -5,12 +5,14 @@ import { canonical, validateAssets } from '../packages/contracts/src/validation.
 import { makeQwenHybridAssets } from './qwen-hybrid-model.js';
 import { makeQwenHybridParallelAssets } from './qwen-hybrid-parallel.js';
 import { makeQwen35FP8WeightPreset } from './qwen35-fp8-weights.js';
+import { makeQwen35FP8ExecutionAssets } from './qwen35-fp8-execution.js';
 
 const assets = new Map<string, AssetDocument>();
 for (const release of ['qwen35', 'qwen38'] as const) {
   const latest = release === 'qwen35' ? makeQwenHybridParallelAssets(release, 4) : [];
+  const published = release === 'qwen35' ? makeQwen35FP8WeightPreset(latest) : undefined;
   for (const asset of [...makeQwenHybridAssets(release), ...makeQwenHybridParallelAssets(release),
-    ...(release === 'qwen35' ? [...makeQwenHybridParallelAssets(release, 3), ...latest, makeQwen35FP8WeightPreset(latest)] : [])]) {
+    ...(published ? [...makeQwenHybridParallelAssets(release, 3), ...latest, published, ...makeQwen35FP8ExecutionAssets(latest, published)] : [])]) {
     const key = asset.assetId + '@' + asset.revision;
     const prior = assets.get(key);
     if (prior) assert.equal(canonical(prior), canonical(asset), asset.assetId);

@@ -28,6 +28,35 @@ export function modelWeightProfileIssues(asset:AssetDocument,library:AssetDocume
         if(new Set(mapped).size!==mapped.length||mapped.some(axis=>!shape.has(axis)))issues.push('发布权重的缩放轴与物理矩阵不符 '+key+'/'+target.storageId);
       }
     }
+    const executionIds=new Set<string>();
+    for(const execution of section.execution??[]){
+      const node=graph.nodes.find(value=>value.nodeId===execution.nodeId),prefix=key+'/'+execution.nodeId;
+      if(executionIds.has(execution.nodeId)||node?.body.kind!=='opaque'||!node.body.localCost){
+        issues.push('量化执行须绑定唯一具备逐卡规则的算子 '+prefix);continue;
+      }
+      executionIds.add(execution.nodeId);
+      const reads=node.body.cost.memoryAccess.filter(access=>access.mode==='read').map(access=>access.storageId);
+      const weights=new Set(reads.filter(id=>graph.storages.find(storage=>storage.storageId===id)?.category==='weight'));
+      if(new Set(execution.weights).size!==execution.weights.length||weights.size!==execution.weights.length||execution.weights.some(id=>!weights.has(id))){
+        issues.push('量化执行必须声明该矩阵读取的全部权重 '+prefix);
+      }
+      for(const id of execution.weights){
+        const weight=section.targets.find(target=>target.storageId===id),spec=weight?.specification??rule.weight;
+        if(!weight||!spec?.payloadDtype||canonical(spec.payloadDtype)!==canonical(execution.matrix.computeClass.multiplyDtype)){
+          issues.push('量化矩阵输入精度与发布权重格式不同 '+prefix+'/'+id);
+        }
+      }
+      const activation=graph.tensors.find(tensor=>tensor.tensorId===execution.activation.tensorId);
+      if(activation?.dtype.category!=='float'||execution.activation.scaleDtype.category!=='float'||
+        !node.body.inputs.some(port=>port.tensorId===execution.activation.tensorId)||
+        graph.storages.find(storage=>storage.storageId===activation.storageId)?.category==='weight'){
+        issues.push('动态量化须声明浮点激活输入和浮点缩放 '+prefix);
+      }
+      const matrix=execution.matrix.computeClass;
+      if(matrix.inputDtypes.some(dtype=>canonical(dtype)!==canonical(matrix.multiplyDtype)))issues.push('量化矩阵的两个操作数须使用声明的乘法精度 '+prefix);
+      const signature=(stages:typeof execution.stages)=>canonical(stages.map(({segmentId,placement,computeClass})=>({segmentId,placement,computeClass})));
+      if(signature(execution.stages)!==signature(execution.local.stages))issues.push('全局和逐卡量化阶段须使用同一排序及计算精度 '+prefix);
+    }
   }
   return issues;
 }

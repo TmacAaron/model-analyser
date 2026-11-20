@@ -4,6 +4,7 @@ import { AssetDocument, type AssetRef, type GraphTemplate, type Diagnostic, Proj
 import { validateScenario } from './scenario-validation.js';
 import { parseExpression, expressionSymbols } from './expression.js';
 import { modelWeightProfileIssues,quantizationRuleIssues } from './quantization-validation.js';
+import { quantizedExecutionBody } from './quantized-execution.js';
 import { collectivePorts } from './collective.js';
 import { configProfileProblems,reviewConfigImport } from './config-import.js';
 import { measurementProblems } from './measurement-file.js';
@@ -112,6 +113,21 @@ export function validateAssets(roots:AssetDocument[],library:AssetDocument[]=roo
     if(asset.definition.kind==='quantization'){
       for(const issue of quantizationRuleIssues(asset.definition.quantization,library))report(asset,issue.code,issue.message,'definition.quantization'+(issue.path?'.'+issue.path:''));
       for(const message of modelWeightProfileIssues(asset,library))report(asset,'invalid_model_weight_profile',message,'definition.modelWeights');
+      for(const section of asset.definition.modelWeights?.moduleRules??[]){
+        const module=byKey.get(section.module.assetId+'@'+section.module.revision);
+        if(module?.definition.kind!=='module')continue;
+        const graph=module.definition.graph;
+        for(const execution of section.execution??[]){
+          const source=graph.nodes.find(node=>node.nodeId===execution.nodeId)?.body;
+          if(source?.kind!=='opaque')continue;
+          const path='definition.modelWeights.execution.'+execution.nodeId;
+          try{
+            const body=quantizedExecutionBody(source,execution);
+            cost(module,body.cost,graph.storages,path);
+            if(body.localCost)localCost(module,body.localCost,graph.tensors,graph.storages,path+'.local');
+          }catch(error){report(asset,'invalid_quantized_execution',error instanceof Error?error.message:'量化计算声明无效',path);}
+        }
+      }
     }
     if(asset.definition.kind==='formula') {
       try {const symbols=expressionSymbols(parseExpression(asset.definition.formula.expression));for(const symbol of symbols)if(!Object.hasOwn(asset.definition.formula.inputs,symbol))report(asset,'unbound_symbol',`未声明输入 ${symbol}`);}

@@ -11,9 +11,11 @@
 
 A100使用[官方datasheet](https://images.nvidia.com/data-center/a100/a100-datasheet.pdf)第1页SXM列。H100计算能力使用[Hopper白皮书v1.04](https://resources.nvidia.com/en-us-hopper-architecture)表3第39页明确列出的dense值与FP32累加方式；内存使用[H100 Sep24 datasheet](https://resources.nvidia.com/en-us-gpu/h100-datasheet-24306)第2页SXM列。各文档对应PDF、版本、页码、SHA256和仅含必要数值的事实清单固定在 `references/hardware/source-lock.json`。已逐页渲染检查列与脚注，未使用搜索摘要或第三方规格表作为录入依据。
 
+H100 SXM r2 增加 FP8 E4M3FN 矩阵、FP32 累加分类，稠密峰值为 **1,978.9 TFLOPS**。r1 项目可继续按已保存快照复算，并可在「设备」切换到新版。 [Hopper 白皮书表 3](https://resources.nvidia.com/en-us-hopper-architecture)
+
 容量是把标称80GB按十进制SI换算的**建模假设**，不是驱动报告的可分配或空闲容量。HBM的GB/s、TB/s也按十进制换算。实际项目应按明确可用容量、运行时保留和效率重新配置。整卡预设不自动表达MIG、降频、温度或功耗限制。
 
-本预设使用dense峰值，没有采用稀疏headline，也没有把SXM、PCIe、NVL或多GPU合计数据混用。FP32非Tensor值仅作为现有通用vector计算分类的上界代理，不是softmax、exp、rsqrt等具体指令吞吐。未录入的FP8、整数、自定义router/SFU分类不借用BF16峰值。
+本预设使用对应 SXM 整卡的稠密峰值。FP32 非 Tensor 值作为通用向量计算的上界代理。计算分类需要匹配设备声明的能力，缺少相应算力时理论耗时保留缺项。
 
 BF16与FP16各自提供 `inputDtypes=[dtype]` 和 `[dtype,dtype]` 两种明确的同精度分类，分别匹配现有模型与C01的记录方式；峰值相同，不按输入个数翻倍。其他混合类型或不同累加方式仍须作者声明，分类不匹配时保留缺项。
 

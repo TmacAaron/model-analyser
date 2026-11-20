@@ -75,9 +75,11 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
   const latest=useRef({text,scenarioId:active?.scenarioId,projectId:project?.projectId});latest.current={text,scenarioId:active?.scenarioId,projectId:project?.projectId};const workspaceSession=session.current,workspaceNavigation=navigation.current;
   const quantizationPresets:QuantizationPresetChoice[]=[...new Map([
     ...(project?.assetSnapshots.flatMap(a=>a.definition.kind==='quantization'?[{ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
-      ...(a.definition.modelWeights?{weightPresetModel:a.definition.modelWeights.model}:{})}]:[])??[]),
+      ...(a.definition.modelWeights?{weightPresetModel:a.definition.modelWeights.model,
+        weightPresetExecution:a.definition.modelWeights.moduleRules.some(rule=>rule.execution?.length)}:{})}]:[])??[]),
     ...(report?.assets.filter(a=>a.kind==='quantization'&&!a.archived).filter(a=>!project?.assetSnapshots.some(s=>s.assetId===a.assetId&&s.revision===a.revision)).map(a=>({
-      ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,...(a.weightPresetModel?{weightPresetModel:a.weightPresetModel}:{})}))??[]),
+      ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
+      ...(a.weightPresetModel?{weightPresetModel:a.weightPresetModel,weightPresetExecution:a.weightPresetExecution===true}:{})}))??[]),
   ].map(p=>[p.ref.assetId+'@'+p.ref.revision,p])).values()];
   const models=report?.assets.filter(a=>a.kind==='model'&&!a.archived)??[],hardwares=report?.assets.filter(a=>a.kind==='hardware'&&!a.archived)??[];
   const hardwareChoices=[...new Map([...(project?.assetSnapshots.filter(a=>a.definition.kind==='hardware').map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · 项目快照'}))??[]),...hardwares.map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · '+(a.origin==='builtin'?'内置库':'用户库')+' · '+a.assetId.slice(-8)}))].map(a=>[a.ref.assetId+'@'+a.ref.revision,a])).values()];

@@ -158,8 +158,16 @@ export const AscendQuantizationMapping = z.strictObject({sourceKey:Id,storageId:
 export const AscendQuantizationReview = z.strictObject({importId:Id,sourceId:Id,draft:z.strictObject({sourceKey:z.string(),storageId:z.string(),specificationText:z.string(),note:z.string()}),
   mappings:z.array(AscendQuantizationMapping),appliedMappings:z.array(AscendQuantizationMapping),appliedNote:z.string().optional(),confirmationNote:z.string()});
 export const QuantizationDefinition = z.strictObject({selector:NodeSelector,storageIds:z.array(StorageId).min(1).optional(),weight:QuantizedStorageSpec.optional(),activation:QuantizedStorageSpec.optional(),state:QuantizedStorageSpec.optional(),preset:AssetRef.optional(),importOrigin:AscendQuantizationOrigin.optional()});
+const ModelWeightStage=CostDefinition.shape.compute.element.extend({placement:z.enum(['before_matrix','after_matrix'])});
+const ModelWeightExecution=z.strictObject({nodeId:NodeId,weights:z.array(StorageId).min(1),
+  activation:z.strictObject({tensorId:TensorId,groupSize:PositiveInt,scaleDtype:DTypeSpec}),
+  matrix:z.strictObject({segmentId:Id,computeClass:ComputeClass}),
+  stages:z.array(ModelWeightStage).min(1),
+  local:z.strictObject({bindings:LocalCostRule.shape.bindings,stages:z.array(ModelWeightStage).min(1)}),
+});
 const ModelWeightProfile=z.strictObject({model:AssetRef,moduleRules:z.array(z.strictObject({module:AssetRef,
   targets:z.array(z.strictObject({storageId:StorageId,axes:z.record(Id,Id).optional(),specification:QuantizedStorageSpec.optional()})).min(1),
+  execution:z.array(ModelWeightExecution).min(1).optional(),
 })).min(1)});
 export const QuantizationApplication = z.strictObject({storageId:StorageId,category:z.enum(['weight','activation','state']),nodeIds:z.array(NodeId),
   assignmentIndices:z.array(Natural).min(1),overriddenIndices:z.array(Natural),shape:Shape,dtype:DTypeSpec,beforeBytes:Natural,afterBytes:Natural,
@@ -480,7 +488,7 @@ export const MeasurementComparisonReport = z.strictObject({version:z.literal('me
 export const MeasurementImportPreviewRequest = z.strictObject({file:MeasurementFile,scenario:Scenario,assets:z.array(AssetDocument),result:AnalysisResult.optional(),existing:z.array(MeasurementRecord)});
 export const MeasurementImportRow = z.strictObject({measurementId:Id,status:z.enum(['ready','needs_confirmation','unmatched','stale','needs_analysis','duplicate','conflict']),message:Id,comparison:MeasurementComparison.optional()});
 export const MeasurementImportPreview = z.strictObject({version:z.literal('measurement-import.1'),rows:z.array(MeasurementImportRow),canApply:z.boolean(),newRecordCount:Natural});
-export const AssetIndexEntry = z.strictObject({assetId:AssetId,kind:AssetKind,revision:PositiveInt,name:Id,origin:z.enum(['builtin','user']),archived:z.boolean(),format:z.enum(['json','yaml']),family:Id.optional(),configModelTypes:z.array(Id).optional(),weightPresetModel:AssetRef.optional()});
+export const AssetIndexEntry = z.strictObject({assetId:AssetId,kind:AssetKind,revision:PositiveInt,name:Id,origin:z.enum(['builtin','user']),archived:z.boolean(),format:z.enum(['json','yaml']),family:Id.optional(),configModelTypes:z.array(Id).optional(),weightPresetModel:AssetRef.optional(),weightPresetExecution:z.literal(true).optional()});
 export const ApiError = z.strictObject({code:z.enum(['validation','reference','conflict','io','not_found','unsupported_version']),message:Id,
   fieldIssues:z.array(z.strictObject({path:z.string(),message:Id})),currentRevision:PositiveInt.optional()});
 export const SaveDraftRequest = z.strictObject({requestId:Id,draft:AssetDraft});
@@ -634,6 +642,7 @@ export type AscendQuantizationMapping = z.infer<typeof AscendQuantizationMapping
 export type AscendQuantizationReview = z.infer<typeof AscendQuantizationReview>;
 
 export type QuantizedStorageSpec = z.infer<typeof QuantizedStorageSpec>;
+export type ModelWeightExecution = z.infer<typeof ModelWeightExecution>;
 
 export type FusionPresetTemplate = z.infer<typeof FusionPresetTemplate>;
 

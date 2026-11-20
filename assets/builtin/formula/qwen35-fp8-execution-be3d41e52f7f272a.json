@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:qwen35-fp8-execution:be3d41e52f7f272a",
+  "revision": 1,
+  "name": "A0 * A1 [count]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/model.safetensors.index.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://docs.vllm.ai/en/v0.15.0/api/vllm/model_executor/layers/quantization/utils/quant_utils/#vllm.model_executor.layers.quantization.utils.quant_utils.kDynamic128Scale",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Estimate a fused projection with one dynamic FP32 activation scale per row and per 128 contraction features, E4M3FN operands, and FP32 accumulators. The conversion work proxy is six operations per input element and one per scale group. The output work proxy is three operations per output element and contraction chunk, covering the two scales, partial sum and final output conversion. Working tiles and scales reside on chip. Graph outputs, collectives and cached state keep their declared formats."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "A0": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "A1": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "A0 * A1",
+      "output": {
+        "unit": "count",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}
