@@ -13,7 +13,7 @@ import { canonical } from '../../../packages/contracts/src/validation.js';
 import { type SaveState } from './serialized-autosave.js';
 import { CanvasConnectionEditor } from './canvas-connection-editor.js';
 import { ModelCanvas } from './model-canvas.js';
-import { projectCanvasGraph,type CanvasNode } from './canvas-graph.js';
+import type { CanvasGraph,CanvasNode } from './canvas-graph.js';
 import { ResolvedNodeInspector } from './resolved-inspector-view.js';
 import { traceNodeFormulas } from './formula-trace.js';
 import { ParallelPresetEditor } from './parallel-preset-view.js';
@@ -31,32 +31,15 @@ type Panel='inspect'|'workload'|'parallel'|'quantization'|'fusion'|'execution'|'
 const familyLabel=(family:string|undefined)=>family?.startsWith('qwen')?'Qwen':family?.startsWith('deepseek')?'DeepSeek':family?.startsWith('glm')?'GLM':family?.startsWith('synthetic')?'研究与合成参考':family??'其他';
 const panels:Record<Panel,string>={inspect:'节点与算法',workload:'推理配置',parallel:'并行方式',quantization:'量化',fusion:'融合',execution:'执行与多流',memory:'显存假设',analysis:'分析结果',capacity:'容量',compare:'配置对比',connection:'连接编辑',advanced:'高级配置'};
 const number=(n:number)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:3,notation:n>=1e6?'compact':'standard'}).format(n);
+const emptyCanvas:CanvasGraph={nodes:[],edges:[]};
 export function ModelWorkspace(props:Props){
   const display=useDisplayUnits();
   const {project,scenario:s,catalog,status}=props,[scope,setScope]=useState('$model'),[selected,setSelected]=useState<string[]>([]),[panel,setPanel]=useState<Panel>('inspect'),[error,setError]=useState(''),[result,setResult]=useState<AnalysisResult|null>(null),[analysisRun,setAnalysisRun]=useState(0),[connection,setConnection]=useState<{from:string;to:string}|null>(null);
   const [expandOperatorCalls,setExpandOperatorCalls]=useState(false);
   const fingerprint=useMemo(()=>canonical({scenario:s?withoutQuantizationReviews(s):s,assets:project?.assetSnapshots}),[s,project?.assetSnapshots]);
-  const expansion=useModelInstantiation(s,project?.assetSnapshots,fingerprint),attempt=expansion.attempt,resolved=attempt?.status==='available'?attempt.resolved:undefined;
+  const expansion=useModelInstantiation(s,project?.assetSnapshots,fingerprint,{scope,expandOperatorCalls}),{attempt,projection}=expansion;
+  const resolved=attempt?.status==='available'?attempt.resolved:undefined,graph=projection?.graph??emptyCanvas;
   const resolvedNodes=useMemo(()=>new Map(resolved?.graph.nodes.map(node=>[node.nodeId as string,node])),[resolved]);
-  const graph=useMemo(()=>{
-    if(!resolved)return {nodes:[],edges:[]};
-    const projected=projectCanvasGraph(resolved,scope,s?.parallelPlan.communications,expandOperatorCalls);
-    const quantized=new Set<string>(resolved.quantizationApplications.flatMap(item=>item.nodeIds));
-    const fused=new Set<string>(resolved.fusionApplications.flatMap(item=>item.memberNodeIds));
-    const budgets=new Set<string>(s?.modulePeakOverrides?.flatMap(rule=>rule.phases.includes(s.workload.kind)?
-      resolved.containers.find(c=>c.nodeId===rule.nodeId)?.leafNodeIds??[]:[])??[]);
-    const parallelTargets=s?.parallelPlan.assignments.flatMap(assignment=>{
-      if(!assignment.phases.includes(s.workload.kind))return [];
-      return assignment.selector.kind==='nodes'?assignment.selector.nodeIds:[assignment.selector.rootNodeId];
-    })??[];
-    const nodes=projected.nodes.map(node=>({...node,badges:[
-      ...(node.leafIds.some(id=>quantized.has(id))?['量化已应用']:[]),
-      ...(node.leafIds.some(id=>fused.has(id))?['融合已应用']:[]),
-      ...(parallelTargets.some(target=>target==='$model'||target===node.id||node.leafIds.some(id=>id===target||id.startsWith(target+'/')))?['并行布局']:[]),
-      ...(node.leafIds.some(id=>budgets.has(id))?['显存预算']:[]),
-    ]}));
-    return {...projected,nodes};
-  },[resolved,scope,s?.parallelPlan.communications,s?.parallelPlan.assignments,s?.modulePeakOverrides,s?.workload.kind,expandOperatorCalls]);
   const repeatRoot=scope.replace(/\[\d+\]$/,'');
   const repeatInstances=useMemo(()=>resolved?[...new Set([...resolved.containers,...resolved.graph.nodes]
     .filter(c=>c.nodeId.startsWith(repeatRoot+'[')&&/^\[\d+\]$/.test(c.nodeId.slice(repeatRoot.length))).map(c=>c.nodeId))]:[],[resolved,repeatRoot]);
@@ -72,8 +55,8 @@ export function ModelWorkspace(props:Props){
   useEffect(()=>{document.querySelector('.studio-panel-body')?.scrollTo({top:0,left:0});},[scope,selected.join('\0'),panel]);
   const canvasPositions=useMemo(()=>Object.fromEntries(project?.viewState.nodes.map(n=>[n.nodeId,{x:n.x,y:n.y}])??[]),[project?.viewState.nodes]);
   const fusionKey=fingerprint+'\0'+scope+'\0'+selected.join('\0')+'\0'+panel,fusionTask=useFusionTask(fusionKey),recommendations=fusionTask.reply?.kind==='candidates'?fusionTask.reply.candidates:[];
-  function recommend(){if(panel!=='fusion'||!resolved||!s||!project)return;const operators=new Set(graph.nodes.filter(n=>n.kind==='operator').map(n=>n.id)),selections=allOperators&&leaves.length>1?[leaves]:graph.edges.filter(e=>operators.has(e.from)&&operators.has(e.to)).slice(0,6).map(e=>[e.from,e.to]);fusionTask.run({kind:'candidates',resolved,scenario:s,assets:project.assetSnapshots,selections});}
-  useEffect(()=>{recommend();},[fusionKey,resolved]);
+  function recommend(){if(panel!=='fusion'||!resolved||!projection||!s||!project)return;const operators=new Set(graph.nodes.filter(n=>n.kind==='operator').map(n=>n.id)),selections=allOperators&&leaves.length>1?[leaves]:graph.edges.filter(e=>operators.has(e.from)&&operators.has(e.to)).slice(0,6).map(e=>[e.from,e.to]);fusionTask.run({kind:'candidates',resolved,scenario:s,assets:project.assetSnapshots,selections});}
+  useEffect(()=>{recommend();},[fusionKey,resolved,projection]);
   useEffect(()=>{if(resolved&&scope!=='$model'&&!resolved.containers.some(c=>c.nodeId===scope)&&!resolved.graph.nodes.some(n=>n.nodeId===scope)){setScope('$model');setSelected([]);}},[resolved,scope]);
   function patch(next:Scenario){setError('');props.onScenario(next);}
   function drill(n:CanvasNode){if(n.kind==='module'){setExpandOperatorCalls(false);const first=[...(resolved?.containers??[]),...(resolved?.graph.nodes??[])].find(c=>c.nodeId===n.id+'[0]');setScope(first?.nodeId??n.id);setSelected([]);setPanel('inspect');}}
@@ -85,7 +68,7 @@ export function ModelWorkspace(props:Props){
     <nav className="studio-toolbar" aria-label="模型分析工具">{(['workload','parallel','quantization','fusion','execution','memory','capacity','compare','advanced'] as Panel[]).map(key=><button key={key} className={panel===key?'active':''} onClick={()=>setPanel(key)}>{panels[key]}{key==='fusion'&&leaves.length>1?' · '+leaves.length:''}</button>)}<button className="studio-analyze" disabled={!s} onClick={()=>{setPanel('analysis');setAnalysisRun(n=>n+1);}}>分析此配置 ↗</button></nav>
     {(props.error||error)&&<div role="alert" className="studio-error">{props.error||error}<button onClick={()=>setError('')}>关闭</button></div>}
     <div className="studio-content"><section className="studio-stage"><nav className="canvas-breadcrumb" aria-label="模块路径">{repeatInstances.length>0&&<span className="repeat-instance-control">模块内部 · {repeatInstances.length} × <select disabled={expandOperatorCalls} aria-label="查看重复模块实例" value={scope===repeatRoot?repeatInstances[0]:scope} onChange={e=>{setScope(e.target.value);setSelected([]);}}>{repeatInstances.findIndex(id=>id===scope)>=128&&<option value={scope}>实例 {repeatInstances.findIndex(id=>id===scope)+1} / {repeatInstances.length}</option>}{repeatInstances.slice(0,128).map((id,i)=><option key={id} value={id}>实例 {i+1} / {repeatInstances.length}</option>)}</select>{repeatInstances.length>128&&<label>调用编号<input type="number" aria-label="重复算子调用编号" min={1} max={repeatInstances.length} value={Math.max(1,repeatInstances.findIndex(id=>id===scope)+1)} disabled={expandOperatorCalls} onChange={e=>{const i=Number(e.target.value)-1;if(Number.isSafeInteger(i)&&repeatInstances[i]){setScope(repeatInstances[i]!);setSelected([]);}}}/></label>}{resolved?.graph.nodes.some(n=>n.nodeId===repeatRoot+'[0]')&&<label><input type="checkbox" aria-label="跨调用选择算子" checked={expandOperatorCalls} onChange={e=>{setExpandOperatorCalls(e.target.checked);setScope(e.target.checked?repeatRoot:repeatInstances[0]!);setSelected([]);}}/>跨调用选择算子</label>}</span>}<button onClick={()=>{setScope('$model');setSelected([]);}}>{model?.name??'模型结构'}</button>{scope!=='$model'&&scope.split('/').map((part,i,parts)=><span key={i}>／<button onClick={()=>{setScope(parts.slice(0,i+1).join('/'));setSelected([]);}}>{decodeURIComponent(part)}</button></span>)}<span className="canvas-stage-caption">{graph.nodes.length} 个{scope==='$model'?'模块／算子':'子模块／算子'} · 数据依赖连线</span></nav>
-      {project&&s&&resolved?<ModelCanvas key={project.projectId+':'+scope} graph={graph} scopeKey={project.projectId+':'+s.model.assetId+':'+scope} layout={canvasPositions} selected={selected} onSelect={ids=>{setSelected(ids);if(ids.length>1)setPanel('fusion');else if(panel==='fusion')setPanel('inspect');}} onOpen={drill} onMove={positions=>{const nodes=project.viewState.nodes.map(n=>({...n})),byId=new Map<string,typeof nodes[number]>();for(const item of nodes)if(!byId.has(item.nodeId))byId.set(item.nodeId,item);for(const [nodeId,p] of Object.entries(positions)){const old=byId.get(nodeId);if(old){old.x=p.x;old.y=p.y;}else nodes.push({nodeId:nodeId as ProjectDocument['viewState']['nodes'][number]['nodeId'],...p,collapsed:false});}props.onProject({...project,viewState:{...project.viewState,nodes}});}} onConnect={(from,to)=>{setConnection({from,to});setPanel('connection');}} tooltip={summary}/>:<div className="studio-empty"><span>◇</span><h1>{expansion.pending?'正在展开模型结构':expansion.cancelled?'模型展开已取消':expansion.error?'模型结构展开失败':attempt?.status==='unavailable'?'当前模型需要补充配置':'从一张模型结构图开始'}</h1>{expansion.pending?<><p role="status">可继续修改配置或选择其他模型。</p><button onClick={expansion.cancel}>取消展开</button></>:<p>选择模型后直接探索模块与算子，配置、融合与分析都在这张画布上展开。</p>}{expansion.error&&<p role="alert">{expansion.error}</p>}{(expansion.cancelled||expansion.error)&&<button onClick={expansion.retry}>重新展开模型</button>}{attempt?.status==='unavailable'&&attempt.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>)}</div>}
+      {project&&s&&projection?<ModelCanvas key={project.projectId+':'+scope} graph={graph} defaultPositions={projection.defaultPositions} scopeKey={project.projectId+':'+s.model.assetId+':'+scope} layout={canvasPositions} selected={selected} onSelect={ids=>{setSelected(ids);if(ids.length>1)setPanel('fusion');else if(panel==='fusion')setPanel('inspect');}} onOpen={drill} onMove={positions=>{const nodes=project.viewState.nodes.map(n=>({...n})),byId=new Map<string,typeof nodes[number]>();for(const item of nodes)if(!byId.has(item.nodeId))byId.set(item.nodeId,item);for(const [nodeId,p] of Object.entries(positions)){const old=byId.get(nodeId);if(old){old.x=p.x;old.y=p.y;}else nodes.push({nodeId:nodeId as ProjectDocument['viewState']['nodes'][number]['nodeId'],...p,collapsed:false});}props.onProject({...project,viewState:{...project.viewState,nodes}});}} onConnect={(from,to)=>{setConnection({from,to});setPanel('connection');}} tooltip={summary}/>:<div className="studio-empty"><span>◇</span><h1>{expansion.pending?'正在展开模型结构':expansion.cancelled?'模型展开已取消':expansion.error?(resolved?'画布准备失败':'模型结构展开失败'):resolved?'正在准备画布':attempt?.status==='unavailable'?'当前模型需要补充配置':'从一张模型结构图开始'}</h1>{(expansion.pending||resolved&&!expansion.error)?<><p role="status">可继续修改配置或选择其他模型。</p><button onClick={expansion.cancel}>{expansion.pending?'取消展开':'取消准备画布'}</button></>:<p>选择模型后直接探索模块与算子，配置、融合与分析都在这张画布上展开。</p>}{expansion.error&&<p role="alert">{expansion.error}</p>}{(expansion.cancelled||expansion.error)&&<button onClick={expansion.retry}>{resolved?'重新准备画布':'重新展开模型'}</button>}{attempt?.status==='unavailable'&&attempt.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>)}</div>}
       {resolved&&<div className="canvas-status"><span>{resolved.graph.nodes.length} 算子 · {resolved.containers.length-1} 模块 · {s?.deviceTopology.devices.length} 物理设备</span><span>{s?.workload.kind} · Batch {s?.workload.batchSize}{result?' · 分析结果已生成':''}</span></div>}
     </section><section className="studio-inspector" aria-label="画布配置与详情"><div className="inspector-heading"><div><small>{scope==='$model'?'MODEL WORKSPACE':'MODULE WORKSPACE'}</small><h2>{panels[panel]}</h2></div><button onClick={()=>setPanel('inspect')} aria-label="返回节点详情">⌕</button></div>
       {project&&s&&<div className="studio-panel-body">

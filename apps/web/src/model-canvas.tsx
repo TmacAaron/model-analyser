@@ -1,5 +1,5 @@
 import {useEffect,useLayoutEffect,useMemo,useRef,useState,type PointerEvent as ReactPointerEvent,type ReactNode} from 'react';
-import {canvasLayout,type CanvasGraph,type CanvasNode} from './canvas-graph.js';
+import type {CanvasGraph,CanvasNode} from './canvas-graph.js';
 import {CanvasNodeNavigator} from './canvas-node-navigator.js';
 import {CanvasOverview} from './canvas-overview.js';
 import {canvasNodeAt,canvasRect,canvasRoutePath,canvasVisibleRect,createCanvasScene,largeCanvas,nodeHeight,nodeWidth,nodesInCanvasRect,routesInCanvasRect,type CanvasPoint,type CanvasPositions,type CanvasSize} from './canvas-scene.js';
@@ -11,13 +11,13 @@ type Drag=
   |{kind:'nodes';start:CanvasPoint;positions:CanvasPositions;ids:string[];updates?:Map<string,CanvasPoint>;node:CanvasNode}
   |{kind:'connect';from:string;end:CanvasPoint};
 
-export function ModelCanvas({graph,layout,scopeKey,selected,onSelect,onOpen,onMove,onConnect,tooltip}:{
-  graph:CanvasGraph;layout:CanvasPositions;scopeKey:string;selected:string[];
+export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onSelect,onOpen,onMove,onConnect,tooltip}:{
+  graph:CanvasGraph;defaultPositions:CanvasPositions;layout:CanvasPositions;scopeKey:string;selected:string[];
   onSelect:(ids:string[])=>void;onOpen:(node:CanvasNode)=>void;
   onMove:(positions:Record<string,CanvasPoint>)=>void;onConnect:(from:string,to:string)=>void;tooltip:(node:CanvasNode)=>ReactNode;
 }){
   const svg=useRef<SVGSVGElement>(null),host=useRef<HTMLDivElement>(null),tools=useRef<HTMLDivElement>(null),drag=useRef<Drag|null>(null),space=useRef(false);
-  const defaults=useMemo(()=>canvasLayout(graph),[graph]),positions=useMemo(()=>({...defaults,...layout}),[defaults,layout]);
+  const positions=useMemo(()=>({...defaultPositions,...layout}),[defaultPositions,layout]);
   const scene=useMemo(()=>createCanvasScene(graph,positions),[graph,positions]);
   const allPoints=useMemo(()=>scene.nodes.map(item=>item.point),[scene]);
   const selection=useMemo(()=>new Set(selected),[selected]);
@@ -236,7 +236,7 @@ export function ModelCanvas({graph,layout,scopeKey,selected,onSelect,onOpen,onMo
       <button onClick={()=>fit()}>适配全图</button>
       <button disabled={!selected.length} onClick={()=>fit(selected)}>定位选中节点</button>
       {large&&<CanvasNodeNavigator nodes={graph.nodes} onLocate={node=>{pendingFocus.current=node.id;onSelect([node.id]);fit([node.id]);}}/>}
-      <button onClick={()=>{onMove(defaults);setMoving(undefined);}}>自动布局</button>
+      <button onClick={()=>{onMove(defaultPositions);setMoving(undefined);}}>自动布局</button>
     </div>
     <svg ref={svg} className={'canvas-surface mode-'+mode} role="application" aria-label="模型结构画布" tabIndex={0}
       data-render-mode={compact?'overview':'detail'} data-node-count={graph.nodes.length} data-edge-count={graph.edges.length}

@@ -6,6 +6,55 @@ import { ProjectDocument,AnalysisResult } from '@model-analyser/contracts';
 test.setTimeout(180000);
 test.use({viewport:{width:1440,height:1100}});
 
+test('a held full-canvas projection leaves the workspace interactive and cannot replace the single call',async({page})=>{
+  await page.addInitScript(()=>{
+    const OriginalWorker=window.Worker,held:Array<()=>void>=[];
+    Object.assign(window,{heldCanvasProjections:held});
+    window.Worker=class extends OriginalWorker{
+      constructor(url:string|URL,options?:WorkerOptions){
+        super(url,options);
+        if(!String(url).includes('model-instantiation-worker-'))return;
+        this.addEventListener('message',event=>{
+          const {kind,projection}=event.data;
+          if(kind!=='projected'||projection?.view?.expandOperatorCalls!==true)return;
+          event.stopImmediatePropagation();
+          held.push(()=>this.onmessage?.call(this,event));
+        });
+      }
+    };
+  });
+  const p=ProjectDocument.parse(JSON.parse(await readFile('examples/runtime-baseline/synthetic-chain-9999.json','utf8')));
+  p.projectId=randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'held-projection.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});
+  await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',p.projectId);
+  await page.locator('.canvas-node.module').click();
+  const expanded=page.getByLabel('跨调用选择算子',{exact:true});
+  await expanded.check();
+  await expect(page.getByRole('heading',{name:'正在准备画布',exact:true})).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>((window as Window&{heldCanvasProjections?:Array<()=>void>}).heldCanvasProjections?.length??0))).toBe(1);
+  await page.getByRole('button',{name:'显示单位设置',exact:true}).click();
+  await expect(page.getByLabel('时间显示单位',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'显示单位设置',exact:true}).click();
+  await expanded.uncheck();
+  const canvas=page.locator('.canvas-surface'),operator=canvas.locator('[data-node-id="leaves[0]"]');
+  await expect(operator).toBeVisible();
+  await page.evaluate(()=>{
+    (window as Window&{heldCanvasProjections?:Array<()=>void>}).heldCanvasProjections?.shift()?.();
+  });
+  await expect(operator).toBeVisible();
+  await expect(canvas).not.toHaveAttribute('data-node-count','10001');
+  await expect(page.getByRole('heading',{name:'正在准备画布',exact:true})).toHaveCount(0);
+
+  await expanded.check();
+  await page.getByRole('button',{name:'取消准备画布',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'模型展开已取消',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'分析此配置 ↗',exact:true})).toBeEnabled();
+  await page.getByRole('button',{name:'重新展开模型',exact:true}).click();
+  await expect(canvas).toHaveAttribute('data-node-count','10001');
+  await expect(canvas).toHaveAttribute('data-edge-count','10000');
+});
+
 test('the actual maximum connected canvas fits, pans, edits and computes in a worker while preserving its fixed mathematical hash',async({page,browser})=>{
   const path='examples/runtime-baseline/synthetic-chain-9999.json',raw=await readFile(path,'utf8'),p=ProjectDocument.parse(JSON.parse(raw));p.projectId=randomUUID();await page.goto('/');await expect(page.locator('.canvas-node.module').first()).toBeVisible();
   await page.evaluate(()=>{const state={running:true,gaps:[] as number[],longTasks:[] as number[],supported:false};const w=window as typeof window&{runtimeObservation?:{state:typeof state;stop:()=>void}};let previous=performance.now();function frame(now:number){if(!state.running)return;state.gaps.push(now-previous);previous=now;requestAnimationFrame(frame);}let observer:PerformanceObserver|undefined;try{observer=new PerformanceObserver(list=>state.longTasks.push(...list.getEntries().map(e=>e.duration)));observer.observe({entryTypes:['longtask']});state.supported=true;}catch{/* Record unavailable instrumentation without substituting a zero peak. */}w.runtimeObservation={state,stop:()=>{state.running=false;observer?.disconnect();}};requestAnimationFrame(frame);});
