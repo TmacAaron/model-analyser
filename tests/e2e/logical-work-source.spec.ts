@@ -5,6 +5,7 @@ import {promisify} from 'node:util';
 import {Scenario} from '@model-analyser/contracts';
 import {makeDecodeProject} from '../../scripts/decode-project.js';
 import {c01Project} from '../model-fixtures.js';
+import {scopedLogicalFusionProject} from '../logical-work-fixture.js';
 
 test('drills from sequence logical work to the third actual call and exports the primitive formula',async({page})=>{
  const project=makeDecodeProject(c01Project());
@@ -28,12 +29,43 @@ test('drills from sequence logical work to the third actual call and exports the
  await start.click();
  await expect(logical).toContainText('计算段 work');
  await expect(logical).toContainText('B * (C + Q)');
+ await expect(logical.getByRole('table',{name:'逻辑工作量公式的参数输入'}).locator('tbody tr').filter({hasText:/^C/})).toContainText('4 count');
  const wait=page.waitForEvent('download');
  await logical.getByRole('button',{name:'导出此页逻辑来源',exact:true}).click();
  const file=await(await wait).path();
  if(!file)throw Error('Missing exported logical work report');
  const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
- expect(JSON.parse(cli.stdout)).toMatchObject({kind:'logical_work_source',operation:'segment_sum',quantity:{value:5,unit:'operation'}});
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'logical_work_source',schemaVersion:2,operation:'segment_sum',quantity:{value:5,unit:'operation'},parameterBindingGraph:{complete:true,roots:3}});
+});
+
+test('opens scoped fusion extra from an actual step and exports its workload and override evidence',async({page})=>{
+ const project=scopedLogicalFusionProject();
+ project.projectId=randomUUID();
+ await page.goto('/');
+ await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'scoped-fusion-work.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+ await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();
+ await page.getByRole('button',{name:'查看整个序列有效工作量来源',exact:true}).click();
+ const logical=page.getByRole('region',{name:'逻辑工作来源'}),start=logical.getByRole('button',{name:'复核此逻辑工作量',exact:true});
+ await start.click();
+ await logical.locator('article').filter({hasText:'模型 · 步骤 3'}).getByRole('button',{name:'查看此项逻辑来源',exact:true}).click();
+ await start.click();
+ await logical.locator('article').filter({hasText:'融合附加项 $fusion:scope-proof/extra'}).getByRole('button',{name:'查看此项逻辑来源',exact:true}).click();
+ await expect(page.locator('.cost-source-inspector').getByLabel('来源步骤',{exact:true})).toHaveValue('2');
+ await start.click();
+ await expect(logical).toContainText('已复核逻辑指标 12 operation');
+ const roots=logical.getByRole('table',{name:'逻辑工作量公式的参数输入'}).locator('tbody tr');
+ await expect(roots.filter({hasText:/^B/})).toContainText('3 count');
+ await expect(roots.filter({hasText:/^C/})).toContainText('4 count');
+ await logical.locator('.binding-operations > summary').click();
+ await expect(logical.locator('.binding-operations')).toContainText('实际节点覆盖');
+ await expect(logical.locator('.binding-operations')).toContainText('contextTokensPerRequest');
+ const download=page.waitForEvent('download');
+ await logical.getByRole('button',{name:'导出此页逻辑来源',exact:true}).click();
+ const file=await(await download).path();
+ if(!file)throw Error('Missing fusion work export');
+ const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'logical_work_source',schemaVersion:2,operation:'segment_sum',quantity:{value:12,unit:'operation'},parameterBindingGraph:{complete:true,roots:2}});
 });
 
 test('compares growing and fixed-context work and opens each side with its own fixed inputs',async({page})=>{

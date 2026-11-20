@@ -27,7 +27,7 @@ export function LogicalWorkSourceView({metric,selector,result,scenario,assets,st
   const actualStep=step===undefined?undefined:result.decode?.steps.find(item=>item.index===step);
   if(step!==undefined&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,retry,cancel}=useCostSourceWorker(open,request,'logical_work_source',readLogicalWorkSourceReply);
  return <section className="logical-work-source declaration-source" aria-label="逻辑工作来源">
@@ -59,7 +59,8 @@ function LogicalProof({report,onNavigate}:{report:LogicalWorkSourceReport;onNavi
    {item.addition&&item.quantity&&<p>{item.addition.before} + {item.quantity.value} = {item.addition.after} {item.quantity.unit}</p>}
    {item.kind==='segment'?item.formula&&<><FormulaProof proof={item.formula.proof}/>{item.formula.truncated&&<p>公式记录达到预算，指标已按完整公式复算。</p>}</>:<button onClick={()=>onNavigate(item)}>查看此项逻辑来源</button>}
   </article>)}
-  {report.parameterBindings&&<ParameterBindingProof graph={report.parameterBindings}/>}
+  {report.parameterBindings&&(report.parameterBindings.roots.length||!report.parameterBindings.complete?
+   <ParameterBindingProof graph={report.parameterBindings}/>:<p>本页已展开的公式未读取参数。</p>)}
   {report.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>)}
  </div>;
 }

@@ -9,7 +9,8 @@ import {logicalFusionExtraRows,logicalWorkMembers,logicalWorkRows,type LogicalWo
 import {containedFusions} from './aggregate-members.js';
 import {namespaceDiagnostics} from './decode.js';
 import {explainValue} from './formula.js';
-import {parameterBindingGraph} from './parameter-binding-graph.js';
+import {logicalParameterBindingGraph,parameterBindingGraph,parameterReads,type AdditionalParameterRoot,type ParameterBindingGraph} from './parameter-binding-graph.js';
+import type {ParameterCaptureTrace} from './parameter-observation.js';
 import type {LocalCostDeclaration} from './local-cost-observation.js';
 import type {FusionDeclaration} from './fusion-observation.js';
 import type {AnalysisObserver,LogicalExtraOperand,LogicalTerm} from './logical-work-observation.js';
@@ -18,7 +19,7 @@ export const LogicalWorkSelector=z.strictObject({
  scope:MetricScope,computeClass:ComputeClass,field:z.enum(['usefulOperations','executedOperations']),fusionNodeId:NodeId.optional(),
 });
 export type LogicalWorkSelector=z.infer<typeof LogicalWorkSelector>;
-export const LogicalWorkSourceRequest=LeafCostSourceRequest.extend({selector:LogicalWorkSelector,decodeFrame:z.literal(true).optional()});
+export const LogicalWorkSourceRequest=LeafCostSourceRequest.extend({selector:LogicalWorkSelector,decodeFrame:z.literal(true).optional(),proofVersion:z.literal(2).optional()});
 export type LogicalWorkSourceRequest=z.input<typeof LogicalWorkSourceRequest>;
 const pageSize=20;
 
@@ -30,17 +31,19 @@ type FoldOperand={quantity?:Quantity;diagnosticIds:string[];addition?:{before:nu
 type EvidenceItem=(LogicalWorkSourceMember|Omit<Segment,'expression'>&{formula?:ReturnType<typeof explainValue>})&FoldOperand;
 
 export async function replayLogicalWorkSource(input:unknown){
- const request=LogicalWorkSourceRequest.parse(input),{scenario,assets,inputHash,engineVersion,selector,stepContext,page}=request;
+ const request=LogicalWorkSourceRequest.parse(input),{scenario,assets,inputHash,engineVersion,selector,stepContext,page,proofVersion}=request;
  const {scope,computeClass,field,fusionNodeId}=selector,target=scope.target;
  if(scope.aggregation!=='model_useful'||fusionNodeId!==undefined&&target.kind!=='node')throw Error('请选择模型逻辑工作范围或实际融合附加项');
  if(request.decodeFrame&&!stepContext)throw Error('逻辑来源缺少实际 Decode 步骤上下文');
  const prefix=request.decodeFrame&&stepContext?`decode-step-${stepContext.index}::`:undefined;
  if(engineVersion!==ENGINE_VERSION||await computeInputHash(scenario,assets,stepContext)!==inputHash)throw Error('逻辑工作来源的固定输入、步骤或引擎版本不匹配');
  const leaves:LocalCostDeclaration[]=[],terms:LogicalTerm[]=[],fusionDeclarations:FusionDeclaration[]=[],extraOperands:LogicalExtraOperand[]=[];
+ let bindingTrace:ParameterCaptureTrace|undefined;
  const sequence=scenario.workload.kind==='decode'&&scenario.workload.steps!==1;
  if(sequence&&fusionNodeId!==undefined)throw Error('融合附加项需要选择一个实际 Decode 步骤');
  const observer:AnalysisObserver|undefined=fusionNodeId!==undefined?{fusion:{
   nodeId:fusionNodeId,declaration:record=>fusionDeclarations.push(record),logicalExtra:term=>extraOperands.push(term),
+  ...(proofVersion===2?{bindings:(trace:ParameterCaptureTrace)=>{bindingTrace=trace;}}:{}),
  }}:target.kind==='node'&&!sequence?{logicalLeaf:{
   nodeId:target.nodeId,declaration:record=>leaves.push(record),term:record=>terms.push(record),
  }}:undefined;
@@ -56,7 +59,7 @@ export async function replayLogicalWorkSource(input:unknown){
  if(!metric||stableStringify(prefix?namespaceDiagnostics(metric,prefix):metric)!==stableStringify(request.metric))throw Error('原逻辑指标、单位或诊断不同');
  const inputs:LogicalInput[]=[];
  let operation:'step_sum'|'member_sum'|'segment_sum',memberCount=0,assetsUsed:AssetRef|undefined,symbols:LocalCostDeclaration['symbols']={};
- let parameterBindings:ReturnType<typeof parameterBindingGraph>|undefined;
+ let parameterBindings:ParameterBindingGraph|undefined,callFrame:string|undefined,fusionFrames:Record<string,string>|undefined;
  function addMember(identity:LogicalWorkSourceMember,compute:LogicalWorkRow['compute']){
   memberCount++;
   const value=select(compute);
@@ -80,6 +83,7 @@ export async function replayLogicalWorkSource(input:unknown){
   if(!authored||!declaration||fusionDeclarations.length!==1)throw Error('原融合附加项的数学方程缺失');
   assetsUsed=authored.origin?.asset??scenario.model;
   symbols=declaration.symbols;
+  fusionFrames=declaration.parameterFrames?.root;
   const captured=new Map(extraOperands.filter(term=>term.field===field&&canonical(term.computeClass)===classKey).map(term=>[term.segmentId,term.metric]));
   for(const [index,segment] of authored.extraCost.compute.entries()){
    if(canonical(segment.computeClass)!==classKey)continue;
@@ -94,7 +98,10 @@ export async function replayLogicalWorkSource(input:unknown){
    const declaration=leaves[0];
    if(!declaration||leaves.some(row=>stableStringify(row)!==stableStringify(declaration)))throw Error('实际叶调用声明缺失或不一致');
    assetsUsed=declaration.asset;symbols=declaration.symbols;
-   if(declaration.bindingContext)parameterBindings=parameterBindingGraph({...declaration,nodeId:target.nodeId,storageRefs:[],storages:[]},assets);
+   if(proofVersion===2){
+    callFrame=declaration.bindingContext?.frameId;
+    bindingTrace=declaration.bindingContext?.trace;
+   }else if(declaration.bindingContext)parameterBindings=parameterBindingGraph({...declaration,nodeId:target.nodeId,storageRefs:[],storages:[]},assets);
    for(const term of terms){
     if(canonical(term.computeClass)!==classKey)continue;
     const segment=declaration.cost.compute[term.index];
@@ -123,7 +130,8 @@ export async function replayLogicalWorkSource(input:unknown){
 
  const start=page*pageSize,componentCount=inputs.length,items:EvidenceItem[]=[];
  if(page>0&&start>=componentCount)throw Error('请求的逻辑工作来源页不存在');
- let value=0,completeSum=true;
+ const reads:AdditionalParameterRoot[]=[];
+ let value=0,completeSum=true,truncatedReads=false;
  for(const [index,term] of inputs.entries()){
   const {metric:operand,...identity}=term;
   let addition:FoldOperand['addition'],quantity:Quantity|undefined;
@@ -141,22 +149,33 @@ export async function replayLogicalWorkSource(input:unknown){
   if(identity.kind==='segment'){
    const {expression,...segment}=identity,formula=quantity?explainValue(expression,symbols,assets):undefined;
    if(formula&&canonical(formula.quantity)!==canonical(quantity))throw Error('原公式计算值不同于实际操作数');
+   if(proofVersion===2&&formula){
+    const target=`计算段 ${segment.index+1} · ${segment.segmentId}`;
+    const segmentReads=parameterReads(formula.proof,(name,quantity)=>({name,quantity,target,
+     frameId:callFrame??(fusionFrames&&Object.hasOwn(fusionFrames,name)?fusionFrames[name]:undefined)??'unrecorded-logical-frame'}));
+    const remaining=256-reads.length;
+    truncatedReads||=formula.truncated||segmentReads.length>remaining;
+    reads.push(...segmentReads.slice(0,remaining));
+   }
    items.push({...segment,...data,...(formula?{formula}:{})});
   }else items.push({...identity,...data});
  }
  if(metric.status==='available'&&(!completeSum||metric.quantity.unit!=='operation'||metric.quantity.value!==value))throw Error('按原顺序累加的逻辑工作量与原指标不同');
+ if(proofVersion===2&&operation==='segment_sum'){
+  parameterBindings=logicalParameterBindingGraph(bindingTrace&&{...bindingTrace,truncated:bindingTrace.truncated||truncatedReads},assets,reads);
+ }
  const diagnosticIds=new Set([...metric.diagnosticIds,...items.flatMap(item=>item.diagnosticIds)]);
  const diagnostics=result.diagnostics.filter(d=>diagnosticIds.has(d.diagnosticId));
  const evidence={items,metric,diagnostics,memberCount,componentCount,operation,
-  ...(assetsUsed?{asset:assetsUsed}:{}),...(parameterBindings?{parameterBindings}:{})};
+  ...(assetsUsed?{asset:assetsUsed}:{}),...(proofVersion===undefined&&parameterBindings?{parameterBindings}:{})};
  jsonBytes(evidence,8*1024*1024);
- return {kind:'logical_work_source' as const,schemaVersion:1 as const,selector,inputHash,engineVersion,page,pageSize,
-  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),request};
+ return {kind:'logical_work_source' as const,schemaVersion:proofVersion??(1 as const),selector,inputHash,engineVersion,page,pageSize,
+  ...(prefix?namespaceDiagnostics(evidence,prefix):evidence),...(proofVersion===2&&parameterBindings?{parameterBindings}:{}),request};
 }
 
 export type LogicalWorkSourceReport=Awaited<ReturnType<typeof replayLogicalWorkSource>>;
 export async function verifyLogicalWorkSourceReport(input:unknown){
- const saved=z.object({kind:z.literal('logical_work_source'),schemaVersion:z.literal(1),request:LogicalWorkSourceRequest}).passthrough().parse(input);
+ const saved=z.object({kind:z.literal('logical_work_source'),schemaVersion:z.union([z.literal(1),z.literal(2)]),request:LogicalWorkSourceRequest}).passthrough().parse(input);
  const report=await replayLogicalWorkSource(saved.request);
  if(stableStringify(saved)!==stableStringify(report))throw Error('逻辑工作来源与固定输入复算不同');
  return report;

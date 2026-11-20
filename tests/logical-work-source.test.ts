@@ -7,6 +7,7 @@ import {makeLocalGemmProject} from '../scripts/local-gemm-project.js';
 import {makeDecodeProject} from '../scripts/decode-project.js';
 import {makeFusedProject} from '../scripts/fused-project.js';
 import {c01Project} from './model-fixtures.js';
+import {scopedLogicalFusionProject} from './logical-work-fixture.js';
 
 const model={kind:'model' as const};
 const leaf=(id:string)=>({kind:'node' as const,nodeId:NodeId.parse(id)});
@@ -47,6 +48,7 @@ it('explains one logical model under replication and preserves module and origin
  const module=await replayLogicalWorkSource((await request(p,moduleScope('module'))).fixed);
  expect(module.items).toEqual(report.items);
  const call=await replayLogicalWorkSource((await request(p,leaf('module/op'))).fixed);
+ expect(call.schemaVersion).toBe(1);
  expect(call).toMatchObject({operation:'segment_sum',asset:{assetId:'example:operator:gemm-local'},items:[{segmentId:'matmul',formula:{proof:{definition:{expression:'2 * M * N * K'},bindings:[{name:'M',quantity:{value:4}},{name:'N',quantity:{value:8}},{name:'K',quantity:{value:16}}]}}}]});
  expect(call.parameterBindings?.nodes.some(n=>n.name==='N'&&n.value.value===8)).toBe(true);
  expect(await verifyLogicalWorkSourceReport(JSON.parse(JSON.stringify(call)))).toEqual(call);
@@ -99,6 +101,31 @@ it('retains actual contexts and independent contributors for growing and fixed-c
  await expect(replayLogicalWorkSource({...fixed,stepContext:{...fixed.stepContext,index:0}})).rejects.toThrow('版本不匹配');
 });
 
+it('binds fusion extra work to the actual preset and Decode context',async()=>{
+ const p=scopedLogicalFusionProject(),fusionNodeId=NodeId.parse('$fusion:scope-proof'),target=leaf('$fusion:scope-proof/extra');
+ const {fixed}=await request(p,target,{step:2,fusionNodeId});
+ const original=await replayLogicalWorkSource(fixed);
+ expect(original.parameterBindings).toBeUndefined();
+ const report=await replayLogicalWorkSource({...fixed,proofVersion:2});
+ expect(report).toMatchObject({schemaVersion:2,metric:{quantity:{value:12,unit:'operation'}},parameterBindings:{scope:'actual_logical_parameter_context',complete:true}});
+ expect(report.items).toEqual(original.items);
+ expect(report.parameterBindings?.roots).toMatchObject(['B','C'].map(name=>({role:'logical',name,frameId:'["asset","A"]',target:'计算段 1 · scoped-extra'})));
+ expect(report.parameterBindings?.nodes).toEqual(expect.arrayContaining([
+  expect.objectContaining({name:'B',frameId:'["asset","A"]',value:{kind:'integer',value:3},source:expect.objectContaining({kind:'node_override'})}),
+  expect.objectContaining({name:'contextTokensPerRequest',value:{kind:'number',value:4}}),
+ ]));
+ const earlier=await request(p,target,{step:0,fusionNodeId});
+ const first=await replayLogicalWorkSource({...earlier.fixed,proofVersion:2});
+ expect(first.metric).toMatchObject({quantity:{value:6}});
+ expect(first.parameterBindings?.nodes.find(node=>node.kind==='workload'&&node.name==='contextTokensPerRequest')?.value.value).toBe(2);
+ expect(await verifyLogicalWorkSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const forged=structuredClone(report);
+ const root=forged.parameterBindings?.roots[0];
+ if(!root)throw Error('Missing fusion root');
+ root.frameId='["asset","$model"]';
+ await expect(verifyLogicalWorkSourceReport(forged)).rejects.toThrow('固定输入复算不同');
+});
+
 it('keeps the running total across pages and rejects altered replies, evidence and scopes',async()=>{
  const p=replicatedGemm(),op=operator(p),segment=op.cost.compute[0]!;
  for(let i=0;i<24;i++)op.cost.compute.push({...segment,segmentId:'other'+i,usefulOperations:lit(1),executedOperations:lit(1)});
@@ -106,6 +133,16 @@ it('keeps the running total across pages and rejects altered replies, evidence a
  expect(report).toMatchObject({page:1,componentCount:25,metric:{quantity:{value:1048}}});
  expect(report.items[0]).toMatchObject({index:20,addition:{before:1043,after:1044}});
  expect(report.items).toHaveLength(5);
+ const first=await replayLogicalWorkSource({...fixed,proofVersion:2});
+ expect(first.parameterBindings?.roots.map(root=>root.name).sort()).toEqual(['K','M','N']);
+ expect(first.parameterBindings?.roots.every(root=>root.target==='计算段 1 · matmul')).toBe(true);
+ const second=await replayLogicalWorkSource({...fixed,page:1,proofVersion:2});
+ expect(second.parameterBindings).toMatchObject({complete:true,roots:[]});
+ expect(second.items).toEqual(report.items);
+ const scopedTask={taskId:'logical',phase:'logical_work_source',request:{...fixed,page:1,proofVersion:2 as const}};
+ const scopedReply={taskId:'logical',phase:'logical_work_source',status:'available',report:second};
+ expect(readLogicalWorkSourceReply(scopedReply,scopedTask)).toEqual(scopedReply);
+ expect(()=>readLogicalWorkSourceReply({...scopedReply,report:{...second,parameterBindings:undefined}},scopedTask)).toThrow('实际公式');
  const task={taskId:'logical',phase:'logical_work_source',request:{...fixed,page:1}},reply={taskId:task.taskId,phase:task.phase,status:'available',report};
  expect(readLogicalWorkSourceReply(reply,task)).toBe(reply);
  expect(()=>readLogicalWorkSourceReply({...reply,report:{...report,items:[]}},task)).toThrow('分页');
