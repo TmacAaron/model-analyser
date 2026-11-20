@@ -1,6 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 import {randomUUID} from 'node:crypto';import {mkdir,readFile} from 'node:fs/promises';import {execFile} from 'node:child_process';import {promisify} from 'node:util';
-import {StorageId,type ProjectDocument} from '@model-analyser/contracts';import {verifyExactLeafSourceReport} from '@model-analyser/core';
+import {NodeId,StorageId,type ProjectDocument} from '@model-analyser/contracts';import {verifyExactLeafSourceReport} from '@model-analyser/core';
 import {makeQuantizationScopeProject} from '../../scripts/quantization-scope-project.js';import {evidenceDirectory} from './evidence-directory.js';
 test.setTimeout(90000);
 async function open(page:Page,p:ProjectDocument,nodeId='x'){
@@ -13,6 +13,28 @@ test('shared allocation explains actual later-consumer scopes and exports a vers
 });
 test('explicit zero-byte allocation remains the active source after quantization',async({page})=>{
  const p=makeQuantizationScopeProject();p.scenarios[0]!.numericOverrides=[{target:{kind:'storage',storageId:StorageId.parse('x::left')},field:'memory_bytes',value:{value:0,unit:'byte'}}];const {source}=await open(page,p);await expect(source).toContainText('已复核原叶指标：14 byte');const item=source.locator('.storage-access-item').first();await expect(item).toContainText('量化分配：8 → 14 byte');await expect(item).toContainText('最终 0 byte');await expect(item).toContainText('覆盖 #0：0 byte');await expect(item).toContainText('本次访问贡献 0 byte');await unchanged(page,p);
+});
+test('shows override proportions, effective bandwidth efficiency and authenticated version 4 export',async({page})=>{
+ const project=makeQuantizationScopeProject(),scenario=project.scenarios[0]!;
+ const target={kind:'node' as const,nodeId:NodeId.parse('x')};
+ scenario.numericOverrides=[
+  {target,field:'traffic_bytes',value:{value:80,unit:'byte'},description:'人工覆盖总流量'},
+  {target,field:'memory_efficiency',value:{value:.5,unit:'ratio'}},
+ ];
+ const {source,proof,inspector}=await open(page,project);
+ await expect(source.getByRole('region',{name:'实际流量覆盖'})).toContainText('28 byte 覆盖为 80 byte');
+ await expect(source.locator('.storage-access-item').first()).toContainText('14 ÷ 28 × 80 = 40 byte');
+ await inspector.getByLabel('成本来源指标',{exact:true}).selectOption('seconds');
+ await expect(proof.getByRole('region',{name:'实际耗时覆盖'})).toContainText('显存带宽效率 · 1 → 0.5 ratio');
+ await expect(proof).toContainText('已复核原叶指标：1.6 second');
+ const download=page.waitForEvent('download');
+ await proof.getByRole('button',{name:'导出此页固定输入与来源',exact:true}).click();
+ const file=await(await download).path();if(!file)throw Error('Missing download');
+ const report=await verifyExactLeafSourceReport(JSON.parse(await readFile(file,'utf8')));
+ expect(report).toMatchObject({schemaVersion:4,kind:'leaf_timing_source',metric:{quantity:{value:1.6}},timingOverrides:[{overrideIndex:1}]});
+ const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
+ expect(JSON.parse(cli.stdout)).toMatchObject({schemaVersion:4,quantity:{value:1.6,unit:'second'}});
+ await unchanged(page,project);
 });
 test('access pages stay bounded and switching metrics resets the current page',async({page})=>{
  const p=makeQuantizationScopeProject(),op=p.assetSnapshots.find(a=>a.definition.kind==='operator');if(op?.definition.kind!=='operator')throw Error();const access=op.definition.operator.cost.memoryAccess[0]!;op.definition.operator.cost.memoryAccess=Array.from({length:45},(_,i)=>({...structuredClone(access),accessId:'read-'+i}));const {proof,source,inspector}=await open(page,p);await expect(source.locator('.storage-access-item')).toHaveCount(20);await proof.getByRole('button',{name:'下一页精确表达式',exact:true}).click();await expect(source.locator('.storage-access-item').first()).toContainText('read-20');await proof.getByRole('button',{name:'下一页精确表达式',exact:true}).click();await expect(source.locator('.storage-access-item')).toHaveCount(5);await inspector.getByLabel('成本来源指标',{exact:true}).selectOption('write');await expect(source).toContainText('已复核原叶指标：0 byte');await expect(source.locator('.storage-access-item')).toHaveCount(0);await expect(proof.getByRole('button',{name:'上一页精确表达式',exact:true})).toHaveCount(0);await unchanged(page,p);

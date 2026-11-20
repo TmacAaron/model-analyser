@@ -1,9 +1,10 @@
 import {applyStorageAllocationOverrides} from './storage-allocation-overrides.js';
+import {applyNodeCostOverride} from './node-cost-overrides.js';
 import { modelAssumptions,targetParameterSources } from './model-context.js';
 import { AnalysisAttempt,AnalysisResult,type Scenario,type AssetDocument,type Diagnostic,type Provenance,type CostDefinition,type MetricScope,type NodeId,type DecodeStepContext,type MemoryEvidence } from '@model-analyser/contracts';
 import { instantiateModel } from './instantiate.js';
 import { topologicalOrder } from './graph.js';
-import { evaluateCost,memoryAccessBytes } from './cost.js';
+import { evaluateCost } from './cost.js';
 import { allocateStorage } from './storage.js';
 import { calculationInput,computeInputHash } from './input-hash.js';
 import { aggregateCosts,MetricFactory } from './metrics.js';
@@ -43,7 +44,7 @@ export async function analyzeScenario(input:Scenario,library:AssetDocument[],ste
     applyStorageAllocationOverrides(resolved.graph.storages,scenario.numericOverrides);
     const storageBytes=new Map(resolved.graph.storages.map(s=>[s.storageId,allocateStorage(s.storageId,resolved.graph.storages,{symbols:{},assets}).totalBytes])),accessContext={symbols:{},assets,storageBytes};
     for(const override of scenario.numericOverrides){const target=override.target;if(target.kind==='node'&&override.field==='fixed_seconds'&&scenario.numericOverrides.some(o=>o.target.kind==='node'&&o.target.nodeId===target.nodeId&&(o.field==='compute_efficiency'||o.field==='memory_efficiency')))throw new FormulaError('invalid_override','固定耗时与效率覆盖不能同时生效，请选择一个明确的耗时口径');}
-    for(const override of scenario.numericOverrides){
+    for(const [overrideIndex,override] of scenario.numericOverrides.entries()){
       if(override.field==='parameter'||override.target.kind==='device'&&override.field==='memory_bytes')continue;
       const target=override.target,key=JSON.stringify([target,override.field]);if(overrideKeys.has(key))throw new FormulaError('invalid_override','同一目标字段被重复覆盖');overrideKeys.add(key);
       assumptions.push(`Explicit override ${key} = ${override.value.value} ${override.value.unit}${override.description?' ('+override.description+')':''}`);
@@ -51,13 +52,7 @@ export async function analyzeScenario(input:Scenario,library:AssetDocument[],ste
         continue; // Allocation overrides precede all access-byte bindings, regardless of input array order.
       }else if(target.kind==='node'){
         const node=resolved.graph.nodes.find(n=>n.nodeId===target.nodeId);if(node?.body.kind!=='opaque')throw new FormulaError('missing_reference','成本覆盖必须指向实际叶节点，容器可通过 opaque 资产声明总成本');const cost=node.body.cost;
-        if(override.field==='fixed_seconds')cost.timing={kind:'fixed',seconds:override.value.value,description:override.description??'Explicit scenario timing override'};
-        else if(override.field==='compute_efficiency'||override.field==='memory_efficiency'){
-          if(cost.timing.kind!=='roofline_bound')throw new FormulaError('invalid_override','效率覆盖需要 roofline_bound 耗时策略');if(override.field==='compute_efficiency')cost.timing.computeEfficiency=override.value.value;else cost.timing.memoryEfficiency=override.value.value;
-        }else if(override.field==='traffic_bytes'){
-          const values=cost.memoryAccess.map(a=>memoryAccessBytes(a,accessContext)),total=values.reduce((n,v)=>n+v,0);if(!Number.isFinite(total)||total<=0)throw new FormulaError('invalid_override','不能在未声明读写比例时拆分总流量覆盖');
-          for(const [index,access] of cost.memoryAccess.entries())access.logicalBytes={kind:'literal',quantity:{value:(values[index]??0)/total*override.value.value,unit:'byte'}};
-        }else throw new FormulaError('unsupported_override',`当前基线不支持 ${override.field} 成本覆盖`);
+        applyNodeCostOverride(cost,override,overrideIndex,accessContext);
       }else throw new FormulaError('unsupported_override','当前基线未接入此设备/范围覆盖，不能忽略其输入');
     }
     const provenance:Provenance={assetRefs:assets.map(a=>({assetId:a.assetId,revision:a.revision,kind:a.definition.kind})),formulaRefs:resolved.assetRefs.filter(r=>r.kind==='formula'),parameterSources:resolved.parameters.map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),assumptions};

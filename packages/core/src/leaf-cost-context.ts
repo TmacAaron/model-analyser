@@ -5,7 +5,7 @@ import {instantiateModel,type InstantiatedCostCapture} from './instantiate.js';
 import {computeInputHash,stableStringify} from './input-hash.js';
 import {canonical} from '../../contracts/src/validation.js';
 import type {InstantiationObserver} from './instantiate.js';
-export type LeafSourceObservation=Pick<InstantiationObserver,'quantization'|'bindingNodes'|'bindingTraceReady'>&{declared?:(call:InstantiatedCostCapture)=>void};
+export type LeafSourceObservation=Pick<InstantiationObserver,'quantization'|'bindingNodes'|'bindingTraceReady'>&{declared?:(call:InstantiatedCostCapture)=>void;allowNodeCostOverrides?:true};
 /** Semantic selectors originate where a cost field is selected, never from matching values. */
 export const LeafCostSelector=z.strictObject({nodeId:NodeId,scope:MetricScope,field:z.enum(['hbmBytes','logicalReadBytes','logicalWriteBytes','usefulOperations','executedOperations','seconds']),computeClass:ComputeClass.optional()});
 export type LeafCostSelector=z.infer<typeof LeafCostSelector>;
@@ -28,7 +28,7 @@ export async function resolveLeafCostSource(input:unknown,bindings=false,observa
   const metric=compute&&row?row[r.selector.field as 'usefulOperations'|'executedOperations']:node.cost[r.selector.field as 'hbmBytes'|'logicalReadBytes'|'logicalWriteBytes'|'seconds'];
   if(stableStringify(metric)!==stableStringify(r.metric)||result.engineVersion!==r.engineVersion||result.inputHash!==r.inputHash)throw Error('原指标、单位、诊断或版本与固定输入复算不一致。');
   if(metric.status!=='available')throw Error('原指标不可用，保留诊断，不伪造数值求值链。');
-  if(r.scenario.numericOverrides.some(o=>o.target.kind==='node'&&o.target.nodeId===r.selector.nodeId&&o.field!=='parameter'))throw Error('此节点有成本覆盖变换，尚未采集精确覆盖链；未展示被覆盖表达式作为实际来源。');
+  if(!observation?.allowNodeCostOverrides&&r.scenario.numericOverrides.some(o=>o.target.kind==='node'&&o.target.nodeId===r.selector.nodeId&&o.field!=='parameter'))throw Error('此节点有成本覆盖变换，尚未采集精确覆盖链；未展示被覆盖表达式作为实际来源。');
   const captures:InstantiatedCostCapture[]=[];
   const expanded=instantiateModel(r.scenario,r.assets,undefined,r.stepContext,{nodeId:r.selector.nodeId,cost:c=>{captures.push(c);observation?.declared?.(c);},...(bindings?{bindings:true}:{}),...(observation?.quantization?{quantization:observation.quantization}:{}),...(observation?.bindingNodes?{bindingNodes:observation.bindingNodes}:{}),...(observation?.bindingTraceReady?{bindingTraceReady:observation.bindingTraceReady}:{})});
   if(expanded.status!=='available'||captures.length!==1)throw Error('无法唯一捕获原实际调用的成本表达式。');

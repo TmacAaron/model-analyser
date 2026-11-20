@@ -10,11 +10,12 @@ import {memoryAccessBytes} from './cost.js';
 import {applyStorageAllocationOverrides} from './storage-allocation-overrides.js';
 import type {QuantizationObservation,StorageOverrideObservation,QuantizationObserver} from './quantization-observation.js';
 import {stableStringify} from './input-hash.js';
+import {applyNodeCostOverride,type NodeCostOverrideObservation} from './node-cost-overrides.js';
 
 type Access=CostDefinition['memoryAccess'][number];
 const pageSize=20;
 const selectedAccesses=(call:InstantiatedCostCapture,field:string)=>call.cost.memoryAccess.filter(a=>field!=='logicalReadBytes'||a.mode==='read').filter(a=>field!=='logicalWriteBytes'||a.mode==='write');
-const storageField=(field:string)=>['hbmBytes','logicalReadBytes','logicalWriteBytes','seconds'].includes(field);
+const storageField=(field:string)=>['hbmBytes','logicalReadBytes','logicalWriteBytes','seconds','logicalAccessBytes'].includes(field);
 function canonical<T extends {storage:StorageSpec}>(id:string,storages:readonly T[]){const aliases:string[]=[];while(true){if(aliases.includes(id)||aliases.length>=64)throw Error('存储来源alias链无效');aliases.push(id);const entry=storages.find(s=>s.storage.storageId===id);if(!entry)throw Error('实际规范存储声明未采集');if(entry.storage.allocation.kind!=='alias')return {id,aliases,entry};id=entry.storage.allocation.targetStorageId;}}
 function collector(field:string,page:number,assets:AssetDocument[]){
  const ids=new Set<string>(),events:QuantizationObservation[]=[];let truncated=false;
@@ -26,13 +27,16 @@ function collector(field:string,page:number,assets:AssetDocument[]){
  return {ids,events,quantization,declared,get truncated(){return truncated;}};
 }
 /** Observe only this page's allocations, and capture actual later shared-consumer frames. */
-export async function resolveStorageSourceContext(input:unknown){
+export async function resolveStorageSourceContext(input:unknown,allowNodeCostOverrides=false){
  // The validated resolver owns hashes, actual steps, metric identity and all legacy guards.
- const request=LeafCostSourceRequest.parse(input),capture=collector(request.selector.field,request.page,request.assets),traces:ParameterCaptureTrace[]=[];
- let context=await resolveLeafCostSource(input,true,{quantization:capture.quantization,declared:capture.declared,bindingTraceReady:t=>{traces.push(t);}}),active=capture;
+ const request=LeafCostSourceRequest.parse(input),traces:ParameterCaptureTrace[]=[];
+ const traffic=allowNodeCostOverrides&&request.scenario.numericOverrides.some(o=>o.target.kind==='node'&&o.target.nodeId===request.selector.nodeId&&o.field==='traffic_bytes');
+ const field=traffic&&storageField(request.selector.field)?'logicalAccessBytes':request.selector.field;
+ const capture=collector(field,request.page,request.assets);
+ let context=await resolveLeafCostSource(input,true,{quantization:capture.quantization,declared:capture.declared,bindingTraceReady:t=>{traces.push(t);},...(allowNodeCostOverrides?{allowNodeCostOverrides:true}:{})}),active=capture;
  const needed=new Set(capture.events.flatMap(e=>'nodeId'in e?[e.nodeId]:[])),trace=traces[0];
  const missing=[...needed].filter(id=>!trace?.frames.some(f=>f.id===assetParameterFrameId(id)));
- if(missing.length){const next=collector(context.r.selector.field,context.r.page,context.r.assets),calls:InstantiatedCostCapture[]=[],final:ParameterCaptureTrace[]=[];
+ if(missing.length){const next=collector(field,context.r.page,context.r.assets),calls:InstantiatedCostCapture[]=[],final:ParameterCaptureTrace[]=[];
   const expanded=instantiateModel(context.r.scenario,context.r.assets,undefined,context.r.stepContext,{nodeId:context.r.selector.nodeId,bindings:true,bindingNodes:missing,cost:c=>{calls.push(c);next.declared(c);},bindingTraceReady:t=>{final.push(t);},quantization:next.quantization});
   if(stableStringify(expanded)!==stableStringify(context.expanded)||calls.length!==1||final.length!==1)throw Error('扩展来源观察改变了原实际实例化结果');
   const call=calls[0],completed=final[0];if(!call||!completed)throw Error('完整调用来源未采集');call.bindingContext={...call.bindingContext,trace:completed};context={...context,call};active=next;
@@ -43,7 +47,7 @@ type Capture=Awaited<ReturnType<typeof resolveStorageSourceContext>>['capture'];
 type Expression=ReturnType<typeof explainValue>&{field:string;frameId?:string};
 function reads(proof:ValueEvaluationProof,result=new Map<string,Quantity>()){if(proof.kind==='symbol'&&proof.symbol&&proof.quantity)result.set(proof.symbol,proof.quantity);for(const binding of proof.bindings??[])if(binding.proof)reads(binding.proof,result);return result;}
 
-export function explainStorageAccessSource(context:LeafCostContext,capture:Capture){
+export function explainStorageAccessSource(context:LeafCostContext,capture:Capture,trafficOverride?:{overrideIndex:number;override:LeafCostContext['r']['scenario']['numericOverrides'][number]}){
  const {r,call,node,expanded}=context,field=r.selector.field==='seconds'?'hbmBytes':r.selector.field;
  if(!['hbmBytes','logicalReadBytes','logicalWriteBytes'].includes(field))throw Error('请选择实际访问字节字段');
  if(expanded.resolved.fusionApplications.some(f=>f.memberNodeIds.includes(r.selector.nodeId)))throw Error('当前叶涉及融合变换，尚未记录其实际访问链');
@@ -54,12 +58,38 @@ export function explainStorageAccessSource(context:LeafCostContext,capture:Captu
  const boundNode=expanded.resolved.graph.nodes.find(n=>n.nodeId===r.selector.nodeId);if(boundNode?.body.kind!=='opaque')throw Error('实际绑定叶成本缺失');const bound=boundNode.body.cost.memoryAccess;
  if(stableStringify(call.cost.memoryAccess.map(a=>a.accessId))!==stableStringify(bound.map(a=>a.accessId)))throw Error('原访问ID或顺序已变化');
  const accessBindings=new Map(call.cost.memoryAccess.map((a,index)=>[a,bound[index]]));
- const source=selectedAccesses(call,field),roots:AdditionalParameterRoot[]=[],start=r.page*pageSize;let sum=0,bytes=0;
- const contributions=source.map(a=>{const b=accessBindings.get(a);if(!b)throw Error('实际绑定访问缺失');let value:number;
-  if(field==='hbmBytes'&&b.hbmEstimate?.kind==='bytes')value=evaluateValue(b.hbmEstimate.value,{},r.assets).value;
-  else{if(b.logicalBytes.kind==='storage_allocation'&&evaluateValue(b.logicalBytes.passes,{},r.assets).value!==0&&!storageBytes.has(b.storageId))storageBytes.set(b.storageId,allocateStorage(b.storageId,storages,{symbols:{},assets:r.assets}).totalBytes);value=memoryAccessBytes(b,{symbols:{},assets:r.assets,storageBytes});if(field==='hbmBytes'){if(b.hbmEstimate?.kind!=='factor')throw Error('原访问没有HBM估计');value=value*b.hbmEstimate.value;}}
-  if(!Number.isFinite(value)||value<0)throw Error('访问字节不可复核');const left=sum;sum+=value;return {value,left,total:sum};
+ const accessContext={symbols:{},assets:r.assets,storageBytes};
+ function prepareAllocation(access:Access){
+  if(access.logicalBytes.kind==='storage_allocation'&&evaluateValue(access.logicalBytes.passes,{},r.assets).value!==0&&!storageBytes.has(access.storageId))storageBytes.set(access.storageId,allocateStorage(access.storageId,storages,accessContext).totalBytes);
+ }
+ const selected=new Set(selectedAccesses(call,field));
+ const effectiveCost=trafficOverride?structuredClone(boundNode.body.cost):undefined;
+ const observations:NodeCostOverrideObservation[]=[];
+ if(trafficOverride&&effectiveCost){
+  for(const access of bound)prepareAllocation(access);
+  applyNodeCostOverride(effectiveCost,trafficOverride.override,trafficOverride.overrideIndex,accessContext,o=>observations.push(o));
+ }
+ const traffic=observations.find(o=>o.kind==='traffic');
+ const source=traffic?call.cost.memoryAccess:[...selected],roots:AdditionalParameterRoot[]=[],start=r.page*pageSize;let sum=0,previousSum=0,bytes=0;
+ const contributions=source.map((a,index)=>{
+  const original=accessBindings.get(a),effective=effectiveCost?.memoryAccess[index]??original;
+  if(!original||!effective)throw Error('实际绑定访问缺失');
+  const relevant=selected.has(a),independent=field==='hbmBytes'&&effective.hbmEstimate?.kind==='bytes';
+  let value=0;
+  if(relevant){
+   if(field==='hbmBytes'&&effective.hbmEstimate?.kind==='bytes')value=evaluateValue(effective.hbmEstimate.value,{},r.assets).value;
+   else{prepareAllocation(effective);value=memoryAccessBytes(effective,accessContext);if(field==='hbmBytes'){if(effective.hbmEstimate?.kind!=='factor')throw Error('原访问没有HBM估计');value=value*effective.hbmEstimate.value;}}
+  }
+  if(!Number.isFinite(value)||value<0)throw Error('访问字节不可复核');
+  const left=sum;sum+=value;
+  if(!traffic)return {value,left,total:sum};
+  const before=memoryAccessBytes(original,accessContext),after=memoryAccessBytes(effective,accessContext),previous=previousSum;
+  previousSum+=before;
+  const fraction=before/traffic.previousTotal;
+  if(after!==fraction*traffic.override.value.value)throw Error('覆盖后的访问字节与实际分摊顺序不同');
+  return {value,left,total:sum,traffic:{relevant,independent,before,after,fraction,previousSum:{left:previous,right:before,value:previousSum}}};
  });
+ if(traffic&&previousSum!==traffic.previousTotal)throw Error('流量覆盖的原始分母与实际顺序求和不同');
  if(sum!==expected.quantity.value)throw Error('实际分配与原顺序访问求和不等于原指标');
  function expression(value:Parameters<typeof explainValue>[0],symbols:Record<string,Quantity>,field:string,frameId?:string):Expression{return {...explainValue(value,symbols,r.assets),field,...(frameId?{frameId}:{})};}
  function allocation(id:string){const events:AllocationObservation[]=[];let truncated=false;const result=allocateStorage(StorageId.parse(id),storages,{symbols:{},assets:r.assets},e=>{if(events.length<256)events.push(e);else truncated=true;});if(result.totalBytes.status!=='available')throw Error('最终实际分配不可用');return {result,events,truncated,bytes:result.totalBytes.quantity.value};}
@@ -95,16 +125,20 @@ export function explainStorageAccessSource(context:LeafCostContext,capture:Captu
  }
  const items=source.slice(start,start+pageSize).map((access,offset)=>{
   const index=start+offset,contribution=contributions[index],boundAccess=accessBindings.get(access);if(!contribution||!boundAccess)throw Error('实际访问贡献未采集');
-  const independent=field==='hbmBytes'&&access.hbmEstimate?.kind==='bytes',value=independent&&access.hbmEstimate?.kind==='bytes'?access.hbmEstimate.value:access.logicalBytes.kind==='storage_allocation'?access.logicalBytes.passes:access.logicalBytes;
-  const proof=expression(value,call.symbols,'memoryAccess['+JSON.stringify(access.accessId)+'].'+(independent?'hbmEstimate.value':access.logicalBytes.kind==='storage_allocation'?'logicalBytes.passes':'logicalBytes'),call.bindingContext?.frameId),isAllocation=!independent&&access.logicalBytes.kind==='storage_allocation',skippedStorage=isAllocation&&proof.quantity.value===0;
+  const independent=field==='hbmBytes'&&access.hbmEstimate?.kind==='bytes',explicitHBM=independent&&access.hbmEstimate?.kind==='bytes'?access.hbmEstimate.value:undefined;
+  const useLogical=!!traffic||!independent,value=!useLogical&&explicitHBM?explicitHBM:access.logicalBytes.kind==='storage_allocation'?access.logicalBytes.passes:access.logicalBytes;
+  const fieldPath='memoryAccess['+JSON.stringify(access.accessId)+'].';
+  const proof=expression(value,call.symbols,fieldPath+(!useLogical?'hbmEstimate.value':access.logicalBytes.kind==='storage_allocation'?'logicalBytes.passes':'logicalBytes'),call.bindingContext?.frameId),isAllocation=useLogical&&access.logicalBytes.kind==='storage_allocation',skippedStorage=isAllocation&&proof.quantity.value===0;
   const allocationSource=isAllocation&&!skippedStorage?storage(access.storageId):undefined;
   let checked=proof.quantity.value;if(isAllocation){if(!skippedStorage&&!allocationSource)throw Error('实际分配来源未采集');checked=skippedStorage?0:(allocationSource?.bytes??0)*checked;}
+  const explicitProof=traffic&&explicitHBM?expression(explicitHBM,call.symbols,fieldPath+'hbmEstimate.value',call.bindingContext?.frameId):undefined;
+  if(contribution.traffic){if(checked!==contribution.traffic.before)throw Error('原访问表达式与覆盖分母操作数不同');checked=contribution.traffic.relevant?(explicitProof?.quantity.value??contribution.traffic.after):0;}
   const factor=field==='hbmBytes'&&!independent&&access.hbmEstimate?.kind==='factor'?access.hbmEstimate.value:undefined;if(factor!==undefined)checked=checked*factor;
   const unit=isAllocation?'count':'byte';if(proof.quantity.unit!==unit||checked!==contribution.value)throw Error('原访问表达式、分配和因子与实际字节不同');
   if(boundAccess.storageId!==call.storageRefs.find(s=>s.localStorageId===access.storageId)?.storageId)throw Error('实际访问存储映射不同');
-  const item={index,accessId:access.accessId,mode:access.mode,kind:independent?'explicit_hbm_bytes' as const:isAllocation?'storage_allocation' as const:'declared_logical_bytes' as const,proof,...(factor===undefined?{}:{factor}),...(allocationSource?{storage:allocationSource}:{}),skippedStorage,contribution:{value:contribution.value,unit:'byte' as const},sum:{left:contribution.left,right:contribution.value,value:contribution.total},complete:!proof.truncated&&(!allocationSource||allocationSource.complete),boundaries:[] as string[]};
+  const item={index,accessId:access.accessId,mode:access.mode,kind:independent?'explicit_hbm_bytes' as const:isAllocation?'storage_allocation' as const:'declared_logical_bytes' as const,proof,...(factor===undefined?{}:{factor}),...(allocationSource?{storage:allocationSource}:{}),...(contribution.traffic?{traffic:contribution.traffic}:{}),...(explicitProof?{explicitProof}:{}),skippedStorage,contribution:{value:contribution.value,unit:'byte' as const},sum:{left:contribution.left,right:contribution.value,value:contribution.total},complete:!proof.truncated&&!explicitProof?.truncated&&(!allocationSource||allocationSource.complete),boundaries:[] as string[]};
   try{bytes+=jsonBytes(item,16*1024*1024-bytes);return item;}catch{return {index,accessId:access.accessId,mode:access.mode,kind:item.kind,skippedStorage,contribution:item.contribution,sum:item.sum,complete:false,boundaries:['本页来源记录达到16MiB预算']};}
  });
- return {kind:'storage_access_source' as const,field,metric:expected,page:r.page,pageSize,componentCount:source.length,operation:'ordered_sum' as const,total:{value:sum,unit:'byte' as const},items,complete:r.page===0&&source.length<=pageSize&&items.every(i=>i.complete),parameterRoots:roots};
+ return {kind:'storage_access_source' as const,field,metric:expected,page:r.page,pageSize,componentCount:source.length,operation:'ordered_sum' as const,total:{value:sum,unit:'byte' as const},items,complete:r.page===0&&source.length<=pageSize&&items.every(i=>i.complete),...(traffic?{trafficOverride:traffic}:{}),parameterRoots:roots};
 }
 export type StorageAccessSource=ReturnType<typeof explainStorageAccessSource>;
