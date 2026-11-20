@@ -25,6 +25,17 @@ test('exports the complete maximum-size model with its original input and numeri
   test.setTimeout(120000);
   await page.addInitScript(()=>{
     const OriginalWorker=window.Worker;
+    const parse=JSON.parse,decode=TextDecoder.prototype.decode;
+    JSON.parse=function(...args:Parameters<typeof JSON.parse>){
+      const start=performance.now(),value=parse(...args);
+      if(typeof args[0]==='string'&&args[0].length>1000000)document.documentElement.dataset.analysisLastLargeParseMs=String(performance.now()-start);
+      return value;
+    };
+    TextDecoder.prototype.decode=function(...args:Parameters<TextDecoder['decode']>){
+      const start=performance.now(),value=decode.apply(this,args);
+      if(args[0]&&args[0].byteLength>1000000)document.documentElement.dataset.analysisLastLargeDecodeMs=String(performance.now()-start);
+      return value;
+    };
     window.Worker=class extends OriginalWorker{
       constructor(url:string|URL,options?:WorkerOptions){
         super(url,options);
@@ -51,6 +62,8 @@ test('exports the complete maximum-size model with its original input and numeri
   },{once:true}));
   await analyze.click();
   await expect(page.locator('.analysis-cards')).toBeVisible({timeout:45000});
+  const measurementOptions=await page.getByLabel('测量目标',{exact:true}).locator('option').count();
+  const rooflineOptions=await page.getByLabel('Roofline范围',{exact:true}).locator('option').count();
   const button=page.getByRole('button',{name:'导出结果 JSON',exact:true});
   await button.evaluate(el=>el.addEventListener('click',()=>{
     const start=performance.now();
@@ -72,12 +85,32 @@ test('exports the complete maximum-size model with its original input and numeri
   const resultToTwoFrames=Number(await page.locator('html').getAttribute('data-analysis-result-two-frame-ms'));
   const analyzeToTwoFrames=Number(await page.locator('html').getAttribute('data-analysis-click-through-result-ms'));
   const transferredBytes=Number(await page.locator('html').getAttribute('data-analysis-transfer-bytes'));
+  const largeDecode=Number(await page.locator('html').getAttribute('data-analysis-last-large-decode-ms'));
+  const largeParse=Number(await page.locator('html').getAttribute('data-analysis-last-large-parse-ms'));
   expect(transferredBytes).toBeGreaterThan(0);
   expect(resultToTwoFrames).toBeGreaterThan(0);
   expect(analyzeToTwoFrames).toBeGreaterThan(resultToTwoFrames);
   await writeFile('test-results/analysis-export-observation.json',JSON.stringify({chrome:browser.version(),bytes:bytes.length,
     sha256:createHash('sha256').update(bytes).digest('hex'),transferredBytes,analysisThroughResultTwoFramesMilliseconds:analyzeToTwoFrames,
-    resultToTwoAnimationFramesMilliseconds:resultToTwoFrames,clickToTwoAnimationFramesMilliseconds:afterTwoFrames},null,2));
+    resultToTwoAnimationFramesMilliseconds:resultToTwoFrames,clickToTwoAnimationFramesMilliseconds:afterTwoFrames,
+    largeDecodeMilliseconds:largeDecode,largeParseMilliseconds:largeParse,measurementOptions,rooflineOptions},null,2));
+
+  expect(measurementOptions).toBeLessThanOrEqual(101);
+  expect(rooflineOptions).toBeLessThanOrEqual(101);
+  for(const [label,searchLabel] of [['测量目标','查找测量目标'],['Roofline范围','查找 Roofline 范围']] as const){
+    const select=page.getByLabel(label,{exact:true}),search=page.getByLabel(searchLabel,{exact:true});
+    const lastTarget='node:leaves[9998]',lastOption=select.locator(`option[value="${lastTarget}"]`);
+    await expect(lastOption).toHaveCount(0);
+    await search.fill('leaves[9998]');
+    await expect(lastOption).toHaveCount(1);
+    await select.selectOption(lastTarget);
+    await search.fill('no-matching-target');
+    await expect(search.locator('..').getByRole('status')).toHaveText('没有匹配的范围');
+    await expect(select).toHaveValue(lastTarget);
+    await expect(select.locator('option')).toHaveCount(1);
+  }
+  await expect(page.getByRole('button',{name:'记录并绑定当前输入',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'计算 Roofline 拐点',exact:true})).toBeEnabled();
 });
 
 test('cancel and configuration changes discard stale exports and retry reuses the current result',async({page})=>{

@@ -4,10 +4,11 @@ import { rooflineActualFrame,type RooflineField } from './roofline-source.js';
 import { ScalarButton } from './scalar-source.js';
 import { parseTarget,targetProblem,type AnalysisFocus } from './analysis-focus.js';
 import { useDisplayUnits } from './display-units.js';
-import { useEffect,useRef,useState } from 'react';
+import { useEffect,useMemo,useRef,useState } from 'react';
 import { RooflineStudyRequest,RooflineStudyAttempt,type AnalysisResult,type Scenario,type AssetDocument,type RooflineObservation,type RooflineBalance,type MetricValue,type CapacitySearchPoint } from '@model-analyser/contracts';
 import { calculationInput,stableStringify } from '@model-analyser/core';
 import type { RooflineWorkerRequest,RooflineWorkerResponse } from './roofline-study-worker.js';
+import { AnalysisTargetPicker } from './analysis-target-picker.js';
 
 const colors=['#397954','#a0643f','#526db6','#97629d','#4e8a89'];
 const num=(v:number)=>v!==0&&(Math.abs(v)<.0001||Math.abs(v)>=1e12)?v.toExponential(4):new Intl.NumberFormat('en-US',{maximumFractionDigits:4}).format(v);
@@ -29,9 +30,21 @@ export function RooflineStudyView({scenario,assets,result,focus}:{scenario:Scena
   const display=useDisplayUnits(),metric=(m:MetricValue)=>m.status==='available'?(m.quantity.unit==='byte'||m.quantity.unit==='second'?display.metric(m):num(m.quantity.value)):'不可用';
 
   const context=useFocusedTarget(focus),target=context.id,setTarget=context.setId,[step,setStep]=useState('0'),[scan,setScan]=useState(false),[variable,setVariable]=useState('workload:batchSize'),[min,setMin]=useState('1'),[max,setMax]=useState('20'),[filter,setFilter]=useState(''),[busy,setBusy]=useState(false),[cancelling,setCancelling]=useState(false),[progress,setProgress]=useState({completed:0,total:0}),[error,setError]=useState(''),[cached,setCached]=useState<{key:string;attempt:RooflineStudyAttempt}|null>(null);
-  const source=rooflineActualFrame(result,Number(step)),fused=new Set(source?.fusions?.flatMap(f=>f.evaluation.application.memberNodeIds)??[]),nodes=(source?.nodes??[]).filter(n=>!fused.has(n.nodeId)),targets=[['model','整个模型（物理聚合）'],...(source?.modules??[]).map(m=>['module:'+m.nodeId,'模块 '+m.nodeId]),...nodes.map(n=>['node:'+n.nodeId,'节点 '+n.nodeId]),...(source?.fusions??[]).map(f=>['node:'+f.evaluation.application.nodeId,'融合 '+f.evaluation.application.nodeId])],chosen=target,parsedTarget=parseTarget(chosen),targetError=!source?'请求的Decode步骤不存在，未使用序列汇总替代。':context.following&&focus?.reason?focus.reason:parsedTarget?targetProblem(source,parsedTarget,true):'当前选择没有可用的Roofline目标';
+  const source=rooflineActualFrame(result,Number(step)),chosen=target,parsedTarget=parseTarget(chosen);
+  const targets=useMemo(()=>{
+    const fused=new Set(source?.fusions?.flatMap(f=>f.evaluation.application.memberNodeIds)??[]);
+    return [{id:'model',label:'整个模型（物理聚合）'},
+      ...(source?.modules??[]).map(m=>({id:'module:'+m.nodeId,label:'模块 '+m.nodeId})),
+      ...(source?.nodes??[]).filter(n=>!fused.has(n.nodeId)).map(n=>({id:'node:'+n.nodeId,label:'节点 '+n.nodeId})),
+      ...(source?.fusions??[]).map(f=>({id:'node:'+f.evaluation.application.nodeId,label:'融合 '+f.evaluation.application.nodeId}))];
+  },[source]);
+  const targetError=!source?'请求的Decode步骤不存在，未使用序列汇总替代。':context.following&&focus?.reason?focus.reason:parsedTarget?targetProblem(source,parsedTarget,true):'当前选择没有可用的Roofline目标';
   const parameters=assets.find(a=>a.assetId===scenario.model.assetId&&a.revision===scenario.model.revision)?.parameters.filter(p=>p.type==='integer')??[],variables=[['workload:batchSize','并发 batch'],['workload:queryTokensPerRequest','每请求查询长度'],scenario.workload.kind==='prefill'?['workload:pastTokensPerRequest','prefill 历史长度']:['workload:contextTokensPerRequest','decode 上下文长度'],...parameters.map(p=>['parameter:'+p.key,'模型参数 '+p.key])],selectedVariable=variables.some(v=>v[0]===variable)?variable:'workload:batchSize';
-  let input:string;try{input=calculationInput(scenario,assets).canonicalInput;}catch{input=stableStringify([scenario,assets]);}const key=stableStringify([input,chosen,step,scan,selectedVariable,min,max]),current=useRef(key);current.current=key;const worker=useRef<Worker|null>(null);
+  const input=useMemo(()=>{
+    try{return calculationInput(scenario,assets).canonicalInput;}
+    catch{return stableStringify([scenario,assets]);}
+  },[scenario,assets]);
+  const key=stableStringify([input,chosen,step,scan,selectedVariable,min,max]),current=useRef(key);current.current=key;const worker=useRef<Worker|null>(null);
   useEffect(()=>{worker.current?.terminate();worker.current=null;setBusy(false);setCancelling(false);setError('');setSourceTarget(undefined);},[key]);useEffect(()=>()=>worker.current?.terminate(),[]);
   function run(){try{
     if(targetError)throw Error(targetError);
@@ -44,7 +57,7 @@ export function RooflineStudyView({scenario,assets,result,focus}:{scenario:Scena
   const capacity=new Map(report?.scan?.status==='available'?report.scan.result.points.map(p=>[p.value,p] as const):[]);
   function showSource(o:RooflineObservation,field:RooflineField,sample?:{value?:number|undefined}){if(!report)return;if(sample&&sample.value===undefined){setError("请求的整数样本缺少取值，未改用基础点。");return;}setSourceTarget({report,seriesId:o.seriesId,field,sampleValue:sample?.value});}
   function exportResult(){if(!report)return;const u=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='roofline-study.json';a.click();URL.revokeObjectURL(u);}
-  return <section className="roofline-study"><h3>范围 Roofline 与参数拐点</h3><p className="scope-note">按节点、模块或模型研究。拐点为计算屋顶/带宽，不预设存在唯一长度拐点；参数变化会使旧结果失效。</p><div className="roofline-controls"><label>Roofline范围<select aria-label="Roofline范围" value={chosen} disabled={busy} onChange={e=>setTarget(e.target.value)}>{!targets.some(t=>t[0]===chosen)&&<option value={chosen}>当前选择不可用 · {focus?.label??chosen}</option>}{targets.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>{result.decode&&<label>Roofline decode步骤<select aria-label="Roofline decode步骤" value={step} disabled={busy} onChange={e=>setStep(e.target.value)}>{!source&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤{s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}</div>
+  return <section className="roofline-study"><h3>范围 Roofline 与参数拐点</h3><p className="scope-note">按节点、模块或模型研究。拐点为计算屋顶/带宽，不预设存在唯一长度拐点；参数变化会使旧结果失效。</p><div className="roofline-controls"><AnalysisTargetPicker label="Roofline范围" searchLabel="查找 Roofline 范围" value={chosen} targets={targets} unavailableLabel={focus?.label??chosen} disabled={busy} onChange={setTarget}/>{result.decode&&<label>Roofline decode步骤<select aria-label="Roofline decode步骤" value={step} disabled={busy} onChange={e=>setStep(e.target.value)}>{!source&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤{s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}</div>
     <label className="roofline-check"><input type="checkbox" aria-label="扫描 Roofline 参数拐点" checked={scan} disabled={busy} onChange={e=>setScan(e.target.checked)}/>扫描 Roofline 参数拐点</label>{scan&&<div className="roofline-controls"><label>Roofline扫描变量<select aria-label="Roofline扫描变量" value={selectedVariable} disabled={busy} onChange={e=>setVariable(e.target.value)}>{variables.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label><label>最小整数<input type="number" aria-label="Roofline扫描最小值" value={min} disabled={busy} onChange={e=>setMin(e.target.value)}/></label><label>最大整数<input type="number" aria-label="Roofline扫描最大值" value={max} disabled={busy} onChange={e=>setMax(e.target.value)}/></label></div>}
     {targetError&&<p className="scope-note roofline-target-error">{targetError}</p>}<div className="asset-actions"><button disabled={busy||!!targetError} onClick={run}>计算 Roofline 拐点</button>{busy&&<button disabled={cancelling} onClick={()=>{setCancelling(true);worker.current?.postMessage({kind:'cancel'} satisfies RooflineWorkerRequest);}}>取消 Roofline 扫描</button>}</div><p className="scope-note">基础分析和扫描总计最多512次；其余输入固定，参数候选不写入方案。</p>{busy&&<p role="status">Roofline已完成 {progress.completed}/{progress.total}</p>}{error&&<p className="error" role="alert">{error}</p>}{cached&&!attempt&&<p>输入或选项已变化，旧Roofline研究已失效。</p>}{attempt?.status==='unavailable'&&attempt.diagnostics.map(d=><p className="error" key={d.diagnosticId}>{d.message}</p>)}
     {report&&<div className="roofline-study-results"><p><strong>{report.completion==='complete'?'Roofline研究完成':'Roofline研究已取消，仅保留已完成证据'}</strong>{report.base.evaluatedContext!==undefined?' · 步骤上下文 '+report.base.evaluatedContext:''}</p><button onClick={exportResult}>导出 Roofline 研究 JSON</button><label>筛选Roofline分类<select aria-label="筛选Roofline分类" value={selectedFilter} onChange={e=>setFilter(e.target.value)}><option value="">全部分类</option>{all.map(o=><option key={o.seriesId} value={o.seriesId}>{label(o)}</option>)}</select></label><Plot observations={observations}/>
