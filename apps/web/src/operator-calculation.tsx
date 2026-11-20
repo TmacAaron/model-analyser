@@ -85,6 +85,31 @@ function deepSeekV4Algorithm(localId:string,v41=false,ratio='4'):Algorithm|undef
   return undefined;
 }
 
+function glm52Algorithm(localId:string):Algorithm|undefined {
+  if(localId.endsWith('-rmsnorm'))return rmsNorm(localId==='q-rmsnorm'?'查询低秩维度':localId==='kv-rmsnorm'?'KV 潜向量维度':'隐藏维度','10⁻⁵');
+  if(localId==='index-key-norm')return {name:'索引键 LayerNorm',steps:[
+    {label:'沿每个索引键的 128 个特征求均值与方差',equation:'μ = mean(k),  σ² = mean((k − μ)²)'},
+    {label:'应用仿射变换',equation:'y = γ ⊙ (k − μ) / √(σ² + 10⁻⁶) + β'},
+  ]};
+  if(localId.endsWith('-rope'))return {name:'交错部分 RoPE',steps:[
+    {label:localId.startsWith('index-')?'在索引 Q 或 K 的前 64 维内配对':'在每个 Q 位置分量和共享 K 位置分量的 64 维内配对',equation:'(a, b) = (x[2j], x[2j+1])'},
+    {label:'使用当前 token 的位置角，其他坐标保持原值',equation:'(a′, b′) = (ac − bs, as + bc)'},
+  ]};
+  if(localId==='index-topk'||localId==='index-reduce')return {name:'DSA 因果索引选择',steps:[
+    {label:'按头计算索引内积，应用 ReLU 和学习得到的头权重',equation:'score(t) = Σₕ (wₕ / √32) · ReLU(⟨qₕ, kₜ⟩ / √128)'},
+    {label:'屏蔽未来位置，选择行号供当前层和后续复用层读取',equation:'indices = TopK(score[t ≤ p], min(2048, p + 1))'},
+  ]};
+  if(['q-absorb','qk','av','v-up'].includes(localId))return {name:'吸收投影的稀疏 MLA',steps:[
+    {label:'把非旋转键投影移到查询侧',equation:'q̃ₕ = Wₖ,ₕᵀ qₕ'},
+    {label:'仅评分选中的位置，合并潜向量内积与位置内积',equation:'scoreₕ,ₜ = (⟨q̃ₕ, cₜ⟩ + ⟨qʳₕ, kʳₜ⟩) / √256'},
+    {label:'沿选中行加权累计潜向量，随后上投影到值空间',equation:'oₕ = Wᵥ,ₕ · Σₜ softmax(scoreₕ)ₜ · cₜ'},
+  ]};
+  if(['route-topk','route-normalize','combine'].includes(localId))return {name:'GLM MoE 专家路由',steps:[
+    {label:'用加修正偏置的 sigmoid 分数选出 8 个专家',equation:'s = σ(Wᵣx),  ids = TopK(s + b, 8)'},
+    {label:'用原始分数归一化并加权汇总，再加共享专家分支',equation:'y = shared(x) + Σᵢ 2.5 · sᵢ / (Σⱼ sⱼ + 10⁻²⁰) · expertᵢ(x)'},
+  ]};
+}
+
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
   const v41=id==='builtin:model:deepseek-v4.1-flash'||id.startsWith('builtin:module:deepseek-v41-block-');
@@ -92,6 +117,12 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
     const algorithm=deepSeekV4Algorithm(localId,v41,v41?(id.includes('-r2-')?'2':'1'):'4');
     const filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':localId==='engram-hash'?'engram.py':'model.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
+    return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
+  }
+  if(asset.revision===1&&(id==='builtin:model:glm-5.2'||id.startsWith('builtin:module:glm-5.2-block-'))){
+    const algorithm=glm52Algorithm(localId);
+    const filename=localId.endsWith('-rope')?'deepseek_v2.py':algorithm?.name==='吸收投影的稀疏 MLA'?'flashmla_sparse.py':'modeling_glm_moe_dsa.py';
+    const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }
   const hybrid=asset.revision===1&&/^builtin:(module:qwen-hybrid-(moe|dense)-(delta|gqa)|model:qwen3\.(5-397b-a17b|8-27b))$/.test(id);

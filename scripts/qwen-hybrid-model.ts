@@ -4,7 +4,7 @@ import { selection } from './deepseek-model.js';
 import { addDeltaAttention, addGatedAttention, hidden, matrixWeight, normWeight, sequence, type Axis } from './qwen-hybrid-attention.js';
 import { hybridSources, loadQwenHybrid, type QwenHybridRelease } from './qwen-hybrid-profile.js';
 
-function addSwiGlu(graph: GraphAuthor, width: string, prefix: string, input: string, output: string) {
+export function addSwiGlu(graph: GraphAuthor, width: string, prefix: string, input: string, output: string) {
   for (const part of ['gate', 'up']) matrixWeight(graph, prefix + '-' + part + '-weight', width);
   graph.tensor(prefix + '-gate-up', sequence('i', '2 * ' + width));
   graph.node(prefix + '-gate-up', 'SwiGLU gate and up projections', [input, prefix + '-gate-weight', prefix + '-up-weight'],

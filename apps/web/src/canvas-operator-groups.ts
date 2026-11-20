@@ -34,6 +34,15 @@ const qwenHybridMoe:AuthoredGroup[]=[
   {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down','shared-mix-proj','shared-gate']},
 ];
 const qwenHybridDense:AuthoredGroup={key:'ffn',name:'SwiGLU',members:['ffn-gate-up','ffn-silu','ffn-down']};
+const glm52Groups:AuthoredGroup[]=[
+  {key:'indexer',name:'DSA Indexer',members:['index-query','index-query-rope','index-key','index-key-norm','index-key-rope','index-write',
+    'index-weight','index-score','index-reduce','index-topk']},
+  {key:'attention',name:'Sparse MLA',members:['cache-write','q-absorb','qk','softmax','av','v-up','o-proj']},
+  {key:'routed',name:'Routed Experts',members:['router','router-sigmoid','router-bias','route-topk','route-normalize',
+    'dispatch','expert-gate-up','expert-silu','expert-down','combine']},
+  {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down']},
+  qwenHybridDense,
+];
 const v4Compressor=['value-proj','score-proj','pending','pool','norm','rope','write'];
 function deepSeekV4Groups(ratio:string,v41=false):AuthoredGroup[]{
   const mode=ratio==='0'?'滑窗注意力':v41?'CSA2 · R'+ratio:ratio==='4'?'CSA · R4':'HCA · R128';
@@ -62,6 +71,7 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
   const deepSeekV41=/^builtin:module:deepseek-v41-block-(r[12]|window)(?:-|$)/.exec(id);
   const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
+    id.startsWith('builtin:module:glm-5.2-block-')?glm52Groups:
     hybrid?[hybrid[2]==='delta'?qwenHybridDelta:qwenHybridGqa,...(hybrid[1]==='moe'?qwenHybridMoe:[qwenHybridDense])]:
     deepSeekV4?deepSeekV4Groups(deepSeekV4[1]!):
     deepSeekV41?deepSeekV4Groups(deepSeekV41[1]==='window'?'0':deepSeekV41[1]!.slice(1),true):

@@ -6,7 +6,7 @@
 
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
-Qwen3.5-397B-A17B 与 Qwen3.8-27B 已提供[混合注意力文本解码器](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。GQA 的可增长 KV 与 DeltaNet 的固定状态分别计算。[DeepSeek-V4-Flash](MODEL_REFERENCES.md#deepseek-v4-flash) 已接入 43 层主解码器、4／128 token 压缩分组和固定滑窗容量。[DeepSeek-V4.1-Flash](MODEL_REFERENCES.md#deepseek-v41-flash) 已接入 40 层主文本解码器、跨层共享 KV 和索引、CSA2 候选掩码以及两处 Engram。GLM-5.2 与 Kimi-K3 的可计算预设仍需建模。
+Qwen3.5-397B-A17B 与 Qwen3.8-27B 已提供[混合注意力文本解码器](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。GQA 的可增长 KV 与 DeltaNet 的固定状态分别计算。[DeepSeek-V4-Flash](MODEL_REFERENCES.md#deepseek-v4-flash) 已接入 43 层主解码器、4／128 token 压缩分组和固定滑窗容量。[DeepSeek-V4.1-Flash](MODEL_REFERENCES.md#deepseek-v41-flash) 已接入 40 层主文本解码器、跨层共享 KV 和索引、CSA2 候选掩码以及两处 Engram。[GLM-5.2](MODEL_REFERENCES.md#glm-52) 已接入 78 层主文本解码器、21 个 DSA 索引拥有层、吸收投影的稀疏 MLA 以及 BF16 KV 槽位预算。Kimi-K3 的可计算预设仍需建模。
 
 逐卡实参与规范存储已可查看[布局与分配推导](LAYOUT_SOURCES.md)。记录规则、mesh 切片与填充、打包、辅助项、底层容量、数值覆盖与融合取消物化。版本 2 增加重复堆叠切片、链式中间缓冲和原地复用，以及从布局算式到实例、父域与量化实参的有界绑定链。其他来源的参数域与原 PRD 整体验收继续推进。
 

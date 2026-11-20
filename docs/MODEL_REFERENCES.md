@@ -103,6 +103,16 @@ KV 槽位计算只伸缩 GQA 的 K/V 张量。DeltaNet 的 BF16 卷积缓冲及 
 
 固定来源包括 [397B 发布配置](https://huggingface.co/Qwen/Qwen3.5-397B-A17B/blob/6fe6a3a85cefe43a807df708dccc4e44b02e2955/config.json)、[27B 发布配置](https://huggingface.co/Qwen/Qwen3.8-27B/blob/72a217afab8029b39e4af1c7273a829995a3dbaf/config.json)与 Transformers v5.8.0 的 [MoE 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5_moe/modeling_qwen3_5_moe.py)和 [Dense 实现](https://github.com/huggingface/transformers/blob/049d2bf1220747b6d39e2a978b9f5fe0defa1dca/src/transformers/models/qwen3_5/modeling_qwen3_5.py)。
 
+## GLM-5.2
+
+内置 GLM-5.2 预设包含发布配置的 78 层主文本解码器。模型画布显示前三层 Dense、紧接的三层 MoE 索引复用，以及随后 18 组由一层重新索引、三层复用组成的周期。每次重算向后传递 TopK 行号。每层仍然各自写入 MLA 缓存。进入 Block 后可分别查看 DSA Indexer、Sparse MLA、残差连接、Routed Experts 和 Shared Expert。查询与 KV 投影在注意力模块外。
+
+BF16 基线下，每层每 token 追加 512 维潜向量和 64 维旋转位置键。只在 21 个索引拥有层追加 128 维索引键。两者合计 `2 × (78 × (512 + 64) + 21 × 128) = 95,232 B` 每请求每 token。选中行号属于当前前向的激活。MoE 使用加偏置的 sigmoid 分数选出 8 个专家，以原始选中分数归一化并缩放 2.5，再加共享专家输出。
+
+分析使用吸收 K/V 上投影的稀疏 MLA 理论路径。索引计算用 BF16 点积与 FP32 得分，注意力显式物化矩形分数块并区分因果有效计算与执行计算。设备上真实 FP8 索引封装、融合内核、多卡布局和 MTP 需要各自的配置。默认单张 A100 放不下主解码器，容量显示 `0 token / 请求`，仍可查看 BF16 理论成本。
+
+`npm run reference:glm52` 校对原始配置摘要、发布权重索引中的层归属记录和 64 份内置资产。仓库保存发布的配置和权重索引摘要。固定来源为 [GLM-5.2 配置](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/config.json)、[权重索引](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/model.safetensors.index.json)、[Transformers v5.12.0 模型实现](https://github.com/huggingface/transformers/blob/e0e7504bca2bfd1b85bb0eedb148f7b250226f06/src/transformers/models/glm_moe_dsa/modeling_glm_moe_dsa.py)及 [vLLM v0.28.0 稀疏 MLA](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/v1/attention/backends/mla/flashmla_sparse.py)。
+
 ## 目标型号来源
 
 列表用于核对型号身份和后续建模来源。可计算的预设以已有固定资产及该型号的验收记录为准。

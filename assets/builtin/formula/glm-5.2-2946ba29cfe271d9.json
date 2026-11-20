@@ -1,0 +1,79 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:glm-5.2:2946ba29cfe271d9",
+  "revision": 1,
+  "name": "3 * B * Q * K [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/model.safetensors.index.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/huggingface/transformers/blob/e0e7504bca2bfd1b85bb0eedb148f7b250226f06/src/transformers/models/glm_moe_dsa/modeling_glm_moe_dsa.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/models/deepseek_v2.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/v1/attention/backends/mla/flashmla_sparse.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "The 78-layer text decoder uses a BF16 analytical sparse MLA path with absorbed K and V projections. Each layer stores 512 latent and 64 rotary values per token. Only 21 indexer owners append a 128-wide index key; their selected row IDs are carried to the reuse layers in the same forward pass."
+    },
+    {
+      "kind": "note",
+      "text": "Selected rows use the release interleaved RoPE and a BF16 dot-product reference with FP32 scoring. Explicit materialized score tiles model causal useful pairs and rectangular executed work. Active expert weights are read once per distinct selected expert using an upper bound. Router and softmax nonlinear operations and TopK use arithmetic proxies."
+    },
+    {
+      "kind": "note",
+      "text": "Theoretical baseline with untied BF16 token embeddings and full-position output projection. MTP, fused kernels, actual FP8 index packing, RoPE table generation, distributed layout, and data-dependent routes are outside this model profile."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "K": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "3 * B * Q * K",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}
