@@ -1,4 +1,4 @@
-import type { AssetDocument,AssetRef,ResolvedGraph } from '@model-analyser/contracts';
+import type { AssetDocument,AssetRef,ResolvedGraph,StorageSpec } from '@model-analyser/contracts';
 import { collectivePorts } from '../../../packages/contracts/src/collective.js';
 
 /** Module interfaces use their own materialized frame; repeat wrappers use the caller's boundary. */
@@ -32,5 +32,23 @@ export function resolvedInterface(resolved:ResolvedGraph,model:AssetRef,assets:A
 function mapPorts(iface:Pick<ResolvedGraph['graph'],'inputs'|'outputs'>,id:(local:string)=>ResolvedGraph['graph']['tensors'][number]['tensorId']|undefined){
   const map=(ports:typeof iface.inputs)=>ports.flatMap(p=>{const tensorId=id(p.tensorId);return tensorId?[{portId:p.portId,tensorId}]:[];});return {inputs:map(iface.inputs),outputs:map(iface.outputs)};
 }
-export function canonicalInspectorStorage(resolved:ResolvedGraph,id:string){const seen=new Set<string>();let storage=resolved.graph.storages.find(s=>s.storageId===id);while(storage?.allocation.kind==='alias'){if(seen.has(storage.storageId))return;seen.add(storage.storageId);const target=storage.allocation.targetStorageId;storage=resolved.graph.storages.find(s=>s.storageId===target);}return storage;}
+function canonicalStorage(id:string,lookup:(id:string)=>StorageSpec|undefined){
+  let storage=lookup(id);
+  if(storage?.allocation.kind!=='alias')return storage;
+  const seen=new Set<string>();
+  while(storage?.allocation.kind==='alias'){
+    if(seen.has(storage.storageId))return;
+    seen.add(storage.storageId);
+    storage=lookup(storage.allocation.targetStorageId);
+  }
+  return storage;
+}
+export function canonicalInspectorStorage(resolved:ResolvedGraph,id:string){
+  return canonicalStorage(id,id=>resolved.graph.storages.find(s=>s.storageId===id));
+}
+export function indexInspectorObjects(resolved:ResolvedGraph){
+  const tensors=new Map(resolved.graph.tensors.map(t=>[String(t.tensorId),t])),storages=new Map(resolved.graph.storages.map(s=>[String(s.storageId),s]));
+  return {tensors,storage:(id:string)=>canonicalStorage(id,id=>storages.get(id))};
+}
+export type InspectorObjectIndex=ReturnType<typeof indexInspectorObjects>;
 export const containsNode=(parent:string,child:string)=>parent==='$model'||parent===child||child.startsWith(parent+'/')||child.startsWith(parent+'[');

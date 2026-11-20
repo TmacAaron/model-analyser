@@ -6,6 +6,9 @@ import { ProjectDocument,AnalysisResult } from '@model-analyser/contracts';
 test.setTimeout(180000);
 test.use({viewport:{width:1440,height:1100}});
 
+type RuntimeEntry={start:number;duration:number};
+type RuntimeObserver={gaps:RuntimeEntry[];tasks:RuntimeEntry[];marks:{phase:string;at:number}[];supported:boolean;stop:()=>void};
+
 test('a held full-canvas projection leaves the workspace interactive and cannot replace the single call',async({page})=>{
   await page.addInitScript(()=>{
     const OriginalWorker=window.Worker,held:Array<()=>void>=[];
@@ -57,12 +60,31 @@ test('a held full-canvas projection leaves the workspace interactive and cannot 
 
 test('the actual maximum connected canvas fits, pans, edits and computes in a worker while preserving its fixed mathematical hash',async({page,browser})=>{
   const path='examples/runtime-baseline/synthetic-chain-9999.json',raw=await readFile(path,'utf8'),p=ProjectDocument.parse(JSON.parse(raw));p.projectId=randomUUID();await page.goto('/');await expect(page.locator('.canvas-node.module').first()).toBeVisible();
-  await page.evaluate(()=>{const state={running:true,gaps:[] as number[],longTasks:[] as number[],supported:false};const w=window as typeof window&{runtimeObservation?:{state:typeof state;stop:()=>void}};let previous=performance.now();function frame(now:number){if(!state.running)return;state.gaps.push(now-previous);previous=now;requestAnimationFrame(frame);}let observer:PerformanceObserver|undefined;try{observer=new PerformanceObserver(list=>state.longTasks.push(...list.getEntries().map(e=>e.duration)));observer.observe({entryTypes:['longtask']});state.supported=true;}catch{/* Record unavailable instrumentation without substituting a zero peak. */}w.runtimeObservation={state,stop:()=>{state.running=false;observer?.disconnect();}};requestAnimationFrame(frame);});
-  const start=await page.evaluate(()=>performance.now());
+  await page.evaluate(()=>{
+    let previous=performance.now(),running=true,observer:PerformanceObserver|undefined;
+    const state:RuntimeObserver={gaps:[],tasks:[],marks:[],supported:false,stop:()=>{running=false;observer?.disconnect();}};
+    function frame(now:number){
+      if(!running)return;
+      state.gaps.push({start:previous,duration:now-previous});previous=now;requestAnimationFrame(frame);
+    }
+    try{
+      observer=new PerformanceObserver(list=>state.tasks.push(...list.getEntries().map(e=>({start:e.startTime,duration:e.duration}))));
+      observer.observe({entryTypes:['longtask']});state.supported=true;
+    }catch{/* Record unavailable instrumentation without substituting a zero peak. */}
+    Object.assign(window,{runtimeObservation:state});
+    requestAnimationFrame(frame);
+  });
+  const mark=(phase:string)=>page.evaluate(phase=>{
+    const at=performance.now();
+    (window as Window&{runtimeObservation?:RuntimeObserver}).runtimeObservation?.marks.push({phase,at});
+    return at;
+  },phase);
+  const start=await mark('import');
   await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'maximum-chain.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});
   await expect(page.getByLabel('当前模型',{exact:true})).toHaveValue(p.scenarios[0]!.model.assetId);
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await expect(page.locator('.canvas-node.module')).toHaveCount(1);
+  await mark('expand');
   await page.locator('.canvas-node.module').click();
   await page.getByLabel('跨调用选择算子',{exact:true}).check();
   const canvas=page.locator('.canvas-surface'),surface=canvas.locator(':scope > g');
@@ -70,12 +92,13 @@ test('the actual maximum connected canvas fits, pans, edits and computes in a wo
   await expect(canvas).toHaveAttribute('data-edge-count','10000');
   await expect(canvas).toHaveAttribute('data-render-mode','detail');
   await expect(canvas.locator('[data-node-id="leaves[0]"]')).toBeVisible();
+  await expect(page.locator('.state-relations > summary')).toHaveText('持久状态与读写关系 · 0');
   const detailedNodes=await canvas.locator('.canvas-node').count(),detailedEdges=await canvas.locator('.canvas-edge').count();
   expect(detailedNodes).toBeGreaterThan(1);
   expect(detailedNodes).toBeLessThan(32);
   expect(detailedEdges).toBeGreaterThan(0);
   expect(detailedEdges).toBeLessThan(32);
-  const expandedAt=await page.evaluate(()=>performance.now());
+  const expandedAt=await mark('fit');
   await page.getByRole('button',{name:'适配全图',exact:true}).click();
   await expect(canvas).toHaveAttribute('data-render-mode','overview');
   const overview=canvas.locator('canvas');
@@ -111,7 +134,9 @@ test('the actual maximum connected canvas fits, pans, edits and computes in a wo
     inputPath:path,inputSha256:createHash('sha256').update(raw).digest('hex'),importThroughExpandedDOMMilliseconds:expandedAt-start,
     operators:9999,canvasNodes:10001,edges:10000,bounds,detailedNodes,detailedEdges,overviewInk:ink,
   },null,2));
+  await mark('overview screenshot');
   await page.screenshot({path:'test-results/runtime-maximum-canvas.png'});
+  await mark('navigate');
   const old=await surface.getAttribute('transform');
   await page.mouse.move(bounds.x+bounds.width-20,bounds.y+bounds.height-30);
   await page.mouse.down({button:'middle'});
@@ -145,7 +170,28 @@ test('the actual maximum connected canvas fits, pans, edits and computes in a wo
   await expect(canvas.locator('.canvas-node.selected')).toHaveCount(2);
   await page.getByRole('button',{name:'移动画布',exact:true}).click();
   await selected.press('Space');
-  await page.getByRole('button',{name:'定位选中节点',exact:true}).click();const initialPosition=/translate\(([-\d.]+),([-\d.]+)\)/.exec((await selected.getAttribute('transform'))??''),initialZoom=/scale\(([^)]+)\)/.exec((await surface.getAttribute('transform'))??'');if(!initialPosition||!initialZoom)throw Error('Missing actual canvas transform');const rect=await selected.boundingBox();if(!rect)throw Error();await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width/2+35,rect.y+rect.height/2+20,{steps:4});await page.mouse.up();await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();await expect(page.getByRole('button',{name:'取消理论分析',exact:true})).toBeVisible();await page.getByRole('button',{name:'显示单位设置',exact:true}).click();await expect(page.getByLabel('时间显示单位',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'取消理论分析',exact:true})).toBeVisible();await page.getByRole('button',{name:'显示单位设置',exact:true}).click();await expect(page.locator('.analysis-cards')).toBeVisible();const waiting=page.waitForEvent('download');await page.getByRole('button',{name:'导出结果 JSON',exact:true}).click();const download=await waiting;await download.saveAs('test-results/runtime-chain-analysis.json');const result=AnalysisResult.parse(JSON.parse(await readFile('test-results/runtime-chain-analysis.json','utf8')));expect(result.nodes).toHaveLength(9999);expect(result.total.seconds).toMatchObject({status:'available',quantity:{value:expect.closeTo(.009999,12)}});expect(result.total.hbmBytes).toMatchObject({status:'available',quantity:{value:159984}});const baseline=JSON.parse(await readFile('examples/runtime-baseline/observations.json','utf8')) as {results:{case:string;operation:string;summary:{inputHash:string}}[]};expect(result.inputHash).toBe(baseline.results.find(r=>r.case==='synthetic-chain-9999'&&r.operation==='analyze')?.summary.inputHash);const portableWait=page.waitForEvent('download');await page.getByRole('button',{name:'导出',exact:true}).click();const portableFile=await portableWait;await portableFile.saveAs('test-results/runtime-chain-project.json');const portable=ProjectDocument.parse(JSON.parse(await readFile('test-results/runtime-chain-project.json','utf8'))),moved=portable.viewState.nodes.find(n=>n.nodeId==='leaves[0]');expect(moved).toBeDefined();expect(moved?.x).toBeCloseTo(Number(initialPosition[1])+35/Number(initialZoom[1]),2);expect(moved?.y).toBeCloseTo(Number(initialPosition[2])+20/Number(initialZoom[1]),2);await page.screenshot({path:'test-results/runtime-maximum-analysis.png'});const observation=await page.evaluate(()=>{const v=(window as typeof window&{runtimeObservation:{state:{gaps:number[];longTasks:number[];supported:boolean};stop:()=>void}}).runtimeObservation;v.stop();return {frames:v.state.gaps.length,maxAnimationFrameGapMilliseconds:Math.max(...v.state.gaps),longTaskObserverSupported:v.state.supported,longTaskCount:v.state.longTasks.length,maxLongTaskMilliseconds:v.state.longTasks.length?Math.max(...v.state.longTasks):null};});await writeFile('test-results/runtime-browser-observations.json',JSON.stringify({scope:'One observed Chrome flow on a shared desktop; includes startup, DOM/SVG and automation effects, not a frame SLA or pure software operation timing',inputPath:path,browserVersion:browser.version(),...observation},null,2));
+  await mark('drag and save');
+  await page.getByRole('button',{name:'定位选中节点',exact:true}).click();const initialPosition=/translate\(([-\d.]+),([-\d.]+)\)/.exec((await selected.getAttribute('transform'))??''),initialZoom=/scale\(([^)]+)\)/.exec((await surface.getAttribute('transform'))??'');if(!initialPosition||!initialZoom)throw Error('Missing actual canvas transform');const rect=await selected.boundingBox();if(!rect)throw Error();await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width/2+35,rect.y+rect.height/2+20,{steps:4});await page.mouse.up();await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await mark('analyze');
+  await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();await expect(page.getByRole('button',{name:'取消理论分析',exact:true})).toBeVisible();await page.getByRole('button',{name:'显示单位设置',exact:true}).click();await expect(page.getByLabel('时间显示单位',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'取消理论分析',exact:true})).toBeVisible();await page.getByRole('button',{name:'显示单位设置',exact:true}).click();await expect(page.locator('.analysis-cards')).toBeVisible();
+  await mark('export result');
+  const waiting=page.waitForEvent('download');await page.getByRole('button',{name:'导出结果 JSON',exact:true}).click();const download=await waiting;await download.saveAs('test-results/runtime-chain-analysis.json');const result=AnalysisResult.parse(JSON.parse(await readFile('test-results/runtime-chain-analysis.json','utf8')));expect(result.nodes).toHaveLength(9999);expect(result.total.seconds).toMatchObject({status:'available',quantity:{value:expect.closeTo(.009999,12)}});expect(result.total.hbmBytes).toMatchObject({status:'available',quantity:{value:159984}});const baseline=JSON.parse(await readFile('examples/runtime-baseline/observations.json','utf8')) as {results:{case:string;operation:string;summary:{inputHash:string}}[]};expect(result.inputHash).toBe(baseline.results.find(r=>r.case==='synthetic-chain-9999'&&r.operation==='analyze')?.summary.inputHash);
+  await mark('export workspace');
+  const portableWait=page.waitForEvent('download');await page.getByRole('button',{name:'导出',exact:true}).click();const portableFile=await portableWait;await portableFile.saveAs('test-results/runtime-chain-project.json');const portable=ProjectDocument.parse(JSON.parse(await readFile('test-results/runtime-chain-project.json','utf8'))),moved=portable.viewState.nodes.find(n=>n.nodeId==='leaves[0]');expect(moved).toBeDefined();expect(moved?.x).toBeCloseTo(Number(initialPosition[1])+35/Number(initialZoom[1]),2);expect(moved?.y).toBeCloseTo(Number(initialPosition[2])+20/Number(initialZoom[1]),2);
+  await mark('analysis screenshot');
+  await page.screenshot({path:'test-results/runtime-maximum-analysis.png'});
+  const observation=await page.evaluate(()=>{
+    const state=(window as Window&{runtimeObservation?:RuntimeObserver}).runtimeObservation;
+    if(!state)throw Error('Missing runtime observer');
+    state.stop();
+    const ranked=(entries:RuntimeEntry[])=>entries.toSorted((a,b)=>b.duration-a.duration).slice(0,8).map(entry=>({
+      ...entry,phase:state.marks.findLast(mark=>mark.at<=entry.start)?.phase??'start',
+    }));
+    return {frames:state.gaps.length,maxAnimationFrameGapMilliseconds:ranked(state.gaps)[0]?.duration??null,
+      longTaskObserverSupported:state.supported,longTaskCount:state.tasks.length,maxLongTaskMilliseconds:ranked(state.tasks)[0]?.duration??null,
+      longestGaps:ranked(state.gaps),longestTasks:ranked(state.tasks),marks:state.marks};
+  });
+  await writeFile('test-results/runtime-browser-observations.json',JSON.stringify({scope:'One observed Chrome flow on a shared desktop; includes startup, DOM/SVG and automation effects, not a frame SLA or pure software operation timing',inputPath:path,browserVersion:browser.version(),...observation},null,2));
 });
 
 test('canceling model expansion keeps configuration controls available and explicit retry restores the exact graph',async({page})=>{
