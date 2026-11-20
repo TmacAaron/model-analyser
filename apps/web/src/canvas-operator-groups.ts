@@ -18,6 +18,11 @@ const qwenGroups:AuthoredGroup[]=[
 const mlaGroups:AuthoredGroup[]=[
   {key:'attention',name:'MLA Attention',members:['kv-a-norm','rope','q-absorb','kv-b','cache-update','qk','softmax','av','v-up','o-proj']},
 ];
+const v3MoeGroups:AuthoredGroup[]=[
+  ...mlaGroups,
+  {key:'routed',name:'Routed Experts',members:['router','router-sigmoid','router-bias','group-top2','group-scores','group-select','topk','route-weights','dispatch','expert-gate-up','expert-silu','expert-down','combine']},
+  {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down']},
+];
 const glmGroups:AuthoredGroup[]=[
   {key:'attention',name:'GQA Attention',members:['rope','cache-update','expand-kv','qk','score-scale-cast','mask-softmax','probability-cast','av','o-proj']},
   {key:'ffn',name:'SwiGLU',members:['gate-up','silu','down']},
@@ -30,7 +35,8 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
   const id=container.asset.assetId;
   const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
-    /^builtin:module:deepseek-v2-(expanded|absorbed)-(dense|moe)$/.test(id)?mlaGroups:[];
+    id==='builtin:module:deepseek-v3-absorbed-moe'?v3MoeGroups:
+    /^builtin:module:deepseek-(v2-(expanded|absorbed)-(dense|moe)|v3-absorbed-dense)$/.test(id)?mlaGroups:[];
   if(!specs.length)return [];
   const leaves=new Set<string>(container.leafNodeIds);
   return specs.flatMap(spec=>{

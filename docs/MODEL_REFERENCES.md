@@ -48,6 +48,25 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 - 示例硬件为虚构的十进制 80 GB、matrix/vector/selection 各 1 TOP/s、HBM 1 TB/s，仅用于复算。不提供实卡性能或精度结论。大型完整 JSON 仍包含逐指标来源，文件可能较大。
 
 可直接导入：[Qwen decode](../examples/projects/qwen3-0.6b-decode.json)、[Qwen prefill](../examples/projects/qwen3-0.6b-prefill.json)、[DeepSeek expanded](../examples/projects/deepseek-v2-lite-expanded.json)、[DeepSeek absorbed](../examples/projects/deepseek-v2-lite-absorbed.json)。也可从资产库选择内置模型并手工创建硬件；工作台新增方案不需要手写 B/Q/C 绑定。
+
+## DeepSeek-V3 与 DeepSeek-R1
+
+画布下拉列表的 DeepSeek 分类包含两个独立型号。两份固定发布配置在主 decoder 结构上相同，共用模块和公式。画布显示 `3 ×` Dense 和 `58 ×` MoE。进入一个 MoE block 可查看投影、MLA、两处 residual，以及 Routed Experts 和 Shared Expert 的分支与汇合。路由分支可下钻到 sigmoid、校正偏置、组选择、专家 TopK 与原始亲和度归一化。
+
+| 核对项 | 两个型号的主模型 |
+| --- | --- |
+| Attention | 128 heads，Q 低秩维度 1536，KV 潜向量 512，共享 rotary key 64 |
+| MoE | 256 routed experts，8 个组，选择 4 个组与 8 个 routed experts，另有 1 个 shared expert |
+| 参数 | 671,026,419,200，含分组路由校正参数 |
+| 张量权重 | 1,342,052,868,096 B，BF16 权重与 FP32 路由校正 |
+| BF16 KV | 每请求每 token 70,272 B，即 `61 × (512 + 64) × 2` |
+
+预设分析主 decoder 的 absorbed MLA 数学路径。显式物化矩形 attention 临时张量，权重采用 BF16 理论口径，路由与选择分别采用向量及比较代理。发布检查点的 FP8 分块格式、MTP、投机解码、YaRN 表构造和分布式布局需单独建模。默认单卡显存不足时，容量仍显示 KV 单 token 占用与零槽位预算。
+
+`npm run reference:deepseek-v3` 校验两份原始配置的 SHA-256、内置资产和旧 V2-Lite 修订。生成新缺失文件时追加 `-- --write`。数值回归由 `tests/deepseek-v3.test.ts` 直接构建项目并独立复算，无需模型权重或大型示例文件。
+
+来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
+
 ## 目标型号来源
 
 列表用于核对型号身份和后续建模来源。可计算的预设以已有固定资产及该型号的验收记录为准。

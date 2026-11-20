@@ -32,7 +32,7 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
   const family = asset.revision <= 2 && /^builtin:(module:qwen3-decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
     : asset.revision === 1 && /^builtin:(module:glm4-decoder|model:glm-4-9b)$/.test(id) ? 'glm'
-    : asset.revision <= 2 && /^builtin:(module:deepseek-v2-(expanded|absorbed)-(dense|moe)|model:deepseek-v2-lite-(expanded|absorbed))$/.test(id) ? 'deepseek'
+    : asset.revision <= 2 && /^builtin:(module:deepseek-(v2-(expanded|absorbed)|v3-absorbed)-(dense|moe)|model:deepseek-(v2-lite-(expanded|absorbed)|v3|r1))$/.test(id) ? 'deepseek'
     : undefined;
   if (!family) return;
   const epsilon = family === 'glm' ? '1.5625 × 10⁻⁷' : '10⁻⁶';
@@ -41,6 +41,7 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
   if (source?.kind !== 'url') return;
   const algorithms = ['input-norm', 'post-norm', 'final-norm'].includes(localId) ? [rmsNorm('隐藏维度', epsilon)]
     : localId === 'kv-a-norm' && family === 'deepseek' ? [rmsNorm('KV 潜向量维度', epsilon)]
+    : localId === 'q-a-norm' && family === 'deepseek' ? [rmsNorm('Q 潜向量维度', epsilon)]
     : localId === 'qk-norm-rope' && family === 'qwen' ? [rmsNorm('每个 Q/K head 的特征维度', epsilon), rope(family)]
     : localId === 'rope' && family !== 'qwen' ? [rope(family)] : [];
   if (algorithms.length) return { algorithms, url: source.url };

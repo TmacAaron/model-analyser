@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import { readFile, writeFile } from 'node:fs/promises';
+import { AssetDocument } from '@model-analyser/contracts';
+import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
+import { makeDeepSeekAssets } from './deepseek-model.js';
+import { loadDeepSeekV3Profile } from './deepseek-v3-profile.js';
+
+const catalog = new Map<string, AssetDocument>();
+for (const release of ['v3', 'r1'] as const) {
+  for (const asset of makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release))) {
+    const existing = catalog.get(asset.assetId);
+    if (existing) assert.equal(canonical(asset), canonical(existing), asset.assetId);
+    else catalog.set(asset.assetId, asset);
+  }
+}
+assert.deepEqual(validateAssets([...catalog.values()]), []);
+
+const fileFor = (asset: AssetDocument) =>
+  'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') + '.json';
+async function verify(asset: AssetDocument, write: boolean) {
+  const file = fileFor(asset);
+  try {
+    const stored = AssetDocument.parse(JSON.parse(await readFile(file, 'utf8')));
+    assert.equal(canonical(stored), canonical(asset), file);
+  } catch (error) {
+    if (!write || !(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+    await writeFile(file, JSON.stringify(asset, null, 2) + '\n', { flag: 'wx' });
+  }
+}
+// Existing V2 releases share the authoring path and keep their published contents.
+for (const variant of ['expanded', 'absorbed'] as const) {
+  for (const asset of makeDeepSeekAssets(variant)) await verify(asset, false);
+}
+for (const asset of catalog.values()) await verify(asset, process.argv.includes('--write'));
+console.log('Verified ' + catalog.size + ' assets for DeepSeek-V3 and DeepSeek-R1.');
