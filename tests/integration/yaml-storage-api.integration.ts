@@ -10,7 +10,8 @@ import { createApp } from '../../apps/local/src/server.js';
 import { fixture } from '../fixtures.js';
 
 it('uses strict HTTP drafts to persist YAML, retains chosen format after a failed publication and replays through a restarted service',async()=>{
-  const parent=resolve('data'),root=await mkdtemp(join(parent,'yaml-http-')),builtin=join(root,'builtin');await mkdir(builtin);let fail=true,server=createApp(new FileStore(root,builtin,async stage=>{if(stage==='before_head'&&fail){fail=false;throw Error('injected unavailable disk');}}));
+  const parent=resolve('data');await mkdir(parent,{recursive:true});
+  const root=await mkdtemp(join(parent,'yaml-http-')),builtin=join(root,'builtin');await mkdir(builtin);let fail=true,server=createApp(new FileStore(root,builtin,async stage=>{if(stage==='before_head'&&fail){fail=false;throw Error('injected unavailable disk');}}));
   async function listen(){await listenForFetch(server);const address=server.address();if(!address||typeof address==='string')throw Error();return 'http://127.0.0.1:'+address.port+'/api/v1/';}
   const close=()=>new Promise<void>((done,reject)=>server.close(e=>e?reject(e):done()));
   try{
