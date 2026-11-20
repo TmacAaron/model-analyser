@@ -10,7 +10,7 @@ import {explainValue} from './formula.js';
 import {fusionParameterBindingGraph,parameterReads} from './parameter-binding-graph.js';
 import type {FusionDeclaration} from './fusion-observation.js';
 import type {ParameterCaptureTrace} from './parameter-observation.js';
-import {unpack,type TimingDag} from './timing-dag.js';
+import {rooflineMetricInputs,type TimingDag} from './timing-dag.js';
 
 export const FusionCostSelector=z.strictObject({
  scope:MetricScope,field:z.enum(['hbmBytes','logicalReadBytes','logicalWriteBytes','usefulOperations','executedOperations','seconds']),
@@ -60,25 +60,9 @@ function maximum(items:FusionSourceOperand[]){
  return max;
 }
 
-function usedRooflineOperands(dag:TimingDag,cost:CostResult){
- const operands:RooflineOperand[]=[];
- for(const node of dag.nodes){
-  const source=node.source;
-  if(source?.['kind']!=='metric_boundary')continue;
-  const boundary=source['field'];
-  let metric:MetricValue,selector:FusionCostSelector;
-  if(boundary==='hbmBytes'){
-   metric=cost.hbmBytes;selector={scope:cost.scope,field:'hbmBytes'};
-  }else{
-   const index=source['evaluationIndex'];
-   const segment=typeof index==='number'&&Number.isSafeInteger(index)&&index>=0?cost.compute[index]:undefined;
-   if(!segment||boundary!=='compute['+JSON.stringify(String(index))+'].executedOperations')throw Error('融合 Roofline 的计算分类位置不同');
-   metric=segment.executedOperations;selector={scope:cost.scope,field:'executedOperations',computeClass:segment.computeClass};
-  }
-  if(metric.status!=='available'||metric.quantity.unit!==node.unit||metric.quantity.value!==unpack(node.value))throw Error('融合 Roofline 读取值与同设备的实际指标不同');
-  operands.push({timingNodeId:node.id,quantity:metric.quantity,selector});
- }
- return operands;
+function usedRooflineOperands(dag:TimingDag,cost:CostResult):RooflineOperand[]{
+ return rooflineMetricInputs(dag,cost,String).map(input=>({timingNodeId:input.timingNodeId,quantity:input.quantity,
+  selector:{scope:cost.scope,field:input.field,...(input.field==='executedOperations'?{computeClass:input.computeClass}:{})}}));
 }
 
 export async function replayFusionCostSource(input:unknown){

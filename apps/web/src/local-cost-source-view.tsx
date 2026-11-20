@@ -9,14 +9,17 @@ import {useCostSourceWorker} from './use-cost-source-worker.js';
 import {LayoutSourceView,type LayoutSourceAnchor} from './layout-source-view.js';
 import {ParameterBindingProof} from './parameter-binding-view.js';
 
+type NavigateOperand=(selector:LocalCostSelector)=>(()=>void)|undefined;
+
 function save(report:LocalCostSourceReport){
  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
  const link=document.createElement('a');
  link.href=url;link.download=`model-analyser-local-cost-page-${report.page+1}.json`;link.click();URL.revokeObjectURL(url);
 }
 
-export function LocalCostSourceView({metric,selector,result,scenario,assets,step}:{
+export function LocalCostSourceView({metric,selector,result,scenario,assets,step,goTo}:{
  metric:MetricValue;selector:LocalCostSelector;result:AnalysisResult;scenario:Scenario;assets:AssetDocument[];step:number|undefined;
+ goTo:NavigateOperand;
 }){
  const selectorKey=canonical(selector),identity=useMemo(()=>({}),[selectorKey,metric,result,scenario,assets,step]);
  const [open,setOpen]=useState(false),[cursor,setCursor]=useState({owner:identity,page:0});
@@ -25,7 +28,7 @@ export function LocalCostSourceView({metric,selector,result,scenario,assets,step
   const actualStep=step===undefined?undefined:result.decode?.steps.find(row=>row.index===step);
   if(result.decode&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:3,
    ...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,retry,cancel}=useCostSourceWorker(open,request,'local_cost_source',readLocalSourceReply);
@@ -33,7 +36,7 @@ export function LocalCostSourceView({metric,selector,result,scenario,assets,step
   {!open?<button onClick={()=>{setCursor({owner:identity,page:0});setOpen(true);}}>复核此设备的局部方程</button>:
    !request?<p role="status">请选择一个实际 Decode 步骤。</p>:
    state.status==='running'?<><p role="status">正在后台复核逐卡运算…</p><button onClick={cancel}>取消逐卡来源复核</button></>:
-   state.status==='available'?<><LocalProof key={selectorKey+':'+page} report={state.report}/><div className="button-row">
+   state.status==='available'?<><LocalProof key={selectorKey+':'+page} report={state.report} goTo={goTo}/><div className="button-row">
     {page>0&&<button onClick={()=>setCursor({owner:identity,page:page-1})}>上一页逐卡来源</button>}
     {(page+1)*state.report.pageSize<state.report.componentCount&&<button onClick={()=>setCursor({owner:identity,page:page+1})}>下一页逐卡来源</button>}
     <button onClick={()=>save(state.report)}>导出此页逐卡来源</button><button onClick={()=>setOpen(false)}>关闭逐卡来源</button>
@@ -58,11 +61,12 @@ function Allocation({value,layout}:{value:DeviceAllocation;layout:LayoutContext}
  </>;
 }
 
-function LocalProof({report}:{report:LocalCostSourceReport}){
+function LocalProof({report,goTo}:{report:LocalCostSourceReport;goTo:NavigateOperand}){
  const {metric,participation,dag,trafficOverride}=report;
  const {scenario,assets,inputHash,engineVersion,stepContext}=report.request,{nodeId,deviceId,fusionNodeId}=report.selector;
  const fusionContext=fusionNodeId?scenario.fusionGroups.find(group=>'$fusion:'+encodeURIComponent(group.groupId)===fusionNodeId)?.extraLocalCost?.contextNodeId:undefined;
  const layout={nodeId:fusionContext??nodeId,deviceId,anchor:{scenario,assets,inputHash,engineVersion,...(stepContext?{stepContext}:{})}};
+ const operandsByNode=new Map(report.rooflineOperands?.map(item=>[item.timingNodeId,item]));
  return <div className="storage-access-proof">
   <h5>{report.selector.nodeId} · {report.selector.deviceId}</h5>
   <p>{metric.status==='available'?'已复核逐卡指标 '+show(metric):'原逐卡指标不可用，保留诊断。'} · 第 {report.page+1} 页 · {report.componentCount} 项</p>
@@ -75,7 +79,10 @@ function LocalProof({report}:{report:LocalCostSourceReport}){
   {report.timingOverrides.map(({index,override,change})=>change.kind==='timing'&&<p key={index}>耗时覆盖 #{index+1} · {override.field} = {override.value.value} {override.value.unit} · {change.before.kind} → {change.after.kind}</p>)}
   {dag&&<details><summary>查看当前设备的 Roofline 耗时运算</summary>
    <p>{dag.completeTiming?'已复核每段计算耗时、HBM 耗时与启动耗时。':'当前耗时链包含求值诊断或达到记录预算。'}</p>
-   <PagedTimingDag dag={dag} pageSize={report.pageSize}/>
+   <PagedTimingDag dag={dag} pageSize={report.pageSize} renderOperand={node=>{
+    const item=operandsByNode.get(node.id),navigate=item?goTo(item.selector):undefined;
+    return navigate&&<button onClick={navigate}>{item?.segmentId===undefined?'查看本卡 HBM 来源':'查看 '+item.segmentId+' 的执行工作量'}</button>;
+   }}/>
   </details>}
   {report.items.map((item,i)=><article className="storage-access-item" key={i}><LocalTerm item={item} denominator={trafficOverride?.originalTotal} layout={layout}/></article>)}
   {report.expressionOperands&&<LocalExpressionOperands report={report} anchor={layout.anchor}/>}

@@ -20,7 +20,8 @@ function localTarget(cost:SourceReport['total'],nodeId:LocalCostSelector['nodeId
  const readMetrics=()=>costMetrics(cost).map(metric=>{
   if(!metric.selector)return metric;
   const computeIndex=metric.selector.computeClass?Number(metric.id.split(':')[1]):undefined;
-  return {...metric,localSelector:{...metric.selector,...local,...(computeIndex===undefined?{}:{computeIndex}),...(fusionNodeId?{fusionNodeId}:{})}};
+  return {...metric,label:computeIndex===undefined?metric.label:metric.label+' · 计算段 '+(computeIndex+1),
+   localSelector:{...metric.selector,...local,...(computeIndex===undefined?{}:{computeIndex}),...(fusionNodeId?{fusionNodeId}:{})}};
  });
  return {id:localId(nodeId,deviceId),label:(fusionNodeId?'融合附加 ':'局部 ')+nodeId+' / '+deviceId,readMetrics,local};
 }

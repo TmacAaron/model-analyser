@@ -111,6 +111,40 @@ it('replays local Roofline efficiency and fixed timing in the actual order, incl
  expect(single.participation).toEqual({kind:'complete_single_device'});
 });
 
+it('links equal-valued Roofline input segments and HBM to exact same-device sources in the actual Decode step',async()=>{
+ const project=gemm(),scenario=project.scenarios[0]!;
+ if(scenario.workload.kind!=='decode')throw Error('Missing test Decode');
+ scenario.workload.steps=3;
+ const compute=rule(project).cost.compute;
+ compute.push({...structuredClone(compute[0]!),segmentId:'second-matmul'});
+ const fixed={...await request(project,'seconds',1,2),proofVersion:3 as const},report=await replayLocalCostSource(fixed);
+ expect(report.schemaVersion).toBe(3);
+ const operands=report.rooflineOperands;
+ if(!operands)throw Error('Missing actual Roofline inputs');
+ expect(operands).toMatchObject([
+  {timingNodeId:'compute["matmul"].work',segmentId:'matmul',selector:{deviceId:'gpu1',computeIndex:0,field:'executedOperations'},quantity:{unit:'operation',value:512}},
+  {timingNodeId:'compute["second-matmul"].work',segmentId:'second-matmul',selector:{deviceId:'gpu1',computeIndex:1,field:'executedOperations'},quantity:{unit:'operation',value:512}},
+  {timingNodeId:'hbm.work',selector:{deviceId:'gpu1',field:'hbmBytes'},quantity:{unit:'byte'}},
+ ]);
+ const second=operands[1];
+ if(!second)throw Error('Missing second compute operand');
+ const derived=await replayLocalCostSource({...fixed,selector:second.selector,metric:(await request(project,'executedOperations',1,2)).metric});
+ expect(derived.items[0]).toMatchObject({index:1,segmentId:'second-matmul'});
+ expect(await verifyLocalCostSourceReport(JSON.parse(JSON.stringify(report)))).toEqual(report);
+ const forged=structuredClone(report),altered=forged.rooflineOperands?.[1];
+ if(!altered)throw Error('Missing operand to tamper');
+ altered.selector.computeIndex=0;
+ await expect(verifyLocalCostSourceReport(forged)).rejects.toThrow('固定输入复算不同');
+ const task={taskId:'roofline',phase:'local_cost_source',request:fixed};
+ const reply={taskId:task.taskId,phase:task.phase,status:'available',report};
+ expect(readLocalSourceReply(reply,task)).toBe(reply);
+ expect(()=>readLocalSourceReply({...reply,report:forged},task)).toThrow('原运算不同');
+ const legacy=await replayLocalCostSource({...fixed,proofVersion:2});
+ expect(legacy).not.toHaveProperty('rooflineOperands');
+ expect(legacy.dag).toEqual(report.dag);
+ expect(await verifyLocalCostSourceReport(JSON.parse(JSON.stringify(legacy)))).toEqual(legacy);
+});
+
 it('binds an actual Decode frame, retains unavailable HBM, and rejects stale or substituted identities',async()=>{
  const project=gemm(),scenario=project.scenarios[0]!;
  if(scenario.workload.kind!=='decode')throw Error('Missing test Decode');
@@ -136,6 +170,9 @@ it('paginates actual bindings and rejects oversized worker evidence and incorrec
  expect(report.items.at(-1)).toMatchObject({kind:'compute',index:0});
  expect(report.expressionOperands?.map(row=>row.name)).toEqual(['ma','na','ka']);
  expect((await replayLocalCostSource(fixed)).expressionOperands).toEqual([]);
+ const current=await replayLocalCostSource({...fixed,proofVersion:3});
+ expect(current.items[0]).toMatchObject({kind:'compute',index:0});
+ expect(current.expressionOperands?.map(row=>row.name)).toEqual(['ma','na','ka']);
  await expect(replayLocalCostSource({...fixed,selector:{...fixed.selector,computeIndex:1}})).rejects.toThrow('计算段');
  await expect(replayLocalCostSource({...fixed,page:2})).rejects.toThrow('页不存在');
  const task={taskId:'test',phase:'local_cost_source',request:{...fixed,page:1}};

@@ -2,7 +2,7 @@ import { useDisplayUnits } from './display-units.js';
 import { useDeferredValue,useEffect,useMemo,useRef,useState } from 'react';
 import type { AnalysisResult,AssetDocument,Scenario } from '@model-analyser/contracts';
 
-import type {FusionCostSelector,FusionSourceOperand,LogicalWorkSourceMember} from '@model-analyser/core';
+import type {FusionCostSelector,FusionSourceOperand,LocalCostSelector,LogicalWorkSourceMember} from '@model-analyser/core';
 import { LeafCostSourceView } from './leaf-cost-source-view.js';
 import {AggregateCostSourceView,type AggregateSourceMember} from './aggregate-cost-source-view.js';
 import {CommunicationCostSourceView} from './communication-cost-source-view.js';
@@ -38,7 +38,11 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
   const proofStep=step==='aggregate'?undefined:Number(step);
   const aggregate=targetId==='model'||targetId.startsWith('module:')||!!result.decode&&step==='aggregate'&&targetId.startsWith('node:')?metric?.aggregateSelector:undefined;
   const communication=value&&metric?.communicationSelector?<CommunicationCostSourceView metric={value} selector={metric.communicationSelector} result={result} scenario={scenario} assets={assets} step={proofStep}/>:undefined;
-  const local=value&&metric?.localSelector?<LocalCostSourceView metric={value} selector={metric.localSelector} result={result} scenario={scenario} assets={assets} step={proofStep}/>:undefined;
+  function goToLocalOperand(selector:LocalCostSelector){
+   const key=canonical(selector),matching=metrics.find(item=>canonical(item.localSelector)===key);
+   if(matching)return ()=>setMetric(matching.id);
+  }
+  const local=value&&metric?.localSelector?<LocalCostSourceView metric={value} selector={metric.localSelector} result={result} scenario={scenario} assets={assets} step={proofStep} goTo={goToLocalOperand}/>:undefined;
   function goToFusionTerm(term:FusionSourceOperand,operandSelector?:FusionCostSelector){
    const source=operandSelector??metric?.fusionSelector;
    if(!source||term.deviceId===undefined)return;

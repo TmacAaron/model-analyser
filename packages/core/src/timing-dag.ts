@@ -1,12 +1,39 @@
 import type {CostObservation} from './cost-observation.js';
 // Bounded operation graph from actual evaluateCost observations.
-import {type Quantity} from '@model-analyser/contracts';
+import type {CostResult,MetricValue,Quantity} from '@model-analyser/contracts';
 type Unit=Quantity['unit'];
 export type TraceNumber=number|'positive_infinity'|'negative_infinity'|'nan'|'negative_zero';
 export type TimingNode={id:string;operation:'input'|'literal'|'return'|'zero_when_work_zero'|'multiply'|'divide'|'log'|'subtract'|'exp'|'sum'|'max';inputs:string[];value:TraceNumber;unit:Unit;source?:Record<string,unknown>};
 export type TimingDag={nodes:TimingNode[];root?:string;completeTiming:boolean;truncated:boolean;guards:Record<string,unknown>[];errors:{code:string;message:string}[]};
 export function pack(value:number):TraceNumber{if(Number.isNaN(value))return 'nan';if(value===Infinity)return 'positive_infinity';if(value===-Infinity)return 'negative_infinity';if(Object.is(value,-0))return 'negative_zero';return value;}
 export function unpack(value:TraceNumber){return typeof value==='number'?value:value==='positive_infinity'?Infinity:value==='negative_infinity'?-Infinity:value==='negative_zero'?-0:NaN;}
+type MetricInput={timingNodeId:string;quantity:Quantity}&(
+ {field:'hbmBytes'}|{field:'executedOperations';computeIndex:number;computeClass:CostResult['compute'][number]['computeClass'];segmentId:string}
+);
+
+/** Connect recorded inputs to their original cost field, including unmerged segments. */
+export function rooflineMetricInputs(dag:TimingDag,cost:CostResult,segmentIdAt:(index:number)=>string|undefined){
+ const inputs:MetricInput[]=[];
+ for(const node of dag.nodes){
+  const source=node.source;
+  if(source?.['kind']!=='metric_boundary')continue;
+  function quantity(metric:MetricValue){
+   if(metric.status!=='available'||metric.quantity.unit!==node.unit||metric.quantity.value!==unpack(node.value))throw Error('Roofline 读取值与同设备的实际指标不同');
+   return metric.quantity;
+  }
+  if(source['field']==='hbmBytes'){
+   inputs.push({timingNodeId:node.id,field:'hbmBytes',quantity:quantity(cost.hbmBytes)});
+   continue;
+  }
+  const index=source['evaluationIndex'];
+  if(typeof index!=='number'||!Number.isSafeInteger(index)||index<0)throw Error('Roofline 缺少实际计算段序号');
+  const segmentId=segmentIdAt(index),segment=cost.compute[index];
+  if(segmentId===undefined||!segment||source['field']!==`compute[${JSON.stringify(segmentId)}].executedOperations`)throw Error('Roofline 的原始计算段位置不同');
+  inputs.push({timingNodeId:node.id,field:'executedOperations',computeIndex:index,computeClass:segment.computeClass,segmentId,quantity:quantity(segment.executedOperations)});
+ }
+ return inputs;
+}
+
 function number(event:Record<string,unknown>,key:string){const value=event[key];if(typeof value!=='number')throw Error('Missing recorded number '+key);return value;}
 function string(event:Record<string,unknown>,key:string){const value=event[key];if(typeof value!=='string')throw Error('Missing recorded string '+key);return value;}
 function origin(event:Record<string,unknown>){const value=event['origin'];if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Missing actual duration origin');return value as Record<string,unknown>;}

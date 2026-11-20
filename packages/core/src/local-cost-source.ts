@@ -13,10 +13,11 @@ import type {LocalCostDeclaration,LocalCostObservation} from './local-cost-obser
 import type {FusionDeclaration} from './fusion-observation.js';
 import type {LayoutSourceSelector} from './layout-source.js';
 import type {ParameterCaptureTrace} from './parameter-observation.js';
+import {rooflineMetricInputs} from './timing-dag.js';
 
 export const LocalCostSelector=LeafCostSelector.extend({deviceId:DeviceId,computeIndex:z.number().int().nonnegative().optional(),fusionNodeId:NodeId.optional()});
 export type LocalCostSelector=z.infer<typeof LocalCostSelector>;
-export const LocalCostSourceRequest=LeafCostSourceRequest.extend({selector:LocalCostSelector,decodeFrame:z.literal(true).optional(),proofVersion:z.literal(2).optional()});
+export const LocalCostSourceRequest=LeafCostSourceRequest.extend({selector:LocalCostSelector,decodeFrame:z.literal(true).optional(),proofVersion:z.union([z.literal(2),z.literal(3)]).optional()});
 export type LocalCostSourceRequest=z.input<typeof LocalCostSourceRequest>;
 const pageSize=20;
 type LocalBinding=LocalCostObservation['outcome']['bindings'][number];
@@ -43,7 +44,7 @@ function quantity(metric:ReturnType<typeof compact>,unit:Quantity['unit']){
 
 export async function replayLocalCostSource(input:unknown){
  const request=LocalCostSourceRequest.parse(input),{scenario,assets,selector,stepContext,inputHash,engineVersion,page}=request;
- const extended=request.proofVersion===2;
+ const extended=request.proofVersion!==undefined;
  const {nodeId,deviceId,field,computeIndex,computeClass,scope,fusionNodeId}=selector;
  if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1)throw Error('局部成本来源需要选择一个实际 Decode 步骤');
  if(request.decodeFrame&&!stepContext)throw Error('局部成本缺少实际 Decode 步骤上下文');
@@ -230,12 +231,13 @@ export async function replayLocalCostSource(input:unknown){
   return {kind:'custom_formula' as const,...(actual.status==='available'?{formula:formula(authored.timing.seconds,{kind:'timing',field:'seconds'},quantity(actual,'second'))}:{})};
  }
  const selectedCompute=computeIndex!==undefined?[computeIndex]:roofline?effective.compute.map((_,index)=>index):[];
- const componentReaders=[
-  ...outcome.bindings.map(binding=>()=>bindingItem(binding)),
+ const bindings=outcome.bindings.map(binding=>()=>bindingItem(binding));
+ const equations=[
   ...selectedCompute.map(index=>()=>computeItem(index,field==='usefulOperations'?field:'executedOperations')),
   ...accessIndices.map(index=>()=>accessItem(index)),
   ...(timing&&!roofline?[()=>durationItem(metric)]:[]),
  ];
+ const componentReaders=request.proofVersion===3?[...equations,...bindings]:[...bindings,...equations];
  const componentCount=componentReaders.length;
  const start=page*pageSize;
  if(page>0&&start>=componentCount)throw Error('请求的局部成本来源页不存在');
@@ -244,6 +246,12 @@ export async function replayLocalCostSource(input:unknown){
  if(roofline&&!dag)throw Error('缺少实际局部 Roofline 计算轨迹');
  const root=dag?.nodes.find(n=>n.id===dag.root);
  if(dag?.completeTiming&&(metric.status!=='available'||root?.value!==metric.quantity.value))throw Error('实际局部 Roofline 轨迹与原耗时不同');
+ const rooflineOperands=request.proofVersion===3&&dag?rooflineMetricInputs(dag,cost,index=>effective.compute[index]?.segmentId).map(input=>({
+  timingNodeId:input.timingNodeId,quantity:input.quantity,
+  selector:{nodeId,deviceId,scope,field:input.field,...(fusionNodeId?{fusionNodeId}:{}),
+   ...(input.field==='executedOperations'?{computeIndex:input.computeIndex,computeClass:input.computeClass}:{})},
+  ...(input.field==='executedOperations'?{segmentId:input.segmentId}:{}),
+ })):undefined;
  const diagnosticIds=new Set(metric.diagnosticIds);
  for(const item of items){
   if(item.kind==='access')for(const id of [...item.logical.diagnosticIds,...item.hbm.diagnosticIds])diagnosticIds.add(id);
@@ -260,16 +268,16 @@ export async function replayLocalCostSource(input:unknown){
  if(extended&&!trace)throw Error('未采集到原逐卡词法参数域');
  const parameterBindings=trace?localParameterBindingGraph({...trace,truncated:trace.truncated||!complete||readsTruncated},assets,parameterRoots):undefined;
  const expressionOperandsComplete=complete&&!readsTruncated&&(parameterBindings?.complete??false);
- return {kind:'local_cost_source' as const,schemaVersion:extended?2 as const:1 as const,inputHash,engineVersion,selector,page,pageSize,componentCount,
+ return {kind:'local_cost_source' as const,schemaVersion:request.proofVersion??(1 as const),inputHash,engineVersion,selector,page,pageSize,componentCount,
   complete:complete&&page===0&&componentCount<=pageSize&&metric.status==='available'&&(!dag||dag.completeTiming)&&(!extended||expressionOperandsComplete),
   ...(diagnosticPrefix?namespaceDiagnostics(evidence,diagnosticPrefix):evidence),
-  ...(extended?{expressionOperands:reads,expressionOperandsComplete,parameterBindings}:{}),request};
+  ...(extended?{expressionOperands:reads,expressionOperandsComplete,parameterBindings}:{}),...(rooflineOperands?{rooflineOperands}:{}),request};
 }
 
 export type LocalCostSourceReport=Awaited<ReturnType<typeof replayLocalCostSource>>;
 
 export async function verifyLocalCostSourceReport(input:unknown){
- const saved=z.object({kind:z.literal('local_cost_source'),schemaVersion:z.union([z.literal(1),z.literal(2)]),request:LocalCostSourceRequest}).passthrough().parse(input);
+ const saved=z.object({kind:z.literal('local_cost_source'),schemaVersion:z.union([z.literal(1),z.literal(2),z.literal(3)]),request:LocalCostSourceRequest}).passthrough().parse(input);
  const report=await replayLocalCostSource(saved.request);
  if(stableStringify(saved)!==stableStringify(report))throw Error('局部成本来源报告与固定输入复算不同');
  return report;
