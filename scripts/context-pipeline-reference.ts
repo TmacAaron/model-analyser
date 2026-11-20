@@ -9,7 +9,10 @@ import { makeNamedParallelBase,makeNamedParallelProject } from './named-parallel
 import { contextOracle,pipelineOracle,stableShardAttention } from './context-pipeline-oracle.js';
 import lock from '../references/parallel/context-pipeline-source-lock.json' with {type:'json'};
 const value=(m:MetricValue|undefined)=>{assert.ok(m?.status==='available');return m.quantity.value;};
-for(const source of lock.sources){let bytes:Uint8Array;try{bytes=await readFile('.runtime/context-parallel-review/'+source.name+'.md');}catch(e){if(!(e instanceof Error&&'code'in e&&e.code==='ENOENT'))throw e;const response=await fetch(source.url);assert.ok(response.ok);bytes=new Uint8Array(await response.arrayBuffer());}assert.equal(createHash('sha256').update(bytes).digest('hex'),source.sha256,'Pinned primary source '+source.name);}
+for(const source of lock.sources){
+  const bytes=await readFile('references/parallel/context-pipeline/'+source.name+'.md');
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),source.sha256,'Pinned primary source '+source.name);
+}
 await mkdir('examples/context-pipeline',{recursive:true});const rows=[],assets=new Map<string,AssetDocument>();
 for(const kind of ['pcp2','dcp2','pp2'] as const){const base=makeNamedParallelBase(kind),{project,preview}=await makeNamedParallelProject(kind);for(const a of base.assetSnapshots){const prior=assets.get(a.assetId);if(prior)assert.equal(canonical(prior),canonical(a));assets.set(a.assetId,a);}assert.deepEqual(validateAssets(base.assetSnapshots).filter(d=>d.severity==='error'),[]);
   const maximum=kind==='pcp2'?17:kind==='dcp2'?33:4,capacity=await searchCapacity(project.scenarios[0]!,project.assetSnapshots,{variable:{kind:'workload',field:'batchSize'},searchRange:{min:maximum-1,max:maximum+1}});assert.ok(capacity.status==='available'&&capacity.result.capacityStatus.kind==='solved'&&capacity.result.capacityStatus.maximum===maximum);await writeFile('examples/context-pipeline/'+kind+'-batch-capacity.json',JSON.stringify(capacity,null,2)+'\n');

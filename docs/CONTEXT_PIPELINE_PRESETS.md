@@ -75,7 +75,7 @@ stage0和stage1各使用一个新固定模块包装原GQA attention/residual图�
 
 ## 发布与验证
 
-`npm run reference:context-pipeline`核对两份固定来源SHA、八case手算与整数容量边界，再检查全部固定资产身份后发布。闭包79份资产，其中29份复用已有固定资产，新增50个head；当前内置578head/581JSON。三份base、三份已应用项目、五份其他workload项目、三份容量证明与参考账本都可从上述目录查阅。
+`npm run reference:context-pipeline` 从仓库读取上述固定提交的[Context 原文](../references/parallel/context-pipeline/context-parallel.md)与[Pipeline 原文](../references/parallel/context-pipeline/pipeline-parallel.md)，离线核对 SHA-256、八个手算案例与整数容量边界，再校验固定资产身份。原文随附[上游许可](../references/parallel/context-pipeline/LICENSE)。闭包 79 份资产，其中 29 份复用已有固定资产，新增 50 个 head；当前内置 578 个 head、581 份 JSON。三份 base、三份已应用项目、五份其他 workload 项目、三份容量证明与参考账本都可从上述目录查阅。
 
 发布时按完整assetId/revision寻找旧文件并核对内容，新路径使用完整ID哈希；先校验整个待发布集合，不因命名冲突覆盖其他资产。发布中断可重跑，不承诺跨文件事务。
 
