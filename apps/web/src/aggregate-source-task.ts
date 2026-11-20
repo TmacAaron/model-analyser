@@ -8,7 +8,7 @@ export type AggregateSourceReply={taskId:string;phase:AggregateSourceTask['phase
 
 const object=(value:unknown):value is Record<string,unknown>=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 
-export function readAggregateSourceReply(value:unknown,task:AggregateSourceTask):AggregateSourceReply{
+export function readAggregateSourceReply(value:unknown,task:Omit<AggregateSourceTask,'phase'>&{phase:string}):AggregateSourceReply{
  if(!object(value)||value['taskId']!==task.taskId||value['phase']!==task.phase)throw Error('聚合来源回复的任务身份有误');
  if(value['status']==='error'&&typeof value['message']==='string')return value as AggregateSourceReply;
  const report=value['report'],request=task.request;

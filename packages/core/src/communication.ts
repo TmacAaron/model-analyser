@@ -5,9 +5,10 @@ import { partitionTensor } from './partition.js';
 import { MetricFactory } from './metrics.js';
 import { canReadTensorLocally } from './layout-compatibility.js';
 import { canonical,collectRefs } from '../../contracts/src/validation.js';
+import type {CommunicationTimingArithmetic} from './communication-observation.js';
 
 /** Network traffic is explicit; collective names never introduce a second coefficient. */
-export function evaluateCommunication(input:CommunicationDefinition,inputScope:MetricScope,tensors:TensorSpec[],inputTopology:DeviceTopology,context:EvaluationContext):CommunicationAttempt{
+export function evaluateCommunication(input:CommunicationDefinition,inputScope:MetricScope,tensors:TensorSpec[],inputTopology:DeviceTopology,context:EvaluationContext,observeTiming?:(step:CommunicationTimingArithmetic)=>void):CommunicationAttempt{
   const diagnostics:Diagnostic[]=[];
   try{
     const c=CommunicationDefinition.parse(input),scope=MetricScope.parse(inputScope),topology=DeviceTopology.parse(inputTopology),group=topology.groups.find(g=>g.groupId===c.groupId);
@@ -49,14 +50,19 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     const communication=declared?{groupId:c.groupId,operation:c.operation,sendBytesPerMember:common(declared.map(p=>p.sendBytes)),receiveBytesPerMember:common(declared.map(p=>p.receiveBytes)),algorithmTrafficBytesPerMember:common(declared.map(p=>p.algorithmTrafficBytes)),groupSendBytes:metrics.sum(declared.map(p=>p.sendBytes),'byte'),groupReceiveBytes:metrics.sum(declared.map(p=>p.receiveBytes),'byte')}:{groupId:c.groupId,operation:c.operation,sendBytesPerMember:sendMetric,receiveBytesPerMember:receiveMetric,algorithmTrafficBytesPerMember:trafficMetric,groupSendBytes:metrics.available(send*sendCount,'byte'),groupReceiveBytes:metrics.available(receive*receiveCount,'byte')};
     let seconds;
     try{
-      if(c.timing.kind==='fixed')seconds=metrics.available(c.timing.seconds,'second');
-      else if(c.timing.kind==='custom_formula')seconds=metrics.available(numericValue(c.timing.seconds,'second',context),'second');
+      if(c.timing.kind==='fixed'||c.timing.kind==='custom_formula'){
+        const value=c.timing.kind==='fixed'?c.timing.seconds:numericValue(c.timing.seconds,'second',context);
+        seconds=metrics.available(value,'second');
+        observeTiming?.({kind:c.timing.kind,seconds:value});
+      }
       else {
         const maxTraffic=declared?declared.every(p=>p.algorithmTrafficBytes.status==='available')?Math.max(...declared.flatMap(p=>p.algorithmTrafficBytes.status==='available'?[p.algorithmTrafficBytes.quantity.value]:[])):NaN:traffic;
         if(!Number.isFinite(maxTraffic)||!declared&&trafficUnderflow)throw new FormulaError('numeric_overflow','通信算法流量溢出或下溢，无法计算传输时间');
         const transfer=maxTraffic/c.timing.bytePerSecond,startup=c.algorithm.startupRounds*c.timing.latencySeconds;
         if(maxTraffic>0&&transfer===0)throw new FormulaError('numeric_overflow','非零通信传输耗时下溢，不能报告为零');
-        seconds=metrics.available(transfer+startup,'second');
+        const value=transfer+startup;
+        seconds=metrics.available(value,'second');
+        if(seconds.status==='available')observeTiming?.({kind:'bandwidth_latency',maxTraffic,bytePerSecond:c.timing.bytePerSecond,rounds:c.algorithm.startupRounds,latencySeconds:c.timing.latencySeconds,transfer,startup,seconds:value});
       }
     }catch(e){seconds=metrics.unavailable(e instanceof FormulaError?e.code:'invalid_communication_time',e instanceof Error?e.message:'通信时间不可用');}
     const unmodeled=metrics.unavailable('missing_communication_memory','通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间');

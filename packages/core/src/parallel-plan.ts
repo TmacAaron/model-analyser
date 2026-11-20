@@ -20,6 +20,7 @@ import { evaluateFusions } from './fusion-cost.js';
 import { fusionRuntime,fusionMemoryOrder } from './fusion-runtime.js';
 import { buildStreamsExecution } from './streams.js';
 import { temporalMemory } from './temporal-memory.js';
+import {communicationSymbols,type BoundCollectiveObservation,type CommunicationPlanObserver,type CommunicationTimingArithmetic,type CommunicationTimingOverride} from './communication-observation.js';
 
 const MAX_PARALLEL_USES=20000;
 type Assignment=Scenario['parallelPlan']['assignments'][number];
@@ -28,14 +29,16 @@ const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(
 const storageSignature=(p:StoragePartitionResult)=>canonical([...p.perDevice].sort((a,b)=>a.deviceId<b.deviceId?-1:1).map(d=>({deviceId:d.deviceId,copies:d.copies,payload:d.allocation.payloadBytes,auxiliaries:d.allocation.auxiliaryBytes,total:d.totalBytes})).map(d=>({...d,payload:d.payload.status==='available'?d.payload.quantity:d.payload,auxiliaries:d.auxiliaries.map(a=>({name:a.name,bytes:a.bytes.status==='available'?a.bytes.quantity:a.bytes})),total:d.total.status==='available'?d.total.quantity:d.total})));
 
 /** Resolve layouts and declared allocation totals; this is not a distributed schedule/peak. */
-export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext):Promise<ParallelResolutionAttempt>{
+export async function resolveParallelPlan(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:CommunicationPlanObserver):Promise<ParallelResolutionAttempt>{
   const diagnostics:Diagnostic[]=[];
   let location:Diagnostic['location']={kind:'file',name:'parallel-plan'};
   try{
     const pack=calculationInput(input,library),assets=pack.assets;let scenario=pack.scenario;
     location={kind:'scenario',scenarioId:scenario.scenarioId};
     const invalid=validateScenario(scenario,assets).filter(d=>d.severity==='error'&&d.code!=='unresolved_partial');if(invalid.length)return ParallelResolutionAttempt.parse({status:'unavailable',diagnostics:invalid});
-    const expanded=instantiateModel(scenario,assets,undefined,stepContext);if(expanded.status==='unavailable')return ParallelResolutionAttempt.parse(expanded);
+    const captures:BoundCollectiveObservation[]=[];
+    const nativeNodeId=observer?.nativeNodeId;
+    const expanded=instantiateModel(scenario,assets,undefined,stepContext,nativeNodeId?{nodeId:nativeNodeId,collective:record=>captures.push(record)}:undefined);if(expanded.status==='unavailable')return ParallelResolutionAttempt.parse(expanded);
     const resolved=expanded.resolved,graph=resolved.graph;diagnostics.push(...expanded.diagnostics);
     modulePeakContexts(resolved,scenario,assets);
     const nativeCommunications=graph.nodes.flatMap(n=>n.body.kind==='collective'?[{nodeId:n.nodeId,definition:n.body.communication}]:[]),planCommunicationCount=scenario.parallelPlan.communications.length;
@@ -130,12 +133,27 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       const from=targets('tensor',c.source.tensorId,allSelection),to=targets('tensor',c.destination.tensorId,allSelection);if(from.length!==1||to.length!==1||!from[0]||!to[0])throw new FormulaError('ambiguous_communication_target','通信端点需唯一的展开张量 ID');
       const temporaryStorageIds=c.temporaryStorageIds?.map(id=>{const matches=targets('storage',id,allSelection);if(matches.length!==1||!matches[0])throw new FormulaError('ambiguous_communication_buffer','通信临时存储需要唯一展开 ID');return StorageId.parse(matches[0].id);});
       const definition={...c,source:{tensorId:TensorId.parse(from[0].id),distribution:mappedLayout(c.source.distribution,from[0].axes)},destination:{tensorId:TensorId.parse(to[0].id),distribution:mappedLayout(c.destination.distribution,to[0].axes)},...(temporaryStorageIds?{temporaryStorageIds}:{})},group=scenario.deviceTopology.groups.find(g=>g.groupId===c.groupId);if(!group)throw new FormulaError('missing_reference','通信组缺失');
-      const overrides=scenario.numericOverrides.filter(o=>o.target.kind==='node'&&o.target.nodeId===c.placement?.nodeId),fields=new Set<string>();for(const o of overrides){if(fields.has(o.field))throw new FormulaError('invalid_override','通信字段重复覆盖');fields.add(o.field);}if(fields.has('fixed_seconds')&&(fields.has('communication_bandwidth')||fields.has('communication_latency')))throw new FormulaError('invalid_override','固定通信时间不能同时覆盖带宽/延迟');
-      for(const o of overrides){if(o.field==='fixed_seconds')definition.timing={kind:'fixed',seconds:o.value.value,description:o.description??'Explicit communication timing override'};else if(o.field==='communication_bandwidth'||o.field==='communication_latency'){if(definition.timing.kind!=='bandwidth_latency')throw new FormulaError('invalid_override','带宽/延迟覆盖需要 bandwidth_latency 策略');if(o.field==='communication_bandwidth')definition.timing.bytePerSecond=o.value.value;else definition.timing.latencySeconds=o.value.value;}else throw new FormulaError('unsupported_override','通信节点不支持覆盖 '+o.field);diagnostics.push({diagnosticId:'communication-override-'+diagnostics.length,severity:'info',code:'communication_override_applied',message:`通信 ${c.placement?.nodeId} 显式覆盖 ${o.field}=${o.value.value} ${o.value.unit}`,location});}
+      const overrides=[...scenario.numericOverrides.entries()].filter(([,o])=>o.target.kind==='node'&&o.target.nodeId===c.placement?.nodeId),fields=new Set<string>();for(const [,o] of overrides){if(fields.has(o.field))throw new FormulaError('invalid_override','通信字段重复覆盖');fields.add(o.field);}if(fields.has('fixed_seconds')&&(fields.has('communication_bandwidth')||fields.has('communication_latency')))throw new FormulaError('invalid_override','固定通信时间不能同时覆盖带宽/延迟');
+      const capture=observer?.index===index,overrideTrace:CommunicationTimingOverride[]=[];
+      for(const [overrideIndex,o] of overrides){
+        const before=capture?structuredClone(definition.timing):undefined;
+        if(o.field==='fixed_seconds')definition.timing={kind:'fixed',seconds:o.value.value,description:o.description??'Explicit communication timing override'};
+        else if(o.field==='communication_bandwidth'||o.field==='communication_latency'){
+          if(definition.timing.kind!=='bandwidth_latency')throw new FormulaError('invalid_override','带宽/延迟覆盖需要 bandwidth_latency 策略');
+          if(o.field==='communication_bandwidth')definition.timing.bytePerSecond=o.value.value;else definition.timing.latencySeconds=o.value.value;
+        }else throw new FormulaError('unsupported_override','通信节点不支持覆盖 '+o.field);
+        if(before)overrideTrace.push({index:overrideIndex,override:o,before,after:structuredClone(definition.timing)});
+        diagnostics.push({diagnosticId:'communication-override-'+diagnostics.length,severity:'info',code:'communication_override_applied',message:`通信 ${c.placement?.nodeId} 显式覆盖 ${o.field}=${o.value.value} ${o.value.unit}`,location});
+      }
       const deviceIds=c.operation==='send_recv'?group.members.filter(id=>id===c.sourceDeviceId||id===c.destinationDeviceId):group.members;
       const nativeSource=nativeCommunications[index-planCommunicationCount],communicationContext=nativeSource?{...context,provenance:{assetRefs:resolved.assetRefs,formulaRefs:resolved.assetRefs.filter(r=>r.kind==='formula'),parameterSources:resolved.parameters.filter(p=>inside(nativeSource.nodeId,p.nodeId)).map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),assumptions:['Graph-native communication binds its owning frame parameters and actual tensor/storage/axis IDs before evaluation.','Explicit per-member payload and trafficFactor are applied once. Time is the group span, not the sum of device durations.','Network-only cost: local HBM, reduction arithmetic and conversion work require separate declarations. Temporary storage is explicitly allocated and live during communication.',...scenario.parallelPlan.assumptions]}}:context;
-      const evaluation=evaluateCommunication(definition,{phase:resolved.phase,target:{kind:'node',nodeId:c.placement?.nodeId??NodeId.parse('$parallel-communication:'+index)},deviceIds,aggregation:'group_total'},graph.tensors,scenario.deviceTopology,communicationContext);
+      let timing:CommunicationTimingArithmetic|undefined;
+      const evaluation=evaluateCommunication(definition,{phase:resolved.phase,target:{kind:'node',nodeId:c.placement?.nodeId??NodeId.parse('$parallel-communication:'+index)},deviceIds,aggregation:'group_total'},graph.tensors,scenario.deviceTopology,communicationContext,capture?record=>{timing=record;}:undefined);
       if(evaluation.status==='unavailable')throw new FormulaError(evaluation.diagnostics[0]?.code??'invalid_communication',evaluation.diagnostics.map(d=>d.message).join('; '));diagnostics.push(...evaluation.result.diagnostics);const native=nativeCommunications[index-planCommunicationCount];communications.push({index,...(native?{origin:{kind:'graph',nodeId:native.nodeId}}:{}),evaluation:evaluation.result});
+      if(capture&&observer){
+        const collective=captures.find(record=>record.nodeId===native?.nodeId);
+        observer.record(structuredClone({index,...(c.placement?.nodeId?{nodeId:c.placement.nodeId}:{}),...(collective?{collective}:{}),symbols:communicationSymbols(context.symbols),overrides:overrideTrace,...(timing?{timing}:{})}));
+      }
     }
     const warn=(code:string,message:string,nodeId:NodeId,severity:'warning'|'info'='warning')=>diagnostics.push({diagnosticId:'parallel-'+diagnostics.length,severity,code,message,location:{kind:'node',nodeId}});
     for(const t of tensorLayouts)if(t.partition.distribution.kind==='partial'&&!communications.some(c=>c.evaluation.source.tensorId===t.tensorId&&tensorSignature(c.evaluation.source)===tensorSignature(t.partition)&&(c.evaluation.definition.operation==='all_reduce'||c.evaluation.definition.operation==='reduce_scatter')))throw new FormulaError('unresolved_partial',`节点 ${t.nodeId} 的 partial 对象 ${t.tensorId} 未声明匹配归约`);
