@@ -12,15 +12,21 @@ it('keeps one opaque call inspectable and allows explicit cross-call operator se
  expect(projectCanvasGraph(a.resolved,'block',[],true).nodes.filter(n=>n.kind==='operator').map(n=>n.id)).toEqual(['block[0]','block[1]','block[2]']);expect(JSON.stringify(a.resolved)).toBe(before);
 });
 
-it('projects the authored Qwen attention as one node with one real input and preserves its nested arithmetic edges',()=>{
+it('projects Qwen QKV outside the attention block and preserves all three input tensors',()=>{
  const p=makeQwenProject({kind:'prefill',batchSize:1,pastTokensPerRequest:0,queryTokensPerRequest:4,chunkTokens:4}),s=p.scenarios[0]!,a=instantiateModel(s,p.assetSnapshots);
  if(a.status!=='available')throw Error(JSON.stringify(a));
  const before=JSON.stringify(a.resolved),id='decoder[0]/$view:attention';
  const group=projectCanvasView(a.resolved,s,{scope:'decoder[0]',expandOperatorCalls:false}).graph;
- expect(group.nodes.find(node=>node.id===id)?.leafIds).toHaveLength(7);
+ const projection='decoder[0]/qkv';
+ expect(group.nodes.find(node=>node.id===id)?.leafIds).toHaveLength(6);
+ expect(group.nodes.find(node=>node.id===projection)?.kind).toBe('operator');
  expect(group.nodes.some(node=>node.id==='decoder[0]/qk')).toBe(false);
- expect(group.edges.filter(edge=>edge.from==='decoder[0]/input-norm'&&edge.to===id)).toHaveLength(1);
+ expect(group.edges.filter(edge=>edge.from==='decoder[0]/input-norm'&&edge.to===projection)).toHaveLength(1);
+ expect(group.edges.filter(edge=>edge.from===projection&&edge.to===id).map(edge=>edge.tensorIds)).toEqual([
+   ['decoder[0]::q-proj','decoder[0]::k-proj','decoder[0]::v-new'],
+ ]);
  const inner=projectCanvasView(a.resolved,s,{scope:id,expandOperatorCalls:false}).graph;
+ expect(inner.nodes.some(node=>node.id===projection)).toBe(false);
  expect(inner.nodes.some(node=>node.id==='decoder[0]/qk')).toBe(true);
  expect(inner.edges.some(edge=>edge.from==='decoder[0]/qk'&&edge.to==='decoder[0]/softmax')).toBe(true);
  expect(JSON.stringify(a.resolved)).toBe(before);

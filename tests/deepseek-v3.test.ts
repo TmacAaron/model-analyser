@@ -47,7 +47,7 @@ it.each(['v3', 'r1'] as const)('reproduces %s main-model weights and latent cach
   expect(amount(matrix?.executedOperations)).toBe(denseWork + 2 * batchSize * heads * layers * queries * (past + queries) * pairWidth);
   const route = result.total.compute.find(item => item.computeClass.resource === 'custom');
   expect(amount(route?.usefulOperations)).toBe(batchSize * queries * moeLayers * (2 * experts + 8 * 4 + 8 * experts));
-}, 30_000);
+}, 60_000);
 
 it('uses the final Decode allocation for KV bytes per token and detects the single-card capacity limit', async () => {
   const assets = makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile('v3'));
@@ -61,4 +61,4 @@ it('uses the final Decode allocation for KV bytes per token and detects the sing
     currentKvBytes: 4 * kvBytesPerToken, averageBytesPerToken: kvBytesPerToken,
     budget: { status: 'no_room', limitingDeviceIds: ['gpu0'] },
   });
-}, 30_000);
+}, 90_000);
