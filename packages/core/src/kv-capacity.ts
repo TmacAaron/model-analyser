@@ -166,7 +166,9 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
         if(allocation.shape.some(axis=>axis!==token&&(!extent(axis)||!Number.isSafeInteger(extent(axis)))))throw Error('缓存含有未知或空的非 token 维度。');
         const distribution=allocations.get(spec.storageId);
         if(layout&&!distribution)throw Error('缓存缺少已解析的分片规则。');
-        return {spec:{...spec,allocation},tokenAxis:token.axisId,...(distribution?{distribution}:{})};
+        // The execution planner replicates the complete object onto a synthetic one-card group.
+        // The slot solver can size the exact same object on that card without the synthetic group.
+        return {spec:{...spec,allocation},tokenAxis:token.axisId,...(distribution&&!layout?.singleDeviceBaseline?{distribution}:{})};
       });
       budget=solveKvSlots(profile,active.deviceTopology,limits,reference);
     }catch(error){

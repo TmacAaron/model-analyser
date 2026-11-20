@@ -20,6 +20,22 @@ function stateTensor(windowed=false){
 }
 
 describe('KV capacity',()=>{
+  it('sizes complete single-card KV storage using the peak from multi-stream execution',async()=>{
+    const {project}=await makeGqaProject('tp-heads');
+    const scenario=project.scenarios[0]!;
+    scenario.deviceTopology={devices:scenario.deviceTopology.devices.slice(0,1),groups:[]};
+    scenario.parallelPlan={assignments:[],communications:[],assumptions:[]};
+    scenario.executionPlan={kind:'streams',assignments:[],extraDependencies:[],resourcePolicy:{kind:'ideal'}};
+    const capacity=await estimateKvCapacity(scenario,project.assetSnapshots);
+    if(capacity.status!=='available')throw Error(capacity.message);
+    expect(capacity.report).toMatchObject({averageBytesPerToken:16,budget:{status:'available',more:[{bytes:16}]}});
+    const device=capacity.report.devices[0]!;
+    expect(device.nonKvBytes).toBeGreaterThan(0);
+    expect(capacity.report.budget).toMatchObject({
+      tokensPerRequest:Math.floor((device.capacityBytes-device.nonKvBytes!)/16),
+    });
+  });
+
   it('preserves real Qwen layer count, KV heads and BF16 width in the budget',async()=>{
     const p=makeQwenProject({kind:'decode',batchSize:1,queryTokensPerRequest:1,contextTokensPerRequest:2,steps:1});
     const result=await estimateKvCapacity(p.scenarios[0]!,p.assetSnapshots);

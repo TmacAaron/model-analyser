@@ -107,10 +107,12 @@ test('a custom profile applies to all parallel cards and updates the same KV cal
   await expect(page.getByRole('region', { name: 'KV 缓存容量' })).toContainText('224 token / 请求');
 });
 
-test('explains unbound cards and makes an independent single-card configuration with actual results', async ({ page }) => {
+test('repairs unbound cards in the current configuration and calculates both streaming analysis and KV capacity', async ({ page }) => {
+  test.setTimeout(90_000);
   const project = makeQwen17Project({ kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 0 });
   const original = project.scenarios[0]!;
   original.name = '双卡基准';
+  original.executionPlan = { kind: 'streams', assignments: [], extraDependencies: [], resourcePolicy: { kind: 'ideal' } };
   original.deviceTopology = {
     devices: [original.deviceTopology.devices[0]!, { ...original.deviceTopology.devices[0]!, deviceId: DeviceId.parse('device_1') }],
     groups: [{ groupId: 'main', members: [original.deviceTopology.devices[0]!.deviceId] }],
@@ -119,21 +121,24 @@ test('explains unbound cards and makes an independent single-card configuration 
   await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
   const notice = page.locator('.studio-layout-notice');
   await expect(notice).toContainText('2 张卡尚未应用当前阶段的并行布局');
+  await expect(page.locator('.analysis-cards')).toHaveCount(0);
   await page.getByRole('button', { name: '容量', exact: true }).click();
   const capacity = page.getByRole('region', { name: 'KV 缓存容量', exact: true });
-  await expect(capacity).toContainText('待核定');
   await expect(notice).toContainText('2 张卡');
-  await notice.getByRole('button', { name: '新建单卡配置', exact: true }).click();
-  await expect(page.getByRole('tab', { name: /^双卡基准 · 单卡/ })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
-  await expect(capacity).toContainText('114,688 B / token');
-  await expect(notice).toHaveCount(0);
+  await expect(capacity).toHaveCount(0);
   await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  await notice.getByRole('button', { name: '改为单卡并计算', exact: true }).click();
+  await expect(page.getByRole('tab', { name: /^双卡基准/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await expect(notice).toHaveCount(0);
   const cards = page.locator('.studio-inspector .analysis-cards');
-  await expect(cards).toContainText('生命周期显存峰值');
+  await expect(cards).toContainText('理论耗时 · 多流', { timeout: 40_000 });
   await expect(cards).not.toContainText('不可用');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  await expect(capacity).toContainText('114,688 B / token', { timeout: 40_000 });
+  await expect(capacity).toContainText(/[\d,]+ token \/ 请求/);
   const saved = await storedProject(page, project);
-  expect(saved.scenarios[0]).toEqual(original);
-  expect(saved.scenarios[1]?.deviceTopology.devices).toEqual(original.deviceTopology.devices.slice(0, 1));
-  expect(saved.scenarios[1]?.workload).toEqual(original.workload);
+  expect(saved.scenarios).toEqual([{
+    ...original, deviceTopology: { ...original.deviceTopology, devices: original.deviceTopology.devices.slice(0, 1) },
+  }]);
 });

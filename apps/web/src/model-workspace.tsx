@@ -10,7 +10,6 @@ import { useFusionTask } from './use-fusion-task.js';
 import { useModelInstantiation } from './use-model-instantiation.js';
 import { mergeMeasurements } from '../../../packages/contracts/src/measurement-file.js';
 import { canonical } from '../../../packages/contracts/src/validation.js';
-import { copyConfiguration, resetConfigurationDraft } from '../../../packages/contracts/src/configuration-edit.js';
 import { validateScenario } from '../../../packages/contracts/src/scenario-validation.js';
 import { type SaveState } from './serialized-autosave.js';
 import { CanvasConnectionEditor } from './canvas-connection-editor.js';
@@ -63,11 +62,13 @@ export function ModelWorkspace(props:Props){
   const resolved=attempt?.status==='available'?attempt.resolved:undefined,graph=projection?.graph??emptyCanvas;
   const missingLayout=!!s&&s.deviceTopology.devices.length>1&&!s.parallelPlan.nativeBindings&&
     !s.parallelPlan.assignments.some(assignment=>assignment.phases.includes(s.workload.kind));
-  const canCopySingleDevice=useMemo(()=>{
+  const singleDeviceFallback=useMemo(()=>{
     if(!missingLayout||!s||!project||!resolved||s.parallelPlan.assignments.length||
-      s.parallelPlan.communications.length||resolved.graph.nodes.some(node=>node.body.kind==='collective'))return false;
-    return !validateScenario({...s,deviceTopology:primaryDeviceTopology(s)},project.assetSnapshots).some(diagnostic=>diagnostic.severity==='error');
+      s.parallelPlan.communications.length||resolved.graph.nodes.some(node=>node.body.kind==='collective'))return undefined;
+    const candidate={...s,deviceTopology:primaryDeviceTopology(s)};
+    return validateScenario(candidate,project.assetSnapshots).some(diagnostic=>diagnostic.severity==='error')?undefined:candidate;
   },[missingLayout,s,project?.assetSnapshots,resolved]);
+  useEffect(()=>{if(singleDeviceFallback)setResult(null);},[singleDeviceFallback]);
   const resolvedNodes=useMemo(()=>new Map(resolved?.graph.nodes.map(node=>[node.nodeId as string,node])),[resolved]);
   const repeatRoot=scope.replace(/\[\d+\]$/,'');
   const repeatInstances=useMemo(()=>resolved?[...new Set([...resolved.containers,...resolved.graph.nodes]
@@ -115,16 +116,11 @@ export function ModelWorkspace(props:Props){
   function patch(next:Scenario){setError('');props.onScenario(next);}
   function openPanel(next:Panel){setSidebarCollapsed(false);setPanel(next);}
   function analyzeCanvas(layout=false){setOpenLayout(layout);openPanel('analysis');setAnalysisRun(value=>value+1);}
-  function copySingleDevice(){
-    if(!canCopySingleDevice||!s||!project)return;
+  function useSingleDevice(){
+    if(!singleDeviceFallback)return;
     try{
-      const id=crypto.randomUUID();
-      const copy=resetConfigurationDraft(copyConfiguration(project,s.scenarioId,id),id);
-      const scenarios=copy.scenarios.map(scenario=>scenario.scenarioId===id
-        ? {...scenario,name:s.name+' · 单卡',deviceTopology:primaryDeviceTopology(scenario)} : scenario);
-      props.onProject({...copy,scenarios});
-      props.onSelectConfiguration(id);
-      if(panel==='analysis')analyzeCanvas();
+      patch(singleDeviceFallback);
+      if(panel!=='capacity')analyzeCanvas();
     }catch(issue){setError(issue instanceof Error?issue.message:String(issue));}
   }
   function selectPresetMembers(ids:string[]){
@@ -147,7 +143,7 @@ export function ModelWorkspace(props:Props){
       {project&&s&&<div className="studio-panel-body">
         {missingLayout&&layoutPanels.includes(panel)&&<div className="studio-layout-notice" role="status">
           <p>{s.deviceTopology.devices.length} 张卡尚未应用当前阶段的并行布局。</p>
-          {canCopySingleDevice&&<button type="button" onClick={copySingleDevice}>新建单卡配置</button>}
+          {singleDeviceFallback&&<button type="button" onClick={useSingleDevice}>改为单卡并计算</button>}
           {panel!=='parallel'&&<button type="button" onClick={()=>openPanel('parallel')}>前往并行配置</button>}
         </div>}
         {panel==='inspect'&&<>{node?<><h3>{node.name}</h3><p className="studio-node-path">{node.id}</p>{summary(node)}{node.kind==='operator'&&<OperatorCalculation key={'calculation:'+node.id} asset={scopeDefinition} nodeId={node.id}/>}{resolved&&<ResolvedNodeInspector key={node.id} resolved={resolved} model={s.model} assets={project.assetSnapshots} nodeId={node.id} leafIds={node.leafIds}/>} {node.kind==='module'&&node.id!==scope&&<button onClick={()=>drill(node)}>进入模块计算流程 →</button>}{node.kind==='module'&&!node.viewGroup&&<button onClick={()=>setPanel('memory')}>配置此模块显存预算</button>}<button type="button" onClick={()=>analyzeCanvas(true)}>查看所选节点设备布局</button><h3>算法与计算来源</h3>{trace?.chain.filter((c,i,a)=>a.findIndex(v=>v.name===c.name)===i).map((c,i)=><p key={i}>{c.name}</p>)}{trace?.formulas.map(a=><div className="studio-algorithm" key={a.assetId}><strong>{a.name}</strong>{a.definition.kind==='formula'&&<><p>{a.definition.formula.description}</p><code>{a.definition.formula.expression}</code><small>输入：{Object.entries(a.definition.formula.inputs).map(([name,v])=>name+' ('+v.unit+')').join('，')} · 输出 {a.definition.formula.output.unit}</small></>}</div>)}</>:<><h3>{model?.name}</h3><p>点击模块进入计算流程，悬浮查看涉及的算子与计算；在算子层框选多个节点以配置融合。</p>{resolved&&<ResolvedNodeInspector key="$model" resolved={resolved} model={s.model} assets={project.assetSnapshots} nodeId="$model" leafIds={resolved.graph.nodes.map(n=>n.nodeId)}/>}<h3>当前配置</h3><p>{s.name} · {s.workload.kind} · {s.deviceTopology.devices.length} 卡</p><p>并行、量化和其他配置保存在同一模型下，可复制配置后对照查看。</p></>}{attempt?.diagnostics.length?attempt.diagnostics.map(d=><p key={d.diagnosticId}>{d.message}</p>):null}</>}
@@ -165,12 +161,12 @@ export function ModelWorkspace(props:Props){
         {panel==='fusion'&&<><p>{allOperators?'已选择 '+leaves.length+' 个算子':'进入模块后框选多个算子。'}</p><h3>推荐融合 · 结构候选</h3><p className="scope-note">以下组合通过当前图的融合约束；时间默认合计，不预设 kernel 加速或取消存储。</p>{fusionTask.pending&&<p role="status">正在后台检查融合候选…<button onClick={fusionTask.cancel}>取消融合推荐</button></p>}{fusionTask.cancelled&&<p>融合推荐已取消。<button onClick={recommend}>重新检查融合推荐</button></p>}{fusionTask.error&&<p role="alert">{fusionTask.error}<button onClick={recommend}>重新检查融合推荐</button></p>}{recommendations.map((r,i)=><button className="studio-fusion-suggestion" key={i} onClick={()=>setSelected(r.nodeIds)}>{r.names.join(' → ')}<small>{r.description}</small></button>)}{!fusionTask.pending&&!fusionTask.cancelled&&!fusionTask.error&&!recommendations.length&&<p>当前选择没有可确认的结构建议；可调整选择并查看约束诊断。</p>}<FusionEditor canvasSelection={selected} onPresetSelection={selectPresetMembers} scope={ownerScope} key={s.scenarioId} scenario={s} assets={project.assetSnapshots} onChange={patch} selection={allOperators?leaves:[]} resolved={resolved}/></>}
         {panel==='execution'&&<ExecutionEditor scenario={s} assets={project.assetSnapshots} onChange={patch}/>}
         {panel==='memory'&&<MemoryPeakEditor scenario={s} assets={project.assetSnapshots} onChange={patch} resolved={resolved} resolveIfMissing={false} selection={node?.kind==='module'?node.id:scope}/>}
-        <div hidden={panel!=='analysis'}><AnalysisView key={project.projectId+':'+s.scenarioId} focus={analysisFocus} scenario={s} assets={project.assetSnapshots} measurements={project.measurements} onMeasurement={m=>props.onProject({...project,measurements:[...project.measurements,m]})} onMeasurements={rows=>props.onProject({...project,measurements:mergeMeasurements(project.measurements,rows)})} autoRunKey={analysisRun} layoutRequest={openLayout?analysisRun:undefined} onResult={setResult}/></div>
+        {!singleDeviceFallback&&<div hidden={panel!=='analysis'}><AnalysisView key={project.projectId+':'+s.scenarioId} focus={analysisFocus} scenario={s} assets={project.assetSnapshots} measurements={project.measurements} onMeasurement={m=>props.onProject({...project,measurements:[...project.measurements,m]})} onMeasurements={rows=>props.onProject({...project,measurements:mergeMeasurements(project.measurements,rows)})} autoRunKey={analysisRun} layoutRequest={openLayout?analysisRun:undefined} onResult={setResult}/></div>}
         {panel==='advanced'&&<>
           <ParallelPresetEditor key={project.projectId+':topology:'+s.scenarioId} summary="高级设备与拓扑" project={project} scenario={s} hardwareChoices={props.hardwareChoices} onHardware={props.onHardware} onTopology={patch} onApply={props.onPreset}/>
           <ConfigurationEditor key={project.projectId+':'+s.scenarioId} project={project} scenario={s} resolved={resolved} selection={selected.length?selected:[scope]} onProject={props.onProject}/>
         </>}
-        {panel==='capacity'&&<KvCapacityView scenario={s} assets={project.assetSnapshots}/>}
+        {panel==='capacity'&&!singleDeviceFallback&&<KvCapacityView scenario={s} assets={project.assetSnapshots}/>}
         {panel==='compare'&&<ScenarioComparisonView scenarios={configurations} assets={project.assetSnapshots} focus={analysisFocus}/>}
         {structureScope===scope&&template&&<div hidden={panel!=='structure'}><CanvasStructureEditor key={scope+':'+template.assetId+'@'+template.revision} source={template} initialNodeId={templateNodeId} assets={project.assetSnapshots} catalog={catalog} active={panel==='structure'} onApply={props.onEditStructure}/></div>}
         {panel==='connection'&&connection&&<CanvasConnectionEditor key={scope+':'+connection.from+':'+connection.to} source={scopeDefinition} scope={ownerScope} from={connection.from} to={connection.to} assets={project.assetSnapshots} onApply={props.onEditStructure}/>}

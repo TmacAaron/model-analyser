@@ -14,7 +14,7 @@ const pageSize=12;
 function KvPhysicalDevices({report}:{report:KvCapacityReport}){
   const display=useDisplayUnits(),[page,setPage]=useState(0);
   const growth=useMemo(()=>new Map('more' in report.budget?report.budget.more.map(row=>[row.deviceId,row.bytes]):[]),[report.budget]);
-  const bytes=(value:number|undefined)=>value===undefined?'待核定':display.bytes(value);
+  const bytes=(value:number|undefined)=>value===undefined?'—':display.bytes(value);
   return <>
     <StudyEvidencePager label="KV 设备" page={page} size={pageSize} total={report.devices.length} onChange={setPage}/>
     <div className="analysis-table"><table><thead><tr><th>设备</th><th>显存上限</th><th>当前 KV</th><th>其他持久状态</th><th>非 KV 峰值</th><th>可分给 KV</th><th>下一长度增量</th></tr></thead>
@@ -31,11 +31,11 @@ function KvSummary({report}:{report:KvCapacityReport}){
   return <>
     <div className="kv-budget-cards">
       <div className="metric-card"><span>KV 显存预算</span>
-        <strong>{budget.status==='available'?integer.format(budget.tokensPerRequest)+' token / 请求':budget.status==='no_room'?'0 token / 请求':'待核定'}</strong>
+        <strong>{budget.status==='available'?integer.format(budget.tokensPerRequest)+' token / 请求':budget.status==='no_room'?'0 token / 请求':'无法计算'}</strong>
         {budget.status==='available'&&<small>当前 batch {report.batchSize} · 约束设备 {budget.limitingDeviceIds.join('、')}</small>}
       </div>
       <div className="metric-card"><span>当前 KV 平均占用</span>
-        <strong>{report.averageBytesPerToken===undefined?'待核定':bytesPerToken.format(report.averageBytesPerToken)+' B / token'}</strong>
+        <strong>{report.averageBytesPerToken===undefined?'—':bytesPerToken.format(report.averageBytesPerToken)+' B / token'}</strong>
         {report.currentKvBytes!==undefined&&<small>所有物理设备合计 {display.bytes(report.currentKvBytes)}{report.referenceTokensPerRequest!==undefined&&' · 每请求 '+integer.format(report.referenceTokensPerRequest)+' token'}</small>}
       </div>
     </div>
