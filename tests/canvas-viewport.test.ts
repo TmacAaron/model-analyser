@@ -22,11 +22,11 @@ const positions={'skip-source':{x:400,y:0},'skip-target':{x:400,y:600},'regular-
 
 it('keeps a crossing residual route when both endpoints are outside the visible area',()=>{
   const scene=createCanvasScene(graph,positions);
-  const crossing=canvasRect({x:12,y:230},{x:28,y:340});
+  const crossing=canvasRect({x:642,y:230},{x:658,y:340});
   expect(nodesInCanvasRect(scene,crossing)).toEqual([]);
   const routes=routesInCanvasRect(scene,crossing);
   expect(routes.map(route=>route.edge.id)).toEqual(['residual']);
-  expect(canvasRoutePath(routes[0]!)).toBe('M505,96 V116 H20 V578 H505 V600');
+  expect(canvasRoutePath(routes[0]!)).toBe('M505,96 V116 H650 V578 H505 V600');
 });
 
 it('uses sparse drag updates for hit testing and reuses routes unrelated to the drag',()=>{
@@ -37,6 +37,20 @@ it('uses sparse drag updates for hit testing and reuses routes unrelated to the 
   expect(visible.map(item=>item.node.id)).toEqual(['skip-target']);
   expect(canvasNodeAt(visible,{x:0,y:350})?.id).toBe('skip-target');
   const [changed,unchanged]=routesInCanvasRect(scene,undefined,updates);
-  expect(canvasRoutePath(changed!)).toBe('M505,96 V116 H20 V278 H55 V300');
+  expect(canvasRoutePath(changed!)).toBe('M505,96 V116 H650 V278 H55 V300');
   expect(unchanged).toBe(scene.routes[1]?.route);
+});
+
+it('assigns different rails to overlapping residuals and orders branch ports by position',()=>{
+  const nodes=['source','left','right','first-join','last-join']
+    .map(id=>({id,name:id,kind:'operator' as const,leafIds:[id]}));
+  const edge=(id:string,to:string)=>({id,from:'source',to,kind:'data' as const,tensorIds:[id]});
+  const scene=createCanvasScene({nodes,edges:[
+    edge('right-branch','right'),edge('left-branch','left'),edge('first-residual','first-join'),edge('last-residual','last-join'),
+  ]},{source:{x:260,y:0},left:{x:0,y:150},right:{x:520,y:150},'first-join':{x:260,y:450},'last-join':{x:260,y:600}});
+  const routes=new Map(scene.routes.map(item=>[item.route.edge.id,item.route]));
+  expect(routes.get('left-branch')!.sx).toBeLessThan(routes.get('right-branch')!.sx);
+  expect(routes.get('first-residual')?.rail).toBeDefined();
+  expect(routes.get('last-residual')?.rail).toBeDefined();
+  expect(routes.get('first-residual')?.rail).not.toBe(routes.get('last-residual')?.rail);
 });

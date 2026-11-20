@@ -6,7 +6,7 @@ export type CanvasView={scope:string;expandOperatorCalls:boolean};
 export type CanvasProjection={view:CanvasView;graph:CanvasGraph;defaultPositions:CanvasPositions};
 
 export function projectCanvasView(resolved:ResolvedGraph,scenario:Scenario,view:CanvasView):CanvasProjection{
-  const graph=projectCanvasGraph(resolved,view.scope,scenario.parallelPlan.communications,view.expandOperatorCalls);
+  const graph=projectCanvasGraph(resolved,view.scope,scenario.parallelPlan.communications,view.expandOperatorCalls,true);
   const quantized=new Set<string>(resolved.quantizationApplications.flatMap(item=>item.nodeIds));
   const fused=new Set<string>(resolved.fusionApplications.flatMap(item=>item.memberNodeIds));
   const budgets=new Set<string>(scenario.modulePeakOverrides?.flatMap(rule=>rule.phases.includes(scenario.workload.kind)?

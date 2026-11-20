@@ -48,3 +48,13 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 - 示例硬件为虚构的十进制 80 GB、matrix/vector/selection 各 1 TOP/s、HBM 1 TB/s，仅用于复算。不提供实卡性能或精度结论。大型完整 JSON 仍包含逐指标来源，文件可能较大。
 
 可直接导入：[Qwen decode](../examples/projects/qwen3-0.6b-decode.json)、[Qwen prefill](../examples/projects/qwen3-0.6b-prefill.json)、[DeepSeek expanded](../examples/projects/deepseek-v2-lite-expanded.json)、[DeepSeek absorbed](../examples/projects/deepseek-v2-lite-absorbed.json)。也可从资产库选择内置模型并手工创建硬件；工作台新增方案不需要手写 B/Q/C 绑定。
+## 目标型号来源
+
+列表用于核对型号身份和后续建模来源。可计算的预设以已有固定资产及该型号的验收记录为准。
+
+| 家族 | 发布者的型号资料 |
+| --- | --- |
+| DeepSeek | [V3](https://huggingface.co/deepseek-ai/DeepSeek-V3)、[R1](https://huggingface.co/deepseek-ai/DeepSeek-R1)、[V4-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash)、[V4.1-Flash](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash) |
+| GLM | [GLM-5.2](https://huggingface.co/zai-org/GLM-5.2) |
+| Kimi | [Kimi-K3](https://huggingface.co/moonshotai/Kimi-K3) |
+| Qwen | [Qwen3.5-397B-A17B](https://huggingface.co/Qwen/Qwen3.5-397B-A17B)、[Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) |

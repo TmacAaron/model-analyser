@@ -137,6 +137,7 @@ test('scoped comparison totals same-class segments and keeps fused members disti
     name:'compare-fused.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project)),
   });
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+  await page.locator('.canvas-node.operation-group.fusion').press('Enter');
   await page.locator('[data-node-id="A"]').press('Space');
   const nextComparison=async()=>{
     await page.getByRole('button',{name:'配置对比',exact:true}).click();

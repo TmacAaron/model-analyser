@@ -20,6 +20,10 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
   const positions=useMemo(()=>({...defaultPositions,...layout}),[defaultPositions,layout]);
   const scene=useMemo(()=>createCanvasScene(graph,positions),[graph,positions]);
   const allPoints=useMemo(()=>scene.nodes.map(item=>item.point),[scene]);
+  const railBounds=useMemo(()=>scene.routes.reduce<{left:number;right:number}|undefined>((bounds,{route:{rail}})=>{
+    if(rail===undefined)return bounds;
+    return bounds?{left:Math.min(rail,bounds.left),right:Math.max(rail,bounds.right)}:{left:rail,right:rail};
+  },undefined),[scene]);
   const selection=useMemo(()=>new Set(selected),[selected]);
   const [size,setSize]=useState<CanvasSize>({width:800,height:600});
   const [moving,setMoving]=useState<ReadonlyMap<string,CanvasPoint>>(),[focused,setFocused]=useState<string>();
@@ -46,7 +50,7 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
     if(!compact)return visibleNodes;
     return readable&&selected.length===1?visibleNodes.filter(item=>item.node.id===selected[0]):[];
   },[compact,readable,selected,visibleNodes]);
-  const fitAll=useMemo(()=>fitCanvasViewport(allPoints,size.width,size.height),[allPoints,size]);
+  const fitAll=useMemo(()=>fitCanvasViewport(allPoints,size.width,size.height,railBounds),[allPoints,railBounds,size]);
 
   function local(client:CanvasPoint):CanvasPoint{
     const rect=svg.current?.getBoundingClientRect();
@@ -69,7 +73,7 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
     const width=host.current?.clientWidth??size.width,height=host.current?.clientHeight??size.height;
     const toolbar=tools.current;
     const inset=large&&!scope&&toolbar?Math.max(0,Math.min(height-101,toolbar.offsetTop+toolbar.offsetHeight-40)):0;
-    const fitted=fitCanvasViewport(points,width,height-inset);
+    const fitted=fitCanvasViewport(points,width,height-inset,scope?undefined:railBounds);
     if(fitted)setView({...fitted,y:fitted.y+inset});
     setHover(undefined);
   }
@@ -183,7 +187,7 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
       setBox(undefined);
     }else if(d.kind==='connect'){
       const target=canvasNodeAt(scene.nodes,d.end,d.from);
-      if(target)onConnect(d.from,target.id);
+      if(target&&!target.viewGroup)onConnect(d.from,target.id);
       setConnection(undefined);
     }
   }
@@ -193,18 +197,21 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
     setHover({node,point:{x:Math.max(8,Math.min(p.x+16,size.width-300)),y:Math.max(60,Math.min(p.y+18,size.height-235))}});
   }
 
+  const hoveredId=hover?.node.id;
   const edgeElements=useMemo(()=>compact?null:visibleRoutes.map(route=>{
     const {edge,sx,sy,tx,ty,rail}=route;
-    return <g key={edge.id} role="img" aria-label={edge.kind+' · '+edge.tensorIds.join(', ')+' · '+edge.from+' → '+edge.to}>
+    const active=selection.has(edge.from)||selection.has(edge.to)||hoveredId===edge.from||hoveredId===edge.to;
+    return <g key={edge.id} role="img" opacity={(selection.size||hoveredId)&&!active ? .36 : 1}
+      aria-label={edge.kind+' · '+edge.tensorIds.join(', ')+' · '+edge.from+' → '+edge.to}>
       <path className="canvas-edge" d={canvasRoutePath(route)} fill="none" stroke={edge.kind==='data'?'#6894cf':'#b29978'} strokeWidth="1.6" strokeDasharray={edge.kind==='data'?undefined:'5 5'} markerEnd="url(#canvas-arrow)">
         <title>{edge.kind} · {edge.tensorIds.join(', ')||edge.from+' → '+edge.to}</title>
       </path>
-      {edge.kind==='data'&&<text className="canvas-edge-label" x={(rail??(sx+tx)/2)+5} y={(sy+ty)/2-(rail===undefined?4:0)}>{edge.tensorIds.map(id=>id.split('::').at(-1)).join(' · ').slice(0,24)}</text>}
+      {edge.kind==='data'&&(active||visibleRoutes.length<=14)&&<text className="canvas-edge-label" x={(rail??(sx+tx)/2)+5} y={(sy+ty)/2-(rail===undefined?4:0)}>{edge.tensorIds.map(id=>id.split('::').at(-1)).join(' · ').slice(0,24)}</text>}
     </g>;
-  }),[compact,visibleRoutes]);
+  }),[compact,visibleRoutes,selection,hoveredId]);
   const nodeElements=useMemo(()=>cardNodes.map(({node:n,point:p})=><g key={n.id} data-node-id={n.id} role="button"
     aria-label={(n.kind==='module'?'展开模块 ':'选择算子 ')+n.name+' '+n.id} aria-pressed={selection.has(n.id)} tabIndex={0}
-    className={'canvas-node '+n.kind+(selection.has(n.id)?' selected':'')} transform={`translate(${p.x},${p.y})`}
+    className={'canvas-node '+n.kind+(n.viewGroup?' operation-group '+n.viewGroup.kind:'')+(selection.has(n.id)?' selected':'')} transform={`translate(${p.x},${p.y})`}
     onFocus={()=>setFocused(n.id)} onBlur={()=>setFocused(undefined)}
     onPointerDown={e=>{e.stopPropagation();start(e,n);}}
     onKeyDown={e=>{
@@ -215,12 +222,12 @@ export function ModelCanvas({graph,defaultPositions,layout,scopeKey,selected,onS
     onPointerEnter={e=>showHover(n,e)} onPointerLeave={()=>setHover(undefined)}>
     <rect width={nodeWidth} height={nodeHeight} rx="16"/>
     {n.repeatCount&&<g className="canvas-repeat"><rect x="155" y="-13" width="62" height="28" rx="14"/><text x="186" y="6" textAnchor="middle">{n.repeatCount} ×</text></g>}
-    <text className="canvas-node-kind" x="16" y="22">{n.boundary==='input'?'INPUT':n.boundary==='output'?'OUTPUT':n.kind==='module'?'MODULE':n.kind==='communication'?'COLLECTIVE':'OPERATOR'}</text>
+    <text className="canvas-node-kind" x="16" y="22">{n.boundary==='input'?'INPUT':n.boundary==='output'?'OUTPUT':n.viewGroup?.kind==='fusion'?'FUSED':n.viewGroup?'OPERATOR':n.kind==='module'?'MODULE':n.kind==='communication'?'COLLECTIVE':'OPERATOR'}</text>
     <text className="canvas-node-name" x="16" y="46">{n.name.length>23?n.name.slice(0,22)+'…':n.name}</text>
-    <text className="canvas-node-detail" x="16" y="69">{n.kind==='module'?n.id.split('/').at(-1)+' · '+n.leafIds.length+' 个算子':n.id.split('/').at(-1)?.slice(0,27)}</text>
+    <text className="canvas-node-detail" x="16" y="69">{n.viewGroup?n.leafIds.length+' 个计算步骤':n.kind==='module'?n.id.split('/').at(-1)+' · '+n.leafIds.length+' 个算子':n.id.split('/').at(-1)?.slice(0,27)}</text>
     {n.badges?.length?<text className="canvas-node-badge" x="16" y="87">{n.badges.join(' · ')}</text>:null}
     <circle cx="105" cy="0" r="5" className="canvas-port input"/>
-    {n.kind!=='boundary'&&<circle cx="105" cy={nodeHeight} r="7" className="canvas-port output" role="button"
+    {n.kind!=='boundary'&&!n.viewGroup&&<circle cx="105" cy={nodeHeight} r="7" className="canvas-port output" role="button"
       aria-label={'从 '+n.id+' 拖出连线'} onPointerDown={e=>{e.stopPropagation();start(e,n,true);}}/>}
   </g>),[cardNodes,selection,selected,mode,onSelect,onOpen,positions,size]);
 

@@ -12,7 +12,7 @@ type ActiveExport={owner:AnalysisResult;request:AnalysisExportRequest};
 const record=(value:unknown):value is Record<string,unknown>=>typeof value==='object'&&value!==null&&!Array.isArray(value);
 function matchesSelection(reply:unknown,selection:AnalysisExportSelection){
   return record(reply)&&reply.kind===selection.kind&&
-    (selection.kind!=='step'||reply.index===selection.index&&reply.inputHash===selection.inputHash);
+    ((selection.kind!=='step'&&selection.kind!=='layout')||reply.index===selection.index&&reply.inputHash===selection.inputHash);
 }
 
 function downloadBlob(blob:Blob,name:string){

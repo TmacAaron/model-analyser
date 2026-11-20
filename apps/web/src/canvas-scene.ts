@@ -10,13 +10,16 @@ export const nodeWidth=210;
 export const nodeHeight=96;
 export const largeCanvas=(graph:CanvasGraph)=>graph.nodes.length>500||graph.edges.length>1200;
 
-type Anchor={edge:CanvasEdge;sourceOffset:number;targetOffset:number;rail:number};
+type Rail={side:'left'|'right';x:number;lane:number};
+type Anchor={edge:CanvasEdge;sourceOffset:number;targetOffset:number;rail:Rail};
 export type CanvasRoute={edge:CanvasEdge;sx:number;sy:number;tx:number;ty:number;rail?:number;bounds:CanvasRect};
 export type PlacedNode={node:CanvasNode;point:CanvasPoint};
 
 function routeEdge(anchor:Anchor,a:CanvasPoint,b:CanvasPoint):CanvasRoute{
   const sx=a.x+anchor.sourceOffset,sy=a.y+nodeHeight,tx=b.x+anchor.targetOffset,ty=b.y;
-  const skip=b.y-a.y>200,rail=skip?anchor.rail:undefined;
+  const skip=b.y-a.y>200,{side,x,lane}=anchor.rail;
+  const rail=skip?(side==='left'?Math.min(x,a.x-40-lane*22,b.x-40-lane*22):
+    Math.max(x,a.x+nodeWidth+40+lane*22,b.x+nodeWidth+40+lane*22)):undefined;
   const bounds={
     left:Math.min(sx,tx,rail??sx)-8,
     top:Math.min(sy,ty-(skip?22:30))-8,
@@ -35,25 +38,48 @@ export function canvasRoutePath(route:CanvasRoute){
 
 export function createCanvasScene(graph:CanvasGraph,positions:CanvasPositions){
   const nodes:PlacedNode[]=[];
-  let left=Infinity;
+  let left=Infinity,right=-Infinity;
   for(const node of graph.nodes){
     const point=positions[node.id];
-    if(point){nodes.push({node,point});left=Math.min(left,point.x);}
+    if(point){nodes.push({node,point});left=Math.min(left,point.x);right=Math.max(right,point.x+nodeWidth);}
   }
-  const incoming=new Map<string,number>(),outgoing=new Map<string,number>();
-  for(const {from,to} of graph.edges){
-    incoming.set(to,(incoming.get(to)??0)+1);
-    outgoing.set(from,(outgoing.get(from)??0)+1);
+  const incoming=new Map<string,CanvasEdge[]>(),outgoing=new Map<string,CanvasEdge[]>();
+  const edges=graph.edges.filter(edge=>positions[edge.from]&&positions[edge.to]);
+  for(const edge of edges){
+    const sources=outgoing.get(edge.from)??[],targets=incoming.get(edge.to)??[];
+    sources.push(edge);targets.push(edge);
+    outgoing.set(edge.from,sources);incoming.set(edge.to,targets);
   }
-  const nextIn=new Map<string,number>(),nextOut=new Map<string,number>();
-  const routes=graph.edges.flatMap((edge,index)=>{
-    const {from,to}=edge,a=positions[from],b=positions[to];
-    const sourceIndex=(nextOut.get(from)??0)+1,targetIndex=(nextIn.get(to)??0)+1;
-    nextOut.set(from,sourceIndex);
-    nextIn.set(to,targetIndex);
-    if(!a||!b)return [];
-    const anchor={edge,sourceOffset:30+150*sourceIndex/(outgoing.get(from)!+1),targetOffset:30+150*targetIndex/(incoming.get(to)!+1),rail:left-40-(index%7)*20};
-    return [{anchor,route:routeEdge(anchor,a,b)}];
+  const rails=new Map<string,Rail>(),lanes={left:[] as number[],right:[] as number[]};
+  const longEdges=edges.filter(edge=>positions[edge.to]!.y-positions[edge.from]!.y>200)
+    .toSorted((a,b)=>positions[a.from]!.y-positions[b.from]!.y||positions[b.to]!.y-positions[a.to]!.y);
+  for(const edge of longEdges){
+    const a=positions[edge.from]!,b=positions[edge.to]!;
+    const available=(side:'left'|'right')=>{
+      const index=lanes[side].findIndex(end=>end+32<=a.y);
+      return index<0?lanes[side].length:index;
+    };
+    const l=available('left'),r=available('right');
+    const side=Math.min(a.x,b.x)-left+l*56<=right-Math.max(a.x,b.x)-nodeWidth+r*56?'left':'right';
+    const lane=side==='left'?l:r;
+    lanes[side][lane]=b.y;
+    rails.set(edge.id,{side,lane,x:side==='left'?left-40-lane*22:right+40+lane*22});
+  }
+  const offsets=(groups:Map<string,CanvasEdge[]>,other:'from'|'to')=>{
+    const result=new Map<string,number>();
+    for(const group of groups.values()){
+      const x=(edge:CanvasEdge)=>rails.get(edge.id)?.x??positions[edge[other]]!.x+nodeWidth/2;
+      group.sort((a,b)=>x(a)-x(b));
+      group.forEach((edge,index)=>result.set(edge.id,30+150*(index+1)/(group.length+1)));
+    }
+    return result;
+  };
+  const source=offsets(outgoing,'to'),target=offsets(incoming,'from');
+  const routes=edges.map(edge=>{
+    const a=positions[edge.from]!,b=positions[edge.to]!;
+    const anchor={edge,sourceOffset:source.get(edge.id)!,targetOffset:target.get(edge.id)!,
+      rail:rails.get(edge.id)??{side:'left' as const,lane:0,x:left-40}};
+    return {anchor,route:routeEdge(anchor,a,b)};
   });
   return {nodes,routes,positions};
 }

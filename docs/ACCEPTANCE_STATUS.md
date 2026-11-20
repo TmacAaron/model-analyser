@@ -1,5 +1,7 @@
 # 阶段退出条件复核
 
+提交 `d245757` 的干净 Windows 快照通过 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。907 项单元与契约测试、16 项 HTTP 测试、283 项 Chrome 回归、45 组运行基线、生产构建和全部参考复算通过。Chrome 覆盖 512 个容量样本及逐设备分页。
+
 提交 `ec5dfe3` 的干净 Windows 快照通过 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。907 项单元与契约测试、16 项 HTTP 测试、280 项 Chrome 回归、45 组运行基线、生产构建和全部参考复算通过。Chrome 在每种配置 2,048 个算子的两配置案例中核对了比较结果、首屏显示和后台导出。
 
 提交 `81c3d95` 的干净 Windows 快照通过 `npm run acceptance:storage-sources` 全部 61 步，终端退出 0。904 项单元与契约测试、16 项 HTTP 测试、280 项 Chrome 回归、45 组运行基线、生产构建与全部参考复算通过。Chrome 覆盖配置比较后台导出、取消、重试和丢弃过期文件。

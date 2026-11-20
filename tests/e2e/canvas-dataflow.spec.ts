@@ -8,6 +8,13 @@ test('Qwen residual keeps the same input fan-out and repeated decoders open one 
  const bypass=arrows.find(a=>a.includes('$input:')&&a.endsWith(' → decoder[0]/attention-residual'));expect(bypass).toBeDefined();
  const source=bypass!.split(' · ').at(-1)!.split(' → ')[0]!;expect(arrows.some(a=>a.endsWith(source+' → decoder[0]/input-norm'))).toBe(true);
  expect(arrows.some(a=>a.endsWith('decoder[0]/attention-residual → decoder[0]/mlp-residual'))).toBe(true);
+ const attention=page.locator('[data-node-id="decoder[0]/$view:attention"]');
+ await expect(attention).toContainText('GQA Attention');
+ await expect(page.locator('[data-node-id="decoder[0]/qk"]')).toHaveCount(0);
+ await attention.press('Enter');
+ await expect(page.locator('[data-node-id="decoder[0]/qk"]')).toBeVisible();
+ await expect(page.getByRole('img',{name:/decoder\[0\]\/qk → decoder\[0\]\/softmax$/})).toHaveCount(1);
+ await page.getByRole('navigation',{name:'模块路径',exact:true}).getByRole('button',{name:'decoder[0]',exact:true}).click();
  await page.locator('[data-node-id="decoder[0]/input-norm"]').press('Space');await page.locator('[data-node-id="decoder[0]/mlp-residual"]').press('Shift+Space');await page.getByRole('button',{name:'定位选中节点',exact:true}).click();await page.screenshot({path:'test-results/canvas-residual-dataflow.png'});
  await instance.selectOption('decoder[27]');await expect(page.locator('[data-node-id="decoder[27]/input-norm"]')).toHaveCount(1);await expect(page.locator('[data-node-id="decoder[0]/input-norm"]')).toHaveCount(0);
 });

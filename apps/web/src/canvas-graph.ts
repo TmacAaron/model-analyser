@@ -1,6 +1,7 @@
 import { NodeId,type ResolvedGraph,type Scenario,type CommunicationDefinition } from '@model-analyser/contracts';
 import { instantiateModel } from '@model-analyser/core';
-export type CanvasNode={id:string;name:string;kind:'module'|'operator'|'communication'|'boundary';leafIds:string[];badges?:string[];communication?:CommunicationDefinition;repeatCount?:number;boundary?:'input'|'output'};
+import { authoredCanvasGroups,canvasFusionGroup,canvasOperatorScope,type CanvasOperatorGroup } from './canvas-operator-groups.js';
+export type CanvasNode={id:string;name:string;kind:'module'|'operator'|'communication'|'boundary';leafIds:string[];badges?:string[];communication?:CommunicationDefinition;repeatCount?:number;boundary?:'input'|'output';viewGroup?:CanvasOperatorGroup};
 export type CanvasEdge={id:string;from:string;to:string;kind:'data'|'control'|'synchronization';tensorIds:string[]};
 export type CanvasGraph={nodes:CanvasNode[];edges:CanvasEdge[]};
 const within=(id:string,parent:string)=>parent==='$model'||id.startsWith(parent+'/')||id.startsWith(parent+'[');
@@ -11,22 +12,50 @@ function hasVisibleAncestor(id:string,scopedIds:ReadonlySet<string>){
   return false;
 }
 /** Collapse only containment, then project real dependencies onto the visible children. */
-export function projectCanvasGraph(resolved:ResolvedGraph,scope='$model',communications:Scenario['parallelPlan']['communications']=[],expandOperatorCalls=false):CanvasGraph{
+export function projectCanvasGraph(resolved:ResolvedGraph,scope='$model',communications:Scenario['parallelPlan']['communications']=[],expandOperatorCalls=false,groupOperators=false):CanvasGraph{
   // A repeat is one navigation entry. Show its first actual invocation, never a wall of copies.
   const firstId=scope+'[0]';
-  if(!expandOperatorCalls&&(resolved.containers.some(c=>c.nodeId===firstId)||resolved.graph.nodes.some(n=>n.nodeId===firstId)))return projectCanvasGraph(resolved,firstId,communications);
+  if(!expandOperatorCalls&&(resolved.containers.some(c=>c.nodeId===firstId)||resolved.graph.nodes.some(n=>n.nodeId===firstId)))return projectCanvasGraph(resolved,firstId,communications,false,groupOperators);
+  const view=groupOperators?canvasOperatorScope(resolved,scope):undefined,members=view?new Set(view.leafIds):undefined;
   const expandedLeafIds=new Set(resolved.graph.nodes.map(node=>node.nodeId));
   const scoped=new Map(resolved.containers.filter(c=>c.nodeId!=='$model'&&c.nodeId!==scope&&within(c.nodeId,scope)&&!expandedLeafIds.has(c.nodeId)).map(c=>[c.nodeId,c]));
   const scopedIds=new Set<string>(scoped.keys());
-  const direct=[...scoped.values()].filter(c=>!hasVisibleAncestor(c.nodeId,scopedIds));
-  const nodes:CanvasNode[]=direct.map(c=>({id:c.nodeId,name:c.name,kind:'module',leafIds:[...c.leafNodeIds]}));
+  const direct=view?[]:[...scoped.values()].filter(c=>!hasVisibleAncestor(c.nodeId,scopedIds));
+  let nodes:CanvasNode[]=direct.map(c=>({id:c.nodeId,name:c.name,kind:'module',leafIds:[...c.leafNodeIds]}));
   const collapsedLeaves=new Set(direct.flatMap(container=>container.leafNodeIds));
-  for(const n of resolved.graph.nodes)if((n.nodeId===scope||within(n.nodeId,scope))&&!collapsedLeaves.has(n.nodeId))nodes.push({id:n.nodeId,name:n.name,kind:n.body.kind==='collective'?'communication':'operator',leafIds:[n.nodeId],...(n.body.kind==='collective'?{communication:n.body.communication}:{})});
+  for(const n of resolved.graph.nodes)if((members?members.has(n.nodeId):n.nodeId===scope||within(n.nodeId,scope))&&!collapsedLeaves.has(n.nodeId))nodes.push({id:n.nodeId,name:n.name,kind:n.body.kind==='collective'?'communication':'operator',leafIds:[n.nodeId],...(n.body.kind==='collective'?{communication:n.body.communication}:{})});
+  if(groupOperators){
+    const replace=(group:CanvasOperatorGroup)=>{
+      const leafIds=new Set(group.leafIds);
+      nodes=nodes.flatMap(node=>{
+        const remaining=node.leafIds.filter(id=>!leafIds.has(id));
+        return remaining.length?[remaining.length===node.leafIds.length?node:{...node,leafIds:remaining}]:[];
+      });
+      nodes.push({id:group.id,name:group.name,kind:'module',leafIds:group.leafIds,viewGroup:group});
+    };
+    if(!view)for(const group of authoredCanvasGroups(resolved,scope))replace(group);
+    if(view?.kind!=='fusion'){
+      const directOwner=new Map(nodes.flatMap(node=>node.leafIds.map(id=>[id,node] as const)));
+      for(const group of resolved.fusionApplications){
+        const owners=group.memberNodeIds.map(id=>directOwner.get(id));
+        if(owners.some(node=>!node))continue;
+        const first=owners[0];
+        if(first?.kind==='module'&&owners.every(node=>node===first)){
+          const exact=first.viewGroup&&first.leafIds.length===group.memberNodeIds.length;
+          const repeatPrefix=first.id+'[';
+          const invocations=new Set(group.memberNodeIds.filter(id=>id.startsWith(repeatPrefix)).map(id=>id.slice(0,id.indexOf(']',repeatPrefix.length)+1)));
+          if(!exact&&invocations.size<2)continue;
+        }
+        replace(canvasFusionGroup(scope,group,'融合 · '+group.groupId));
+      }
+    }
+  }
   const repeatCounts=new Map<string,Set<string>>();for(const c of [...resolved.containers,...resolved.graph.nodes]){const match=/^(.*)\[\d+\]$/.exec(c.nodeId);if(match){const ids=repeatCounts.get(match[1]!)??new Set<string>();ids.add(c.nodeId);repeatCounts.set(match[1]!,ids);}}for(const node of nodes){const count=repeatCounts.get(node.id)?.size;if(count)node.repeatCount=count;}
   const owner=new Map<string,string>(),edges=new Map<string,CanvasEdge>();
   for(const node of nodes)for(const leafId of node.leafIds)owner.set(leafId,node.id);
   const visibleIds=new Set(nodes.map(node=>node.id));
-  const add=(id:string,from:string,to:string,kind:CanvasEdge['kind'],tensorId?:string)=>{const a=owner.get(from),b=owner.get(to);if(!a||!b||a===b)return;const key=JSON.stringify([a,b,kind]),old=edges.get(key);if(old){if(tensorId&&!old.tensorIds.includes(tensorId))old.tensorIds.push(tensorId);}else edges.set(key,{id,from:a,to:b,kind,tensorIds:tensorId?[tensorId]:[]});};
+  const addProjected=(id:string,a:string,b:string,kind:CanvasEdge['kind'],tensorId?:string)=>{const key=JSON.stringify([a,b,kind]),old=edges.get(key);if(old){if(tensorId&&!old.tensorIds.includes(tensorId))old.tensorIds.push(tensorId);}else edges.set(key,{id,from:a,to:b,kind,tensorIds:tensorId?[tensorId]:[]});};
+  const add=(id:string,from:string,to:string,kind:CanvasEdge['kind'],tensorId?:string)=>{const a=owner.get(from),b=owner.get(to);if(a&&b&&a!==b)addProjected(id,a,b,kind,tensorId);};
   for(const e of resolved.graph.edges)if(e.from.kind==='node'&&e.to.kind==='node')add(e.edgeId,e.from.nodeId,e.to.nodeId,'data',e.tensorId);
   // Preserve actual tensors crossing this view, including the residual input that
   // bypasses normalization/attention. Boundary identity is the canonical tensor ID.
@@ -40,8 +69,8 @@ export function projectCanvasGraph(resolved:ResolvedGraph,scope='$model',communi
     return id;
   };
   for(const e of resolved.graph.edges){const from=e.from.kind==='node'?owner.get(e.from.nodeId):undefined,to=e.to.kind==='node'?owner.get(e.to.nodeId):undefined;
-    if(!from&&to){const id=boundary('input',e.tensorId);edges.set('$input:'+e.edgeId,{id:'$input:'+e.edgeId,from:id,to,kind:'data',tensorIds:[e.tensorId]});}
-    if(from&&!to){const id=boundary('output',e.tensorId);edges.set('$output:'+e.edgeId,{id:'$output:'+e.edgeId,from,to:id,kind:'data',tensorIds:[e.tensorId]});}
+    if(!from&&to)addProjected('$input:'+e.edgeId,boundary('input',e.tensorId),to,'data',e.tensorId);
+    if(from&&!to)addProjected('$output:'+e.edgeId,from,boundary('output',e.tensorId),'data',e.tensorId);
   }
   for(const e of resolved.graph.dependencies)add(e.edgeId,e.fromNodeId,e.toNodeId,e.kind);
   for(const c of communications){const p=c.placement;if(!p||!p.phases.includes(resolved.phase)||nodes.some(n=>n.id===p.nodeId))continue;const targets=[...p.afterNodeIds,...p.beforeNodeIds],common=targets.length?resolved.containers.filter(container=>!resolved.graph.nodes.some(n=>n.nodeId===container.nodeId)&&targets.every(id=>id===container.nodeId||container.leafNodeIds.includes(id))).toSorted((a,b)=>b.nodeId.length-a.nodeId.length)[0]?.nodeId??'$model':'$model';if(common!==scope)continue;
