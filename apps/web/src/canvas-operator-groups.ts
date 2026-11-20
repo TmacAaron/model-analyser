@@ -12,14 +12,14 @@ export type CanvasOperatorGroup={
 const marker='/$view:';
 type AuthoredGroup={key:string;name:string;members:readonly string[]};
 const qwenGroups:AuthoredGroup[]=[
-  {key:'attention',name:'GQA Attention',members:['qkv','qk-norm-rope','cache-update','qk','softmax','av','o-proj']},
+  {key:'attention',name:'GQA Attention',members:['qk-norm-rope','cache-update','qk','softmax','av','o-proj']},
   {key:'ffn',name:'SwiGLU',members:['gate-up-proj','silu-multiply','down-proj']},
 ];
 const mlaGroups:AuthoredGroup[]=[
-  {key:'attention',name:'MLA Attention',members:['q-proj','kv-a','kv-a-norm','rope','q-absorb','kv-b','cache-update','qk','softmax','av','v-up','o-proj']},
+  {key:'attention',name:'MLA Attention',members:['kv-a-norm','rope','q-absorb','kv-b','cache-update','qk','softmax','av','v-up','o-proj']},
 ];
 const glmGroups:AuthoredGroup[]=[
-  {key:'attention',name:'GQA Attention',members:['qkv','rope','cache-update','expand-kv','qk','score-scale-cast','mask-softmax','probability-cast','av','o-proj']},
+  {key:'attention',name:'GQA Attention',members:['rope','cache-update','expand-kv','qk','score-scale-cast','mask-softmax','probability-cast','av','o-proj']},
   {key:'ffn',name:'SwiGLU',members:['gate-up','silu','down']},
 ];
 

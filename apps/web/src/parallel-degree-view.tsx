@@ -128,9 +128,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
-      <details className="parallel-degree-hardware">
-        <summary>绑定硬件并校验</summary>
-        <p>新增槽位使用当前首设备的硬件资料 {hardware?.name ?? hardwareRef?.assetId}。已有同等规模的设备映射可直接复用。</p>
+      <div className="parallel-degree-validation">
         {needsNetwork && <div className="parallel-degree-link">
           <label>通信带宽 (B/s)<input type="number" min={0} step="any" value={linkBandwidth} onChange={event => setBandwidth(event.target.value)}/></label>
           <label>单轮延迟 (s)<input type="number" min={0} step="any" value={linkLatency} onChange={event => setLatency(event.target.value)}/></label>
@@ -155,7 +153,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           }}>应用并行度</button>
         </div>}
         {outcome?.status === 'error' && <p role="alert" className="error">{outcome.message}</p>}
-      </details>
+      </div>
     </section>}
   </section>;
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { ProjectDocument } from '@model-analyser/contracts';
-import { makeGqaBaseProject } from '../../scripts/gqa-project.js';
+import { makeGqaBaseProject, makeGqaProject } from '../../scripts/gqa-project.js';
 import { makeNamedParallelBase } from '../../scripts/named-parallel-project.js';
 
 async function importProject(page: Page, project: ProjectDocument) {
@@ -21,7 +21,6 @@ async function storedProject(page: Page, project: ProjectDocument) {
 }
 
 async function validateLayout(page: Page) {
-  await page.getByText('绑定硬件并校验', { exact: true }).click();
   await page.getByLabel('通信带宽 (B/s)', { exact: true }).fill('1000');
   await page.getByLabel('单轮延迟 (s)', { exact: true }).fill('0.001');
   await page.getByRole('button', { name: '校验布局', exact: true }).click();
@@ -36,7 +35,7 @@ test('Attention TP from a single-card configuration previews first and drives pe
   await tp.fill('2');
   await expect(layout).toContainText('2 个逻辑槽位');
   await expect(layout).toContainText('AllReduce × 1');
-  await expect(page.getByRole('button', { name: '校验布局', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('设备型号', { exact: true })).toHaveCount(0);
   await dp.fill('2');
   await expect(page.locator('.parallel-degree-editor')).toContainText('未声明这组并行度');
   await expect(layout).toHaveCount(0);
@@ -57,7 +56,6 @@ test('Attention TP from a single-card configuration previews first and drives pe
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(tp).toHaveValue('2');
   await tp.fill('1');
-  await page.getByText('绑定硬件并校验', { exact: true }).click();
   await page.getByRole('button', { name: '校验布局', exact: true }).click();
   await expect(layout).toContainText('1 个实际设备 · 0 个通信');
   await page.getByRole('button', { name: '应用并行度', exact: true }).click();
@@ -84,4 +82,26 @@ test('MoE EP and expert TP bind the shared physical roles defined by the model',
   const saved = (await storedProject(page, project)).scenarios[0]!;
   expect(saved.parallelPlan.nativeBindings?.groups.map(group => group.logicalGroupId)).toEqual(['world', 'grid', 'tp0', 'tp1']);
   expect(saved.deviceTopology.devices).toHaveLength(4);
+});
+
+test('a custom profile applies to all parallel cards and updates the same KV calculation', async ({ page }) => {
+  const { project } = await makeGqaProject('tp-heads');
+  await importProject(page, project);
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  const panel = page.locator('.device-settings');
+  await expect(panel.getByLabel('设备型号', { exact: true })).toHaveCount(1);
+  await expect(panel).toContainText('2 卡');
+  await panel.getByRole('button', { name: '自定义参数', exact: true }).click();
+  await panel.getByLabel('硬件容量 byte', { exact: true }).fill('2048');
+  await panel.getByRole('button', { name: '应用自定义参数', exact: true }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  const saved = await storedProject(page, project);
+  const current = saved.scenarios[0]!;
+  const profile = saved.assetSnapshots.find(asset => asset.assetId === current.deviceTopology.devices[0]!.hardware.assetId);
+  expect(current.deviceTopology.devices.map(device => device.deviceId)).toEqual(['gpu0', 'gpu1']);
+  expect(current.deviceTopology.devices[0]!.hardware).toEqual(current.deviceTopology.devices[1]!.hardware);
+  expect(profile?.definition).toMatchObject({ kind: 'hardware', hardware: { capacityBytes: 2048 } });
+  expect(current.parallelPlan).toEqual(project.scenarios[0]?.parallelPlan);
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'KV 缓存容量' })).toContainText('224 token / 请求');
 });

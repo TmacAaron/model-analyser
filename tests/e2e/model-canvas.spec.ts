@@ -17,16 +17,33 @@ test('the default surface is the model canvas with hierarchy, hover computations
 test('Attention opens to atomic normalization and rotary operations with a calculation detail level', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /展开模块 .* decoder$/ }).press('Enter');
+  await expect(page.locator('[data-node-id="decoder[0]/qkv"]')).toBeVisible();
   await page.locator('[data-node-id="decoder[0]/input-norm"]').press('Space');
   const norm = page.getByRole('region', { name: 'RMSNorm 计算步骤', exact: true });
   await expect(norm).toContainText('r = rsqrt(m + ε)');
   await expect(page.locator('[data-node-id="decoder[0]/qk-norm-rope"]')).toHaveCount(0);
   await page.getByRole('button', { name: /展开模块 GQA Attention/ }).press('Enter');
+  await expect(page.locator('[data-node-id="decoder[0]/qkv"]')).toHaveCount(0);
   await page.locator('[data-node-id="decoder[0]/qk-norm-rope"]').press('Space');
   await expect(norm).toContainText('每个 Q/K head');
   const rotary = page.getByRole('region', { name: 'RoPE 计算步骤', exact: true });
   await expect(rotary).toContainText('(a′, b′) = (ac − bs, as + bc)');
   await expect(page.getByRole('link', { name: '查看固定版本源码 ↗' })).toHaveAttribute('href', /modeling_qwen3\.py$/);
+});
+
+test('collapsing the sidebar expands the canvas and choosing a tool opens it again', async ({ page }) => {
+  await page.goto('/');
+  const stage = page.locator('.studio-stage');
+  const panel = page.getByRole('region', { name: '画布配置与详情', exact: true });
+  const expanded = await stage.boundingBox();
+  expect(expanded?.width).toBeGreaterThan(0);
+  await page.getByRole('button', { name: '收起侧栏', exact: true }).click();
+  await expect(panel).not.toBeVisible();
+  await expect(page.getByRole('button', { name: '展开侧栏', exact: true })).toHaveAttribute('aria-expanded', 'false');
+  expect((await stage.boundingBox())?.width).toBeGreaterThan(expanded!.width);
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  await expect(panel.getByLabel('设备型号', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '收起侧栏', exact: true })).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('dragging persists graph layout and a box selection configures fusion in a second view of the same model',async({page})=>{
@@ -36,7 +53,7 @@ test('dragging persists graph layout and a box selection configures fusion in a 
 test('an unused manually added device can be removed while group references are protected',async({page})=>{
   const project=ProjectDocument.parse(JSON.parse(readFileSync('examples/contracts/project.json','utf8')));
   await open(page,project);
-  await page.getByRole('button',{name:'并行方式',exact:true}).click();
+  await page.getByRole('button',{name:'高级配置',exact:true}).click();
   const editor=page.locator('.parallel-preset-editor');
   await editor.getByText('高级设备与拓扑',{exact:true}).click();
   await editor.getByRole('button',{name:'添加物理设备（复制首设备硬件）',exact:true}).click();
