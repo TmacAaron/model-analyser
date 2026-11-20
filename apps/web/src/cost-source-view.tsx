@@ -36,7 +36,9 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
   const sourceScenario=frame.scenario??scenario,findAsset=useSourceAssets(assets);
   const problem=sourceProblem(report,target,metric);
   const proofStep=step==='aggregate'?undefined:Number(step);
-  const aggregate=targetId==='model'||targetId.startsWith('module:')||!!result.decode&&step==='aggregate'&&targetId.startsWith('node:')?metric?.aggregateSelector:undefined;
+  const nodePlacement=targetId.startsWith('node:')?report?.distributed?.layout.localCosts.nodes.find(row=>row.nodeId===targetId.slice(5))?.placement:undefined;
+  const aggregate=targetId==='model'||targetId.startsWith('module:')||targetId.startsWith('node:')&&
+   (!!result.decode&&step==='aggregate'||nodePlacement?.kind==='placed'||nodePlacement?.kind==='no_work')?metric?.aggregateSelector:undefined;
   const communication=value&&metric?.communicationSelector?<CommunicationCostSourceView metric={value} selector={metric.communicationSelector} result={result} scenario={scenario} assets={assets} step={proofStep}/>:undefined;
   function goToLocalOperand(selector:LocalCostSelector){
    const key=canonical(selector),matching=metrics.find(item=>canonical(item.localSelector)===key);
@@ -98,10 +100,12 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
    const nextStep=member.step?String(member.step.index):step;
    const frame=nextStep==='aggregate'?result:result.decode?.steps.find(item=>String(item.index)===nextStep)?.result;
    const nodeId=member.target.kind==='node'?member.target.nodeId:undefined;
+   const deviceId=member.kind==='device'?member.deviceIds[0]:undefined;
    const network=member.kind==='communication'&&aggregate?.field==='seconds'&&nodeId?frame?.distributed?.layout.communications.find(c=>c.evaluation.definition.placement?.nodeId===nodeId):undefined;
-   const nextTarget=network?`communication:${network.index}`:member.target.kind==='model'?'model':`${member.kind==='fusion'?'fusion':member.target.kind}:${member.target.nodeId}`;
+   const nextTarget=deviceId&&nodeId?localId(nodeId,deviceId):network?`communication:${network.index}`:member.target.kind==='model'?'model':`${member.kind==='fusion'?'fusion':member.target.kind}:${member.target.nodeId}`;
    const next=nextStep===step?index?.targets.get(nextTarget):frame&&findSourceTarget(frame,nextTarget,nextStep!=='aggregate');
-   const matching=next?.readMetrics().find(item=>item.aggregateSelector?.field===aggregate?.field&&canonical(item.aggregateSelector?.computeClass)===canonical(aggregate?.computeClass));
+   const matching=next?.readMetrics().find(item=>item.aggregateSelector?.field===aggregate?.field&&canonical(item.aggregateSelector?.computeClass)===canonical(aggregate?.computeClass)&&
+    (member.computeIndex===undefined||item.localSelector?.computeIndex===member.computeIndex));
    setStep(nextStep);setTarget(nextTarget);setMetric(matching?.id??`missing:${aggregate?.field}`);setQuery('');
   }
   return <div className="cost-source-content"><p className="scope-note">按当前结果查看实际值、精度、固定公式与求值假设。引用沿用引擎记录，可能包含所属范围共用依赖，不表示每个公式都单独贡献于此指标。下方覆盖声明表是输入来源清单；生效/优先级以所选指标与结构参数来源为准，不把声明表再次计入成本。</p>
@@ -128,7 +132,7 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
       {value.status==='available'?<>
         <p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>
         {layout??logical??fusion??local??communication??(
-          aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={proofStep} onNavigate={navigate}/>:
+          aggregate?<><AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={proofStep} onNavigate={navigate}/>{deviceChoices}</>:
           devices.length?deviceChoices:
           <LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>
         )}

@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {makeLocalGemmProject} from '../../scripts/local-gemm-project.js';
+import {makeStreamProject} from '../../scripts/stream-project.js';
 import {c01Project} from '../model-fixtures.js';
 
 test('drills from a model barrier to the selected device and checks the exported local work formula',async({page})=>{
@@ -26,22 +27,33 @@ test('drills from a model barrier to the selected device and checks the exported
  await inspector.locator(':scope > summary').click();
  await inspector.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
  await inspector.locator('.aggregate-cost-source article').filter({hasText:'算子 module/op'}).getByRole('button',{name:'查看此项来源',exact:true}).click();
- await inspector.getByRole('button',{name:'查看 gpu1 的局部方程',exact:true}).click();
+ const aggregate=inspector.getByRole('region',{name:'聚合运算来源'});
+ const metric=inspector.getByLabel('成本来源指标',{exact:true});
  const local=inspector.getByRole('region',{name:'逐卡运算来源'});
- async function exportSource(){
+ async function verifyExport(button:'导出此页逐卡来源'|'导出此页聚合来源'){
   const download=page.waitForEvent('download');
-  await local.getByRole('button',{name:'导出此页逐卡来源',exact:true}).click();
+  await inspector.getByRole('button',{name:button,exact:true}).click();
   const file=await(await download).path();
   if(!file)throw Error('Missing local cost export');
   const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
   return JSON.parse(cli.stdout);
  }
+ await aggregate.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
+ await expect(aggregate).toContainText('max(3.28, 3.28) = 3.28 second');
+ expect(await verifyExport('导出此页聚合来源')).toMatchObject({kind:'aggregate_cost_source',schemaVersion:2,operation:'device_max',quantity:{value:3.28,unit:'second'}});
+ await metric.selectOption('useful:0');
+ const last=aggregate.getByRole('article').filter({has:page.getByRole('heading',{name:'设备 gpu1 · 计算段 2',exact:true})});
+ await expect(last).toContainText('1792 + 512 = 2304 operation');
+ await last.getByRole('button',{name:'查看此项来源',exact:true}).click();
+ await expect(inspector.getByLabel('成本来源范围',{exact:true})).toHaveValue('local:["module/op","gpu1"]');
+ await expect(metric).toHaveValue('useful:1');
  await local.getByRole('button',{name:'复核此设备的局部方程',exact:true}).click();
+ await expect(local).toContainText('second-matmul · 有效工作');
+ await metric.selectOption('seconds');
  await expect(local).toContainText('已复核逐卡指标 3.28 second');
  await local.getByText('查看当前设备的 Roofline 耗时运算',{exact:true}).click();
  await expect(local).toContainText('已复核每段计算耗时、HBM 耗时与启动耗时。');
- expect(await exportSource()).toMatchObject({kind:'local_cost_source',schemaVersion:3,selector:{nodeId:'module/op',deviceId:'gpu1',field:'seconds'},rooflineOperands:3});
- const metric=inspector.getByLabel('成本来源指标',{exact:true});
+ expect(await verifyExport('导出此页逐卡来源')).toMatchObject({kind:'local_cost_source',schemaVersion:3,selector:{nodeId:'module/op',deviceId:'gpu1',field:'seconds'},rooflineOperands:3});
  await local.getByRole('button',{name:'查看 second-matmul 的执行工作量',exact:true}).click();
  await expect(metric).toHaveValue('executed:1');
  await expect(local).toContainText('已复核逐卡指标 640 operation');
@@ -63,9 +75,31 @@ test('drills from a model barrier to the selected device and checks the exported
  await expect(tail).toContainText('已复核 16 个有效元素 · 20 个分配元素');
  const lexical=local.getByRole('region',{name:'实际参数绑定链'}).filter({has:page.getByRole('table',{name:'逐卡算式的词法参数'})});
  await expect(lexical).toContainText('16 count');
- expect(await exportSource()).toMatchObject({kind:'local_cost_source',schemaVersion:3,selector:{nodeId:'module/op',deviceId:'gpu1',computeIndex:0},quantity:{value:512,unit:'operation'},expressionOperands:3,expressionOperandsComplete:true});
+ expect(await verifyExport('导出此页逐卡来源')).toMatchObject({kind:'local_cost_source',schemaVersion:3,selector:{nodeId:'module/op',deviceId:'gpu1',computeIndex:0},quantity:{value:512,unit:'operation'},expressionOperands:3,expressionOperandsComplete:true});
  await inspector.getByLabel('成本来源范围',{exact:true}).selectOption({label:'局部 module/op / gpu0'});
  await expect(local).toContainText('已复核逐卡指标 640 operation');
  await local.getByText(/查看本页算式读取的实参/).click();
  await expect(local.getByRole('heading',{name:'nl = 5 count',exact:true})).toBeVisible();
+});
+
+test('separates the actual shared-bandwidth node span from the isolated device equation',async({page})=>{
+ const project=makeStreamProject(c01Project(),true);
+ project.projectId=randomUUID();
+ await page.goto('/');
+ await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'stream-node-cost.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+ await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+ await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();
+ await expect(page.locator('.analysis-cards')).toBeVisible();
+ const inspector=page.locator('.cost-source-inspector');
+ await inspector.locator(':scope > summary').click();
+ await inspector.getByLabel('成本来源范围',{exact:true}).selectOption('node:A');
+ const aggregate=inspector.getByRole('region',{name:'聚合运算来源'});
+ await aggregate.getByRole('button',{name:'复核此指标的聚合运算',exact:true}).click();
+ await expect(aggregate).toContainText('已复核原指标 0.004 second');
+ await expect(aggregate).toContainText('0.001 → 0.005 s · left');
+ await aggregate.getByRole('button',{name:'查看此卡独立耗时',exact:true}).click();
+ const local=inspector.getByRole('region',{name:'逐卡运算来源'});
+ await local.getByRole('button',{name:'复核此设备的局部方程',exact:true}).click();
+ await expect(local).toContainText('已复核逐卡指标 0.002 second');
 });
