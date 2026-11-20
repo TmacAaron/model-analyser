@@ -1055,20 +1055,7 @@
                       "tensorShards": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "properties": {
-                            "tensorId": {
-                              "$ref": "#/$defs/__schema0"
-                            },
-                            "axisId": {
-                              "$ref": "#/$defs/__schema0"
-                            }
-                          },
-                          "required": [
-                            "tensorId",
-                            "axisId"
-                          ],
-                          "additionalProperties": false
+                          "$ref": "#/$defs/__schema66"
                         }
                       },
                       "networkDefaults": {
@@ -1103,36 +1090,14 @@
                       "reductions": {
                         "type": "array",
                         "items": {
-                          "type": "object",
-                          "properties": {
-                            "tensorId": {
-                              "$ref": "#/$defs/__schema0"
-                            },
-                            "producerNodeId": {
-                              "$ref": "#/$defs/__schema0"
-                            },
-                            "consumerNodeIds": {
-                              "minItems": 1,
-                              "type": "array",
-                              "items": {
-                                "$ref": "#/$defs/__schema0"
-                              }
-                            },
-                            "payloadBytes": {
-                              "$ref": "#/$defs/__schema13"
-                            },
-                            "payloadDtype": {
-                              "$ref": "#/$defs/__schema29"
-                            }
-                          },
-                          "required": [
-                            "tensorId",
-                            "producerNodeId",
-                            "consumerNodeIds",
-                            "payloadBytes",
-                            "payloadDtype"
-                          ],
-                          "additionalProperties": false
+                          "$ref": "#/$defs/__schema67"
+                        }
+                      },
+                      "moduleRules": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema68"
                         }
                       },
                       "assumptions": {
@@ -1157,7 +1122,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema66"
+                              "$ref": "#/$defs/__schema69"
                             }
                           },
                           "plan": {
@@ -1743,7 +1708,7 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
           "candidate": {
-            "$ref": "#/$defs/__schema67"
+            "$ref": "#/$defs/__schema70"
           },
           "editorFormat": {
             "type": "string",
@@ -5075,6 +5040,80 @@
     "__schema66": {
       "type": "object",
       "properties": {
+        "tensorId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "axisId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "tensorId",
+        "axisId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema67": {
+      "type": "object",
+      "properties": {
+        "tensorId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "producerNodeId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "consumerNodeIds": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "payloadBytes": {
+          "$ref": "#/$defs/__schema13"
+        },
+        "payloadDtype": {
+          "$ref": "#/$defs/__schema29"
+        }
+      },
+      "required": [
+        "tensorId",
+        "producerNodeId",
+        "consumerNodeIds",
+        "payloadBytes",
+        "payloadDtype"
+      ],
+      "additionalProperties": false
+    },
+    "__schema68": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema5"
+        },
+        "tensorShards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema66"
+          }
+        },
+        "reductions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema67"
+          }
+        }
+      },
+      "required": [
+        "module",
+        "tensorShards",
+        "reductions"
+      ],
+      "additionalProperties": false
+    },
+    "__schema69": {
+      "type": "object",
+      "properties": {
         "groupId": {
           "$ref": "#/$defs/__schema0"
         },
@@ -5143,7 +5182,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema67": {
+    "__schema70": {
       "anyOf": [
         {
           "type": "string"
@@ -5160,7 +5199,7 @@
         {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema67"
+            "$ref": "#/$defs/__schema70"
           }
         },
         {
@@ -5169,7 +5208,7 @@
             "type": "string"
           },
           "additionalProperties": {
-            "$ref": "#/$defs/__schema67"
+            "$ref": "#/$defs/__schema70"
           }
         }
       ]

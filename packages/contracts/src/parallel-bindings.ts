@@ -32,6 +32,16 @@ export function nativeBindingIssues(b:Bindings,topology:Scenario['deviceTopology
 export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   const r=p.declaredPlan,errors:string[]=[],unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)errors.push(label+' 重复');};
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
+  if(p.moduleRules){
+    if(p.strategy!=='tensor_sharded')errors.push('模块分片规则仅适用于 TP 预设');
+    unique(p.moduleRules.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块分片规则');
+    for(const rule of p.moduleRules){
+      if(rule.module.kind!=='module')errors.push('模块分片规则必须引用固定模块修订');
+      if(!rule.tensorShards.length&&!rule.reductions.length)errors.push('模块分片规则缺少张量分片或输出归约');
+      unique(rule.tensorShards.map(shard=>shard.tensorId),'模块规则的张量分片');
+      unique(rule.reductions.map(reduction=>reduction.tensorId),'模块规则的输出归约');
+    }
+  }
   if(!r)return errors;
   if(p.tensorShards.length||p.reductions.length)errors.push('声明式方案不能夹带旧式 TP 简写');
   unique(r.deviceSlots,'设备槽位');unique(r.groups.map(g=>g.groupId),'组角色');

@@ -163,10 +163,14 @@ export const QuantizationApplication = z.strictObject({storageId:StorageId,categ
 export const ParallelPresetRecipe = z.strictObject({deviceSlots:z.array(DeviceId).min(1).max(64),groups:z.array(z.strictObject({groupId:Id,members:z.array(DeviceId).min(1),
   mesh:z.strictObject({axes:z.array(z.strictObject({axisId:Id,size:PositiveInt})),coordinates:z.array(z.strictObject({deviceId:DeviceId,coordinates:z.array(Natural)}))}).optional()})).min(1),
   plan:ParallelPlan.pick({assignments:true,communications:true,assumptions:true})});
+const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id});
+const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec});
 export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan']),phases:Phases,
-  tensorShards:z.array(z.strictObject({tensorId:TensorId,axisId:Id})),
+  tensorShards:z.array(PresetTensorShard),
   networkDefaults:z.strictObject({scope:z.enum(['intra_group','inter_group']),bytesPerSecond:z.number().positive(),latencySeconds:NonNegative,description:Id}).optional(),
-  reductions:z.array(z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec})),assumptions:z.array(Id).min(1),declaredPlan:ParallelPresetRecipe.optional()});
+  reductions:z.array(PresetReduction),
+  moduleRules:z.array(z.strictObject({module:AssetRef,tensorShards:z.array(PresetTensorShard),reductions:z.array(PresetReduction)})).min(1).optional(),
+  assumptions:z.array(Id).min(1),declaredPlan:ParallelPresetRecipe.optional()});
 export const FusionGroup = z.strictObject({groupId:Id,memberNodeIds:z.array(NodeId).min(1),eliminatedTensorIds:z.array(TensorId),
   origin:z.strictObject({asset:AssetRef,presetId:Id,scopeNodeId:NodeId}).optional(),extraCost:CostDefinition,extraLocalCost:z.strictObject({contextNodeId:NodeId,rule:LocalCostRule}).optional(),timeStrategy:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('sum_members')}),

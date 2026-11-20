@@ -13,9 +13,10 @@ const poolId = '$degree-pool';
 const rankPrefix = '$degree-rank:';
 
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
-  if (model.revision !== 1) return undefined;
+  const qwenParallel = (model.assetId === 'builtin:model:qwen3-1.7b' && model.revision === 2) ||
+    (model.assetId === 'builtin:model:qwen3-0.6b' && model.revision === 3);
   const ownerId = preset.strategy === 'declared_plan' ? 'builtin:model:parallel-' + preset.presetId : 'builtin:model:gqa-distributed-reference';
-  if (model.assetId !== ownerId) return undefined;
+  if (!qwenParallel && (model.revision !== 1 || model.assetId !== ownerId)) return undefined;
   switch (preset.strategy) {
     case 'batch_sharded': return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
     case 'tensor_sharded': return size > 1 ? { ...serialDegrees, attentionTp: size } : undefined;

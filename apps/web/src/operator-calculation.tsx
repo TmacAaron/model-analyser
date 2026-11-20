@@ -30,7 +30,7 @@ function rope(family: 'qwen' | 'deepseek' | 'glm'): Algorithm {
 
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
-  const family = asset.revision <= 2 && /^builtin:(module:qwen3-decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
+  const family = asset.revision <= 3 && /^builtin:(module:qwen3-decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
     : asset.revision === 1 && /^builtin:(module:glm4-decoder|model:glm-4-9b)$/.test(id) ? 'glm'
     : asset.revision <= 2 && /^builtin:(module:deepseek-(v2-(expanded|absorbed)|v3-absorbed)-(dense|moe)|model:deepseek-(v2-lite-(expanded|absorbed)|v3|r1))$/.test(id) ? 'deepseek'
     : undefined;

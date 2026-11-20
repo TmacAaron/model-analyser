@@ -38,7 +38,9 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const [latency, setLatency] = useState<string>();
   const linkBandwidth = bandwidth ?? String(networkDefaults?.bytesPerSecond ?? '');
   const linkLatency = latency ?? String(networkDefaults?.latencySeconds ?? '');
-  const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' || match.slots > 1 && match.preset.reductions.length > 0);
+  const moduleReductions = match?.preset.moduleRules?.reduce((count, rule) => count + rule.reductions.length, 0) ?? 0;
+  const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' ||
+    match.slots > 1 && (match.preset.reductions.length > 0 || moduleReductions > 0));
   const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', linkBandwidth, linkLatency]);
   const active = useRef<{ worker: Worker | null } | null>(null);
   const currentKey = useRef(fingerprint);
@@ -127,6 +129,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       {match.preset.tensorShards.length > 0 && match.slots > 1 && <p>张量轴分片 {match.preset.tensorShards.map(item => item.tensorId + '/' + item.axisId).join('、')}</p>}
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
+          : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">
         {needsNetwork && <div className="parallel-degree-link">
@@ -140,6 +143,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           setState(undefined);
         }}>取消布局校验</button>}
         {result && <div className="parallel-degree-result">
+          {scenario.workload.kind==='decode'&&scenario.workload.steps>1&&<small>首个 Decode 步骤</small>}
           <p>{result.deviceIds.length} 个实际设备 · {result.communicationCount} 个通信</p>
           <ul>{result.allocations.map(row => <li key={row.deviceId}>{row.deviceId} · 权重 {display.bytes(row.weightBytes)} · 状态 {display.bytes(row.stateBytes)}</li>)}</ul>
           <button type="button" onClick={() => {

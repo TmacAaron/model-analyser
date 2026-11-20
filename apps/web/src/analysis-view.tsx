@@ -51,9 +51,24 @@ function DecodeView({result,onSource,focus,assets,scenario,exporter}:{assets:Ass
   </section>;
 }
 const format=(n:number)=>n!==0&&(Math.abs(n)<0.0001||Math.abs(n)>=1e12)?n.toExponential(3):new Intl.NumberFormat('en-US',{maximumFractionDigits:4}).format(n);
-function MetricCard({label,metric,children,onSource}:{label:string;metric?:MetricValue|undefined;children?:React.ReactNode;onSource:()=>void}){
+function operatorHbmBytes(result:AnalysisResult|undefined){
+  if(result?.total.hbmBytes.status!=='unavailable'||!result.distributed||!result.total.communications.length)return;
+  const fusions=result.fusions??[],fusedMembers=new Set(fusions.flatMap(fusion=>fusion.evaluation.application.memberNodeIds));
+  const costs=[
+    ...result.nodes.filter(node=>!fusedMembers.has(node.nodeId)&&!node.cost.communications.length).map(node=>node.cost),
+    ...fusions.map(fusion=>fusion.cost),
+  ];
+  let bytes=0;
+  if(!costs.length)return;
+  for(const cost of costs){
+    if(cost.hbmBytes.status!=='available')return;
+    bytes+=cost.hbmBytes.quantity.value;
+  }
+  if(Number.isFinite(bytes))return bytes;
+}
+function MetricCard({label,metric,children,onSource,missingLabel='缺项未补零'}:{label:string;metric?:MetricValue|undefined;children?:React.ReactNode;onSource:()=>void;missingLabel?:string}){
   const {metric:show}=useDisplayUnits();
-return <div className="metric-card"><button className="metric-source-button" onClick={onSource} aria-label={'查看'+label+'来源'}><span>{label}</span><strong>{children??show(metric)}</strong>{metric?.status==='available'&&<small>{metric.basis} · 原始单位 {metric.quantity.unit}</small>}{metric?.status==='unavailable'&&<small>缺项未补零</small>}</button></div>;}
+return <div className="metric-card"><button className="metric-source-button" onClick={onSource} aria-label={'查看'+label+'来源'}><span>{label}</span><strong>{children??show(metric)}</strong>{metric?.status==='available'&&<small>{metric.basis} · 原始单位 {metric.quantity.unit}</small>}{metric?.status==='unavailable'&&<small>{missingLabel}</small>}</button></div>;}
 function Roofline({result,assets}:{result:AnalysisResult;assets:AssetDocument[]}){
   const scalar=useScalarSource(result);
   const points=result.roofline.filter(p=>p.arithmeticIntensity.status==='available'&&p.arithmeticIntensity.operationsPerByte>0).slice(0,20),xs=points.flatMap(p=>p.arithmeticIntensity.status==='available'?[p.arithmeticIntensity.operationsPerByte]:[]),ys=points.flatMap(p=>[p.roofPerformance,p.actualOrPredictedPerformance].flatMap(m=>m.status==='available'&&m.quantity.value>0?[m.quantity.value]:[]));
@@ -81,6 +96,7 @@ export function AnalysisView({scenario,assets,measurements,onMeasurement,onMeasu
   function openSource(targetId:string,metricId:string,step?:number){setSourceSelection(old=>({targetId,metricId,...(step!==undefined?{step}:{}),nonce:(old?.nonce??0)+1}));}
   const focusedCost=result&&focus?.target?targetCost(result,focus.target):undefined,focusError=focus?.reason??(result&&focus?.target?targetProblem(result,focus.target):undefined);
   const peak=result?.memory.some(m=>m.peakBytes.status==='unavailable')?result.memory.find(m=>m.peakBytes.status==='unavailable')?.peakBytes:result?.memory.reduce<MetricValue|undefined>((best,m)=>m.peakBytes.status==='available'&&(best?.status!=='available'||m.peakBytes.quantity.value>best.quantity.value)?m.peakBytes:best,undefined);
+  const operatorHbm=useMemo(()=>operatorHbmBytes(result??undefined),[result]);
   const source=result?[result.total.seconds,result.total.logicalReadBytes,result.total.logicalWriteBytes,result.total.hbmBytes,...result.total.compute.map(c=>c.usefulOperations)].find(m=>m.status==='available'):undefined;
   return <section className="analysis-panel"><div className="panel-title"><div><h2>理论分析与测量比较</h2><small>单步/逐步 Decode；串行或指定多流，多卡需显式布局与局部方程，不支持的配置明确报缺项</small></div><button onClick={run} disabled={busy}>{busy?'计算中…':'计算理论结果'}</button></div>
     {busy&&<button onClick={cancel}>取消理论分析</button>}{error&&<p className="error" role="alert">{error}</p>}
@@ -88,7 +104,7 @@ export function AnalysisView({scenario,assets,measurements,onMeasurement,onMeasu
     <TraceImportEditor scenario={scenario} assets={assets} result={result} onApply={onMeasurements}/>
     {!attempt&&<p className="scope-note">{previous?'输入已变化，旧结果已失效，请重新计算。':'从固定快照计算叶节点、模块汇总、生命周期显存与 Roofline。'}</p>}
     {attempt?.status==='unavailable'&&<div className="error" role="alert">{attempt.diagnostics.map(d=><p key={d.diagnosticId}>{d.code} · {d.message}</p>)}</div>}
-    {result&&<>{focus&&<section className="analysis-focus"><h3>画布选择 · {focus.label}</h3>{focus.target&&<code>{targetId(focus.target)}</code>}{focusError?<p role="status">{focusError}</p>:focusedCost?<><p>所选范围耗时 {show(focusedCost.seconds)} · HBM {show(focusedCost.hbmBytes)}</p><button onClick={()=>focus.target&&openSource(sourceTargetId(result,focus.target),'seconds')}>查看画布选择的成本来源</button></>:<p>等待此目标的结果。</p>}<button onClick={()=>memorySection.current?.scrollIntoView({block:'start'})}>查看所选范围存储</button><small>成本、显存参与关系、时间线、Roofline和测量带入当前选择，可分别改选；全模型概览与所选范围分开。</small></section>}<p className="scope-note">{result.phase} · {result.scope.aggregation} · {result.scope.deviceIds.join(', ')} · {result.decode?result.decode.steps.length+' 个 decode 步骤累计':'一个明确步骤'}</p>{focus&&<h3>全模型概览</h3>}<div className="analysis-cards"><ModelComputeSummary key={result.inputHash} result={result} onSource={openSource}/><MetricCard onSource={()=>openSource('model','seconds')} label={result.distributed?.layout.execution.status==='available'&&result.distributed.layout.execution.result.policy==='streams'?'理论耗时 · 多流':'理论耗时 · 串行'} metric={result.total.seconds}/><MetricCard onSource={()=>openSource('model','hbm')} label="估计 HBM 流量" metric={result.total.hbmBytes}/><MetricCard onSource={()=>openSource('memory:'+Math.max(0,result.memory.findIndex(m=>m.peakBytes===peak)),'peak')} label={result.distributed?'最大每卡生命周期峰值':'生命周期显存峰值'} metric={peak}/></div>
+    {result&&<>{focus&&<section className="analysis-focus"><h3>画布选择 · {focus.label}</h3>{focus.target&&<code>{targetId(focus.target)}</code>}{focusError?<p role="status">{focusError}</p>:focusedCost?<><p>所选范围耗时 {show(focusedCost.seconds)} · HBM {show(focusedCost.hbmBytes)}</p><button onClick={()=>focus.target&&openSource(sourceTargetId(result,focus.target),'seconds')}>查看画布选择的成本来源</button></>:<p>等待此目标的结果。</p>}<button onClick={()=>memorySection.current?.scrollIntoView({block:'start'})}>查看所选范围存储</button><small>成本、显存参与关系、时间线、Roofline和测量带入当前选择，可分别改选；全模型概览与所选范围分开。</small></section>}<p className="scope-note">{result.phase} · {result.scope.aggregation} · {result.scope.deviceIds.join(', ')} · {result.decode?result.decode.steps.length+' 个 decode 步骤累计':'一个明确步骤'}</p>{focus&&<h3>全模型概览</h3>}<div className="analysis-cards"><ModelComputeSummary key={result.inputHash} result={result} onSource={openSource}/><MetricCard onSource={()=>openSource('model','seconds')} label={result.distributed?.layout.execution.status==='available'&&result.distributed.layout.execution.result.policy==='streams'?'理论耗时 · 多流':'理论耗时 · 串行'} metric={result.total.seconds}/><MetricCard onSource={()=>openSource('model','hbm')} label="估计 HBM 流量" metric={result.total.hbmBytes} missingLabel={operatorHbm===undefined?'缺项未补零':'通信本地 HBM 待核定'}>{operatorHbm===undefined?undefined:display.bytes(operatorHbm)+' · 算子'}</MetricCard><MetricCard onSource={()=>openSource('memory:'+Math.max(0,result.memory.findIndex(m=>m.peakBytes===peak)),'peak')} label={result.distributed?'最大每卡生命周期峰值':'生命周期显存峰值'} metric={peak}/></div>
       <div className="analysis-identity"><code>input {result.inputHash.slice(0,20)}…</code><small>engine {result.engineVersion}</small><button disabled={exportState?.status==='running'} onClick={()=>exportFile({kind:'json'})}>导出结果 JSON</button><button disabled={exportState?.status==='running'} onClick={()=>exportFile({kind:'csv'})}>{result.fusions?.length?'导出执行成本 CSV':'导出叶成本 CSV'}</button></div><AnalysisExportFeedback exporter={analysis}/>
       {focus&&<CanvasLayoutView result={result} focus={focus} request={layoutRequest} exporter={analysis}/>}
       <CostSourceInspector key={'sources:'+result.inputHash} result={result} scenario={scenario} assets={assets} selection={sourceSelection}/>
