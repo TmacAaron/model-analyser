@@ -113,6 +113,16 @@ BF16 基线下，每层每 token 追加 512 维潜向量和 64 维旋转位置�
 
 `npm run reference:glm52` 校对原始配置摘要、发布权重索引中的层归属记录和 64 份内置资产。仓库保存发布的配置和权重索引摘要。固定来源为 [GLM-5.2 配置](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/config.json)、[权重索引](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/model.safetensors.index.json)、[Transformers v5.12.0 模型实现](https://github.com/huggingface/transformers/blob/e0e7504bca2bfd1b85bb0eedb148f7b250226f06/src/transformers/models/glm_moe_dsa/modeling_glm_moe_dsa.py)及 [vLLM v0.28.0 稀疏 MLA](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/v1/attention/backends/mla/flashmla_sparse.py)。
 
+## Kimi-K3
+
+内置 Kimi-K3 预设包含发布配置的 93 层主文本解码器，其中 69 层 Kimi Delta Attention、24 层 Gated MLA。画布按 12 层的 Attention Residuals 块组织，首块单独显示，中间 6 个同构块折叠为 `6 ×`，末块保留 9 层的实际排布。历史块归档与当前块累加值沿两条数据流传递。每个 Attention Residuals 节点使用同一 token 的历史块和当前块做深度 softmax，最终混合读取八个归档和末块的累加值。
+
+Gated MLA 的 NoPE 路径直接使用额外的 64 个通道。吸收键和值的上投影后，每层每 token 保存 512 维潜向量和 64 维共享键，BF16 合计 **27,648 B／token／请求**。KDA 的 FP32 递推矩阵和 BF16 短卷积缓冲合计 **454,459,392 B／请求**，计入固定显存。跨层残差归档是本次前向的激活。首层使用 Dense SiTU-GLU；后续 92 层从 896 个窄专家中选择 16 个，并将归一化后的窄空间汇总投影回隐藏宽度，再加两个共享专家的输出。
+
+预设使用 BF16 权重、FP32 递推状态、逐 token 的理论 KDA 算式和紧凑 MLA 缓存。发布检查点的 MXFP4 物理存储、真实 KDA chunk 内核、视觉编码器和多卡布局需要各自的配置。默认单张 A100 的 KV 预算为 `0 token / 请求`，可查看理论成本和每 token 的缓存占用。
+
+`npm run reference:kimi-k3` 校对发布配置的 SHA‑256 和 87 份内置资产。固定来源为 [Kimi-K3 发布配置](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json)、[主解码器实现](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py)、[FLA 的有限下界门控](https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/gate.py)和 [vLLM 的混合缓存说明](https://vllm.ai/blog/2026-07-27-k3)。
+
 ## 目标型号来源
 
 列表用于核对型号身份和后续建模来源。可计算的预设以已有固定资产及该型号的验收记录为准。

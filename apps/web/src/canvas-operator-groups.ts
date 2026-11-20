@@ -43,6 +43,18 @@ const glm52Groups:AuthoredGroup[]=[
   {key:'shared',name:'Shared Expert',members:['shared-gate-up','shared-silu','shared-down']},
   qwenHybridDense,
 ];
+const kimiDepth=(prefix:string):AuthoredGroup=>({key:prefix+'-depth',name:'Attention Residuals',
+  members:[prefix+'-depth-score',prefix+'-depth-mix']});
+const kimiKda:AuthoredGroup={key:'attention',name:'Kimi Delta Attention',members:['q-conv','k-conv','v-conv','qk-normalize',
+  'decay-a','decay-b','bounded-decay','beta-proj','beta-sigmoid','recurrent','kda-gate-proj','kda-norm-gate','kda-o-proj']};
+const kimiMla:AuthoredGroup={key:'attention',name:'Gated MLA · NoPE',members:['cache-write','q-absorb','qk','softmax','av','v-up',
+  'mla-gate-proj','mla-gate','mla-o-proj']};
+const kimiExperts:AuthoredGroup[]=[
+  {key:'routed',name:'Routed · Latent MoE',members:['router','route-affinities','route-bias','route-topk','route-normalize','latent-down',
+    'dispatch','expert-gate-up','expert-situ','expert-down','combine','latent-rmsnorm','latent-up']},
+  {key:'shared',name:'Shared Experts',members:['shared-gate-up','shared-situ','shared-down']},
+  {key:'ffn',name:'Dense SiTU-GLU',members:['dense-gate-up','dense-situ','dense-down']},
+];
 const v4Compressor=['value-proj','score-proj','pending','pool','norm','rope','write'];
 function deepSeekV4Groups(ratio:string,v41=false):AuthoredGroup[]{
   const mode=ratio==='0'?'滑窗注意力':v41?'CSA2 · R'+ratio:ratio==='4'?'CSA · R4':'HCA · R128';
@@ -72,6 +84,8 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
   const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
     id.startsWith('builtin:module:glm-5.2-block-')?glm52Groups:
+    id==='builtin:model:kimi-k3'?[kimiDepth('final')]:
+    id.startsWith('builtin:module:kimi-k3-layer-')?[kimiDepth('attn'),id.endsWith('-mla')?kimiMla:kimiKda,kimiDepth('ffn'),...kimiExperts]:
     hybrid?[hybrid[2]==='delta'?qwenHybridDelta:qwenHybridGqa,...(hybrid[1]==='moe'?qwenHybridMoe:[qwenHybridDense])]:
     deepSeekV4?deepSeekV4Groups(deepSeekV4[1]!):
     deepSeekV41?deepSeekV4Groups(deepSeekV41[1]==='window'?'0':deepSeekV41[1]!.slice(1),true):

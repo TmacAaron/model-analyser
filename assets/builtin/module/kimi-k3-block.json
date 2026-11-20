@@ -1,0 +1,1806 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:module:kimi-k3-block",
+  "revision": 1,
+  "name": "12 层 Attention Residuals 块",
+  "tags": [
+    "kimi",
+    "kimi-k3",
+    "kda",
+    "mla",
+    "attnres",
+    "bf16"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 7168
+      }
+    },
+    {
+      "key": "V",
+      "name": "V",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 163840
+      }
+    },
+    {
+      "key": "N",
+      "name": "N",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 96
+      }
+    },
+    {
+      "key": "QR",
+      "name": "QR",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1536
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 512
+      }
+    },
+    {
+      "key": "DN",
+      "name": "DN",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "DX",
+      "name": "DX",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 64
+      }
+    },
+    {
+      "key": "DV",
+      "name": "DV",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "I",
+      "name": "I",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 33792
+      }
+    },
+    {
+      "key": "J",
+      "name": "J",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 3072
+      }
+    },
+    {
+      "key": "E",
+      "name": "E",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 896
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 16
+      }
+    },
+    {
+      "key": "S",
+      "name": "S",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 3584
+      }
+    },
+    {
+      "key": "D",
+      "name": "D",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "W",
+      "name": "W",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "P",
+      "name": "P",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/configuration_kimi_k3.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/fused_recurrent.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/gate.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://vllm.ai/blog/2026-07-27-k3",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "The published 93-layer text decoder uses 69 KDA and 24 gated NoPE MLA layers, eight depth archives, and one initial dense SiTU-GLU layer. Each subsequent MoE has 896 routed experts, 16 selected per token and two shared experts."
+    },
+    {
+      "kind": "note",
+      "text": "BF16 analytical model with FP32 KDA matrix state, BF16 short-convolution history, and an absorbed MLA cache. NoPE passes both query/key channel sets unchanged. Attention Residual archives contain current-call token activations across depth; they do not persist as KV across Decode calls."
+    },
+    {
+      "kind": "note",
+      "text": "Attention and expert compute uses a logical materialized reference, explicit arithmetic proxies and an upper bound on distinct selected routed expert weights. The released MXFP4 storage and fused kernels, chunk KDA kernel execution, device sharding and vision encoder are outside this BF16 profile."
+    }
+  ],
+  "definition": {
+    "kind": "module",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "x",
+          "tensorId": "x"
+        },
+        {
+          "portId": "archive",
+          "tensorId": "archive"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "archive-out",
+          "tensorId": "archived"
+        },
+        {
+          "portId": "y",
+          "tensorId": "y"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "boundary",
+          "name": "KDA · Attention Residuals 边界",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "x"
+            },
+            {
+              "portId": "archive",
+              "tensorId": "archive"
+            },
+            {
+              "portId": "y",
+              "tensorId": "after-boundary"
+            },
+            {
+              "portId": "archive-out",
+              "tensorId": "archived"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:kimi-k3-layer-boundary",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DX",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DX"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "linear",
+          "name": "KDA · Latent MoE",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "after-boundary"
+            },
+            {
+              "portId": "archive",
+              "tensorId": "archived"
+            },
+            {
+              "portId": "y",
+              "tensorId": "linear-output"
+            }
+          ],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            },
+            "wiring": "chain",
+            "carry": [
+              {
+                "outputPortId": "y",
+                "inputPortId": "x"
+              }
+            ]
+          },
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:kimi-k3-layer-kda",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DX",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DX"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:kimi-k3:48ec7a4ef8b96c31",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "P": {
+                        "kind": "symbol",
+                        "name": "P"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "full",
+          "name": "Gated MLA · Latent MoE",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "linear-output"
+            },
+            {
+              "portId": "archive",
+              "tensorId": "archived"
+            },
+            {
+              "portId": "y",
+              "tensorId": "full-output"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:kimi-k3-layer-mla",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DX",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DX"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:kimi-k3:48ec7a4ef8b96c31",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "P": {
+                        "kind": "symbol",
+                        "name": "P"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "cycle",
+          "name": "3 层 KDA + 1 层 Gated MLA",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "full-output"
+            },
+            {
+              "portId": "archive",
+              "tensorId": "archived"
+            },
+            {
+              "portId": "y",
+              "tensorId": "y"
+            }
+          ],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "literal",
+              "quantity": {
+                "value": 2,
+                "unit": "count"
+              }
+            },
+            "wiring": "chain",
+            "carry": [
+              {
+                "outputPortId": "y",
+                "inputPortId": "x"
+              }
+            ]
+          },
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:kimi-k3-cycle",
+              "revision": 1,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "N",
+                "value": {
+                  "kind": "symbol",
+                  "name": "N"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DX",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DX"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              },
+              {
+                "parameterKey": "D",
+                "value": {
+                  "kind": "symbol",
+                  "name": "D"
+                }
+              },
+              {
+                "parameterKey": "W",
+                "value": {
+                  "kind": "symbol",
+                  "name": "W"
+                }
+              },
+              {
+                "parameterKey": "P",
+                "value": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:kimi-k3:48ec7a4ef8b96c31",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "P": {
+                        "kind": "symbol",
+                        "name": "P"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "boundary-in",
+          "from": {
+            "kind": "graph_input",
+            "portId": "x"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "x"
+          },
+          "tensorId": "x"
+        },
+        {
+          "edgeId": "boundary-in-archive",
+          "from": {
+            "kind": "graph_input",
+            "portId": "archive"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "archive"
+          },
+          "tensorId": "archive"
+        },
+        {
+          "edgeId": "out-archive-out",
+          "from": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "archive-out"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "archive-out"
+          },
+          "tensorId": "archived"
+        },
+        {
+          "edgeId": "linear-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "linear",
+            "portId": "x"
+          },
+          "tensorId": "after-boundary"
+        },
+        {
+          "edgeId": "linear-in-archive",
+          "from": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "archive-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "linear",
+            "portId": "archive"
+          },
+          "tensorId": "archived"
+        },
+        {
+          "edgeId": "full-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "linear",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "full",
+            "portId": "x"
+          },
+          "tensorId": "linear-output"
+        },
+        {
+          "edgeId": "full-in-archive",
+          "from": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "archive-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "full",
+            "portId": "archive"
+          },
+          "tensorId": "archived"
+        },
+        {
+          "edgeId": "cycle-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "full",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cycle",
+            "portId": "x"
+          },
+          "tensorId": "full-output"
+        },
+        {
+          "edgeId": "cycle-in-archive",
+          "from": {
+            "kind": "node",
+            "nodeId": "boundary",
+            "portId": "archive-out"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "cycle",
+            "portId": "archive"
+          },
+          "tensorId": "archived"
+        },
+        {
+          "edgeId": "out-y",
+          "from": {
+            "kind": "node",
+            "nodeId": "cycle",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "y"
+          },
+          "tensorId": "y"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "x",
+          "name": "x",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "x"
+        },
+        {
+          "tensorId": "archive",
+          "name": "archive",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "depth",
+              "semantic": "custom",
+              "size": {
+                "kind": "symbol",
+                "name": "P"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "archive"
+        },
+        {
+          "tensorId": "after-boundary",
+          "name": "after-boundary",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "after-boundary"
+        },
+        {
+          "tensorId": "archived",
+          "name": "archived",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "depth",
+              "semantic": "custom",
+              "size": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:kimi-k3:48ec7a4ef8b96c31",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "P": {
+                      "kind": "symbol",
+                      "name": "P"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "archived"
+        },
+        {
+          "tensorId": "linear-output",
+          "name": "linear-output",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "linear-output"
+        },
+        {
+          "tensorId": "full-output",
+          "name": "full-output",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "full-output"
+        },
+        {
+          "tensorId": "y",
+          "name": "y",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "d",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "y"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "x",
+          "name": "x",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "archive",
+          "name": "archive",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "depth",
+                "semantic": "custom",
+                "size": {
+                  "kind": "symbol",
+                  "name": "P"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "after-boundary",
+          "name": "after-boundary",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "archived",
+          "name": "archived",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "depth",
+                "semantic": "custom",
+                "size": {
+                  "kind": "formula",
+                  "call": {
+                    "formula": {
+                      "assetId": "builtin:formula:kimi-k3:48ec7a4ef8b96c31",
+                      "revision": 1,
+                      "kind": "formula"
+                    },
+                    "bindings": {
+                      "P": {
+                        "kind": "symbol",
+                        "name": "P"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "linear-output",
+          "name": "linear-output",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "full-output",
+          "name": "full-output",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "y",
+          "name": "y",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "d",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        }
+      ],
+      "states": []
+    }
+  }
+}

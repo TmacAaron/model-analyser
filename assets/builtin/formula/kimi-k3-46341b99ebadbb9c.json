@@ -1,0 +1,79 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:kimi-k3:46341b99ebadbb9c",
+  "revision": 1,
+  "name": "C + Q [count]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/configuration_kimi_k3.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/fused_recurrent.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/gate.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://vllm.ai/blog/2026-07-27-k3",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "The published 93-layer text decoder uses 69 KDA and 24 gated NoPE MLA layers, eight depth archives, and one initial dense SiTU-GLU layer. Each subsequent MoE has 896 routed experts, 16 selected per token and two shared experts."
+    },
+    {
+      "kind": "note",
+      "text": "BF16 analytical model with FP32 KDA matrix state, BF16 short-convolution history, and an absorbed MLA cache. NoPE passes both query/key channel sets unchanged. Attention Residual archives contain current-call token activations across depth; they do not persist as KV across Decode calls."
+    },
+    {
+      "kind": "note",
+      "text": "Attention and expert compute uses a logical materialized reference, explicit arithmetic proxies and an upper bound on distinct selected routed expert weights. The released MXFP4 storage and fused kernels, chunk KDA kernel execution, device sharding and vision encoder are outside this BF16 profile."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "C": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "C + Q",
+      "output": {
+        "unit": "count",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

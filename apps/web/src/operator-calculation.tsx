@@ -110,6 +110,34 @@ function glm52Algorithm(localId:string):Algorithm|undefined {
   ]};
 }
 
+function kimiK3Algorithm(localId:string):Algorithm|undefined {
+  if(localId==='q-rmsnorm'||localId==='kv-rmsnorm')return rmsNorm(localId==='q-rmsnorm'?'查询低秩维度':'KV 潜向量维度','10⁻⁶');
+  if(localId.endsWith('-rmsnorm'))return rmsNorm(localId==='latent-rmsnorm'?'专家潜向量维度':'隐藏维度','10⁻⁵');
+  if(localId.endsWith('-depth-score')||localId.endsWith('-depth-mix'))return {name:'Attention Residuals',steps:[
+    {label:'取同一 token 的历史块归档和当前块累加值',equation:'V = [v₁, …, vₚ, v_current]'},
+    {label:'按隐藏维度归一化，以学习到的投影计算深度权重',equation:'sⱼ = wᵀ RMSNorm(vⱼ)'},
+    {label:'沿块深度做 softmax，再加权汇总原始残差',equation:'y = Σⱼ softmax(s)ⱼ · vⱼ'},
+  ]};
+  if(localId==='bounded-decay'||localId==='recurrent')return {name:'Kimi Delta Attention',steps:[
+    {label:'计算每个键通道带下界的对数衰减',equation:'g = −5 · σ(exp(A_log) · (F(x) + b))'},
+    {label:'衰减旧状态，以归一化键读取当前预测并求修正',equation:'S̃ = diag(exp(g)) S,  δ = β · (v − kᵀS̃)'},
+    {label:'写回 FP32 矩阵并由归一化查询读取',equation:'S′ = S̃ + kδᵀ,  y = qᵀS′'},
+  ]};
+  if(localId.endsWith('-situ'))return {name:'SiTU-GLU',steps:[
+    {label:'限制门控和上投影两侧的值，并保留门控 sigmoid',equation:'a = 4 · tanh(gate / 4) · σ(gate),  u = 25 · tanh(up / 25)'},
+    {label:'逐元素相乘后交给下投影',equation:'activation = a ⊙ u'},
+  ]};
+  if(['q-absorb','qk','av','mla-gate'].includes(localId))return {name:'Gated MLA · NoPE',steps:[
+    {label:'吸收键上投影，额外 64 个通道直接参加内积',equation:'sₕ,ₜ = (⟨Wₖ,ₕᵀqₕ, cₜ⟩ + ⟨qˣₕ, kˣₜ⟩) / √192'},
+    {label:'沿可见位置汇总潜向量，上投影后应用输出门',equation:'oₕ = σ(gₕ) ⊙ Wᵥ,ₕ Σₜ softmax(sₕ)ₜ cₜ'},
+  ]};
+  if(['latent-down','route-topk','combine','latent-up'].includes(localId))return {name:'Stable LatentMoE',steps:[
+    {label:'从完整隐藏向量算路由分数，按修正偏置选 16 个专家',equation:'s = σ(Wᵣx),  ids = TopK(s + b, 16)'},
+    {label:'将窄投影送入专家，用原始分数归一化后汇总',equation:'z = Σᵢ [sᵢ / (Σⱼ sⱼ + 10⁻²⁰)] · expertᵢ(W↓x)'},
+    {label:'归一化并回到隐藏宽度，加上共享分支',equation:'y = W↑ RMSNorm(z) + shared(x)'},
+  ]};
+}
+
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
   const v41=id==='builtin:model:deepseek-v4.1-flash'||id.startsWith('builtin:module:deepseek-v41-block-');
@@ -122,6 +150,12 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
   if(asset.revision===1&&(id==='builtin:model:glm-5.2'||id.startsWith('builtin:module:glm-5.2-block-'))){
     const algorithm=glm52Algorithm(localId);
     const filename=localId.endsWith('-rope')?'deepseek_v2.py':algorithm?.name==='吸收投影的稀疏 MLA'?'flashmla_sparse.py':'modeling_glm_moe_dsa.py';
+    const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));
+    return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
+  }
+  if(asset.revision===1&&(id==='builtin:model:kimi-k3'||id.startsWith('builtin:module:kimi-k3-layer-'))){
+    const algorithm=kimiK3Algorithm(localId);
+    const filename=localId==='bounded-decay'?'gate.py':localId==='recurrent'?'fused_recurrent.py':'modeling_kimi_linear.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }
