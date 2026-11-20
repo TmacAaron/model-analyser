@@ -19,6 +19,7 @@ export * from './measurement-import.js';
 export * from './trace-import.js';
 export * from './rocm-import.js';
 export * from './capacity.js';
+export * from './kv-capacity.js';
 export * from './capacity-candidate.js';
 export * from './scenario-comparison.js';
 export * from './partition.js';

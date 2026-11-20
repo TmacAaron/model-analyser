@@ -25,7 +25,7 @@ import { FusionEditor } from './fusion-view.js';
 import { ExecutionEditor } from './execution-view.js';
 import { MemoryPeakEditor } from './memory-peak-view.js';
 import { AnalysisView } from './analysis-view.js';
-import { CapacityView } from './capacity-view.js';
+import { KvCapacityView } from './kv-capacity-view.js';
 import { ScenarioComparisonView } from './comparison-view.js';
 type Props={recoveryTools?:React.ReactNode;project:ProjectDocument|undefined;scenario:Scenario|undefined;catalog:AssetIndexEntry[];status:SaveState;error:string;
   onModel:(id:string)=>Promise<void>;onImport:(file:File)=>Promise<void>;onExport:()=>void;onScenario:(s:Scenario)=>void;onProject:(p:ProjectDocument)=>void;onSelectConfiguration:(id:string)=>void;onCopyConfiguration:()=>void;
@@ -111,7 +111,7 @@ export function ModelWorkspace(props:Props){
         {panel==='memory'&&<MemoryPeakEditor scenario={s} assets={project.assetSnapshots} onChange={patch} resolved={resolved} resolveIfMissing={false} selection={node?.kind==='module'?node.id:scope}/>}
         <div hidden={panel!=='analysis'}><AnalysisView key={project.projectId+':'+s.scenarioId} focus={analysisFocus} scenario={s} assets={project.assetSnapshots} measurements={project.measurements} onMeasurement={m=>props.onProject({...project,measurements:[...project.measurements,m]})} onMeasurements={rows=>props.onProject({...project,measurements:mergeMeasurements(project.measurements,rows)})} autoRunKey={analysisRun} layoutRequest={openLayout?analysisRun:undefined} onResult={setResult}/></div>
         {panel==='advanced'&&<ConfigurationEditor key={project.projectId+':'+s.scenarioId} project={project} scenario={s} resolved={resolved} selection={selected.length?selected:[scope]} onProject={props.onProject}/>}
-        {panel==='capacity'&&<CapacityView scenario={s} assets={project.assetSnapshots}/>}
+        {panel==='capacity'&&<KvCapacityView scenario={s} assets={project.assetSnapshots}/>}
         {panel==='compare'&&<ScenarioComparisonView scenarios={configurations} assets={project.assetSnapshots} focus={analysisFocus}/>}
         {structureScope===scope&&template&&<div hidden={panel!=='structure'}><CanvasStructureEditor key={scope+':'+template.assetId+'@'+template.revision} source={template} initialNodeId={templateNodeId} assets={project.assetSnapshots} catalog={catalog} active={panel==='structure'} onApply={props.onEditStructure}/></div>}
         {panel==='connection'&&connection&&<CanvasConnectionEditor key={scope+':'+connection.from+':'+connection.to} source={scopeDefinition} scope={ownerScope} from={connection.from} to={connection.to} assets={project.assetSnapshots} onApply={props.onEditStructure}/>}

@@ -460,6 +460,8 @@ type MetricValue =
 - MFU 使用各计算精度的 useful work 和同设备范围唯一峰值，不以 effective 能力冒充峰值。MBU 在 actualBytes 明确为物理 HBM 计数时使用 measured_hbm，否则只可使用 estimated_hbm，不能直接代入逻辑读写。比值超过 100% 保留原值并诊断，正值下溢也不能伪装成零利用率。
 - inputHash 采用规范 UTF-16 键序列化与 SHA-256，范围为当前方案计算字段和可达固定依赖快照；名称、视图、测量、无关资产不改变理论输入 hash。engineVersion 独立记录算法版本，测量另有 measurementHash。当前引擎标识 `0.1.0-execution.10`，支持方案融合、原生通信、逐步 decode 和下述多流资源模型。
 - CapacitySearchRequest 使用 `variable`（workload 字段或根模型整数 parameterKey）及显式整数 `searchRange={min,max}`；当前单次最多 512 点，方法为 exhaustive_integer，无须假设单调。CapacitySearchResult 包含 `engineVersion/baseInputHash/baseScenario/request/method/completion/points/capacityStatus/diagnostics`；每点保留 value、inputHash、各设备 peakBytes/capacityBytes、fit、分精度 compute、HBM/seconds 与诊断，计算失败点单独 unavailable。
+- 画布容量首页以当前输入的规范 KV／MLA latent 存储计算预算。可确认的常驻 KV 按 backing 和物理设备去重。逐步 Decode 用实际最后一步的缓存预留显示当前用量，非 KV 预留取各步 `生效峰值 − 常驻 KV` 的逐设备最大值。其他持久状态单列。无法拆分的总峰值覆盖保留当前已知占用，预算待核定。
+- 预算固定当前非 KV 预留、批大小和已验证的缓存分片规则。对可伸缩 append 缓存，仅替换实际存储中的 token 轴，使用原分配器逐卡重算打包、对齐、量化辅助数据和副本，汇报最紧设备约束下的每请求 token 槽位。均匀 token 分片要求可整除。窗口和覆盖式缓存、任意辅助公式或不可延伸的显式切片保留已有分配证据，容量待核定。模型上下文上限与更长上下文的非 KV 开销另行校验。
 - 容量搜索不修改基础方案。工作负载扫描仅改变该字段；根参数扫描替换该参数绑定及项目/方案/根节点参数覆盖，保留所有其他参数与子节点覆盖。fixedVariables 用 workload./binding. 前缀区分名字，完整基础方案另存 baseScenario，表达式绑定保持原定义。
 - 容量 solved 表示完整指定区间中的最大可容纳整数；逐点检查允许后续出现非单调的可行区间。若最大已知可行值以上仍有不可计算点，则 unavailable；区间没有可行点也不返回虚构的 0。上界仍可容纳时必须诊断范围受限；limitingDeviceIds 在下一整数记录实际超限设备，在区间上界记录剩余 bytes 最少的设备，后者不代表已证明全局瓶颈。
 - 搜索在 Web Worker 中执行，逐点让出消息处理以接收取消；取消保留已完成点但 capacityStatus unavailable。计算输入或搜索条件改变后终止过期 worker，隐藏旧结论。单点分析报告的 point_only 与独立容量搜索报告分开，搜索结果不覆盖基础方案的 inputHash。

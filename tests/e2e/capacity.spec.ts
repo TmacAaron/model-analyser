@@ -37,7 +37,7 @@ test('keeps all 512 canvas capacity samples in the chart and downloadable eviden
   await page.goto('/');
   await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'long-capacity.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
-  await page.getByRole('button',{name:'容量',exact:true}).click();
+  await page.getByRole('button',{name:'容量',exact:true}).click();await page.getByText('高级参数扫描',{exact:true}).click();
   const panel=page.locator('.studio-inspector .capacity-panel'),max=panel.getByLabel('容量搜索最大值',{exact:true});
   await panel.getByLabel('容量求解变量',{exact:true}).selectOption('parameter:M');
   await max.fill('512');
@@ -110,7 +110,7 @@ test('pages physical devices for one point and keeps the final device linked to 
   await page.goto('/');
   await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'many-devices.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
-  await page.getByRole('button',{name:'容量',exact:true}).click();
+  await page.getByRole('button',{name:'容量',exact:true}).click();await page.getByText('高级参数扫描',{exact:true}).click();
   const panel=page.locator('.studio-inspector .capacity-panel');
   await panel.getByLabel('容量搜索最大值',{exact:true}).fill('1');
   await panel.getByRole('button',{name:'搜索容量',exact:true}).click();
