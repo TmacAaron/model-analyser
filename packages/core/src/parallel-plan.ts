@@ -44,13 +44,15 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const local=observer&&'localCost'in observer?observer:undefined,communication=observer&&'index'in observer?observer:undefined;
     const nativeNodeId=communication?.nativeNodeId,fusion=observer&&'fusion'in observer?observer.fusion:undefined;
     const layoutObserver=observer&&'layout'in observer?observer.layout:undefined,layoutTarget=layoutObserver?.target;
-    const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration}
+    const fusionGroup=fusion?.bindings?scenario.fusionGroups.find(group=>'$fusion:'+encodeURIComponent(group.groupId)===fusion.nodeId):undefined;
+    const instantiated=local?.declaration?{nodeId:local.localCost.nodeId,declaration:local.declaration,...(local.bindings?{bindings:true}:{})}
       :communication&&(nativeNodeId||communication.bindings)?{
         nodeId:nativeNodeId??'$model',
         ...(nativeNodeId?{collective:(record:BoundCollectiveObservation)=>captures.push(record)}:{}),
         ...(communication.bindings?{bindings:true,bindingTraceReady:communication.bindings}:{}),
       }
-      :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration}}
+      :fusion?.declaration?{nodeId:fusion.nodeId,fusion:{nodeId:fusion.nodeId,record:fusion.declaration,...(fusion.bindings?{bindings:true as const}:{})},
+        ...(fusion.bindings?{bindings:true,bindingNodes:[fusionGroup?.origin?.scopeNodeId,fusionGroup?.extraLocalCost?.contextNodeId].filter((id):id is NodeId=>id!==undefined),bindingTraceReady:fusion.bindings}:{})}
       :layoutObserver?{nodeId:layoutObserver.target.kind==='tensor'?layoutObserver.target.nodeId:'$model',
         ...(layoutObserver.declaration||layoutObserver.derived?{layoutObject:{target:layoutObserver.target,
           ...(layoutObserver.declaration?{record:layoutObserver.declaration}:{}),...(layoutObserver.derived?{derived:layoutObserver.derived}:{})}}:{}),

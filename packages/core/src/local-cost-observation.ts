@@ -19,4 +19,5 @@ export type LocalCostObservation={
 export type LocalPlanObserver={
  localCost:{nodeId:NodeId;deviceId:DeviceId;timing:boolean;record:(observation:LocalCostObservation)=>void};
  declaration?:(observation:LocalCostDeclaration,kind:'local'|'global')=>void;
+ bindings?:true;
 };

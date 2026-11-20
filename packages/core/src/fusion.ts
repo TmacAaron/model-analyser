@@ -4,12 +4,15 @@ import { bindLocalCostRule } from './local-cost-rule.js';
 import { topologicalOrder } from './graph.js';
 import { validateAssets } from '../../contracts/src/validation.js';
 import { expressionSymbols,parseExpression } from '../../contracts/src/expression.js';
-import { scopedNumericSymbols } from './evaluation-scope.js';
+import { scopedNumericSymbols,type SymbolAssignment } from './evaluation-scope.js';
+import { assetParameterFrameId,workloadParameterFrameId } from './parameter-observation.js';
 import {communicationSymbols} from './communication-observation.js';
 import type {FusionDeclaration,FusionDeclarationObserver} from './fusion-observation.js';
 
 const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(root+'/')||id.startsWith(root+'[');
-export function fusionSymbols(resolved:ResolvedGraph,scenario:Scenario,nodeId:NodeId):Record<string,Quantity>{return scopedNumericSymbols(resolved.parameters,scenario.workload,nodeId);}
+export function fusionSymbols(resolved:ResolvedGraph,scenario:Scenario,nodeId:NodeId,onAssign?:(value:SymbolAssignment)=>void):Record<string,Quantity>{
+  return scopedNumericSymbols(resolved.parameters,scenario.workload,nodeId,onAssign);
+}
 
 /** Preserve mathematical nodes; resolve atomic execution membership and explicitly removable materialization. */
 export function applyFusion(resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[],diagnostics:Diagnostic[],observer?:FusionDeclarationObserver):void{
@@ -36,14 +39,19 @@ export function applyFusion(resolved:ResolvedGraph,scenario:Scenario,assets:Asse
       for(const c of scenario.parallelPlan.communications)if(!c.placement||c.placement.phases.includes(resolved.phase)){const tensorIds=[c.source.tensorId,c.destination.tensorId].flatMap(id=>tensors.has(id)?[id]:resolved.objectBindings.flatMap(b=>b.tensors.filter(t=>t.localTensorId===id).map(t=>t.tensorId))),storageIds=(c.temporaryStorageIds??[]).flatMap(id=>storages.has(id)?[id]:resolved.objectBindings.flatMap(b=>b.storages.filter(s=>s.localStorageId===id).map(s=>s.storageId)));if([...tensorIds.map(tensorStorage),...storageIds.map(canonical)].includes(storage))throw new FormulaError('external_fusion_consumer','显式通信仍使用被取消物化的存储 '+id);}
       if(scenario.numericOverrides.some(o=>o.target.kind==='storage'&&o.field==='memory_bytes'&&canonical(o.target.storageId)===storage&&o.value.value!==0))throw new FormulaError('invalid_fusion_elision_override','不能取消物化同时要求非零分配覆盖 '+id);
     }
-    const rootSymbols=fusionSymbols(resolved,scenario,group.origin?.scopeNodeId??NodeId.parse('$model')),extraCost=bindCost(group.extraCost,rootSymbols),timeStrategy=group.timeStrategy.kind==='override'?{...group.timeStrategy,timing:group.timeStrategy.timing.kind==='custom_formula'?{...group.timeStrategy.timing,seconds:bind(group.timeStrategy.timing.seconds,rootSymbols,'second')}:group.timeStrategy.timing}:group.timeStrategy;
+    const captureBindings=observer?.nodeId===nodeId&&observer.bindings;
+    const rootFrames=captureBindings?new Map<string,string>():undefined,extraLocalFrames=captureBindings&&group.extraLocalCost?new Map<string,string>():undefined;
+    const captureFrame=(into:Map<string,string>)=>({name,source}:SymbolAssignment)=>into.set(name,
+      source.kind==='workload'?workloadParameterFrameId():assetParameterFrameId(source.parameter.nodeId));
+    const rootSymbols=fusionSymbols(resolved,scenario,group.origin?.scopeNodeId??NodeId.parse('$model'),rootFrames?captureFrame(rootFrames):undefined),extraCost=bindCost(group.extraCost,rootSymbols),timeStrategy=group.timeStrategy.kind==='override'?{...group.timeStrategy,timing:group.timeStrategy.timing.kind==='custom_formula'?{...group.timeStrategy.timing,seconds:bind(group.timeStrategy.timing.seconds,rootSymbols,'second')}:group.timeStrategy.timing}:group.timeStrategy;
     let extraLocalCost=group.extraLocalCost,extraLocalSymbols:Record<string,Quantity>|undefined;
     if(extraLocalCost){
       if(!members.has(extraLocalCost.contextNodeId))throw new FormulaError('invalid_fusion_context','融合局部附加成本上下文必须是实际成员');
-      extraLocalSymbols=fusionSymbols(resolved,scenario,extraLocalCost.contextNodeId);
+      extraLocalSymbols=fusionSymbols(resolved,scenario,extraLocalCost.contextNodeId,extraLocalFrames?captureFrame(extraLocalFrames):undefined);
       extraLocalCost={...extraLocalCost,rule:bindLocalCostRule(extraLocalCost.rule,extraLocalSymbols,graph.tensors,new Map(graph.tensors.map(t=>[t.tensorId,t.tensorId])),tensors,new Map(graph.storages.map(s=>[s.storageId,s.storageId])))};
     }
-    if(observer?.nodeId===nodeId)observation={symbols:communicationSymbols(rootSymbols),...(extraLocalSymbols?{extraLocalSymbols:communicationSymbols(extraLocalSymbols)}:{}),removed:[]};
+    if(observer?.nodeId===nodeId)observation={symbols:communicationSymbols(rootSymbols),...(extraLocalSymbols?{extraLocalSymbols:communicationSymbols(extraLocalSymbols)}:{}),
+      ...(rootFrames?{parameterFrames:{root:Object.fromEntries(rootFrames),...(extraLocalFrames?{extraLocal:Object.fromEntries(extraLocalFrames)}:{})}}:{}),removed:[]};
     const memberStorage=new Set([...members].flatMap(id=>nodes.get(id)?.portBindings.map(p=>tensorStorage(p.tensorId))??[]));for(const cost of [extraCost,...(extraLocalCost?[extraLocalCost.rule.cost]:[])])for(const id of [...cost.memoryAccess.map(a=>a.storageId),...cost.temporaryStorageIds]){const canonicalId=canonical(id);if(eliminatedStorageIds.includes(canonicalId))throw new FormulaError('invalid_fusion_elision','附加成本不能重新物化已取消对象 '+id);if((storages.get(canonicalId)?.category==='activation'||storages.get(canonicalId)?.category==='state'&&!graph.states.some(s=>s.creator.kind==='initialized'&&s.storageIds.some(id=>canonical(id)===canonicalId)))&&!memberStorage.has(canonicalId))throw new FormulaError('missing_fusion_data_dependency','附加激活/未初始化状态访问需要原成员中的明确端口依赖 '+id);}
     const probe=AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:'$fusion-validation:'+group.groupId,revision:1,name:'Fusion extra validation',parameters:[],tags:[],sources:[],definition:{kind:'operator',operator:{category:'custom',inputs:[],outputs:[],tensors:graph.tensors,storages:graph.storages,states:[],phases:[resolved.phase],cost:extraCost,...(extraLocalCost?{localCost:extraLocalCost.rule}:{})}}}),error=validateAssets([probe],[...assets,probe]).find(d=>d.severity==='error');if(error)throw new FormulaError('invalid_fusion_cost','融合 '+group.groupId+' 附加成本无效：'+error.message);
     resolved.fusionApplications.push(FusionApplication.parse({...group,nodeId,extraNodeId,ownerNodeId:owner,memberNodeIds:order.filter(id=>members.has(id)),eliminatedStorageIds,extraCost,...(extraLocalCost?{extraLocalCost}:{}),timeStrategy}));

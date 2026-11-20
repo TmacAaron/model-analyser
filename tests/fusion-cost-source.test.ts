@@ -70,10 +70,12 @@ it('preserves exact physical summation and actual elision identities, including 
 });
 
 it('counts distributed members and extra equations once per device and uses the actual extra tensor context',async()=>{
- const {project,group}=replicated(),rule=group.extraLocalCost?.rule;
- if(!rule)throw Error('Missing local extra rule');
+ const {project,s,group}=replicated(),rule=group.extraLocalCost?.rule;
+ const model=project.assetSnapshots.find(asset=>asset.assetId===s.model.assetId);
+ if(!rule||!model)throw Error('Missing local extra rule');
+ model.parameters.push({key:'ExtraBytes',name:'Extra HBM bytes',type:'integer',unit:'byte',default:{kind:'integer',value:2}});
  rule.bindings.push({symbol:'scratchRead',source:{kind:'storage_bytes',storageId:StorageId.parse('sY'),basis:'per_copy'}});
- rule.cost.memoryAccess.push({accessId:'extra-read',storageId:StorageId.parse('sY'),mode:'read',logicalBytes:{kind:'symbol',name:'scratchRead'},hbmEstimate:{kind:'factor',value:1}});
+ rule.cost.memoryAccess.push({accessId:'extra-read',storageId:StorageId.parse('sY'),mode:'read',logicalBytes:{kind:'symbol',name:'scratchRead'},hbmEstimate:{kind:'bytes',value:{kind:'symbol',name:'ExtraBytes'}}});
  const groupReport=await replayFusionCostSource(await request(project,'executedOperations'));
  expect(groupReport.items.slice(0,2)).toMatchObject([{deviceId:gpu0,step:{before:0,after:6}},{deviceId:gpu1,step:{before:6,after:12}}]);
  const rankReport=await replayFusionCostSource(await request(project,'hbmBytes',gpu1));
@@ -81,8 +83,13 @@ it('counts distributed members and extra equations once per device and uses the 
  expect(rankReport.items.slice(0,3)).toMatchObject([{kind:'member',nodeId:'A',step:{after:2}},{kind:'member',nodeId:'B',step:{after:4}},{kind:'extra',nodeId:'$fusion:pair/extra',step:{after:6}}]);
  const {fixed,result}=await frame(project),f=result.fusions?.[0]?.evaluation,extra=f?.extraPerDevice.find(d=>d.deviceId===gpu1)?.outcome;
  if(!f||extra?.status!=='available')throw Error('Missing test extra');
- const proof=await replayLocalCostSource({...fixed,metric:extra.cost.hbmBytes,selector:{nodeId:f.application.extraNodeId,fusionNodeId:f.application.nodeId,deviceId:gpu1,scope:extra.cost.scope,field:'hbmBytes'}});
+ const proof=await replayLocalCostSource({...fixed,metric:extra.cost.hbmBytes,selector:{nodeId:f.application.extraNodeId,fusionNodeId:f.application.nodeId,deviceId:gpu1,scope:extra.cost.scope,field:'hbmBytes'},proofVersion:2});
  expect(proof.items).toMatchObject([{kind:'binding',binding:{symbol:'scratchRead',quantity:{value:2}},storage:{canonicalStorageId:'sY',distribution:{kind:'replicated'}}},{kind:'access',hbm:{quantity:{value:2}},logicalFormula:{proof:{symbol:'scratchRead'}}}]);
+ expect(proof.expressionOperands).toMatchObject([
+  {name:'scratchRead',source:{kind:'physical',layout:{kind:'storage',storageId:'sY',deviceId:'gpu1'}}},
+  {name:'ExtraBytes',source:{kind:'parameter',frameId:'["asset","$model"]'}},
+ ]);
+ expect(proof.parameterBindings?.complete).toBe(true);
 });
 
 it('sums independent member barriers with different bottleneck devices',async()=>{

@@ -7,9 +7,9 @@ import type {ParameterCaptureTrace,ParameterFrame,ParameterObservation} from './
 type Value=ResolvedParameter['value'];type Source=ResolvedParameter['source'];
 export type ParameterBindingNode={id:string;kind:'workload'|'repeat_index'|'default'|'override'|'literal'|'symbol'|'formula'|'binding'|'parameter'|'boundary';inputs:string[];value:Value;unit:Quantity['unit'];frameId:string;name:string;source?:Source;formula?:Extract<ValueExpr,{kind:'formula'}>['call']['formula'];proof?:ValueEvaluationProof};
 export type ParameterBindingCandidate={id:string;frameId:string;parameterKey:string;kind:'default'|'binding'|'override';status:'winning'|'superseded'|'skipped'|'unset';nodeId?:string;source?:Source;overrideIndex?:number};
-export type ParameterBindingRoot={role:'call'|'storage'|'quantization'|'layout'|'communication';target:string;frameId?:string;name:string;nodeId?:string};
+export type ParameterBindingRoot={role:'call'|'storage'|'quantization'|'layout'|'communication'|'local';target:string;frameId?:string;name:string;nodeId?:string};
 export type AdditionalParameterRoot={frameId:string;name:string;quantity:Quantity;target:string};
-export type ParameterBindingGraph={schemaVersion:1;scope:'actual_call_and_storage_parameter_context'|'actual_call_storage_and_quantization_parameter_context'|'actual_layout_parameter_context'|'actual_communication_parameter_context';nodes:ParameterBindingNode[];candidates:ParameterBindingCandidate[];roots:ParameterBindingRoot[];complete:boolean;truncated:boolean;boundaries:string[];frameCount:number};
+export type ParameterBindingGraph={schemaVersion:1;scope:'actual_call_and_storage_parameter_context'|'actual_call_storage_and_quantization_parameter_context'|'actual_layout_parameter_context'|'actual_communication_parameter_context'|'actual_local_parameter_context';nodes:ParameterBindingNode[];candidates:ParameterBindingCandidate[];roots:ParameterBindingRoot[];complete:boolean;truncated:boolean;boundaries:string[];frameCount:number};
 type BindingTarget={role:ParameterBindingRoot['role'];target:string;frameId:string|undefined;symbols:Record<string,Quantity>};
 const numeric=(value:Value):value is Extract<Value,{kind:'integer'|'number'}>=>value.kind==='integer'||value.kind==='number';
 /** Rebuild actual binding edges from recorded roles/frame IDs, never equal values. */
@@ -30,7 +30,11 @@ export function communicationParameterBindingGraph(trace:ParameterCaptureTrace,a
  return buildBindings(trace,assets,expressionTargets(reads,'communication'),'actual_communication_parameter_context',256);
 }
 
-function expressionTargets(reads:readonly AdditionalParameterRoot[],role:'layout'|'communication'):BindingTarget[]{
+export function localParameterBindingGraph(trace:ParameterCaptureTrace,assets:AssetDocument[],reads:readonly AdditionalParameterRoot[]):ParameterBindingGraph{
+ return buildBindings(trace,assets,expressionTargets(reads,'local'),'actual_local_parameter_context',256);
+}
+
+function expressionTargets(reads:readonly AdditionalParameterRoot[],role:'layout'|'communication'|'local'):BindingTarget[]{
  return reads.map(read=>({role,target:read.target,frameId:read.frameId,symbols:Object.fromEntries([[read.name,read.quantity]])}));
 }
 
@@ -100,9 +104,9 @@ function buildBindings(trace:ParameterCaptureTrace|undefined,assets:AssetDocumen
   for(const name of names){
    if(roots.length>=limit){truncated=true;break;}
    const nodeId=lookup(target.frameId,name),root:ParameterBindingRoot={role:target.role,target:target.target,...(target.frameId?{frameId:target.frameId}:{}),name,...(nodeId?{nodeId}:{})};
-   if((target.role==='layout'||target.role==='communication')&&nodeId){
+   if((target.role==='layout'||target.role==='communication'||target.role==='local')&&nodeId){
     const resolved=nodes.find(n=>n.id===nodeId),used=target.symbols[name];
-    if(!resolved||!numeric(resolved.value)||resolved.value.value!==used?.value||resolved.unit!==used.unit)throw Error(target.role==='layout'?'实际布局读取与参数绑定的值或单位不同':'实际通信读取与参数绑定的值或单位不同');
+    if(!resolved||!numeric(resolved.value)||resolved.value.value!==used?.value||resolved.unit!==used.unit)throw Error('实际公式读取与参数绑定的值或单位不同');
    }
    if(!spend(root))break;
    roots.push(root);

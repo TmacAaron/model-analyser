@@ -7,6 +7,7 @@ import {FormulaProof} from './declaration-source-view.js';
 import {PagedTimingDag} from './leaf-timing-source-view.js';
 import {useCostSourceWorker} from './use-cost-source-worker.js';
 import {LayoutSourceView,type LayoutSourceAnchor} from './layout-source-view.js';
+import {ParameterBindingProof} from './parameter-binding-view.js';
 
 function save(report:LocalCostSourceReport){
  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
@@ -24,7 +25,8 @@ export function LocalCostSourceView({metric,selector,result,scenario,assets,step
   const actualStep=step===undefined?undefined:result.decode?.steps.find(row=>row.index===step);
   if(result.decode&&!actualStep)return;
   const frame=actualStep?.result??result;
-  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
+  return {selector,metric,scenario:actualStep?.scenario??scenario,assets,inputHash:frame.inputHash,engineVersion:frame.engineVersion,page,proofVersion:2,
+   ...(frame.stepContext?{stepContext:frame.stepContext,...(actualStep?{decodeFrame:true as const}:{})}:{})};
  },[identity,page]);
  const {state,retry,cancel}=useCostSourceWorker(open,request,'local_cost_source',readLocalSourceReply);
  return <section className="local-cost-source declaration-source" aria-label="逐卡运算来源">
@@ -76,7 +78,46 @@ function LocalProof({report}:{report:LocalCostSourceReport}){
    <PagedTimingDag dag={dag} pageSize={report.pageSize}/>
   </details>}
   {report.items.map((item,i)=><article className="storage-access-item" key={i}><LocalTerm item={item} denominator={trafficOverride?.originalTotal} layout={layout}/></article>)}
+  {report.expressionOperands&&<LocalExpressionOperands report={report} anchor={layout.anchor}/>}
  </div>;
+}
+
+function LocalExpressionOperands({report,anchor}:{report:LocalCostSourceReport;anchor:LayoutSourceAnchor}){
+ const [open,setOpen]=useState(false),[page,setPage]=useState(0);
+ const operands=report.expressionOperands??[],limit=20,start=page*limit;
+ if(!operands.length&&report.expressionOperandsComplete)return null;
+ return <details className="local-expression-operands" onToggle={event=>setOpen(event.currentTarget.open)}>
+  <summary>查看本页算式读取的实参 · {operands.length}</summary>
+  {open&&<>
+   {!report.expressionOperandsComplete&&<p>此页包含未采集的参数来源或达到记录预算。</p>}
+   <section aria-label="逐卡算式的设备与词法实参">
+    {operands.slice(start,start+limit).map((operand,index)=><article className="storage-access-item" key={start+index}>
+     <h5>{operand.name} = {operand.quantity.value} {operand.quantity.unit}</h5>
+     <p>{operand.label}</p>
+     {operand.source.kind==='physical'?<>
+      <p>设备绑定 #{operand.source.bindingIndex+1} · {operand.source.layout.deviceId} · {localBindingLabel(operand.source.source)}</p>
+      <LayoutSourceView anchor={anchor} selector={operand.source.layout}/>
+     </>:<p>{operand.source.frameId?'词法参数':'未采集的词法参数'}{operand.source.frameId&&<> · <code>{operand.source.frameId}</code></>}</p>}
+    </article>)}
+   </section>
+   <div className="button-row">
+    {page>0&&<button onClick={()=>setPage(page-1)}>上一页逐卡实参</button>}
+    {start+limit<operands.length&&<button onClick={()=>setPage(page+1)}>下一页逐卡实参</button>}
+   </div>
+   {report.parameterBindings&&(report.parameterBindings.roots.length>0||!report.parameterBindings.complete)&&<ParameterBindingProof graph={report.parameterBindings}/>}
+  </>}
+ </details>;
+}
+
+type DeviceOperand=Extract<NonNullable<LocalCostSourceReport['expressionOperands']>[number]['source'],{kind:'physical'}>;
+function localBindingLabel(source:DeviceOperand['source']){
+ switch(source.kind){
+  case 'tensor_axis':return (source.basis==='logical'?'有效轴 ':'分配轴 ')+source.axisId;
+  case 'tensor_slice':return source.axisId+(source.edge==='start'?' 切片起点':' 切片终点（不含）');
+  case 'tensor_elements':return source.basis==='logical'?'有效元素数':'分配元素数';
+  case 'tensor_copies':return '张量副本数';
+  case 'storage_bytes':return source.basis==='per_copy'?'每副本字节数':'含全部副本字节数';
+ }
 }
 
 function LocalTerm({item,denominator,layout}:{item:Item;denominator:number|undefined;layout:LayoutContext}){

@@ -11,10 +11,19 @@ export function readLocalSourceReply(value:unknown,task:Omit<LocalSourceTask,'ph
  if(!object(value)||value['taskId']!==task.taskId||value['phase']!==task.phase)throw Error('局部成本来源回复的任务身份有误');
  if(value['status']==='error'&&typeof value['message']==='string')return value as LocalSourceReply;
  const report=value['report'],request=task.request,page=request.page??0;
- if(value['status']!=='available'||!object(report)||report['schemaVersion']!==1||report['kind']!=='local_cost_source'||report['inputHash']!==request.inputHash||report['engineVersion']!==request.engineVersion||report['page']!==page||canonical(report['selector'])!==canonical(request.selector)||canonical(report['metric'])!==canonical(request.metric))throw Error('局部成本来源回复与当前固定输入或指标不同');
+ if(value['status']!=='available'||!object(report)||report['schemaVersion']!==(request.proofVersion??1)||report['kind']!=='local_cost_source'||report['inputHash']!==request.inputHash||report['engineVersion']!==request.engineVersion||report['page']!==page||canonical(report['selector'])!==canonical(request.selector)||canonical(report['metric'])!==canonical(request.metric))throw Error('局部成本来源回复与当前固定输入或指标不同');
  const count=report['componentCount'];
  if(report['pageSize']!==20||typeof count!=='number'||!Number.isSafeInteger(count)||count<page*20||!Array.isArray(report['items'])||report['items'].length!==Math.min(20,count-page*20)||!Array.isArray(report['timingOverrides'])||report['timingOverrides'].length>2)throw Error('局部成本来源回复超过分页范围');
  const dag=report['dag'];
  if(dag!==undefined&&(!object(dag)||!Array.isArray(dag['nodes'])||dag['nodes'].length>256||!Array.isArray(dag['guards'])||dag['guards'].length>256))throw Error('局部 Roofline 来源回复超过记录范围');
+ if(request.proofVersion===2){
+  const operands=report['expressionOperands'],bindings=report['parameterBindings'];
+  if(typeof report['expressionOperandsComplete']!=='boolean'||!Array.isArray(operands)||operands.length>256||operands.some(row=>
+   !object(row)||typeof row['name']!=='string'||typeof row['label']!=='string'||!object(row['source'])||
+   !object(row['quantity'])||typeof row['quantity']['unit']!=='string'||!Number.isFinite(row['quantity']['value'])||
+   (row['source']['kind']!=='parameter'&&(row['source']['kind']!=='physical'||!object(row['source']['layout'])||row['source']['layout']['deviceId']!==request.selector.deviceId))))throw Error('逐卡实参回复与当前设备或记录范围不同');
+  if(!object(bindings)||bindings['schemaVersion']!==1||bindings['scope']!=='actual_local_parameter_context'||
+   ['nodes','roots','candidates','boundaries'].some(key=>!Array.isArray(bindings[key])||bindings[key].length>(key==='boundaries'?32:256)))throw Error('逐卡参数链回复缺失或超过证据预算');
+ }
  return value as LocalSourceReply;
 }
