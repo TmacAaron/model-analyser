@@ -26,7 +26,7 @@ import { ScenarioComparisonView } from './comparison-view.js';
 import { ExecutionEditor } from './execution-view.js';
 import { CapacityView } from './capacity-view.js';
 import { ParallelView } from './parallel-view.js';
-import { QuantizationEditor } from './quantization-view.js';
+import { QuantizationEditor,type QuantizationPresetChoice } from './quantization-view.js';
 import { FusionEditor } from './fusion-view.js';
 import { DependencyUpgradeView } from './dependency-upgrade-view.js';
 import { ParallelPresetEditor } from './parallel-preset-view.js';
@@ -73,7 +73,12 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
   useEffect(()=>{setIdentityEditing(false);return()=>{identityEdit.current?.abort();identityEdit.current=null;};},[text,draft?.draftId]);
   const active=project?.scenarios.find(s=>s.scenarioId===scenarioId)??project?.scenarios[0];
   const latest=useRef({text,scenarioId:active?.scenarioId,projectId:project?.projectId});latest.current={text,scenarioId:active?.scenarioId,projectId:project?.projectId};const workspaceSession=session.current,workspaceNavigation=navigation.current;
-  const quantizationPresets=[...new Map([...(project?.assetSnapshots.filter(a=>a.definition.kind==='quantization').map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name}))??[]),...(report?.assets.filter(a=>a.kind==='quantization'&&!a.archived).filter(a=>!project?.assetSnapshots.some(s=>s.assetId===a.assetId&&s.revision===a.revision)).map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name}))??[])].map(p=>[p.ref.assetId+'@'+p.ref.revision,p])).values()];
+  const quantizationPresets:QuantizationPresetChoice[]=[...new Map([
+    ...(project?.assetSnapshots.flatMap(a=>a.definition.kind==='quantization'?[{ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
+      ...(a.definition.modelWeights?{weightPresetModel:a.definition.modelWeights.model}:{})}]:[])??[]),
+    ...(report?.assets.filter(a=>a.kind==='quantization'&&!a.archived).filter(a=>!project?.assetSnapshots.some(s=>s.assetId===a.assetId&&s.revision===a.revision)).map(a=>({
+      ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,...(a.weightPresetModel?{weightPresetModel:a.weightPresetModel}:{})}))??[]),
+  ].map(p=>[p.ref.assetId+'@'+p.ref.revision,p])).values()];
   const models=report?.assets.filter(a=>a.kind==='model'&&!a.archived)??[],hardwares=report?.assets.filter(a=>a.kind==='hardware'&&!a.archived)??[];
   const hardwareChoices=[...new Map([...(project?.assetSnapshots.filter(a=>a.definition.kind==='hardware').map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · 项目快照'}))??[]),...hardwares.map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · '+(a.origin==='builtin'?'内置库':'用户库')+' · '+a.assetId.slice(-8)}))].map(a=>[a.ref.assetId+'@'+a.ref.revision,a])).values()];
   async function applyHardware(deviceId:string|null,ref:AssetRef){if(!project||!active)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current,savedAsset=project.assetSnapshots.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision),incoming=savedAsset?[]:await request('snapshot',z.array(AssetDocument),{refs:[ref]});if(token!==session.current||operationNavigation!==navigation.current||snapshot.text!==latest.current.text||snapshot.scenarioId!==latest.current.scenarioId)throw Error('项目或方案已变化，未应用晚到的硬件快照；请重新选择。');const h=savedAsset??incoming.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);if(h?.definition.kind!=='hardware')throw Error('所选快照不是硬件');update({...project,assetSnapshots:mergeSnapshots(project.assetSnapshots,incoming),scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?{...s,deviceTopology:{...s.deviceTopology,devices:s.deviceTopology.devices.map(d=>deviceId===null||d.deviceId===deviceId?{...d,hardware:ref}:d)}}:s)});}
@@ -83,8 +88,13 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
   function mergeSnapshots(current:AssetDocument[],incoming:AssetDocument[]){const existing=new Map(current.map(a=>[a.assetId+'@'+a.revision,a]));for(const a of incoming){const key=a.assetId+'@'+a.revision,prior=existing.get(key);if(prior&&canonical(prior)!==canonical(a))throw Error('项目快照与资产库的同修订内容冲突：'+key);existing.set(key,a);}return [...existing.values()];}
   async function applyQuantizationPreset(ref:AssetRef,selector:Scenario['quantizationOverrides'][number]['selector']){
     if(!project||!active)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current,savedAsset=project.assetSnapshots.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision),incoming=savedAsset?[]:await request('snapshot',z.array(AssetDocument),{refs:[ref]}),preset=savedAsset??incoming.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);
-    if(token!==session.current||operationNavigation!==navigation.current||snapshot.text!==latest.current.text||snapshot.scenarioId!==latest.current.scenarioId)throw Error('项目或所选方案已变化，未应用预设，请重新选择。');if(preset?.definition.kind!=='quantization')throw Error('选择的资产不是量化预设');const rule={...structuredClone(preset.definition.quantization),selector,preset:ref};
-    update({...project,assetSnapshots:mergeSnapshots(project.assetSnapshots,incoming),scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?{...s,quantizationOverrides:[...s.quantizationOverrides,rule]}:s)});
+    if(token!==session.current||operationNavigation!==navigation.current||snapshot.text!==latest.current.text||snapshot.scenarioId!==latest.current.scenarioId)throw Error('项目或所选方案已变化，未应用预设，请重新选择。');if(preset?.definition.kind!=='quantization')throw Error('选择的资产不是量化预设');
+    const modelWeights=preset.definition.modelWeights;
+    if(modelWeights&&(modelWeights.model.assetId!==active.model.assetId||modelWeights.model.revision!==active.model.revision||selector.kind!=='subtree'||selector.rootNodeId!=='$model'))throw Error('发布权重预设只用于整个固定版本的模型。');
+    const rule={...structuredClone(preset.definition.quantization),selector,preset:ref};
+    const overrides=modelWeights?active.quantizationOverrides.filter(item=>!quantizationPresets.some(form=>form.weightPresetModel&&
+      form.ref.assetId===item.preset?.assetId&&form.ref.revision===item.preset.revision)):active.quantizationOverrides;
+    update({...project,assetSnapshots:mergeSnapshots(project.assetSnapshots,incoming),scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?{...s,quantizationOverrides:[...overrides,rule]}:s)});
   }
   async function updateModelReference(){if(!active||!project)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current;try{
     const current=report?.assets.find(a=>a.kind==='model'&&a.assetId===active.model.assetId);if(!current)throw Error('资产库中没有该模型，项目仍可使用已保存快照');

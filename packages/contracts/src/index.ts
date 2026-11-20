@@ -54,7 +54,7 @@ export const FormulaDefinition = z.strictObject({
 export const DTypeSpec = z.strictObject({category:z.enum(['float','int','uint','custom']),bits:PositiveInt,format:Id});
 export const Shape = z.array(z.strictObject({axisId:Id,semantic:z.enum(['batch','token','head','hidden','expert','vocab','custom']),size:ValueExpr}));
 export const QuantizedStorageSpec = z.strictObject({
-  payloadBits:PositiveInt,packingUnitElements:PositiveInt,alignmentBytes:PositiveInt,
+  payloadBits:PositiveInt,payloadDtype:DTypeSpec.optional(),packingUnitElements:PositiveInt,alignmentBytes:PositiveInt,
   auxiliaries:z.array(z.strictObject({name:Id,dtype:DTypeSpec,count:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('formula'),value:ValueExpr}),
     z.strictObject({kind:z.literal('group'),groupSize:PositiveInt}),
@@ -158,6 +158,9 @@ export const AscendQuantizationMapping = z.strictObject({sourceKey:Id,storageId:
 export const AscendQuantizationReview = z.strictObject({importId:Id,sourceId:Id,draft:z.strictObject({sourceKey:z.string(),storageId:z.string(),specificationText:z.string(),note:z.string()}),
   mappings:z.array(AscendQuantizationMapping),appliedMappings:z.array(AscendQuantizationMapping),appliedNote:z.string().optional(),confirmationNote:z.string()});
 export const QuantizationDefinition = z.strictObject({selector:NodeSelector,storageIds:z.array(StorageId).min(1).optional(),weight:QuantizedStorageSpec.optional(),activation:QuantizedStorageSpec.optional(),state:QuantizedStorageSpec.optional(),preset:AssetRef.optional(),importOrigin:AscendQuantizationOrigin.optional()});
+const ModelWeightProfile=z.strictObject({model:AssetRef,moduleRules:z.array(z.strictObject({module:AssetRef,
+  targets:z.array(z.strictObject({storageId:StorageId,axes:z.record(Id,Id).optional(),specification:QuantizedStorageSpec.optional()})).min(1),
+})).min(1)});
 export const QuantizationApplication = z.strictObject({storageId:StorageId,category:z.enum(['weight','activation','state']),nodeIds:z.array(NodeId),
   assignmentIndices:z.array(Natural).min(1),overriddenIndices:z.array(Natural),shape:Shape,dtype:DTypeSpec,beforeBytes:Natural,afterBytes:Natural,
   specification:QuantizedStorageSpec,previousSpecification:QuantizedStorageSpec.optional(),allocationOverridden:z.boolean(),allocationOverrideBytes:Natural.optional(),importOrigins:z.array(AscendQuantizationOrigin).min(1).optional()});
@@ -185,7 +188,7 @@ export const AssetDocument = z.strictObject({documentType:z.literal('asset'),sch
   definition:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('model'),family:Id,variant:Id,graph:GraphTemplate,assumptions:z.array(Id).optional(),workloadBindings:z.array(z.strictObject({phase:Phase,parameterKey:Id,value:ValueExpr})).optional()}),z.strictObject({kind:z.literal('module'),graph:GraphTemplate}),
     z.strictObject({kind:z.literal('operator'),operator:OperatorDefinition}),z.strictObject({kind:z.literal('formula'),formula:FormulaDefinition}),
-    z.strictObject({kind:z.literal('parallel'),plan:ParallelPlan}),z.strictObject({kind:z.literal('quantization'),quantization:QuantizationDefinition}),z.strictObject({kind:z.literal('hardware'),hardware:HardwareDefinition}),
+    z.strictObject({kind:z.literal('parallel'),plan:ParallelPlan}),z.strictObject({kind:z.literal('quantization'),quantization:QuantizationDefinition,modelWeights:ModelWeightProfile.optional()}),z.strictObject({kind:z.literal('hardware'),hardware:HardwareDefinition}),
   ]),extensions:z.record(z.string(),z.json()).optional(),configMapping:ConfigMappingProfile.optional(),configImport:ConfigImportMetadata.optional(),parallelPresets:z.array(ParallelPresetTemplate).optional(),fusionPresets:z.array(FusionPresetTemplate).optional(),
 });
 export const AssetDraft = z.strictObject({documentType:z.literal('asset_draft'),schemaVersion:z.literal(1),draftId:Id,assetId:AssetId,assetKind:AssetKind,
@@ -477,7 +480,7 @@ export const MeasurementComparisonReport = z.strictObject({version:z.literal('me
 export const MeasurementImportPreviewRequest = z.strictObject({file:MeasurementFile,scenario:Scenario,assets:z.array(AssetDocument),result:AnalysisResult.optional(),existing:z.array(MeasurementRecord)});
 export const MeasurementImportRow = z.strictObject({measurementId:Id,status:z.enum(['ready','needs_confirmation','unmatched','stale','needs_analysis','duplicate','conflict']),message:Id,comparison:MeasurementComparison.optional()});
 export const MeasurementImportPreview = z.strictObject({version:z.literal('measurement-import.1'),rows:z.array(MeasurementImportRow),canApply:z.boolean(),newRecordCount:Natural});
-export const AssetIndexEntry = z.strictObject({assetId:AssetId,kind:AssetKind,revision:PositiveInt,name:Id,origin:z.enum(['builtin','user']),archived:z.boolean(),format:z.enum(['json','yaml']),family:Id.optional(),configModelTypes:z.array(Id).optional()});
+export const AssetIndexEntry = z.strictObject({assetId:AssetId,kind:AssetKind,revision:PositiveInt,name:Id,origin:z.enum(['builtin','user']),archived:z.boolean(),format:z.enum(['json','yaml']),family:Id.optional(),configModelTypes:z.array(Id).optional(),weightPresetModel:AssetRef.optional()});
 export const ApiError = z.strictObject({code:z.enum(['validation','reference','conflict','io','not_found','unsupported_version']),message:Id,
   fieldIssues:z.array(z.strictObject({path:z.string(),message:Id})),currentRevision:PositiveInt.optional()});
 export const SaveDraftRequest = z.strictObject({requestId:Id,draft:AssetDraft});

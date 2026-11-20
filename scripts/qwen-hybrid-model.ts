@@ -18,8 +18,10 @@ export function addSwiGlu(graph: GraphAuthor, width: string, prefix: string, inp
     { useful: '2 * B * Q * H * ' + width });
 }
 
-function addMoe(graph: GraphAuthor, revision: 1 | 2 | 3) {
-  const shardIntermediate = revision >= 2, packByOwner = revision === 3;
+export type HybridModelRevision = 1 | 2 | 3 | 4;
+
+function addMoe(graph: GraphAuthor, revision: HybridModelRevision) {
+  const shardIntermediate = revision >= 2, packByOwner = revision >= 3;
   matrixWeight(graph, 'router-weight', 'E');
   const routerShape: Axis[] = [['b', 'batch', 'B'], ['q', 'token', 'Q'], ['expert', 'expert', 'E']];
   const selected = 'if(K <= E, K, 1 / 0)';
@@ -64,6 +66,16 @@ function addMoe(graph: GraphAuthor, revision: 1 | 2 | 3) {
   graph.tensor('expert-output', [...selectedShape, ['h', 'hidden', 'H']]);
   graph.node('expert-down', 'Routed SwiGLU down projection', ['expert-activation', 'expert-down-weight', ...ownerIds], ['expert-output'],
     { useful: '2 * B * Q * ' + slots + ' * H * J' }, { accessBytes: { 'expert-down-weight': '2 * min(E, B * Q * ' + slots + ') * H * J' } });
+  if (revision === 4) {
+    // The expert axis contains uniform matrices. The accessed share includes their local scales.
+    const passes = graph.equations.value('min(E, B * Q * RouteSlots) / E', 'ratio');
+    for (const [id, weightId] of [['expert-gate-up', 'expert-gate-up-weight'], ['expert-down', 'expert-down-weight']]) {
+      const node = graph.graph.nodes.find(row => row.nodeId === id);
+      const read = node?.body.kind === 'opaque' && node.body.cost.memoryAccess.find(row => row.accessId === 'read-' + weightId);
+      if (!read) throw Error('Missing sparse expert read ' + id);
+      read.logicalBytes = { kind: 'storage_allocation', passes };
+    }
+  }
   graph.tensor('routed-output', hidden);
   graph.node('combine', 'Weighted routed expert sum', ['expert-output', weights, ids], ['routed-output'],
     { useful: '2 * B * Q * ' + slots + ' * H', computeClass: vector });
@@ -86,9 +98,9 @@ const repeat = (count: string): GraphTemplate['nodes'][number]['repeat'] => ({
 const integer = (key: string, value: number, min = 1): AssetDocument['parameters'][number] =>
   ({ key, name: key, type: 'integer', unit: 'count', min, default: { kind: 'integer', value } });
 
-export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2 | 3 = 1): AssetDocument[] {
+export function makeQwenHybridAssets(release: QwenHybridRelease, revision: HybridModelRevision = 1): AssetDocument[] {
   const profile = loadQwenHybrid(release);
-  if (revision === 3 && !profile.moe) throw Error('Owner-local expert slots require a MoE decoder');
+  if (revision >= 3 && !profile.moe) throw Error('Owner-local expert slots require a MoE decoder');
   const parameters = [
     integer('B', 1), integer('Q', 1), integer('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => integer(key, value)),
@@ -96,8 +108,8 @@ export function makeQwenHybridAssets(release: QwenHybridRelease, revision: 1 | 2
   const dimensionParameters = [...parameters, integer('LinearCount', 3), integer('Periods', profile.periods)];
   // Global equations still evaluate exactly K >= 1. An EP owner can receive zero of those routes.
   const equations = new Equations('builtin:formula:qwen-hybrid',
-    revision === 3 ? [...dimensionParameters, integer('RouteSlots', 0, 0)] : dimensionParameters, hybridSources,
-    revision === 3 ? new Map([['RouteSlots', 'K']]) : undefined);
+    revision >= 3 ? [...dimensionParameters, integer('RouteSlots', 0, 0)] : dimensionParameters, hybridSources,
+    revision >= 3 ? new Map([['RouteSlots', 'K']]) : undefined);
   const variant = profile.moe ? 'moe' : 'dense', modulePrefix = 'builtin:module:qwen-hybrid-' + variant + '-';
   const base = {
     documentType: 'asset', schemaVersion: 1, revision, tags: ['qwen', 'hybrid', 'text', 'bf16', variant],

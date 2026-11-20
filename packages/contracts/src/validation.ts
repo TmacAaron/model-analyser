@@ -3,7 +3,7 @@ import { declaredRecipeIssues } from './parallel-bindings.js';
 import { AssetDocument, type AssetRef, type GraphTemplate, type Diagnostic, ProjectDocument, type ValueExpr, type Quantity, type CostDefinition,type LocalCostRule } from './index.js';
 import { validateScenario } from './scenario-validation.js';
 import { parseExpression, expressionSymbols } from './expression.js';
-import { quantizationRuleIssues } from './quantization-validation.js';
+import { modelWeightProfileIssues,quantizationRuleIssues } from './quantization-validation.js';
 import { collectivePorts } from './collective.js';
 import { configProfileProblems,reviewConfigImport } from './config-import.js';
 import { measurementProblems } from './measurement-file.js';
@@ -68,7 +68,15 @@ export function validateAssets(roots:AssetDocument[],library:AssetDocument[]=roo
     }
     for(const [i,a] of value.memoryAccess.entries()){
       if(!storages.some(s=>s.storageId===a.storageId))report(asset,'missing_reference',`访问存储不存在 ${a.storageId}`,path+`.memoryAccess.${i}`);
-      if(a.logicalBytes.kind==='storage_allocation')expression(asset,a.logicalBytes.passes,'count',path+`.memoryAccess.${i}.logicalBytes.passes`,true);else expression(asset,a.logicalBytes,'byte',path+`.memoryAccess.${i}.logicalBytes`);
+      if(a.logicalBytes.kind==='storage_allocation'){
+        const passes=a.logicalBytes.passes;
+        const target=passes.kind==='formula'?byKey.get(`${passes.call.formula.assetId}@${passes.call.formula.revision}`):undefined;
+        const ratio=passes.kind==='literal'?passes.quantity.unit==='ratio':passes.kind==='symbol'
+          ?asset.parameters.some(p=>p.key===passes.name&&p.unit==='ratio'):target?.definition.kind==='formula'&&target.definition.formula.output.unit==='ratio';
+        const field=path+`.memoryAccess.${i}.logicalBytes.passes`;
+        expression(asset,passes,ratio?'ratio':'count',field,!ratio);
+        if(ratio&&passes.kind==='literal'&&passes.quantity.value>1)report(asset,'invalid_storage_access','存储份额不得超过 1',field);
+      }else expression(asset,a.logicalBytes,'byte',path+`.memoryAccess.${i}.logicalBytes`);
       if(a.hbmEstimate?.kind==='bytes')expression(asset,a.hbmEstimate.value,'byte',path+`.memoryAccess.${i}.hbmEstimate`);
     }
     for(const id of value.temporaryStorageIds)if(!storages.some(s=>s.storageId===id))report(asset,'missing_reference',`临时存储不存在 ${id}`,path+'.temporaryStorageIds');
@@ -101,7 +109,10 @@ export function validateAssets(roots:AssetDocument[],library:AssetDocument[]=roo
     if(asset.configImport){if(asset.configImport.status!=='confirmed')report(asset,'config_review_required','config 导入尚待逐项核对，仅保存草稿','configImport.status');for(const issue of reviewConfigImport(asset).filter(i=>!i.resolved))report(asset,issue.code,issue.message,'configImport.'+issue.field);}
     if(asset.definition.kind==='model'&&asset.definition.workloadBindings){unique(asset,asset.definition.workloadBindings.map(b=>b.phase+':'+b.parameterKey),'workloadBindings');for(const b of asset.definition.workloadBindings){const p=asset.parameters.find(p=>p.key===b.parameterKey);if(!p||p.type!=='integer'&&p.type!=='number'){report(asset,'invalid_workload_binding','工作负载绑定必须指向数值参数','workloadBindings');continue;}const fields=b.phase==='decode'?['batchSize','contextTokensPerRequest','queryTokensPerRequest','steps']:['batchSize','queryTokensPerRequest','pastTokensPerRequest','chunkTokens'],scoped:AssetDocument={...asset,parameters:fields.map(key=>({key,name:key,type:'integer',unit:'count',min:['batchSize','queryTokensPerRequest','steps','chunkTokens'].includes(key)?1:0}))};expression(scoped,b.value,p.unit,'workloadBindings.'+b.phase+'.'+b.parameterKey,p.type==='integer');}}
     if(asset.definition.kind==='hardware'){const h=asset.definition.hardware;unique(asset,h.computeCapabilities.map(c=>canonical(c.computeClass)),'definition.hardware.computeCapabilities');unique(asset,h.memoryCapabilities.map(c=>c.key),'definition.hardware.memoryCapabilities');unique(asset,h.communicationDefaults.map(c=>c.scope),'definition.hardware.communicationDefaults');}
-    if(asset.definition.kind==='quantization')for(const issue of quantizationRuleIssues(asset.definition.quantization,library))report(asset,issue.code,issue.message,'definition.quantization'+(issue.path?'.'+issue.path:''));
+    if(asset.definition.kind==='quantization'){
+      for(const issue of quantizationRuleIssues(asset.definition.quantization,library))report(asset,issue.code,issue.message,'definition.quantization'+(issue.path?'.'+issue.path:''));
+      for(const message of modelWeightProfileIssues(asset,library))report(asset,'invalid_model_weight_profile',message,'definition.modelWeights');
+    }
     if(asset.definition.kind==='formula') {
       try {const symbols=expressionSymbols(parseExpression(asset.definition.formula.expression));for(const symbol of symbols)if(!Object.hasOwn(asset.definition.formula.inputs,symbol))report(asset,'unbound_symbol',`未声明输入 ${symbol}`);}
       catch(e){report(asset,'invalid_formula',e instanceof Error?e.message:'公式非法');}

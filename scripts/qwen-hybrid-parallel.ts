@@ -1,7 +1,7 @@
 import { AssetDocument, NodeId, ParallelPresetTemplate, TensorId, type ValueExpr } from '@model-analyser/contracts';
 import { bf16, ref } from './model-authoring.js';
 import { withLocalCost, type AxisBinding } from './local-cost-authoring.js';
-import { makeQwenHybridAssets } from './qwen-hybrid-model.js';
+import { makeQwenHybridAssets, type HybridModelRevision } from './qwen-hybrid-model.js';
 import type { QwenHybridRelease } from './qwen-hybrid-profile.js';
 
 type Shard = readonly [tensorId: string, axisId: string, policy?: 'balanced'];
@@ -74,12 +74,12 @@ function reduction(tensorId: string, producer: string, consumer: string, payload
     payloadBytes, payloadDtype: bf16 };
 }
 
-export function makeQwenHybridParallelAssets(release: QwenHybridRelease, revision: 2 | 3 = 2): AssetDocument[] {
+export function makeQwenHybridParallelAssets(release: QwenHybridRelease, revision: Exclude<HybridModelRevision, 1> = 2): AssetDocument[] {
   const [root, period, delta, gqa, ...formulas] = makeQwenHybridAssets(release, revision);
   if (root?.definition.kind !== 'model' || period?.definition.kind !== 'module' ||
       delta?.definition.kind !== 'module' || gqa?.definition.kind !== 'module') throw Error('Missing hybrid decoder graph');
   const moe = release === 'qwen35';
-  const owners = revision === 3;
+  const owners = revision >= 3;
   const notes = moe ? [attentionNote, expertNote] : [attentionNote];
   const sources: AssetDocument['sources'] = [
     ...root.sources.map(source => source.kind === 'note' ? { ...source, text: source.text.replace('allocator and distributed execution', 'allocator and framework kernel execution') } : source),

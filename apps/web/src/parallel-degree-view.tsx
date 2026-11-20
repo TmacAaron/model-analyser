@@ -102,6 +102,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   }
 
   const outcome = state?.key === fingerprint ? state : undefined;
+  const inputsChangedDuringPreview = state?.status === 'running' && !outcome;
   const result = outcome?.preview;
   const edited = Object.keys(draft).length > 0;
   const hasPlan = !!scenario.parallelPlan.generatedFrom || scenario.parallelPlan.assignments.length > 0;
@@ -139,6 +140,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
         {needsNetwork && (match.preset.sharedPoolDegrees && match.preset.networkDefaults ?
           <details><summary>通信参数{savedTiming||bandwidth!==undefined||latency!==undefined?'':' · 参考值'}</summary>{linkFields}</details> : linkFields)}
         <button type="button" onClick={() => void preview()} disabled={outcome?.status === 'running'}>校验布局</button>
+        {inputsChangedDuringPreview&&<small role="status">配置已更新，请重新校验。</small>}
         {outcome?.status === 'running' && <button type="button" onClick={() => {
           active.current?.worker?.terminate();
           active.current = null;

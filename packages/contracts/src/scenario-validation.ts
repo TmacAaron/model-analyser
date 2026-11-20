@@ -8,7 +8,7 @@ export function validateScenario(scenario:Scenario,assets:AssetDocument[]):Diagn
   const unique=(values:string[],path:string)=>{if(new Set(values).size!==values.length)report('duplicate_id','ID 重复',path);};
   const asset=(id:string,revision:number)=>assets.find(a=>a.assetId===id&&a.revision===revision);
   const model=asset(scenario.model.assetId,scenario.model.revision);
-  for(const [index,rule] of scenario.quantizationOverrides.entries())for(const issue of quantizationRuleIssues(rule,assets))report(issue.code,issue.message,'quantizationOverrides.'+index+(issue.path?'.'+issue.path:''));
+  for(const [index,rule] of scenario.quantizationOverrides.entries())for(const issue of quantizationRuleIssues(rule,assets,scenario.model))report(issue.code,issue.message,'quantizationOverrides.'+index+(issue.path?'.'+issue.path:''));
   if(scenario.model.kind!=='model'||model?.definition.kind!=='model')report('reference_kind_mismatch','方案 model 必须引用正式模型','model');
   for(const [i,g]of scenario.fusionGroups.entries())if(g.origin){const source=asset(g.origin.asset.assetId,g.origin.asset.revision);if(!source||source.definition.kind!==g.origin.asset.kind||!source.fusionPresets?.some(p=>p.presetId===g.origin?.presetId))report('invalid_fusion_preset','融合来源修订或预设不存在','fusionGroups.'+i+'.origin');}
   const devices=scenario.deviceTopology.devices,groups=scenario.deviceTopology.groups;

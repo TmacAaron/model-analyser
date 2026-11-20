@@ -10,6 +10,8 @@ DeepSeek-V3／R1 r2 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／E
 
 Qwen3.5-397B-A17B 和 Qwen3.8-27B r2 提供[全模型 Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen35-与-qwen38-混合注意力全模型)，按配对的头分片 GQA 缓存和 DeltaNet 固定状态。397B 进一步支持 MoE TP 和 r3 MoE EP，可独立分摊专家权重或与相同度数的 Attention TP 共用卡池。EP 下的逐卡路由按均衡估算，总专家分片时保留每 token 的全局 TopK。跨池和上下文并行仍需对应规则。
 
+Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。按实际模块权重和每卡缩放网格复算分配，稀疏专家读取按所读矩阵份额计入实际格式。动态激活量化、转换开销和原生 FP8 矩阵计算仍需显式执行规则。
+
 Qwen3.5-397B-A17B 与 Qwen3.8-27B 已提供[混合注意力文本解码器](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。GQA 的可增长 KV 与 DeltaNet 的固定状态分别计算。[DeepSeek-V4-Flash](MODEL_REFERENCES.md#deepseek-v4-flash) 已接入 43 层主解码器、4／128 token 压缩分组和固定滑窗容量。[DeepSeek-V4.1-Flash](MODEL_REFERENCES.md#deepseek-v41-flash) 已接入 40 层主文本解码器、跨层共享 KV 和索引、CSA2 候选掩码以及两处 Engram。[GLM-5.2](MODEL_REFERENCES.md#glm-52) 已接入 78 层主文本解码器、21 个 DSA 索引拥有层、吸收投影的稀疏 MLA 以及 BF16 KV 槽位预算。[Kimi-K3](MODEL_REFERENCES.md#kimi-k3) 已接入 93 层主文本解码器、Attention Residuals 跨块数据流、Latent MoE、Gated MLA 的 KV 槽位和 KDA 固定状态。正式大模型的多卡布局和发布量化配置继续按 F03／F09 核对。
 
 逐卡实参与规范存储已可查看[布局与分配推导](LAYOUT_SOURCES.md)。记录规则、mesh 切片与填充、打包、辅助项、底层容量、数值覆盖与融合取消物化。版本 2 增加重复堆叠切片、链式中间缓冲和原地复用，以及从布局算式到实例、父域与量化实参的有界绑定链。其他来源的参数域与原 PRD 整体验收继续推进。

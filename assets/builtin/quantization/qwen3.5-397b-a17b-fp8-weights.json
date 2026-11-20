@@ -1,0 +1,199 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:quantization:qwen3.5-397b-a17b-fp8-weights",
+  "revision": 1,
+  "name": "官方 FP8 权重",
+  "tags": [
+    "qwen",
+    "fp8",
+    "block128",
+    "published-weights"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B-FP8/blob/ea5b4f81096f3901c91dea97f81324302495781d/model.safetensors.index.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "E4M3FN payload and one BF16 inverse scale per 128 × 128 block per matrix. Coverage from the full checkpoint index and dtypes from pinned Safetensors headers. DeltaNet A_log and gated norm weights use FP32. Input/output activations, KV and other state retain the authored text graph formats. This preset models checkpoint weight residency and corresponding memory traffic. Matrix execution uses the declared BF16 analytical baseline; dynamic activation scales, conversion kernels and native FP8 execution require separate definitions."
+    }
+  ],
+  "definition": {
+    "kind": "quantization",
+    "quantization": {
+      "selector": {
+        "kind": "subtree",
+        "rootNodeId": "$model"
+      },
+      "weight": {
+        "payloadBits": 8,
+        "payloadDtype": {
+          "category": "float",
+          "bits": 8,
+          "format": "fp8_e4m3fn"
+        },
+        "packingUnitElements": 1,
+        "alignmentBytes": 1,
+        "auxiliaries": [
+          {
+            "name": "weight_scale_inv",
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            },
+            "count": {
+              "kind": "block",
+              "axes": [
+                {
+                  "axisId": "out",
+                  "blockSize": 128
+                },
+                {
+                  "axisId": "in",
+                  "blockSize": 128
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "modelWeights": {
+      "model": {
+        "assetId": "builtin:model:qwen3.5-397b-a17b",
+        "revision": 4,
+        "kind": "model"
+      },
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:qwen-hybrid-moe-delta",
+            "revision": 4,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "expert-gate-up-weight",
+              "axes": {
+                "out": "i"
+              }
+            },
+            {
+              "storageId": "expert-down-weight"
+            },
+            {
+              "storageId": "shared-gate-weight"
+            },
+            {
+              "storageId": "shared-up-weight"
+            },
+            {
+              "storageId": "shared-down-weight"
+            },
+            {
+              "storageId": "delta-qkv-weight-q",
+              "axes": {
+                "out": "d"
+              }
+            },
+            {
+              "storageId": "delta-qkv-weight-k",
+              "axes": {
+                "out": "d"
+              }
+            },
+            {
+              "storageId": "delta-qkv-weight-v",
+              "axes": {
+                "out": "d"
+              }
+            },
+            {
+              "storageId": "delta-output-gate-weight"
+            },
+            {
+              "storageId": "delta-o-weight"
+            },
+            {
+              "storageId": "decay-log",
+              "specification": {
+                "payloadBits": 32,
+                "payloadDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "packingUnitElements": 1,
+                "alignmentBytes": 1,
+                "auxiliaries": []
+              }
+            },
+            {
+              "storageId": "value-norm-weight",
+              "specification": {
+                "payloadBits": 32,
+                "payloadDtype": {
+                  "category": "float",
+                  "bits": 32,
+                  "format": "fp32"
+                },
+                "packingUnitElements": 1,
+                "alignmentBytes": 1,
+                "auxiliaries": []
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:qwen-hybrid-moe-gqa",
+            "revision": 4,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "expert-gate-up-weight",
+              "axes": {
+                "out": "i"
+              }
+            },
+            {
+              "storageId": "expert-down-weight"
+            },
+            {
+              "storageId": "shared-gate-weight"
+            },
+            {
+              "storageId": "shared-up-weight"
+            },
+            {
+              "storageId": "shared-down-weight"
+            },
+            {
+              "storageId": "q-weight"
+            },
+            {
+              "storageId": "k-weight"
+            },
+            {
+              "storageId": "v-weight"
+            },
+            {
+              "storageId": "o-weight"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

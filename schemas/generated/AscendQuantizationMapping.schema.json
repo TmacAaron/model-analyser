@@ -22,6 +22,9 @@
         "payloadBits": {
           "$ref": "#/$defs/__schema1"
         },
+        "payloadDtype": {
+          "$ref": "#/$defs/__schema2"
+        },
         "packingUnitElements": {
           "$ref": "#/$defs/__schema1"
         },
@@ -37,30 +40,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "dtype": {
-                "type": "object",
-                "properties": {
-                  "category": {
-                    "type": "string",
-                    "enum": [
-                      "float",
-                      "int",
-                      "uint",
-                      "custom"
-                    ]
-                  },
-                  "bits": {
-                    "$ref": "#/$defs/__schema1"
-                  },
-                  "format": {
-                    "$ref": "#/$defs/__schema0"
-                  }
-                },
-                "required": [
-                  "category",
-                  "bits",
-                  "format"
-                ],
-                "additionalProperties": false
+                "$ref": "#/$defs/__schema2"
               },
               "count": {
                 "oneOf": [
@@ -72,7 +52,7 @@
                         "const": "formula"
                       },
                       "value": {
-                        "$ref": "#/$defs/__schema2"
+                        "$ref": "#/$defs/__schema3"
                       }
                     },
                     "required": [
@@ -139,7 +119,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema3"
+                          "$ref": "#/$defs/__schema4"
                         }
                       }
                     },
@@ -192,6 +172,32 @@
       "maximum": 9007199254740991
     },
     "__schema2": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "format": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema3": {
       "oneOf": [
         {
           "type": "object",
@@ -295,7 +301,7 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "additionalProperties": {
-                    "$ref": "#/$defs/__schema2"
+                    "$ref": "#/$defs/__schema3"
                   }
                 }
               },
@@ -314,7 +320,7 @@
         }
       ]
     },
-    "__schema3": {
+    "__schema4": {
       "type": "object",
       "properties": {
         "axisId": {

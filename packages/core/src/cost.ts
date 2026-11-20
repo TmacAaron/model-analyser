@@ -1,14 +1,14 @@
 import type {CostObserver,CostObservation,CostDurationOrigin,CostTermObserver} from './cost-observation.js';
 import { CostResult,type CostDefinition,type HardwareDefinition,type MetricScope,type Diagnostic,type Quantity,type MetricValue } from '@model-analyser/contracts';
-import { numericValue,type EvaluationContext } from './storage.js';
-import { FormulaError } from './formula.js';
+import { allocationAccessFactor,numericValue,type EvaluationContext } from './storage.js';
+import { evaluateValue,FormulaError } from './formula.js';
 import { canonical,collectRefs } from '../../contracts/src/validation.js';
 import { StorageId } from '@model-analyser/contracts';
 import type { MetricForUnit } from './metrics.js';
 
 export function memoryAccessBytes(access:CostDefinition['memoryAccess'][number],context:EvaluationContext):number{
   const expr=access.logicalBytes;if(expr.kind!=='storage_allocation')return numericValue(expr,'byte',context);
-  const passes=numericValue(expr.passes,'count',context,true);if(passes===0)return 0;const allocation=context.storageBytes?.get(access.storageId);
+  const passes=allocationAccessFactor(evaluateValue(expr.passes,context.symbols,context.assets));if(passes===0)return 0;const allocation=context.storageBytes?.get(access.storageId);
   if(allocation?.status!=='available'||allocation.quantity.unit!=='byte')throw new FormulaError('missing_storage_allocation','访问 '+access.accessId+' 需要当前设备的已知物理分配 '+access.storageId);
   const bytes=allocation.quantity.value*passes;if(!Number.isFinite(bytes))throw new FormulaError('numeric_overflow','访问分配 × passes 超出数值范围');return bytes;
 }

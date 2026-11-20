@@ -134,31 +134,31 @@
                           "$ref": "#/$defs/__schema4"
                         },
                         "bindings": {
-                          "$ref": "#/$defs/__schema61"
+                          "$ref": "#/$defs/__schema63"
                         },
                         "workload": {
-                          "$ref": "#/$defs/__schema62"
+                          "$ref": "#/$defs/__schema64"
                         },
                         "deviceTopology": {
-                          "$ref": "#/$defs/__schema63"
+                          "$ref": "#/$defs/__schema65"
                         },
                         "parallelPlan": {
                           "$ref": "#/$defs/__schema43"
                         },
                         "executionPlan": {
-                          "$ref": "#/$defs/__schema65"
-                        },
-                        "quantizationOverrides": {
-                          "$ref": "#/$defs/__schema66"
-                        },
-                        "numericOverrides": {
                           "$ref": "#/$defs/__schema67"
                         },
-                        "memoryPeakOverrides": {
+                        "quantizationOverrides": {
                           "$ref": "#/$defs/__schema68"
                         },
-                        "modulePeakOverrides": {
+                        "numericOverrides": {
                           "$ref": "#/$defs/__schema69"
+                        },
+                        "memoryPeakOverrides": {
+                          "$ref": "#/$defs/__schema70"
+                        },
+                        "modulePeakOverrides": {
+                          "$ref": "#/$defs/__schema71"
                         },
                         "ascendQuantizationImports": {
                           "type": "array",
@@ -198,13 +198,13 @@
                               "mappings": {
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/$defs/__schema70"
+                                  "$ref": "#/$defs/__schema72"
                                 }
                               },
                               "appliedMappings": {
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/$defs/__schema70"
+                                  "$ref": "#/$defs/__schema72"
                                 }
                               },
                               "appliedNote": {
@@ -226,7 +226,7 @@
                           }
                         },
                         "fusionGroups": {
-                          "$ref": "#/$defs/__schema71"
+                          "$ref": "#/$defs/__schema73"
                         }
                       },
                       "required": [
@@ -269,34 +269,34 @@
                               "$ref": "#/$defs/__schema0"
                             },
                             "bindings": {
-                              "$ref": "#/$defs/__schema61"
+                              "$ref": "#/$defs/__schema63"
                             },
                             "workload": {
-                              "$ref": "#/$defs/__schema62"
+                              "$ref": "#/$defs/__schema64"
                             },
                             "deviceTopology": {
-                              "$ref": "#/$defs/__schema63"
+                              "$ref": "#/$defs/__schema65"
                             },
                             "parallelPlan": {
                               "$ref": "#/$defs/__schema43"
                             },
                             "executionPlan": {
-                              "$ref": "#/$defs/__schema65"
-                            },
-                            "quantizationOverrides": {
-                              "$ref": "#/$defs/__schema66"
-                            },
-                            "numericOverrides": {
                               "$ref": "#/$defs/__schema67"
                             },
-                            "memoryPeakOverrides": {
+                            "quantizationOverrides": {
                               "$ref": "#/$defs/__schema68"
                             },
-                            "modulePeakOverrides": {
+                            "numericOverrides": {
                               "$ref": "#/$defs/__schema69"
                             },
-                            "fusionGroups": {
+                            "memoryPeakOverrides": {
+                              "$ref": "#/$defs/__schema70"
+                            },
+                            "modulePeakOverrides": {
                               "$ref": "#/$defs/__schema71"
+                            },
+                            "fusionGroups": {
+                              "$ref": "#/$defs/__schema73"
                             }
                           },
                           "required": [
@@ -1331,6 +1331,26 @@
                 },
                 "quantization": {
                   "$ref": "#/$defs/__schema48"
+                },
+                "modelWeights": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "$ref": "#/$defs/__schema4"
+                    },
+                    "moduleRules": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema49"
+                      }
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "moduleRules"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -1464,11 +1484,11 @@
             "type": "string"
           },
           "additionalProperties": {
-            "$ref": "#/$defs/__schema49"
+            "$ref": "#/$defs/__schema51"
           }
         },
         "configMapping": {
-          "$ref": "#/$defs/__schema50"
+          "$ref": "#/$defs/__schema52"
         },
         "configImport": {
           "type": "object",
@@ -1489,7 +1509,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "additionalProperties": {
-                "$ref": "#/$defs/__schema52"
+                "$ref": "#/$defs/__schema54"
               }
             },
             "version": {
@@ -1500,7 +1520,7 @@
               "$ref": "#/$defs/__schema4"
             },
             "profile": {
-              "$ref": "#/$defs/__schema50"
+              "$ref": "#/$defs/__schema52"
             },
             "resolutions": {
               "type": "array",
@@ -1598,14 +1618,14 @@
               "tensorShards": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema53"
+                  "$ref": "#/$defs/__schema55"
                 }
               },
               "sharedPoolDegrees": {
                 "minItems": 1,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema54"
+                  "$ref": "#/$defs/__schema56"
                 }
               },
               "networkDefaults": {
@@ -1640,14 +1660,14 @@
               "reductions": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema55"
+                  "$ref": "#/$defs/__schema57"
                 }
               },
               "moduleRules": {
                 "minItems": 1,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema56"
+                  "$ref": "#/$defs/__schema58"
                 }
               },
               "assumptions": {
@@ -1672,7 +1692,7 @@
                     "minItems": 1,
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/__schema57"
+                      "$ref": "#/$defs/__schema59"
                     }
                   },
                   "plan": {
@@ -1748,16 +1768,16 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "memberNodeIds": {
-                    "$ref": "#/$defs/__schema58"
+                    "$ref": "#/$defs/__schema60"
                   },
                   "eliminatedTensorIds": {
-                    "$ref": "#/$defs/__schema59"
+                    "$ref": "#/$defs/__schema61"
                   },
                   "extraCost": {
                     "$ref": "#/$defs/__schema21"
                   },
                   "timeStrategy": {
-                    "$ref": "#/$defs/__schema60"
+                    "$ref": "#/$defs/__schema62"
                   }
                 },
                 "required": [
@@ -3493,6 +3513,9 @@
         "payloadBits": {
           "$ref": "#/$defs/__schema1"
         },
+        "payloadDtype": {
+          "$ref": "#/$defs/__schema23"
+        },
         "packingUnitElements": {
           "$ref": "#/$defs/__schema1"
         },
@@ -4107,6 +4130,50 @@
       "additionalProperties": false
     },
     "__schema49": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "targets": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema50"
+          }
+        }
+      },
+      "required": [
+        "module",
+        "targets"
+      ],
+      "additionalProperties": false
+    },
+    "__schema50": {
+      "type": "object",
+      "properties": {
+        "storageId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "axes": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/__schema0"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        "specification": {
+          "$ref": "#/$defs/__schema40"
+        }
+      },
+      "required": [
+        "storageId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema51": {
       "anyOf": [
         {
           "type": "string"
@@ -4123,7 +4190,7 @@
         {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema49"
+            "$ref": "#/$defs/__schema51"
           }
         },
         {
@@ -4132,12 +4199,12 @@
             "type": "string"
           },
           "additionalProperties": {
-            "$ref": "#/$defs/__schema49"
+            "$ref": "#/$defs/__schema51"
           }
         }
       ]
     },
-    "__schema50": {
+    "__schema52": {
       "type": "object",
       "properties": {
         "profileId": {
@@ -4189,7 +4256,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "expected": {
-                "$ref": "#/$defs/__schema51"
+                "$ref": "#/$defs/__schema53"
               },
               "required": {
                 "type": "boolean"
@@ -4245,69 +4312,69 @@
       ],
       "additionalProperties": false
     },
-    "__schema51": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/__schema51"
-          }
-        },
-        {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/__schema51"
-          }
-        }
-      ]
-    },
-    "__schema52": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/__schema52"
-          }
-        },
-        {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/__schema52"
-          }
-        }
-      ]
-    },
     "__schema53": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema53"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema53"
+          }
+        }
+      ]
+    },
+    "__schema54": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema54"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema54"
+          }
+        }
+      ]
+    },
+    "__schema55": {
       "type": "object",
       "properties": {
         "tensorId": {
@@ -4327,7 +4394,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema54": {
+    "__schema56": {
       "type": "string",
       "enum": [
         "attentionTp",
@@ -4335,7 +4402,7 @@
         "moeTp"
       ]
     },
-    "__schema55": {
+    "__schema57": {
       "type": "object",
       "properties": {
         "tensorId": {
@@ -4367,7 +4434,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema56": {
+    "__schema58": {
       "type": "object",
       "properties": {
         "module": {
@@ -4376,13 +4443,13 @@
         "tensorShards": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema53"
+            "$ref": "#/$defs/__schema55"
           }
         },
         "reductions": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema55"
+            "$ref": "#/$defs/__schema57"
           }
         }
       },
@@ -4393,7 +4460,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema57": {
+    "__schema59": {
       "type": "object",
       "properties": {
         "groupId": {
@@ -4464,20 +4531,20 @@
       ],
       "additionalProperties": false
     },
-    "__schema58": {
+    "__schema60": {
       "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema59": {
+    "__schema61": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema60": {
+    "__schema62": {
       "oneOf": [
         {
           "type": "object",
@@ -4515,13 +4582,13 @@
         }
       ]
     },
-    "__schema61": {
+    "__schema63": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema19"
       }
     },
-    "__schema62": {
+    "__schema64": {
       "oneOf": [
         {
           "type": "object",
@@ -4586,14 +4653,14 @@
         }
       ]
     },
-    "__schema63": {
+    "__schema65": {
       "type": "object",
       "properties": {
         "devices": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema64"
+            "$ref": "#/$defs/__schema66"
           }
         },
         "groups": {
@@ -4677,7 +4744,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema64": {
+    "__schema66": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -4693,7 +4760,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema65": {
+    "__schema67": {
       "oneOf": [
         {
           "type": "object",
@@ -4802,13 +4869,13 @@
         }
       ]
     },
-    "__schema66": {
+    "__schema68": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema48"
       }
     },
-    "__schema67": {
+    "__schema69": {
       "type": "array",
       "items": {
         "type": "object",
@@ -4929,7 +4996,7 @@
         "additionalProperties": false
       }
     },
-    "__schema68": {
+    "__schema70": {
       "type": "array",
       "items": {
         "type": "object",
@@ -4995,7 +5062,7 @@
         "additionalProperties": false
       }
     },
-    "__schema69": {
+    "__schema71": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5026,7 +5093,7 @@
         "additionalProperties": false
       }
     },
-    "__schema70": {
+    "__schema72": {
       "type": "object",
       "properties": {
         "sourceKey": {
@@ -5059,7 +5126,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema71": {
+    "__schema73": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5068,10 +5135,10 @@
             "$ref": "#/$defs/__schema0"
           },
           "memberNodeIds": {
-            "$ref": "#/$defs/__schema58"
+            "$ref": "#/$defs/__schema60"
           },
           "eliminatedTensorIds": {
-            "$ref": "#/$defs/__schema59"
+            "$ref": "#/$defs/__schema61"
           },
           "origin": {
             "type": "object",
@@ -5113,7 +5180,7 @@
             "additionalProperties": false
           },
           "timeStrategy": {
-            "$ref": "#/$defs/__schema60"
+            "$ref": "#/$defs/__schema62"
           }
         },
         "required": [

@@ -1,3 +1,4 @@
+import {allocationAccessFactor} from './storage.js';
 import {z} from 'zod';
 import {DeviceId,NodeId,type MetricValue,type Quantity,type ValueExpr} from '@model-analyser/contracts';
 import {canonical} from '../../contracts/src/validation.js';
@@ -206,7 +207,7 @@ export async function replayLocalCostSource(input:unknown){
    if(source.logicalBytes.kind==='storage_allocation'){
     logicalFormula=formula(source.logicalBytes.passes,{kind:'access',index,accessId:source.accessId,field:'passes'});
     const passed=logicalFormula.quantity;
-    if(passed.unit!=='count'||!Number.isSafeInteger(passed.value)||passed.value<0)throw Error('局部分配访问 passes 无效');
+    allocationAccessFactor(passed);
     const bytes=passed.value===0?0:quantity((allocation=storage(access.storageId)).totalBytes,'byte').value*passed.value;
     if(bytes!==original)throw Error('每卡分配 × passes 与原局部逻辑流量不同');
    }else logicalFormula=formula(source.logicalBytes,{kind:'access',index,accessId:source.accessId,field:'logicalBytes'},{value:original,unit:'byte'});

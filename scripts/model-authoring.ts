@@ -11,7 +11,7 @@ export const fp32:DTypeSpec={category:'float',bits:32,format:'fp32'};
 export const int64:DTypeSpec={category:'int',bits:64,format:'int64'};
 export const matrix:ComputeClass={arithmetic:'float',inputDtypes:[bf16],multiplyDtype:bf16,accumulateDtype:fp32,resource:'matrix'};
 export const vector:ComputeClass={arithmetic:'float',inputDtypes:[fp32],multiplyDtype:fp32,accumulateDtype:fp32,resource:'vector'};
-export const literal=(value:number,unit:'count'|'byte'|'operation'='count'):ValueExpr=>({kind:'literal',quantity:{value,unit}});
+export const literal=(value:number,unit:'count'|'byte'|'operation'|'ratio'='count'):ValueExpr=>({kind:'literal',quantity:{value,unit}});
 export const symbol=(name:string):ValueExpr=>({kind:'symbol',name});
 export const ref=(a:AssetDocument)=>({assetId:a.assetId,revision:a.revision,kind:a.definition.kind});
 
@@ -19,12 +19,12 @@ export class Equations {
   assets:AssetDocument[]=[];
   constructor(readonly prefix:string,readonly parameters:ParameterDef[],readonly sources:AssetDocument['sources'],
     private readonly inputSymbols?:ReadonlyMap<string,string>){}
-  value(expression:string,unit:'count'|'byte'|'operation'):ValueExpr{
+  value(expression:string,unit:'count'|'byte'|'operation'|'ratio'):ValueExpr{
     if(/^\d+$/.test(expression))return literal(Number(expression),unit);
     if(unit==='count'&&this.parameters.some(p=>p.key===expression))return symbol(expression);
     const id=this.prefix+':'+createHash('sha256').update(unit+':'+expression).digest('hex').slice(0,16);
     let asset=this.assets.find(a=>a.assetId===id);
-    if(!asset){const names=[...expressionSymbols(parseExpression(expression))].sort();asset=AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:id,revision:1,name:expression+' ['+unit+']',parameters:[],tags:['transformer-equation'],sources:this.sources,definition:{kind:'formula',formula:{inputs:Object.fromEntries(names.map(name=>{const p=this.parameters.find(p=>p.key===name);if(!p||p.type!=='integer')throw Error('Missing equation parameter '+name);return [name,{unit:p.unit,integerRequired:true,min:p.min??0}];})),expression,output:{unit,integerRequired:true,nonNegative:true},description:'Explicit analytical equation. Multiply-add counts as two operations; no executable model code.'}}});this.assets.push(asset);}
+    if(!asset){const names=[...expressionSymbols(parseExpression(expression))].sort();asset=AssetDocument.parse({documentType:'asset',schemaVersion:1,assetId:id,revision:1,name:expression+' ['+unit+']',parameters:[],tags:['transformer-equation'],sources:this.sources,definition:{kind:'formula',formula:{inputs:Object.fromEntries(names.map(name=>{const p=this.parameters.find(p=>p.key===name);if(!p||p.type!=='integer')throw Error('Missing equation parameter '+name);return [name,{unit:p.unit,integerRequired:true,min:p.min??0}];})),expression,output:{unit,integerRequired:unit!=='ratio',nonNegative:true},description:'Explicit analytical equation. Multiply-add counts as two operations; no executable model code.'}}});this.assets.push(asset);}
     if(asset.definition.kind!=='formula')throw Error();return {kind:'formula',call:{formula:ref(asset),bindings:Object.fromEntries(Object.keys(asset.definition.formula.inputs).map(k=>[k,symbol(this.inputSymbols?.get(k)??k)]))}};
   }
 }

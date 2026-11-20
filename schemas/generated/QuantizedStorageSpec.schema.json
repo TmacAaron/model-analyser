@@ -5,6 +5,9 @@
     "payloadBits": {
       "$ref": "#/$defs/__schema0"
     },
+    "payloadDtype": {
+      "$ref": "#/$defs/__schema1"
+    },
     "packingUnitElements": {
       "$ref": "#/$defs/__schema0"
     },
@@ -17,33 +20,10 @@
         "type": "object",
         "properties": {
           "name": {
-            "$ref": "#/$defs/__schema1"
+            "$ref": "#/$defs/__schema2"
           },
           "dtype": {
-            "type": "object",
-            "properties": {
-              "category": {
-                "type": "string",
-                "enum": [
-                  "float",
-                  "int",
-                  "uint",
-                  "custom"
-                ]
-              },
-              "bits": {
-                "$ref": "#/$defs/__schema0"
-              },
-              "format": {
-                "$ref": "#/$defs/__schema1"
-              }
-            },
-            "required": [
-              "category",
-              "bits",
-              "format"
-            ],
-            "additionalProperties": false
+            "$ref": "#/$defs/__schema1"
           },
           "count": {
             "oneOf": [
@@ -55,7 +35,7 @@
                     "const": "formula"
                   },
                   "value": {
-                    "$ref": "#/$defs/__schema2"
+                    "$ref": "#/$defs/__schema3"
                   }
                 },
                 "required": [
@@ -102,7 +82,7 @@
                     "const": "channel"
                   },
                   "axisId": {
-                    "$ref": "#/$defs/__schema1"
+                    "$ref": "#/$defs/__schema2"
                   }
                 },
                 "required": [
@@ -122,7 +102,7 @@
                     "minItems": 1,
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/__schema3"
+                      "$ref": "#/$defs/__schema4"
                     }
                   }
                 },
@@ -158,10 +138,36 @@
       "maximum": 9007199254740991
     },
     "__schema1": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "format": {
+          "$ref": "#/$defs/__schema2"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema2": {
       "type": "string",
       "minLength": 1
     },
-    "__schema2": {
+    "__schema3": {
       "oneOf": [
         {
           "type": "object",
@@ -211,7 +217,7 @@
               "const": "symbol"
             },
             "name": {
-              "$ref": "#/$defs/__schema1"
+              "$ref": "#/$defs/__schema2"
             }
           },
           "required": [
@@ -234,7 +240,7 @@
                   "type": "object",
                   "properties": {
                     "assetId": {
-                      "$ref": "#/$defs/__schema1"
+                      "$ref": "#/$defs/__schema2"
                     },
                     "revision": {
                       "$ref": "#/$defs/__schema0"
@@ -262,10 +268,10 @@
                 "bindings": {
                   "type": "object",
                   "propertyNames": {
-                    "$ref": "#/$defs/__schema1"
+                    "$ref": "#/$defs/__schema2"
                   },
                   "additionalProperties": {
-                    "$ref": "#/$defs/__schema2"
+                    "$ref": "#/$defs/__schema3"
                   }
                 }
               },
@@ -284,11 +290,11 @@
         }
       ]
     },
-    "__schema3": {
+    "__schema4": {
       "type": "object",
       "properties": {
         "axisId": {
-          "$ref": "#/$defs/__schema1"
+          "$ref": "#/$defs/__schema2"
         },
         "blockSize": {
           "$ref": "#/$defs/__schema0"

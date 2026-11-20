@@ -104,7 +104,8 @@ export async function scanFiles(root:string,builtinRoot:string,scope:'all'|'revi
     if(source.origin==='builtin'&&usable.some(a=>a.assetId===asset.assetId&&a.revision>asset.revision))continue;
     const archiveFile=join(root,'assets','archive',storageKey(asset.assetId)+'.json');
     let archived=false;try{const raw=JSON.parse(await readFile(archiveFile,'utf8')) as unknown;z.strictObject({assetId:z.literal(asset.assetId)}).parse(raw);archived=true;}catch(e){if(!missing(e))issue(archiveFile,e);}
-    report.assets.push({assetId:asset.assetId,revision:asset.revision,kind:asset.definition.kind,name:asset.name,origin:source.origin,format:source.format,archived,...(asset.definition.kind==='model'?{family:asset.definition.family}:{}),...(asset.configMapping?{configModelTypes:asset.configMapping.modelTypes}:{})});
+    report.assets.push({assetId:asset.assetId,revision:asset.revision,kind:asset.definition.kind,name:asset.name,origin:source.origin,format:source.format,archived,...(asset.definition.kind==='model'?{family:asset.definition.family}:{}),...(asset.configMapping?{configModelTypes:asset.configMapping.modelTypes}:{}),
+      ...(asset.definition.kind==='quantization'&&asset.definition.modelWeights?{weightPresetModel:asset.definition.modelWeights.model}:{})});
   }
   if(scope==='assets')return {...ScanReport.parse(report),revisions:usable,builtinRevisions:revisions.filter(a=>sources.get(identity(a))?.origin==='builtin')};
   for(const entry of await entries(join(root,'assets','drafts')))if(entry.isFile()&&entry.name.endsWith('.json')){

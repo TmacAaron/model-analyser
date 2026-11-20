@@ -40,12 +40,12 @@ export function withLocalCost(graph: GraphTemplate, nodeAxes: Readonly<Record<st
           usefulOperations: replace(segment.usefulOperations, logical),
           executedOperations: replace(segment.executedOperations, allocated),
         })),
-        memoryAccess: body.cost.memoryAccess.map(access => ({
-          ...access,
-          logicalBytes: access.logicalBytes.kind === 'storage_allocation'
-            ? access.logicalBytes : replace(access.logicalBytes,
-              logicalAccesses?.[node.nodeId]?.includes(access.accessId) ? logical : allocated),
-        })),
+        memoryAccess: body.cost.memoryAccess.map(access => {
+          const bindings = logicalAccesses?.[node.nodeId]?.includes(access.accessId) ? logical : allocated;
+          const value = access.logicalBytes;
+          return { ...access, logicalBytes: value.kind === 'storage_allocation'
+            ? { ...value, passes: replace(value.passes, bindings) } : replace(value, bindings) };
+        }),
       },
       description,
     });

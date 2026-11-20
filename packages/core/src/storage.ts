@@ -8,6 +8,17 @@ export function numericValue(expr:ValueExpr,unit:Quantity['unit'],context:Evalua
   if(q.unit!==unit)throw new FormulaError('invalid_unit',`需要 ${unit}，收到 ${q.unit}`);
   if(!Number.isFinite(q.value)||q.value<0||(integer&&!Number.isSafeInteger(q.value)))throw new FormulaError('invalid_shape','数值必须非负有限，精确分配必须为安全整数');return q.value;
 }
+export function allocationAccessFactor(quantity:Quantity):number {
+  const {unit,value}=quantity;
+  if(unit==='count'&&Number.isSafeInteger(value)&&value>=0)return value;
+  if(unit==='ratio'&&Number.isFinite(value)&&value>=0&&value<=1)return value;
+  throw new FormulaError('invalid_storage_access','分配访问需要非负整数次数，或 0 到 1 之间的存储份额');
+}
+export function bindAllocationAccess(value:ValueExpr,context:EvaluationContext):ValueExpr {
+  const quantity=evaluateValue(value,context.symbols,context.assets);
+  allocationAccessFactor(quantity);
+  return {kind:'literal',quantity};
+}
 function exact(value:number):number{if(!Number.isSafeInteger(value)||value<0)throw new FormulaError('numeric_overflow','精确分配超出安全整数范围');return value;}
 function packedBytes(count:number,bits:number):number {
   // Divide first so an exact, safe byte count does not overflow merely because its bit count is larger.
@@ -31,6 +42,7 @@ export function allocateStorage(storageId:StorageSpec['storageId'],storages:Stor
       const allocation=storage.allocation,shape=allocation.shape.map(axis=>({...axis,value:numericValue(axis.size,'count',context,true)}));
       if(new Set(shape.map(a=>a.axisId)).size!==shape.length)throw new FormulaError('duplicate_id','shape 轴 ID 重复');
       const elements=shape.reduce((n,a)=>{const value=exact(n*a.value);observe?.({field:'shape.'+a.axisId,operation:'multiply',inputs:[n,a.value],value,unit:'count'});return value;},1),q=allocation.quantization;
+      if(q?.payloadDtype&&q.payloadDtype.bits!==q.payloadBits)throw new FormulaError('invalid_quantization','存储格式位宽与 payloadBits 不一致');
       const padded=q?exact(Math.ceil(elements/q.packingUnitElements)*q.packingUnitElements):elements;
       const bits=q?.payloadBits??allocation.dtype.bits;
       const raw=packedBytes(padded,bits);payloadBytes=q?exact(Math.ceil(raw/q.alignmentBytes)*q.alignmentBytes):raw;

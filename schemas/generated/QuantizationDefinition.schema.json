@@ -61,7 +61,7 @@
       "$ref": "#/$defs/__schema1"
     },
     "preset": {
-      "$ref": "#/$defs/__schema4"
+      "$ref": "#/$defs/__schema5"
     },
     "importOrigin": {
       "type": "object",
@@ -123,6 +123,9 @@
         "payloadBits": {
           "$ref": "#/$defs/__schema2"
         },
+        "payloadDtype": {
+          "$ref": "#/$defs/__schema3"
+        },
         "packingUnitElements": {
           "$ref": "#/$defs/__schema2"
         },
@@ -138,30 +141,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "dtype": {
-                "type": "object",
-                "properties": {
-                  "category": {
-                    "type": "string",
-                    "enum": [
-                      "float",
-                      "int",
-                      "uint",
-                      "custom"
-                    ]
-                  },
-                  "bits": {
-                    "$ref": "#/$defs/__schema2"
-                  },
-                  "format": {
-                    "$ref": "#/$defs/__schema0"
-                  }
-                },
-                "required": [
-                  "category",
-                  "bits",
-                  "format"
-                ],
-                "additionalProperties": false
+                "$ref": "#/$defs/__schema3"
               },
               "count": {
                 "oneOf": [
@@ -173,7 +153,7 @@
                         "const": "formula"
                       },
                       "value": {
-                        "$ref": "#/$defs/__schema3"
+                        "$ref": "#/$defs/__schema4"
                       }
                     },
                     "required": [
@@ -240,7 +220,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema5"
+                          "$ref": "#/$defs/__schema6"
                         }
                       }
                     },
@@ -276,6 +256,32 @@
       "maximum": 9007199254740991
     },
     "__schema3": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "float",
+            "int",
+            "uint",
+            "custom"
+          ]
+        },
+        "bits": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "format": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "category",
+        "bits",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema4": {
       "oneOf": [
         {
           "type": "object",
@@ -345,7 +351,7 @@
               "type": "object",
               "properties": {
                 "formula": {
-                  "$ref": "#/$defs/__schema4"
+                  "$ref": "#/$defs/__schema5"
                 },
                 "bindings": {
                   "type": "object",
@@ -353,7 +359,7 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "additionalProperties": {
-                    "$ref": "#/$defs/__schema3"
+                    "$ref": "#/$defs/__schema4"
                   }
                 }
               },
@@ -372,7 +378,7 @@
         }
       ]
     },
-    "__schema4": {
+    "__schema5": {
       "type": "object",
       "properties": {
         "assetId": {
@@ -401,7 +407,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema5": {
+    "__schema6": {
       "type": "object",
       "properties": {
         "axisId": {
