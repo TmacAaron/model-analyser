@@ -13,10 +13,17 @@ const poolId = '$degree-pool';
 const rankPrefix = '$degree-rank:';
 
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
-  const qwenParallel = (model.assetId === 'builtin:model:qwen3-1.7b' && model.revision === 2) ||
-    (model.assetId === 'builtin:model:qwen3-0.6b' && model.revision === 3);
+  if (preset.strategy === 'tensor_sharded' && preset.sharedPoolDegrees?.length) {
+    if (size <= 1) return;
+    const degrees = { ...serialDegrees };
+    for (const axis of preset.sharedPoolDegrees) degrees[axis] = size;
+    return degrees;
+  }
+  const fullModelPresets = (model.assetId === 'builtin:model:qwen3-1.7b' && model.revision === 2) ||
+    (model.assetId === 'builtin:model:qwen3-0.6b' && model.revision === 3) ||
+    (model.revision === 2 && (model.assetId === 'builtin:model:deepseek-v3' || model.assetId === 'builtin:model:deepseek-r1'));
   const ownerId = preset.strategy === 'declared_plan' ? 'builtin:model:parallel-' + preset.presetId : 'builtin:model:gqa-distributed-reference';
-  if (!qwenParallel && (model.revision !== 1 || model.assetId !== ownerId)) return undefined;
+  if (!fullModelPresets && (model.revision !== 1 || model.assetId !== ownerId)) return undefined;
   switch (preset.strategy) {
     case 'batch_sharded': return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
     case 'tensor_sharded': return size > 1 ? { ...serialDegrees, attentionTp: size } : undefined;

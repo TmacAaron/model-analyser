@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { AssetDocument, LocalCostRule, NodeId, ParallelPresetTemplate, TensorId, type GraphTemplate, type ValueExpr } from '@model-analyser/contracts';
-import { bf16, ref, symbol } from './model-authoring.js';
+import { AssetDocument, NodeId, ParallelPresetTemplate, TensorId } from '@model-analyser/contracts';
+import { bf16, ref } from './model-authoring.js';
 import { makeQwen17Assets } from './model-expansion.js';
 import { makeQwenAssets } from './qwen-model.js';
+import { withLocalCost, type AxisBinding } from './local-cost-authoring.js';
 
-type AxisBinding = [parameter: string, tensorId: string, axisId: string];
 const attentionAxes: Record<string, AxisBinding[]> = {
   qkv: [['NH', 'q-proj', 'head'], ['NK', 'k-proj', 'kvhead']],
   'qk-norm-rope': [['NH', 'q-proj', 'head'], ['NK', 'k-proj', 'kvhead']],
@@ -15,54 +15,9 @@ const attentionAxes: Record<string, AxisBinding[]> = {
   'o-proj': [['NH', 'attended', 'head']],
 };
 
-function withLocalCost(graph: GraphTemplate): GraphTemplate {
-  const tensors = new Map(graph.tensors.map(tensor => [tensor.tensorId, tensor]));
-  return { ...graph, nodes: graph.nodes.map(node => {
-    if (node.body.kind !== 'opaque') return node;
-    const body = node.body;
-    const input = body.inputs[0];
-    const batch = input && tensors.get(input.tensorId)?.shape.find(axis => axis.semantic === 'batch');
-    if (!input || !batch) throw Error('Missing Qwen batch port for ' + node.nodeId);
-    const axes: AxisBinding[] = [['B', input.tensorId, batch.axisId], ...(attentionAxes[node.nodeId] ?? [])];
-    const axisBindings = (basis: 'logical' | 'allocated') => axes.map(([parameter, tensorId, axisId]) => ({
-      parameter,
-      symbol: basis + '_' + parameter,
-      source: { kind: 'tensor_axis' as const, tensorId: TensorId.parse(tensorId), axisId, basis },
-    }));
-    const logical = axisBindings('logical'), allocated = axisBindings('allocated');
-    const replace = (value: ValueExpr, bindings: ReturnType<typeof axisBindings>): ValueExpr => {
-      if (value.kind === 'literal') return value;
-      if (value.kind === 'symbol') {
-        const binding = bindings.find(item => item.parameter === value.name);
-        return binding ? symbol(binding.symbol) : value;
-      }
-      return { ...value, call: { ...value.call, bindings: Object.fromEntries(
-        Object.entries(value.call.bindings).map(([key, operand]) => [key, replace(operand, bindings)]),
-      ) } };
-    };
-    const localCost = LocalCostRule.parse({
-      participation: { kind: 'tensor_layout', tensorId: input.tensorId },
-      bindings: [...logical, ...allocated].map(({ symbol, source }) => ({ symbol, source })),
-      cost: {
-        ...body.cost,
-        compute: body.cost.compute.map(segment => ({
-          ...segment,
-          usefulOperations: replace(segment.usefulOperations, logical),
-          executedOperations: replace(segment.executedOperations, allocated),
-        })),
-        memoryAccess: body.cost.memoryAccess.map(access => ({
-          ...access,
-          logicalBytes: access.logicalBytes.kind === 'storage_allocation'
-            ? access.logicalBytes : replace(access.logicalBytes, allocated),
-        })),
-      },
-      description: 'Independent request batches or matching query/KV head slices use their declared local axes. ' +
-        'Other dimensions retain their global values. Full object accesses use the local allocation. ' +
-        'Explicit embedding and KV append traffic uses BF16 bytes for the newly accessed token tile.',
-    });
-    return { ...node, body: { ...body, localCost } };
-  }) };
-}
+const description = 'Independent request batches or matching query/KV head slices use their declared local axes. ' +
+  'Other dimensions retain their global values. Full object accesses use the local allocation. ' +
+  'Explicit embedding and KV append traffic uses BF16 bytes for the newly accessed token tile.';
 
 export function makeQwenParallelAssets() {
   const qwen06 = makeQwenAssets(), qwen17 = makeQwen17Assets();
@@ -71,7 +26,7 @@ export function makeQwenParallelAssets() {
   const decoder = AssetDocument.parse({
     ...originalDecoder,
     revision: 3,
-    definition: { ...originalDecoder.definition, graph: withLocalCost(originalDecoder.definition.graph) },
+    definition: { ...originalDecoder.definition, graph: withLocalCost(originalDecoder.definition.graph, attentionAxes, description) },
     sources: [...originalDecoder.sources, { kind: 'note', text: 'Revision 3 declares local batch and attention-head equations and preserves the global equations.' }],
   });
   const localShards = [
@@ -109,7 +64,7 @@ export function makeQwenParallelAssets() {
         }],
       }),
     ];
-    const graph = withLocalCost(source);
+    const graph = withLocalCost(source, attentionAxes, description);
     graph.nodes = graph.nodes.map(node => node.body.kind === 'module' && node.body.asset.assetId === decoder.assetId
       ? { ...node, body: { ...node.body, asset: ref(decoder) } } : node);
     return [AssetDocument.parse({

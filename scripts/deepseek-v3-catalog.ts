@@ -4,19 +4,22 @@ import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeDeepSeekAssets } from './deepseek-model.js';
 import { loadDeepSeekV3Profile } from './deepseek-v3-profile.js';
+import { makeDeepSeekV3ParallelAssets } from './deepseek-v3-parallel.js';
 
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
-  for (const asset of makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release))) {
-    const existing = catalog.get(asset.assetId);
-    if (existing) assert.equal(canonical(asset), canonical(existing), asset.assetId);
-    else catalog.set(asset.assetId, asset);
+  for (const asset of [...makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release)), ...makeDeepSeekV3ParallelAssets(release)]) {
+    const key = asset.assetId + '@' + asset.revision;
+    const existing = catalog.get(key);
+    if (existing) assert.equal(canonical(asset), canonical(existing), key);
+    else catalog.set(key, asset);
   }
 }
 assert.deepEqual(validateAssets([...catalog.values()]), []);
 
 const fileFor = (asset: AssetDocument) =>
-  'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') + '.json';
+  'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') +
+  (asset.revision === 2 && /:deepseek-(?:v3|r1)(?:-|$)/.test(asset.assetId) ? '-r2' : '') + '.json';
 async function verify(asset: AssetDocument, write: boolean) {
   const file = fileFor(asset);
   try {

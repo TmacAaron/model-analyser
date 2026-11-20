@@ -168,6 +168,7 @@ const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id});
 const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec});
 export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan']),phases:Phases,
   tensorShards:z.array(PresetTensorShard),
+  sharedPoolDegrees:z.array(z.enum(['attentionTp','moeEp','moeTp'])).min(1).optional(),
   networkDefaults:z.strictObject({scope:z.enum(['intra_group','inter_group']),bytesPerSecond:z.number().positive(),latencySeconds:NonNegative,description:Id}).optional(),
   reductions:z.array(PresetReduction),
   moduleRules:z.array(z.strictObject({module:AssetRef,tensorShards:z.array(PresetTensorShard),reductions:z.array(PresetReduction)})).min(1).optional(),

@@ -9,6 +9,7 @@ import type { KvCapacityRequest } from './kv-capacity-worker.js';
 type Result={kind:'running'|'cancelled'}|{kind:'error';message:string}|{kind:'ready';report:KvCapacityReport};
 const integer=new Intl.NumberFormat('zh-CN');
 const bytesPerToken=new Intl.NumberFormat('zh-CN',{maximumSignificantDigits:6});
+const formatRate=(value:number)=>(Number.isInteger(value)?integer:bytesPerToken).format(value)+' B / token';
 const pageSize=12;
 
 function KvPhysicalDevices({report}:{report:KvCapacityReport}){
@@ -38,8 +39,8 @@ function KvSummary({report}:{report:KvCapacityReport}){
         {report.fixedSlotsPerRequest!==undefined&&<small>固定槽位，已用 {integer.format(report.referenceTokensPerRequest??0)}</small>}
       </div>
       <div className="metric-card"><span>{report.fixedSlotsPerRequest===undefined?'当前 KV 平均占用':'每个 KV 槽位'}</span>
-        <strong>{report.averageBytesPerToken===undefined?'—':
-          (Number.isInteger(report.averageBytesPerToken)?integer:bytesPerToken).format(report.averageBytesPerToken)+' B / token'}</strong>
+        <strong>{report.averageBytesPerToken===undefined?'—':formatRate(report.averageBytesPerToken)}</strong>
+        {report.replicatedBytesPerToken!==undefined&&<small>每卡复制 {formatRate(report.replicatedBytesPerToken)}</small>}
         {report.currentKvBytes!==undefined&&<small>所有物理设备合计 {display.bytes(report.currentKvBytes)}{report.referenceTokensPerRequest!==undefined&&' · 每请求 '+integer.format(report.referenceTokensPerRequest)+' token'}</small>}
       </div>
     </div>

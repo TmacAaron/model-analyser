@@ -18,7 +18,7 @@ export function validateResult(result:AnalysisResult):Diagnostic[] {
       for(const id of value.diagnosticIds)if(typeof id!=='string'||!ids.has(id))report('missing_reference',`指标引用缺失诊断 ${String(id)}`,path+'.diagnosticIds');
       if(value.status==='unavailable'&&!value.diagnosticIds.some(id=>typeof id==='string'&&ids.get(id)?.severity==='error'))report('missing_reference','不可用指标必须关联至少一条错误/缺项诊断',path);
     }
-    for(const [key,child] of Object.entries(value))metrics(child,path+'.'+key);
+    for(const [key,child] of Object.entries(value))if(key!=='provenance')metrics(child,path+'.'+key);
   }
   metrics(result,'result');
   unique(result.scope.deviceIds,'scope.deviceIds');

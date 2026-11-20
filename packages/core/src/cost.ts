@@ -4,6 +4,7 @@ import { numericValue,type EvaluationContext } from './storage.js';
 import { FormulaError } from './formula.js';
 import { canonical,collectRefs } from '../../contracts/src/validation.js';
 import { StorageId } from '@model-analyser/contracts';
+import type { MetricForUnit } from './metrics.js';
 
 export function memoryAccessBytes(access:CostDefinition['memoryAccess'][number],context:EvaluationContext):number{
   const expr=access.logicalBytes;if(expr.kind!=='storage_allocation')return numericValue(expr,'byte',context);
@@ -18,24 +19,30 @@ export function evaluateAggregateTiming(cost:CostResult,timing:CostDefinition['t
 
 /** Evaluate a single declared leaf cost; no implicit graph expansion, replication or fusion. */
 export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware?:HardwareDefinition,observe?:CostObserver,terms?:CostTermObserver):{cost:CostResult;diagnostics:Diagnostic[]} {
+  const result=evaluateDeclaredCost(cost,scope,context,hardware,observe,terms);
+  return {...result,cost:CostResult.parse(result.cost)};
+}
+
+/** Expanded engine inputs already satisfy the contract. Share their provenance across emitted metrics. */
+export function evaluateDeclaredCost(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware?:HardwareDefinition,observe?:CostObserver,terms?:CostTermObserver):{cost:CostResult;diagnostics:Diagnostic[]} {
   const emit=observe?(event:CostObservation)=>observe(structuredClone(event)):undefined;
   const diagnostics:Diagnostic[]=[];
   const prefix=`cost-${scope.phase}-${scope.target.kind}${scope.target.kind==='model'?'':scope.target.nodeId}-${scope.deviceIds.join('|')}`;
   const provenance=context.provenance??{assetRefs:context.assets.map(a=>({assetId:a.assetId,revision:a.revision,kind:a.definition.kind})),formulaRefs:collectRefs(cost),parameterSources:Object.keys(context.symbols).map(parameterKey=>({parameterKey,source:'evaluation_context'})),assumptions:['Only declared memory accesses are counted; HBM estimates require an explicit factor or bytes expression.']};
   function error(code:string,message:string){emit?.({kind:'error',code,message});const diagnosticId=`${prefix}-${diagnostics.length+1}`;diagnostics.push({diagnosticId,severity:'error',code,message,location:{kind:'file',name:'cost'}});return {status:'unavailable' as const,diagnosticIds:[diagnosticId]};}
-  function metric(value:number,unit:Quantity['unit']):MetricValue {
+  function metric<U extends Quantity['unit']>(value:number,unit:U):MetricForUnit<U> {
     if(!Number.isFinite(value)||value<0)return error('numeric_overflow','成本结果不是非负有限数');
     const diagnosticIds:string[]=[];
     if(value>Number.MAX_SAFE_INTEGER){const diagnosticId=`${prefix}-${diagnostics.length+1}`;diagnostics.push({diagnosticId,severity:'warning',code:'precision_estimate',message:'超过安全整数，以浮点估计表示',location:{kind:'file',name:'cost'}});diagnosticIds.push(diagnosticId);}
     return {status:'available',quantity:{value,unit},basis:'theoretical',provenance,diagnosticIds};
   }
-  function attempt(fn:()=>number,unit:Quantity['unit']):MetricValue{try{return metric(fn(),unit);}catch(e){return error(e instanceof FormulaError?e.code:'invalid_cost',e instanceof Error?e.message:'成本计算失败');}}
-  function sum(values:MetricValue[],unit:Quantity['unit'],field?:'compute_seconds'):MetricValue {
+  function attempt<U extends Quantity['unit']>(fn:()=>number,unit:U):MetricForUnit<U>{try{return metric(fn(),unit);}catch(e){return error(e instanceof FormulaError?e.code:'invalid_cost',e instanceof Error?e.message:'成本计算失败');}}
+  function sum<U extends Quantity['unit']>(values:MetricValue[],unit:U,field?:'compute_seconds'):MetricForUnit<U> {
     const missing=values.filter(v=>v.status==='unavailable');
     if(missing.length)return {status:'unavailable',diagnosticIds:[...new Set(missing.flatMap(v=>v.diagnosticIds))]};
     const value=values.reduce((n,v,index)=>{const operand=v.status==='available'?v.quantity.value:0,next=n+operand;if(field)emit?.({kind:'sum_step',field,index,left:n,right:operand,value:next});return next;},0);if(field)emit?.({kind:'sum_complete',field,value,count:values.length});return metric(value,unit);
   }
-  function duration(work:number,peak:number,efficiency:number,origin?:CostDurationOrigin):MetricValue{
+  function duration(work:number,peak:number,efficiency:number,origin?:CostDurationOrigin):MetricForUnit<'second'>{
     if(work===0){emit?.({kind:'duration',origin,work,peak,efficiency,method:'zero',seconds:0});return metric(0,'second');}
     const denominator=peak*efficiency;let seconds=work/denominator;const direct=seconds;
     if(seconds===0||!Number.isFinite(seconds)){const logWork=Math.log(work),logPeak=Math.log(peak),logEfficiency=Math.log(efficiency),firstDifference=logWork-logPeak,logSeconds=firstDifference-logEfficiency;seconds=Math.exp(logSeconds);emit?.({kind:'log_fallback',origin,logWork,logPeak,logEfficiency,firstDifference,logSeconds,seconds});}
@@ -50,7 +57,7 @@ export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:Evalu
   });
   const accesses=cost.memoryAccess.map((a,index)=>{
     const logical=attempt(()=>memoryAccessBytes(a,context),'byte');
-    let hbm:MetricValue;const estimate=a.hbmEstimate;
+    let hbm:MetricForUnit<'byte'>;const estimate=a.hbmEstimate;
     if(!estimate)hbm=error('missing_hbm_estimate',`访问 ${a.accessId} 未声明 HBM 估计`);
     else if(estimate.kind==='bytes')hbm=attempt(()=>numericValue(estimate.value,'byte',context),'byte');
     else if(logical.status==='unavailable')hbm=logical;
@@ -59,7 +66,7 @@ export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:Evalu
     return {mode:a.mode,logical,hbm};
   });
   const logicalReadBytes=sum(accesses.filter(a=>a.mode==='read').map(a=>a.logical),'byte'),logicalWriteBytes=sum(accesses.filter(a=>a.mode==='write').map(a=>a.logical),'byte'),hbmBytes=sum(accesses.map(a=>a.hbm),'byte');
-  let seconds:MetricValue;
+  let seconds:MetricForUnit<'second'>;
   const timing=cost.timing;
   if(timing.kind==='fixed')seconds=metric(timing.seconds,'second');
   else if(timing.kind==='custom_formula')seconds=attempt(()=>numericValue(timing.seconds,'second',context),'second');
@@ -73,7 +80,7 @@ export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:Evalu
       return duration(c.executedOperations.quantity.value,capability.operationsPerSecond,capability.kind==='peak'?timing.computeEfficiency:1,observe?{kind:'compute',evaluationIndex:index,segmentId:cost.compute[index]?.segmentId,computeClass:c.computeClass,capabilityIndex:hardware?.computeCapabilities.indexOf(capability),capabilityKind:capability.kind}:undefined);
     });
     const computeSeconds=sum(computeTimes,'second','compute_seconds'),memory=hardware?.memoryCapabilities.filter(m=>m.key==='hbm')??[];
-    emit?.({kind:'memory_capability',key:'hbm',matchingCount:memory.length,matches:memory.slice(0,2),declaredEfficiency:timing.memoryEfficiency});let memorySeconds:MetricValue;
+    emit?.({kind:'memory_capability',key:'hbm',matchingCount:memory.length,matches:memory.slice(0,2),declaredEfficiency:timing.memoryEfficiency});let memorySeconds:MetricForUnit<'second'>;
     if(hbmBytes.status==='unavailable')memorySeconds=hbmBytes;
     else if(memory.length!==1||!memory[0])memorySeconds=error('missing_memory_capability','需要唯一匹配的 hbm 带宽能力');
     else if(memory[0].kind==='effective'&&timing.memoryEfficiency!==1)memorySeconds=error('invalid_efficiency','有效带宽不能再次乘效率');
@@ -81,5 +88,5 @@ export function evaluateCost(cost:CostDefinition,scope:MetricScope,context:Evalu
     if(computeSeconds.status==='available'&&memorySeconds.status==='available'){const combined=timing.computeMemoryOverlap==='ideal'?Math.max(computeSeconds.quantity.value,memorySeconds.quantity.value):computeSeconds.quantity.value+memorySeconds.quantity.value,finalSeconds=combined+timing.launchSeconds;emit?.({kind:'overlap',operation:timing.computeMemoryOverlap==='ideal'?'max':'sum',computeSeconds:computeSeconds.quantity.value,memorySeconds:memorySeconds.quantity.value,value:combined});emit?.({kind:'launch',operation:'add',combined,launchSeconds:timing.launchSeconds,seconds:finalSeconds});seconds=metric(finalSeconds,'second');}
     else seconds=sum([computeSeconds,memorySeconds],'second');
   }
-  return {cost:CostResult.parse({scope,compute,logicalReadBytes,logicalWriteBytes,hbmBytes,communications:[],seconds}),diagnostics};
+  return {cost:{scope,compute,logicalReadBytes,logicalWriteBytes,hbmBytes,communications:[],seconds},diagnostics};
 }

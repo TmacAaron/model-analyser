@@ -1,7 +1,7 @@
 export * from './formula.js';
 export * from './evaluation-scope.js';
 export * from './storage.js';
-export * from './cost.js';
+export { evaluateAggregateTiming, evaluateCost, memoryAccessBytes } from './cost.js';
 export * from './parameters.js';
 export * from './parallel-preset.js';
 export * from './instantiate.js';

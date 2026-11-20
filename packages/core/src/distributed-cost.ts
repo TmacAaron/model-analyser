@@ -2,8 +2,8 @@ import { modelAssumptions } from './model-context.js';
 import {observeCostTiming} from './timing-observer.js';
 import {communicationSymbols} from './communication-observation.js';
 import type {LocalAccessTerm,LocalCostOverride,LocalPlanObserver} from './local-cost-observation.js';
-import { DistributedCosts,CostDefinition,type ResolvedGraph,type Scenario,type AssetDocument,type ParallelResolution,type Diagnostic,type LocalDeviceCost,type LocalNodeEvaluation,type LocalCostRule,type Quantity,type MetricValue,type CostResult } from '@model-analyser/contracts';
-import { evaluateCost,memoryAccessBytes } from './cost.js';
+import { CostDefinition,type DistributedCosts,type ResolvedGraph,type Scenario,type AssetDocument,type ParallelResolution,type Diagnostic,type LocalDeviceCost,type LocalNodeEvaluation,type LocalCostRule,type Quantity,type MetricValue,type CostResult } from '@model-analyser/contracts';
+import { evaluateDeclaredCost,memoryAccessBytes } from './cost.js';
 import { numericValue } from './storage.js';
 import { FormulaError } from './formula.js';
 import { MetricFactory,aggregateCosts } from './metrics.js';
@@ -28,6 +28,12 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
   const canonicalStorage=(id:string):string=>{const seen=new Set<string>();while(true){const s=graphStorages.get(id);if(!s)throw new FormulaError('missing_reference','局部成本缺少存储 '+id);if(s.allocation.kind!=='alias')return id;if(seen.has(id))throw new FormulaError('dependency_cycle','局部成本 alias 环');seen.add(id);id=s.allocation.targetStorageId;}};
   const tensorLayout=(nodeId:string,id:string)=>tensorLayouts.get(JSON.stringify([nodeId,id]));
   const storageLayout=(id:string)=>storageAllocations.get(canonicalStorage(id));
+  const deviceBytes=new Map(scenario.deviceTopology.devices.map(device=>[
+    device.deviceId,new Map<ResolvedGraph['graph']['storages'][number]['storageId'],MetricValue>(),
+  ]));
+  for(const storage of graphStorages.values())for(const placement of storageLayout(storage.storageId)?.allocation.perDevice??[]){
+    deviceBytes.get(placement.deviceId)?.set(storage.storageId,placement.totalBytes);
+  }
   function failure(error:unknown){return metrics.unavailable(error instanceof FormulaError?error.code:'invalid_local_cost',error instanceof Error?error.message:'局部成本不可用');}
   const logicalClasses=new Map<string,{computeClass:CostResult['compute'][number]['computeClass'];useful:MetricValue[];executed:MetricValue[]}>();
   for(const node of resolved.graph.nodes){
@@ -48,6 +54,8 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
       if(!devices.length||new Set(devices).size!==devices.length)throw new FormulaError('invalid_scope','局部成本参与设备为空或重复');
       const overrides=scenario.numericOverrides.filter(o=>o.target.kind==='node'&&o.target.nodeId===node.nodeId&&o.field!=='parameter'),fields=new Set<string>();
       for(const o of overrides){if(fields.has(o.field))throw new FormulaError('invalid_override','同一局部成本字段存在重复覆盖');fields.add(o.field);}if(fields.has('fixed_seconds')&&(fields.has('compute_efficiency')||fields.has('memory_efficiency')))throw new FormulaError('invalid_override','局部固定耗时与效率覆盖不能同时应用');
+      const relevantParameters=resolved.parameters.filter(p=>p.nodeId==='$model'||p.nodeId===node.nodeId||node.nodeId.startsWith(p.nodeId+'/')||node.nodeId.startsWith(p.nodeId+'['))
+        .map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind}));
       const perDevice:LocalDeviceCost[]=devices.map(deviceId=>{
         try{
           const observe=observer?.nodeId===node.nodeId&&observer.deviceId===deviceId?observer:undefined;
@@ -64,8 +72,10 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
             if(Object.hasOwn(symbols,binding.symbol))throw new FormulaError('duplicate_id','局部成本绑定符号重复');symbols[binding.symbol]=quantity;bindings.push({symbol:binding.symbol,source,quantity});
           }
           const cost=CostDefinition.parse(singleDeviceBaseline?body.cost:rule?.cost);
-          const storageBytes=new Map([...graphStorages.values()].flatMap(s=>{const local=storageLayout(s.storageId)?.allocation.perDevice.find(d=>d.deviceId===deviceId);return local?[[s.storageId,local.totalBytes] as const]:[];})),accessContext={symbols,assets,storageBytes};
-          for(const id of [...cost.memoryAccess.map(a=>a.storageId),...cost.temporaryStorageIds])if(!storageLayout(id)?.allocation.perDevice.some(d=>d.deviceId===deviceId))throw new FormulaError('unplaced_storage_access',`节点 ${node.nodeId} 在 ${deviceId} 的访问/临时存储 ${id} 尚未配置分配`);
+          const storageBytes=deviceBytes.get(deviceId);
+          if(!storageBytes)throw new FormulaError('missing_reference','局部成本设备硬件缺失');
+          const accessContext={symbols,assets,storageBytes};
+          for(const id of [...cost.memoryAccess.map(a=>a.storageId),...cost.temporaryStorageIds])if(!storageBytes.has(id))throw new FormulaError('unplaced_storage_access',`节点 ${node.nodeId} 在 ${deviceId} 的访问/临时存储 ${id} 尚未配置分配`);
           for(const o of overrides){
             const before=observe?{...cost.timing}:undefined;
             if(o.field==='fixed_seconds')cost.timing={kind:'fixed',seconds:o.value.value,description:o.description??'Explicit per-local-node time override'};
@@ -86,13 +96,12 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
             if(before)recordedOverrides.push({index:scenario.numericOverrides.indexOf(o),override:o,change:{kind:'timing',before,after:{...cost.timing}}});
           }
           const device=scenario.deviceTopology.devices.find(d=>d.deviceId===deviceId),hardware=device?assets.find(a=>a.assetId===device.hardware.assetId&&a.revision===device.hardware.revision):undefined;if(!device||hardware?.definition.kind!=='hardware')throw new FormulaError('missing_reference','局部成本设备硬件缺失');
-          const relevantParameters=resolved.parameters.filter(p=>p.nodeId==='$model'||p.nodeId===node.nodeId||node.nodeId.startsWith(p.nodeId+'/')||node.nodeId.startsWith(p.nodeId+'['));
-          const localProvenance={...provenance,parameterSources:[...relevantParameters.map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),...bindings.map(b=>({parameterKey:node.nodeId+':'+b.symbol,source:'local_'+b.source.kind}))],assumptions:[...assumptions,singleDeviceBaseline?'One physical device with complete replicated objects; use the declared global leaf equation exactly once.':rule?.description??'Missing local rule',...overrides.map(o=>`Explicit local override ${o.field}=${o.value.value} ${o.value.unit}`)]};
+          const localProvenance={...provenance,parameterSources:[...relevantParameters,...bindings.map(b=>({parameterKey:node.nodeId+':'+b.symbol,source:'local_'+b.source.kind}))],assumptions:[...assumptions,singleDeviceBaseline?'One physical device with complete replicated objects; use the declared global leaf equation exactly once.':rule?.description??'Missing local rule',...overrides.map(o=>`Explicit local override ${o.field}=${o.value.value} ${o.value.unit}`)]};
           const scope={phase:resolved.phase,target:{kind:'node' as const,nodeId:node.nodeId},deviceIds:[deviceId],aggregation:'per_device' as const};
           const context={...accessContext,provenance:localProvenance};
           const terms=observe?{access:(index:number,logical:MetricValue,hbm:MetricValue)=>{accesses[index]={logical,hbm};}}:undefined;
           const timed=observe?.timing&&cost.timing.kind==='roofline_bound'?observeCostTiming(cost,scope,context,hardware.definition.hardware,256,terms):undefined;
-          const evaluated=timed?.evaluation??evaluateCost(cost,scope,context,hardware.definition.hardware,undefined,terms);
+          const evaluated=timed?.evaluation??evaluateDeclaredCost(cost,scope,context,hardware.definition.hardware,undefined,terms);
           diagnostics.push(...evaluated.diagnostics);
           if(evaluated.cost.hbmBytes.status==='available')evaluated.cost.hbmBytes.basis='estimated';
           const outcome={status:'available' as const,bindings,cost:evaluated.cost};
@@ -108,5 +117,5 @@ export function evaluateDistributedCosts(resolved:ResolvedGraph,scenario:Scenari
     if(known.length)deviceSubtotals.push({deviceId:device.deviceId,knownNodeIds:known.map(n=>n.nodeId),missingNodeIds:missing,knownLeafCost:aggregateCosts(known.map(n=>n.cost),{phase:resolved.phase,target:{kind:'model'},deviceIds:[device.deviceId],aggregation:'per_device'},metrics)});
   }
   const logicalModelCompute=[...logicalClasses.values()].map(c=>({computeClass:c.computeClass,usefulOperations:metrics.sum(c.useful,'operation'),executedOperations:metrics.sum(c.executed,'operation')}));
-  return DistributedCosts.parse({version:LOCAL_COST_VERSION,nodes,logicalModelCompute,deviceSubtotals});
+  return {version:LOCAL_COST_VERSION,nodes,logicalModelCompute,deviceSubtotals};
 }

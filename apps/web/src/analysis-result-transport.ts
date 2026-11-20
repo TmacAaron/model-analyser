@@ -12,22 +12,24 @@ export function encodeAnalysisCompletion(attempt:AnalysisAttempt,taskId:number):
   const identity={kind:'analyzed' as const,taskId};
   if(attempt.status==='available'){
     try{
-      const pooled=!!attempt.result.decode;
-      const refs=new Map<string,number>(),evidence:Provenance[]=[];
+      const pooled=!!(attempt.result.decode||attempt.result.distributed);
+      const refs=new Map<string,number>(),seen=new WeakMap<object,number>(),evidence:Provenance[]=[];
       const json=JSON.stringify(attempt,function(this:unknown,key,value:unknown){
         if(value===undefined||typeof value==='number'&&(!Number.isFinite(value)||Object.is(value,-0)))throw Error('The result requires structured cloning');
         if(pooled&&key==='provenance'&&hasMetricProvenance(this)){
           if(!record(value))throw Error('Invalid analysis evidence');
+          const byIdentity=seen.get(value);
+          if(byIdentity!==undefined)return byIdentity;
           const signature=JSON.stringify(value);
           const existing=refs.get(signature);
-          if(existing!==undefined)return existing;
-          const index=evidence.length;
-          refs.set(signature,index);evidence.push(value as Provenance);
+          const index=existing??evidence.length;
+          if(existing===undefined){refs.set(signature,index);evidence.push(value as Provenance);}
+          seen.set(value,index);
           return index;
         }
         return value;
       });
-      // Large sequences repeat per-leaf source lists across metrics and steps.
+      // Large reports repeat source lists across metrics, devices and steps.
       // The wire format shares those lists and restores the unchanged public result.
       if(pooled){
         const packet='{"provenance":'+JSON.stringify(evidence)+',"attempt":'+json+'}';

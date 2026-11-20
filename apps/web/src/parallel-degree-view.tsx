@@ -41,6 +41,10 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const moduleReductions = match?.preset.moduleRules?.reduce((count, rule) => count + rule.reductions.length, 0) ?? 0;
   const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' ||
     match.slots > 1 && (match.preset.reductions.length > 0 || moduleReductions > 0));
+  const linkFields = <div className="parallel-degree-link">
+    <label>通信带宽 (B/s)<input type="number" min={0} step="any" value={linkBandwidth} onChange={event => setBandwidth(event.target.value)}/></label>
+    <label>单轮延迟 (s)<input type="number" min={0} step="any" value={linkLatency} onChange={event => setLatency(event.target.value)}/></label>
+  </div>;
   const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', linkBandwidth, linkLatency]);
   const active = useRef<{ worker: Worker | null } | null>(null);
   const currentKey = useRef(fingerprint);
@@ -132,10 +136,8 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">
-        {needsNetwork && <div className="parallel-degree-link">
-          <label>通信带宽 (B/s)<input type="number" min={0} step="any" value={linkBandwidth} onChange={event => setBandwidth(event.target.value)}/></label>
-          <label>单轮延迟 (s)<input type="number" min={0} step="any" value={linkLatency} onChange={event => setLatency(event.target.value)}/></label>
-        </div>}
+        {needsNetwork && (match.preset.sharedPoolDegrees && match.preset.networkDefaults ?
+          <details><summary>通信参数{savedTiming||bandwidth!==undefined||latency!==undefined?'':' · 参考值'}</summary>{linkFields}</details> : linkFields)}
         <button type="button" onClick={() => void preview()} disabled={outcome?.status === 'running'}>校验布局</button>
         {outcome?.status === 'running' && <button type="button" onClick={() => {
           active.current?.worker?.terminate();

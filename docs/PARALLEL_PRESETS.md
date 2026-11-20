@@ -43,6 +43,16 @@ TP degree=1 不生成归约。多卡归约使用 BF16 完整输出 `2*B*Q*H` byt
 
 归约原位更新输出、无额外通信 scratch 是本参考的明确假设。通信本地 HBM、归约算术和转换没有建模，完整 HBM 汇总保留 unavailable；不能用网络时间下界声称已得到真实 kernel 时间。
 
+## DeepSeek-V3 与 DeepSeek-R1 全模型
+
+模型修订 r2 支持请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。并行入口中的 `Attention TP=8`、`MoE EP=8` 使用同一个 8 卡设备池。设备型号在「设备」选择。已有 r1 工作区可以升级后应用布局。
+
+Attention TP 沿查询头切分 Q 上投影、吸收后的 K／V 上投影权重、注意力分数和输出投影。每卡保留完整的 MLA 潜向量和位置键。输出投影后的 BF16 隐藏向量在加入注意力残差前执行 AllReduce。61 层共插入 61 次归约。
+
+MoE EP 保留完整路由、分组 TopK、归一化权重和共享专家。按 `expert_id mod EP` 交错分配专家，再按拥有设备排列权重轴；每个原始路由组的专家分布到不同设备。各卡从复制的 token 和路由记录打包自己拥有的专家输入、ID 和权重。负载模型按每 token 选中位置均分，各卡完成本地专家后，在合并共享专家之前执行 AllReduce。58 个 MoE 层共插入 58 次归约。EP 的分析预算适用于选中专家数和专家总数均可整除的配置。实际路由倾斜、互连拓扑与内核开销需要各自的测量或配置。 [DeepSeek 官方推理参考](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
+
+同池 TP8 ＋ EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
+
 ## 独立 GQA 模型
 
 这是一个完整的**合成 attention/residual 子图**，包括 Q/K/V 投影、cache append、QK、softmax 代理、AV、输出投影和 residual 九个节点。它不包含 norm、RoPE、MLP、embedding 或 logits head，不称为完整生产语言模型。矩阵/存储为 BF16；softmax 使用 FP32 scratch，向量工作为显式代理。cache append 只写当前 BF16 token tile，已有缓存仍被 attention 读取。

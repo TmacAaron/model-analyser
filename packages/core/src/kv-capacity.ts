@@ -25,6 +25,7 @@ export type KvCapacityReport={
   decodeStep?:number|undefined;
   currentKvBytes?:number|undefined;
   averageBytesPerToken?:number|undefined;
+  replicatedBytesPerToken?:number;
   fixedSlotsPerRequest?:number;
   rowProfile?:{groupSizes:number[];fixedWindows:number[];includesIndexer:boolean};
   devices:DeviceRow[];
@@ -172,7 +173,7 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     });
     const batchTokens=(fixedSlots??reference??0)*batchSize;
     const averageBytesPerToken=currentKvBytes!==undefined&&matchesBatch&&Number.isSafeInteger(batchTokens)&&batchTokens>0?currentKvBytes/batchTokens:undefined;
-    let budget:Budget,rowProfile:KvCapacityReport['rowProfile'];
+    let budget:Budget,rowProfile:KvCapacityReport['rowProfile'],replicatedBytesPerToken:number|undefined;
     try{
       if(!states.length)throw Error('此模型在当前阶段没有声明 KV 或 MLA latent 缓存。');
       const rules=new Map<StorageId,SlotRows|undefined>();
@@ -202,6 +203,12 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
         return {...device,currentKvBytes:device.kvBytes,nonKvBytes:device.nonKvBytes};
       });
       const layout=frame.distributed?.layout,allocations=new Map(layout?.storageAllocations.map(record=>[record.storageId,record.allocation.distribution]));
+      if(layout&&devices.length>1&&averageBytesPerToken!==undefined&&specs.every(spec=>{
+        const allocation=allocations.get(spec.storageId);
+        return allocation?.kind==='replicated'&&active.deviceTopology.groups.find(group=>group.groupId===allocation.groupId)?.members.length===devices.length;
+      })&&rows[0]?.kvBytes!==undefined&&rows.every(row=>row.kvBytes===rows[0]?.kvBytes)){
+        replicatedBytesPerToken=rows[0].kvBytes/batchTokens;
+      }
       const profile:SlotStorage[]=specs.map(spec=>{
         const allocation=spec.allocation;
         if(allocation.kind!=='tensor')throw Error('缓存使用固定或自定义字节公式，缺少可伸缩张量分配。');
@@ -220,7 +227,7 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     }
     return {status:'available',report:{inputHash:result.inputHash,scenarioId:result.scenarioId,phase:result.phase,batchSize,
       stateCount:states.length,storageCount:ids.size,referenceTokensPerRequest:reference,decodeStep:step?.index,
-      currentKvBytes,averageBytesPerToken,devices:rows,budget,
+      currentKvBytes,averageBytesPerToken,devices:rows,budget,...(replicatedBytesPerToken!==undefined?{replicatedBytesPerToken}:{}),
       ...(budget.status==='fixed'&&fixedSlots!==undefined?{fixedSlotsPerRequest:fixedSlots}:{}),...(rowProfile?{rowProfile}:{})}};
   }catch(error){
     return {status:'unavailable',message:error instanceof Error?error.message:'无法计算当前配置的 KV 容量。'};

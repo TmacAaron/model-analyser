@@ -32,8 +32,12 @@ export function nativeBindingIssues(b:Bindings,topology:Scenario['deviceTopology
 export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   const r=p.declaredPlan,errors:string[]=[],unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)errors.push(label+' 重复');};
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
+  if(p.sharedPoolDegrees){
+    if(p.strategy!=='tensor_sharded'||!(p.tensorShards.length||p.moduleRules?.length))errors.push('同池并行度需要轴分片预设和显式张量规则');
+    unique(p.sharedPoolDegrees,'同池并行度');
+  }
   if(p.moduleRules){
-    if(p.strategy!=='tensor_sharded')errors.push('模块分片规则仅适用于 TP 预设');
+    if(p.strategy!=='tensor_sharded')errors.push('模块分片规则仅适用于轴分片预设');
     unique(p.moduleRules.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块分片规则');
     for(const rule of p.moduleRules){
       if(rule.module.kind!=='module')errors.push('模块分片规则必须引用固定模块修订');
