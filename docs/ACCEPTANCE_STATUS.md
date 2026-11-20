@@ -1,5 +1,9 @@
 # 阶段退出条件复核
 
+提交 `d36b5ea` 的干净快照在 Windows 上通过完整 `npm run acceptance:storage-sources`。61 步全部退出成功，覆盖 45 组运行基线、903 项单元与契约测试、16 项 HTTP 测试、276 项 Chrome 回归、生产构建及全部参考复算。快照运行前无 `data/` 和本机参考缓存，固定模型、原始 ROCm CSV 及 Context／Pipeline 原文按原始字节核对。
+
+随后提交 `3f21989` 增加[画布内 Roofline 配置对比](SCENARIO_COMPARISON.md#roofline-对比)。最终生产构建及 Roofline／配置对比共 8 项专项 Chrome 测试通过，覆盖实际 Decode 步骤、设备范围对齐、原始指标来源及 JSON 导出。完整 61 步记录对应前一提交。其余原 PRD 要求按[剩余项](REMAINING_PRD.md)核对。
+
 检查点72范围核验见[结果](../_local/history/checkpoint72-result.json)：819单元、16HTTP、10项画布Chrome及最新构建两项数据流／五项来源Chrome通过，旧14份来源报告重放且16文件SHA保持。新增量化观察器是来源采集基础，尚无完整最终分配／HBM报告和UI；未重跑完整组合门禁，F10、主线程成本及原935项最终证据继续未签收，整体目标active。
 
 检查点71已修复[参数绑定来源](PARAMETER_BINDING_SOURCES.md)的特殊名称快照：按实际声明且已绑定的数值键保存来源，不依赖对象自身键枚举来推定参数。`__proto__`、constructor、toString、父域绑定与实际存储公式均通过；普通绑定器、数值算法、共享HTTP契约及引擎.20未改，schema2协议保持。808单元／93文件、16相关Chrome、构建／类型／架构、八份参数及六份耗时参考通过，16份既有固定文件SHA全部保持。842当前来源无漂移，原980段保持；只读工作区修订7，未恢复旧内容。70完整60步属于修复前源码，本次未重跑完整组合，不把旧门禁冒称当前完整门禁。量化等其他来源链、主线程成本与原935项最终证据仍待完成，整个目标active。
