@@ -6,7 +6,7 @@
 
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
-DeepSeek-V3／R1 r2 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。当前模型以均衡专家路由估算，其他混合并行组合需要各自的局部布局和通信定义。
+DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。其他混合并行组合需要各自的局部布局和通信定义。
 
 Qwen3.5-397B-A17B 和 Qwen3.8-27B r2 提供[全模型 Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen35-与-qwen38-混合注意力全模型)，按配对的头分片 GQA 缓存和 DeltaNet 固定状态。397B 进一步支持 MoE TP 和 r3 MoE EP，可独立分摊专家权重或与相同度数的 Attention TP 共用卡池。EP 下的逐卡路由按均衡估算，总专家分片时保留每 token 的全局 TopK。跨池和上下文并行仍需对应规则。
 

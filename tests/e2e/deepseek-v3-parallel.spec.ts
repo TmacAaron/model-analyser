@@ -8,6 +8,8 @@ test('eight shared cards run the real DeepSeek V3 configuration from the canvas'
   await page.getByRole('button', { name: '设备', exact: true }).click();
   await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');
   await expect(page.locator('.device-settings')).toContainText('178.8139 GiB');
+  await expect(page.getByLabel('设备型号', { exact: true })).toHaveValue('builtin:hardware:amd-mi300x-192gb@1');
+  await expect(page.locator('.studio-save')).toContainText('已保存');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await page.getByLabel('Attention TP', { exact: true }).fill('8');
   await page.getByLabel('MoE EP', { exact: true }).fill('8');

@@ -54,11 +54,11 @@ TP degree=1 不生成归约。多卡归约使用 BF16 完整输出 `2*B*Q*H` byt
 
 ## DeepSeek-V3 与 DeepSeek-R1 全模型
 
-模型修订 r2 支持请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。并行入口中的 `Attention TP=8`、`MoE EP=8` 使用同一个 8 卡设备池。设备型号在「设备」选择。已有 r1 工作区可以升级后应用布局。
+模型修订 r3 支持请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。并行入口中的 `Attention TP=8`、`MoE EP=8` 使用同一个 8 卡设备池。设备型号在「设备」选择。已有工作区可升级到 r3 后重新应用布局。
 
 Attention TP 沿查询头切分 Q 上投影、吸收后的 K／V 上投影权重、注意力分数和输出投影。每卡保留完整的 MLA 潜向量和位置键。输出投影后的 BF16 隐藏向量在加入注意力残差前执行 AllReduce。61 层共插入 61 次归约。
 
-MoE EP 保留完整路由、分组 TopK、归一化权重和共享专家。按 `expert_id mod EP` 交错分配专家，再按拥有设备排列权重轴；每个原始路由组的专家分布到不同设备。各卡从复制的 token 和路由记录打包自己拥有的专家输入、ID 和权重。负载模型按每 token 选中位置均分，各卡完成本地专家后，在合并共享专家之前执行 AllReduce。58 个 MoE 层共插入 58 次归约。EP 的分析预算适用于选中专家数和专家总数均可整除的配置。实际路由倾斜、互连拓扑与内核开销需要各自的测量或配置。 [DeepSeek 官方推理参考](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
+MoE EP 将 256 个路由专家的权重按 `expert_id mod EP` 分给各卡，并要求专家总数能整除 EP。每个 token 在全局仍选择 8 个专家，并保留分组 TopK、归一化权重和共享专家。理论负载按商和余数分配，EP16 时 8 张卡各处理 1 个有效槽位，另外 8 张卡处理 0 个。每卡按 `ceil(TopK / EP)` 预留槽位，理论执行计算包括填充，有效计算与路由专家权重读取按实际有效槽位计入。各卡完成本地专家后，在合并共享专家之前执行 AllReduce。58 个 MoE 层共插入 58 次归约。真实路由偏斜、互连拓扑与内核开销由实际执行决定。 [DeepSeek 官方推理参考](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
 
 同池 TP8 ＋ EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
 

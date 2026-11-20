@@ -30,6 +30,12 @@ const axes: Record<string, AxisBinding[]> = {
   combine: [['K', 'expert-output', 'selected']],
 };
 const placementNote = 'The BF16 local equations use allocated request, head and owner slot extents. Comparisons use FP32 vector proxies. With P expert ranks, logical expert e belongs to e mod P; the owner-expert storage axis orders the weights by rank, then by floor(e/P). That placement stripes every router group across the ranks. The estimate assumes K/P selected slots per owner per token. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts.';
+const balancedPlacementNote = 'Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts.';
+const activeRouteReads = {
+  dispatch: ['read-post-norm'],
+  'expert-gate-up': ['read-expert-gate-weight', 'read-expert-up-weight'],
+  'expert-down': ['read-expert-down-weight'],
+};
 const layoutSource = 'https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py';
 
 function withVectorRouting(graph: GraphTemplate): GraphTemplate {
@@ -45,17 +51,18 @@ function reduction(tensorId: string, producer: string, consumer: string, payload
     payloadBytes: payload, payloadDtype: bf16 };
 }
 
-export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release) {
+export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 = 3) {
   const profile = loadDeepSeekV3Profile(release);
-  const [root, dense, moe, ...formulas] = makeDeepSeekAssets('absorbed', profile, true);
+  const [root, dense, moe, ...formulas] = makeDeepSeekAssets('absorbed', profile, true, revision === 3);
   if (root?.definition.kind !== 'model' || dense?.definition.kind !== 'module' || moe?.definition.kind !== 'module') throw Error('Missing V3 decoder assets');
   const sources: AssetDocument['sources'] = [...profile.sources.map(source => source.kind === 'note' ?
     { ...source, text: source.text.replace(', kernel fusion and distributed layout', ' and kernel fusion') } : source),
-  { kind: 'url', url: layoutSource, checkedOn: '2026-11-21' }, { kind: 'note', text: placementNote }];
+  { kind: 'url', url: layoutSource, checkedOn: '2026-11-21' }, { kind: 'note', text: revision === 3 ? balancedPlacementNote : placementNote }];
+  const localNote = revision === 3 ? balancedPlacementNote : placementNote;
   const publishModule = (asset: AssetDocument) => {
     if (asset.definition.kind !== 'module') throw Error('Expected a decoder module');
-    return AssetDocument.parse({ ...asset, sources, definition: { ...asset.definition,
-      graph: withLocalCost(withVectorRouting(asset.definition.graph), axes, placementNote) } });
+    return AssetDocument.parse({ ...asset, revision, sources, definition: { ...asset.definition,
+      graph: withLocalCost(withVectorRouting(asset.definition.graph), axes, localNote, revision === 3 ? activeRouteReads : undefined) } });
   };
   const denseModule = publishModule(dense), moeModule = publishModule(moe);
   const embedding = root.definition.graph.nodes.find(node => node.nodeId === 'embedding');
@@ -63,7 +70,8 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release) {
   if (!payload || payload.kind === 'storage_allocation') throw Error('Missing BF16 hidden output tile equation');
   const headReduce = reduction('attention-output', 'o-proj', 'attention-residual', payload);
   const expertReduce = reduction('routed-output', 'combine', 'shared-add', payload);
-  const sharding = (rows: string[][]) => rows.map(([tensorId, axisId]) => ({ tensorId: TensorId.parse(tensorId), axisId }));
+  const sharding = (rows: string[][]) => rows.map(([tensorId, axisId]) => ({ tensorId: TensorId.parse(tensorId), axisId,
+    ...(revision === 3 && axisId === 'selected' ? { policy: 'balanced' as const } : {}) }));
   const common = { phases: ['prefill', 'decode'], tensorShards: [], reductions: [],
     assumptions: ['Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format.'] };
   const networkDefaults = { scope: 'intra_group', bytesPerSecond: 100_000_000_000, latencySeconds: 0.000003,
@@ -75,15 +83,23 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release) {
     { ...common, presetId: 'dp-batch', name: '请求 DP', description: '按请求均分 batch，每卡持有完整模型。', strategy: 'batch_sharded' },
     { ...common, presetId: 'tp-mla', name: 'Attention TP', description: '分片 MLA 查询头，复制潜向量 KV，归约注意力输出。', strategy: 'tensor_sharded',
       sharedPoolDegrees: ['attentionTp'], networkDefaults, moduleRules: [tp, { ...tp, module: ref(moeModule) }] },
-    { ...common, presetId: 'ep-routed', name: 'MoE EP', description: '均分路由专家与每 token 的已选位置，归约路由输出。', strategy: 'tensor_sharded',
-      sharedPoolDegrees: ['moeEp'], networkDefaults, moduleRules: [ep], assumptions: [...common.assumptions, placementNote] },
+    { ...common, presetId: 'ep-routed', name: 'MoE EP', description: revision === 3 ? '均分专家权重，按均衡路由估算负载，归约路由输出。' : '均分路由专家与每 token 的已选位置，归约路由输出。', strategy: 'tensor_sharded',
+      sharedPoolDegrees: ['moeEp'], networkDefaults, moduleRules: [ep], assumptions: [...common.assumptions, localNote] },
     { ...common, presetId: 'tp-mla-ep-routed', name: 'Attention TP ＋ MoE EP',
       description: '同一批卡分片 MLA 查询头和路由专家，复制潜向量 KV 与共享专家。路由负载按均衡分布估算。', strategy: 'tensor_sharded',
       sharedPoolDegrees: ['attentionTp', 'moeEp'], networkDefaults, moduleRules: [tp, { ...ep, tensorShards: [...tp.tensorShards, ...ep.tensorShards],
-        reductions: [headReduce, expertReduce] }], assumptions: [...common.assumptions, placementNote] },
+        reductions: [headReduce, expertReduce] }], assumptions: [...common.assumptions, localNote] },
   ].map(preset => ParallelPresetTemplate.parse(preset));
-  const model = AssetDocument.parse({ ...root, sources, parallelPresets: presets, definition: { ...root.definition,
-    graph: withLocalCost(root.definition.graph, {}, placementNote),
+  const graph = withLocalCost(root.definition.graph, {}, localNote);
+  const modules = new Map([denseModule, moeModule].map(module => [module.assetId, module]));
+  graph.nodes = graph.nodes.map(node => {
+    if (node.body.kind !== 'module') return node;
+    const module = modules.get(node.body.asset.assetId);
+    if (!module) throw Error('Missing DeepSeek module ' + node.body.asset.assetId);
+    return { ...node, body: { ...node.body, asset: ref(module) } };
+  });
+  const model = AssetDocument.parse({ ...root, revision, sources, parallelPresets: presets, definition: { ...root.definition,
+    graph,
     assumptions: sources.flatMap(source => source.kind === 'note' ? [source.text] : []),
   } });
   return [model, denseModule, moeModule, ...formulas];

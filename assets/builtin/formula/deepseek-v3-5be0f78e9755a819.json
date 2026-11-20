@@ -1,0 +1,75 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v3:5be0f78e9755a819",
+  "revision": 1,
+  "name": "6 * B * Q * RouteSlots * J [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/resolve/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://arxiv.org/html/2412.19437#S2.SS1",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "note",
+      "text": "Main decoder only, with absorbed MLA and explicit rectangular attention temporaries. BF16 analytical weight residency except the FP32 routing correction; published checkpoint FP8 storage, MTP, speculative decoding, YaRN table creation, kernel fusion and distributed layout are outside this definition."
+    },
+    {
+      "kind": "note",
+      "text": "Routed experts use sigmoid affinities. Group and expert selection use corrected scores; weights come from the original affinities, normalized over selected experts and scaled by 2.5. Comparison counts are analytical proxies. Routed weight traffic uses an upper bound on distinct experts touched per call."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "J": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "RouteSlots": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "6 * B * Q * RouteSlots * J",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}
