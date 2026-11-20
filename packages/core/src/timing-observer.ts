@@ -1,11 +1,10 @@
 import type {CostDefinition,HardwareDefinition,MetricScope} from '@model-analyser/contracts';
 import type {EvaluationContext} from './storage.js';
 import {evaluateCost} from './cost.js';
-import type {CostObservation,CostObserver} from './cost-observation.js';
+import type {CostObservation,CostObserver,CostTermObserver} from './cost-observation.js';
 import {timingDag} from './timing-dag.js';
-import type {LocalCostTerms} from './local-cost-observation.js';
 /** Observation budgets affect evidence only; the evaluator always finishes. */
-export function observeCostTiming(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware:HardwareDefinition,maxNodes=256,terms?:LocalCostTerms){
+export function observeCostTiming(cost:CostDefinition,scope:MetricScope,context:EvaluationContext,hardware:HardwareDefinition,maxNodes=256,terms?:CostTermObserver){
  return observeTiming(emit=>evaluateCost(cost,scope,context,hardware,emit,terms),maxNodes);
 }
 

@@ -7,11 +7,13 @@ export function comparisonRows(report:ScenarioComparisonResult):ComparisonRow[]{
   const results=report.entries.map(e=>e.analysis.status==='available'?e.analysis.result:undefined),out:ComparisonRow[]=[];
   const add=(key:string,label:string,unit:string,get:(r:AnalysisResult)=>number|undefined)=>out.push({key,label,unit,values:results.map(r=>r?get(r):undefined)});
   add('seconds','端到端理论跨度','second',r=>value(r.total.seconds));add('hbm','模型 HBM 流量（缺项不补零）','byte',r=>value(r.total.hbmBytes));
-  const classes=new Map(results.flatMap(r=>r?.total.compute.map(c=>[stableStringify(c.computeClass),c.computeClass] as const)??[]));
+  const physicalClasses=new Map(results.flatMap(r=>r?.total.compute.map(c=>[stableStringify(c.computeClass),c.computeClass] as const)??[]));
+  const logicalClasses=new Map(results.flatMap(r=>r?modelComputeFrame(r).compute.map(c=>[stableStringify(c.computeClass),c.computeClass] as const):[]));
+  const classes=new Map([...physicalClasses,...logicalClasses]);
   for(const [key,cls] of classes){
     const label=computeClassLabel(cls);
-    add('useful:'+key,'模型有效 '+label,'operation',r=>value(modelComputeFrame(r).compute.find(c=>stableStringify(c.computeClass)===key)?.usefulOperations));
-    add('executed:'+key,'物理执行 '+label,'operation',r=>value(r.total.compute.find(c=>stableStringify(c.computeClass)===key)?.executedOperations));
+    if(logicalClasses.has(key))add('useful:'+key,'模型有效 '+label,'operation',r=>value(modelComputeFrame(r).compute.find(c=>stableStringify(c.computeClass)===key)?.usefulOperations));
+    if(physicalClasses.has(key))add('executed:'+key,'物理执行 '+label,'operation',r=>value(r.total.compute.find(c=>stableStringify(c.computeClass)===key)?.executedOperations));
   }
   const deviceIds=[...new Set(report.entries.flatMap(e=>e.scenario.deviceTopology.devices.map(d=>d.deviceId)))];
   for(const id of deviceIds){const memory=(r:AnalysisResult)=>r.memory.find(m=>m.deviceScope.kind==='per_device'?m.deviceScope.deviceId===id:m.deviceScope.deviceIds.includes(id));add('peak:'+id,id+' 生命周期峰值','byte',r=>value(memory(r)?.peakBytes));add('capacity:'+id,id+' 硬件容量','byte',r=>memory(r)?.capacityBytes);}

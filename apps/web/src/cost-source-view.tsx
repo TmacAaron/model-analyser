@@ -2,17 +2,19 @@ import { useDisplayUnits } from './display-units.js';
 import { useEffect,useRef,useState } from 'react';
 import type { AnalysisResult,AssetDocument,MetricValue,Scenario } from '@model-analyser/contracts';
 
-import type { AggregateCostSelector,CommunicationCostSelector,FusionCostSelector,FusionSourceOperand,LeafCostSelector,LocalCostSelector } from '@model-analyser/core';
+import {logicalFusionExtraRows,logicalWorkRows,type AggregateCostSelector,type CommunicationCostSelector,type FusionCostSelector,type FusionSourceOperand,type LeafCostSelector,type LocalCostSelector,type LogicalWorkSelector,type LogicalWorkSourceMember} from '@model-analyser/core';
 import { LeafCostSourceView } from './leaf-cost-source-view.js';
 import {AggregateCostSourceView,type AggregateSourceMember} from './aggregate-cost-source-view.js';
 import {CommunicationCostSourceView} from './communication-cost-source-view.js';
 import {LocalCostSourceView} from './local-cost-source-view.js';
 import {FusionCostSourceView} from './fusion-cost-source-view.js';
+import {LogicalWorkSourceView} from './logical-work-source-view.js';
+import {logicalTargetId} from './compute-source.js';
 import {canonical} from '../../../packages/contracts/src/validation.js';
 import { ParameterValues } from './resolved-inspector-view.js';
 export type SourceSelection={targetId:string;metricId:string;step?:number;nonce:number};
 type Report=Pick<AnalysisResult,'total'|'nodes'|'modules'|'memory'|'fusions'|'distributed'|'diagnostics'|'parameterTrace'|'decode'>;
-type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector;localSelector?:LocalCostSelector;fusionSelector?:FusionCostSelector};
+type Metric={id:string;label:string;value:MetricValue;selector?:LeafCostSelector;aggregateSelector?:AggregateCostSelector;communicationSelector?:CommunicationCostSelector;localSelector?:LocalCostSelector;fusionSelector?:FusionCostSelector;logicalSelector?:LogicalWorkSelector};
 type Target={id:string;label:string;metrics:Metric[];local?:Pick<LocalCostSelector,'nodeId'|'deviceId'>};
 function metricIdentity(scope:AggregateCostSelector['scope']|undefined,field:AggregateCostSelector['field'],computeClass?:AggregateCostSelector['computeClass']){
  if(!scope)return {};
@@ -34,7 +36,15 @@ function localTarget(cost:Report['total'],nodeId:LocalCostSelector['nodeId'],dev
  return {id:localId(nodeId,deviceId),label:(fusionNodeId?'融合附加 ':'局部 ')+nodeId+' / '+deviceId,metrics,local};
 }
 const fusionMetrics=(cost:Report['total'])=>costMetrics(cost).map(metric=>metric.aggregateSelector?{...metric,fusionSelector:metric.aggregateSelector}:metric);
-export function sourceTargets(report:Report):Target[]{
+function logicalMetrics(row:ReturnType<typeof logicalWorkRows>[number],fusionNodeId?:LogicalWorkSelector['fusionNodeId']):Metric[]{
+ return computeMetrics(row).map(metric=>{
+  const selector=metric.aggregateSelector;
+  if(!selector?.computeClass||(selector.field!=='usefulOperations'&&selector.field!=='executedOperations'))return metric;
+  return {...metric,label:selector.field==='executedOperations'?metric.label.replace('执行工作','声明执行工作'):metric.label,
+   logicalSelector:{scope:row.scope,field:selector.field,computeClass:selector.computeClass,...(fusionNodeId?{fusionNodeId}:{})}};
+ });
+}
+export function sourceTargets(report:Report,actualDecodeStep=false):Target[]{
   const result:Target[]=[{id:'model',label:report.distributed?'模型物理汇总':'模型汇总',metrics:costMetrics(report.total)},...report.modules.map(n=>({id:'module:'+n.nodeId,label:'模块 '+n.nodeId,metrics:costMetrics(n.cost)})),...report.nodes.map(n=>({id:'node:'+n.nodeId,label:'节点 '+n.nodeId,metrics:costMetrics(n.cost)}))];
   for(const f of report.fusions??[]){
     const {nodeId,extraNodeId}=f.evaluation.application;
@@ -43,7 +53,9 @@ export function sourceTargets(report:Report):Target[]{
     for(const d of f.evaluation.extraPerDevice)if(d.outcome.status==='available')result.push(localTarget(d.outcome.cost,extraNodeId,d.deviceId,nodeId));
   }
   report.memory.forEach((m,i)=>result.push({id:'memory:'+i,label:'生命周期显存 '+(m.deviceScope.kind==='per_device'?m.deviceScope.deviceId:m.deviceScope.deviceIds.join(', ')),metrics:[{id:'peak',label:'峰值（含显式覆盖）',value:m.peakBytes},...m.categoryBreakdown.map(c=>({id:c.category,label:c.category+' 峰值分解',value:c.bytes}))]}));
-  (report.decode?.logicalCompute??report.distributed?.logicalCompute??[]).forEach((c,i)=>result.push({id:'logical:'+i,label:'逻辑有效汇总 '+(c.scope.target.kind==='model'?'模型':c.scope.target.nodeId),metrics:computeMetrics(c)}));
+  const logical=report.decode?.logicalCompute??(report.distributed||actualDecodeStep?logicalWorkRows(report):[]);
+  for(const row of logical)if(row.compute.length)result.push({id:logicalTargetId(row.scope.target),label:'逻辑工作 '+(row.scope.target.kind==='model'?'模型':row.scope.target.nodeId),metrics:logicalMetrics(row)});
+  for(const {row,fusionNodeId} of logicalFusionExtraRows(report))result.push({id:'logical-extra:'+fusionNodeId,label:'逻辑融合附加项 '+fusionNodeId,metrics:logicalMetrics(row,fusionNodeId)});
   const layout=report.distributed?.layout;
   if(layout){
     for(const n of layout.localCosts.nodes)if(n.placement.kind==='placed')for(const d of n.placement.perDevice)if(d.outcome.status==='available')result.push(localTarget(d.outcome.cost,n.nodeId,d.deviceId));
@@ -62,7 +74,7 @@ export function sourceTargets(report:Report):Target[]{
 export function resolveSourceSelection(result:AnalysisResult,step:string,targetId:string,metricId:string){
   const frame=step==='aggregate'?undefined:result.decode?.steps.find(s=>String(s.index)===step);
   const report:Report|undefined=step==='aggregate'?result:frame?.result;
-  const all=report?sourceTargets(report):[],target=all.find(t=>t.id===targetId),metric=target?.metrics.find(m=>m.id===metricId);
+  const all=report?sourceTargets(report,!!frame):[],target=all.find(t=>t.id===targetId),metric=target?.metrics.find(m=>m.id===metricId);
   return {report,scenario:frame?.scenario,all,target,metric,problem:!report?'请求的来源步骤不存在；不会改成序列汇总。':!target?'请求的成本来源范围不存在；不会改成其他范围。':!metric?'请求的来源指标不存在；不会改成其他指标。':undefined};
 }
 function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scenario:Scenario;assets:AssetDocument[];selection?:SourceSelection|undefined}){
@@ -85,6 +97,29 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
    if(matching)return ()=>{setTarget(id);setMetric(matching.id);setQuery('');};
   }
   const fusion=value&&metric?.fusionSelector?<FusionCostSourceView metric={value} selector={metric.fusionSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} goTo={goToFusionTerm}/>:undefined;
+  function navigateLogical(member:LogicalWorkSourceMember){
+   const actual=member.step?result.decode?.steps.find(item=>item.index===member.step?.index):undefined;
+   const available=member.step?(actual?sourceTargets(actual.result,true):[]):all;
+   const selected=metric?.logicalSelector;
+   if(!selected)return;
+   const identity={scope:member.scope,field:selected.field,computeClass:selected.computeClass,...(member.fusionNodeId?{fusionNodeId:member.fusionNodeId}:{})};
+   for(const next of available){
+    const matching=next.metrics.find(item=>canonical(item.logicalSelector)===canonical(identity));
+    if(matching){setStep(actual?String(actual.index):step);setTarget(next.id);setMetric(matching.id);setQuery('');return;}
+   }
+   setStep(member.step?String(member.step.index):step);setTarget('logical:missing');setMetric(metricId);setQuery('');
+  }
+  const logical=value&&metric?.logicalSelector?<LogicalWorkSourceView metric={value} selector={metric.logicalSelector} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigateLogical}/>:undefined;
+  function selectStep(next:string){
+   const selected=metric?.logicalSelector;
+   const frame=next==='aggregate'?result:result.decode?.steps.find(item=>String(item.index)===next)?.result;
+   if(selected&&frame){
+    const destination=sourceTargets(frame,next!=='aggregate').find(item=>item.id===targetId);
+    const matching=destination?.metrics.find(item=>item.logicalSelector?.field===selected.field&&canonical(item.logicalSelector.computeClass)===canonical(selected.computeClass));
+    setMetric(matching?.id??'missing:'+selected.field);
+   }
+   setStep(next);
+  }
   const devices=targetId.startsWith('node:')&&metric?.aggregateSelector?all.flatMap(item=>{
    if(item.local?.nodeId!==targetId.slice(5))return [];
    const matching=item.metrics.find(candidate=>candidate.localSelector?.field===metric.aggregateSelector?.field&&canonical(candidate.localSelector?.computeClass)===canonical(metric.aggregateSelector?.computeClass));
@@ -104,10 +139,10 @@ function Sources({result,scenario,assets,selection}:{result:AnalysisResult;scena
    setStep(nextStep);setTarget(nextTarget);setMetric(matching?.id??`missing:${aggregate?.field}`);setQuery('');
   }
   return <div className="cost-source-content"><p className="scope-note">按当前结果查看实际值、精度、固定公式与求值假设。引用沿用引擎记录，可能包含所属范围共用依赖，不表示每个公式都单独贡献于此指标。下方覆盖声明表是输入来源清单；生效/优先级以所选指标与结构参数来源为准，不把声明表再次计入成本。</p>
-    {result.decode&&<label>来源步骤<select aria-label="来源步骤" value={step} onChange={e=>setStep(e.target.value)}><option value="aggregate">完整序列汇总</option>{step!=='aggregate'&&!result.decode.steps.some(s=>String(s.index)===step)&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤 {s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}
+    {result.decode&&<label>来源步骤<select aria-label="来源步骤" value={step} onChange={e=>selectStep(e.target.value)}><option value="aggregate">完整序列汇总</option>{step!=='aggregate'&&!result.decode.steps.some(s=>String(s.index)===step)&&<option value={step} disabled>缺失步骤 · {step}</option>}{result.decode.steps.map(s=><option key={s.index} value={s.index}>步骤 {s.index+1} · context {s.evaluatedContext}</option>)}</select></label>}
     <div className="preset-fields"><label>查找范围<input aria-label="查找成本来源范围" value={query} onChange={e=>setQuery(e.target.value)}/></label><label>结果范围<select aria-label="成本来源范围" value={targetId} onChange={e=>{setTarget(e.target.value);const next=all.find(t=>t.id===e.target.value);setMetric(next?.metrics.find(m=>m.id===metricId)?.id??next?.metrics[0]?.id??'seconds');}}>{!target&&<option value={targetId} disabled>缺失范围 · {targetId}</option>}{options.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label><label>指标<select aria-label="成本来源指标" value={metricId} onChange={e=>setMetric(e.target.value)}>{!metric&&<option value={metricId} disabled>缺失指标 · {metricId}</option>}{target?.metrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label></div>
     {filtered.length>100&&<p>显示匹配的前 100/{filtered.length} 个范围；输入节点、存储或设备 ID 查看其余范围。</p>}
-    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{fusion??local??communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:devices.length?deviceChoices:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{fusion??local??communication??deviceChoices}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
+    {resolved.problem&&<p role="status">{resolved.problem}</p>}{value&&<section className="metric-source-proof"><h4>{target?.label} · {metric?.label}</h4>{value.status==='available'?<><p className="source-value">{display.metric(value)} · {value.basis}<small>原始 {value.quantity.value} {value.quantity.unit}</small></p>{logical??fusion??local??communication??(aggregate?<AggregateCostSourceView metric={value} selector={aggregate} result={result} scenario={scenario} assets={assets} step={step==='aggregate'?undefined:Number(step)} onNavigate={navigate}/>:devices.length?deviceChoices:<LeafCostSourceView metric={value} selector={metric?.selector} result={result} scenario={scenario} assets={assets} frame={step==='aggregate'?(result.decode?undefined:0):Number(step)}/>)}<h4>范围共用公式记录（非精确贡献）</h4>{provenance?.formulaRefs.length?provenance.formulaRefs.map(ref=>{const a=assets.find(a=>a.assetId===ref.assetId&&a.revision===ref.revision);return <p key={ref.assetId+'@'+ref.revision}><code>{ref.assetId}@r{ref.revision}</code><small>{a?.definition.kind==='formula'?a.definition.formula.expression:'当前快照未含此公式；保留固定引用'}</small></p>;}):<p>此指标没有独立公式引用；查看固定值与假设。</p>}<details><summary>固定资产依赖 · {provenance?.assetRefs.length??0}</summary>{provenance?.assetRefs.map(a=><p key={a.assetId+'@'+a.revision}><code>{a.assetId}@r{a.revision}</code> · {a.kind}</p>)}</details><details className="evaluated-parameters"><summary>参数值与来源 · {provenance?.parameterSources.length??0}</summary>{report?.parameterTrace?<ParameterValues key={step+':'+target?.id} parameters={report.parameterTrace.filter(p=>provenance?.parameterSources.some(source=>source.parameterKey===p.nodeId+':'+p.parameterKey))}/>:<p>{result.decode&&step==='aggregate'?'序列各步参数可能不同，请选择来源步骤查看该步实际求值。':'此旧结果没有记录参数值，请重新计算；不会用当前默认值补填。'}</p>}</details><details className="source-assumptions"><summary>求值假设与覆盖记录 · {provenance?.assumptions.length??0}</summary>{provenance?.assumptions.map((p,i)=><p key={i}>{p}</p>)}</details></>:<><p>不可用；缺项未补零。</p>{fusion??local??communication??deviceChoices}</>}{diagnostics.length>0&&<div className="source-diagnostics">{diagnostics.map((d,i)=><p key={i}>{d}</p>)}</div>}</section>}
     <h4>当前方案数值覆盖声明 · {sourceScenario.numericOverrides.length}</h4>{sourceScenario.numericOverrides.length?<div className="analysis-table source-overrides"><table><thead><tr><th>来源 / 目标</th><th>字段 / 值</th><th>作者说明</th></tr></thead><tbody>{sourceScenario.numericOverrides.map((o,i)=><tr key={i}><td>numericOverrides #{i+1}<small>{JSON.stringify(o.target)}</small></td><td>{o.field}{o.parameterKey?' · '+o.parameterKey:''}<small>{o.value.value} {o.value.unit}</small></td><td>{o.description||'未附说明'}</td></tr>)}</tbody></table></div>:<p>当前方案没有数值覆盖。</p>}
     <details><summary>固定硬件规格与作者来源</summary>{sourceScenario.deviceTopology.devices.map(d=>{const a=assets.find(a=>a.assetId===d.hardware.assetId&&a.revision===d.hardware.revision);return <div key={d.deviceId}><h4>{d.deviceId} · {d.hardware.assetId}@r{d.hardware.revision}</h4><pre>{JSON.stringify(a?.definition,null,2)}</pre><pre>{JSON.stringify(a?.sources??[],null,2)}</pre></div>;})}</details>
   </div>;

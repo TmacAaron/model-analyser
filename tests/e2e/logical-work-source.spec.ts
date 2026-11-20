@@ -1,0 +1,62 @@
+import {expect,test} from '@playwright/test';
+import {randomUUID} from 'node:crypto';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {Scenario} from '@model-analyser/contracts';
+import {makeDecodeProject} from '../../scripts/decode-project.js';
+import {c01Project} from '../model-fixtures.js';
+
+test('drills from sequence logical work to the third actual call and exports the primitive formula',async({page})=>{
+ const project=makeDecodeProject(c01Project());
+ project.projectId=randomUUID();
+ await page.goto('/');
+ await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'logical-work-source.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+ await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+ await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ await page.getByRole('button',{name:'分析此配置 ↗',exact:true}).click();
+ await page.getByRole('button',{name:'查看整个序列有效工作量来源',exact:true}).click();
+ const inspector=page.locator('.cost-source-inspector');
+ const logical=inspector.getByRole('region',{name:'逻辑工作来源'});
+ const start=logical.getByRole('button',{name:'复核此逻辑工作量',exact:true});
+ await start.click();
+ await expect(logical).toContainText('已复核逻辑指标 12 operation');
+ await logical.locator('article').filter({hasText:'模型 · 步骤 3'}).getByRole('button',{name:'查看此项逻辑来源',exact:true}).click();
+ await expect(inspector.getByLabel('来源步骤',{exact:true})).toHaveValue('2');
+ await start.click();
+ await expect(logical).toContainText('已复核逻辑指标 5 operation');
+ await logical.locator('article').filter({hasText:'update'}).getByRole('button',{name:'查看此项逻辑来源',exact:true}).click();
+ await start.click();
+ await expect(logical).toContainText('计算段 work');
+ await expect(logical).toContainText('B * (C + Q)');
+ const wait=page.waitForEvent('download');
+ await logical.getByRole('button',{name:'导出此页逻辑来源',exact:true}).click();
+ const file=await(await wait).path();
+ if(!file)throw Error('Missing exported logical work report');
+ const cli=await promisify(execFile)(process.execPath,['--import','tsx','scripts/verify-leaf-cost-source.ts',file]);
+ expect(JSON.parse(cli.stdout)).toMatchObject({kind:'logical_work_source',operation:'segment_sum',quantity:{value:5,unit:'operation'}});
+});
+
+test('compares growing and fixed-context work and opens each side with its own fixed inputs',async({page})=>{
+ const project=makeDecodeProject(c01Project()),scenario=project.scenarios[0]!;
+ if(scenario.workload.kind!=='decode')throw Error('Missing Decode fixture');
+ const approximation=Scenario.parse({...scenario,scenarioId:scenario.scenarioId+':approximation',name:'Fixed context fixture',workload:{...scenario.workload,approximation:'fixed_context'}});
+ project.scenarios.push(approximation);project.projectId=randomUUID();
+ await page.goto('/');
+ await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({name:'logical-delta.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});
+ await expect(page.locator('.model-studio')).toHaveAttribute('data-workspace-id',project.projectId);
+ await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+ await page.getByRole('button',{name:'配置对比',exact:true}).click();
+ const comparison=page.locator('.comparison-panel');
+ await comparison.getByRole('button',{name:'计算方案比较',exact:true}).click();
+ await expect(comparison.locator('.comparison-results')).toContainText('方案比较完成');
+ await comparison.getByRole('button',{name:/^查看差值来源 模型有效 .*approximation$/}).click();
+ const source=comparison.getByRole('region',{name:'比较指标来源'});
+ await expect(source.locator('.comparison-delta-proof')).toContainText('9 − 12 = -3 operation');
+ for(const [side,value] of [['基准',12],['当前',9]] as const){
+  const operand=source.getByRole('article',{name:side+'指标依据'});
+  await operand.getByRole('button',{name:'打开'+side+'逻辑工作来源',exact:true}).click();
+  const logical=operand.getByRole('region',{name:'逻辑工作来源'});
+  await logical.getByRole('button',{name:'复核此逻辑工作量',exact:true}).click();
+  await expect(logical).toContainText('已复核逻辑指标 '+value+' operation');
+ }
+});

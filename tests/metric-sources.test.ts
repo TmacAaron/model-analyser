@@ -18,6 +18,17 @@ function result(r:ScenarioComparisonResult,i=0):AnalysisResult{const a=r.entries
 function number(m:MetricValue){if(m.status!=='available')throw Error('Available metric required');return m.quantity.value;}
 function duplicate(p:ProjectDocument){const s=p.scenarios[0];if(!s)throw Error();p.scenarios.push(Scenario.parse({...s,scenarioId:s.scenarioId+':copy',name:'Independent copy'}));return p;}
 describe('exact comparison and model compute sources',()=>{
+  it('offers logical-only classes in the comparison even when no device equation reports that precision',async()=>{
+    const p=duplicate(makeLocalGemmProject(c01Project())),asset=p.assetSnapshots.find(a=>a.definition.kind==='operator');
+    if(asset?.definition.kind!=='operator')throw Error('Missing fixture operator');
+    const base=asset.definition.operator.cost.compute[0];if(!base)throw Error('Missing fixture compute');
+    const logicalClass={...base.computeClass,multiplyDtype:{category:'float' as const,bits:32,format:'fp32'}},work={kind:'literal' as const,quantity:{value:9,unit:'operation' as const}};
+    asset.definition.operator.cost.compute.push({segmentId:'logical-only',computeClass:logicalClass,usefulOperations:work,executedOperations:work});
+    const r=await comparison(p),key=stableStringify(logicalClass),rows=comparisonRows(r);
+    expect(rows.find(row=>row.key==='useful:'+key)?.values).toEqual([9,9]);
+    expect(rows.some(row=>row.key==='executed:'+key)).toBe(false);
+    expect(comparisonMetricEvidence(r,'useful:'+key,1)).toMatchObject({kind:'metric',parts:[{targetId:'logical:model',metric:{quantity:{value:9}}}]});
+  });
   it('keeps same-model2s→5s and64B→128B identities, both delta operands and immutable input hashes',async()=>{
     const p=makeMetricSourceProject(c01Project()),before=structuredClone(p),r=await comparison(p);
     expect(p.scenarios[0]?.model).toEqual(p.scenarios[1]?.model);

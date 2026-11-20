@@ -1,12 +1,13 @@
-import {replayAggregateCostSource,replayCommunicationCostSource,replayExactLeafSource,replayLocalCostSource,replayFusionCostSource} from '@model-analyser/core';
+import {replayAggregateCostSource,replayCommunicationCostSource,replayExactLeafSource,replayLocalCostSource,replayFusionCostSource,replayLogicalWorkSource} from '@model-analyser/core';
 import type {LeafSourceReply,LeafSourceTask} from './leaf-source-task.js';
 import {leafSourceProofVersion} from './leaf-source-task.js';
 import type {AggregateSourceReply,AggregateSourceTask} from './aggregate-source-task.js';
 import type {CommunicationSourceReply,CommunicationSourceTask} from './communication-source-task.js';
 import type {LocalSourceReply,LocalSourceTask} from './local-source-task.js';
 import type {FusionSourceReply,FusionSourceTask} from './fusion-source-task.js';
+import type {LogicalWorkSourceReply,LogicalWorkSourceTask} from './logical-work-source-task.js';
 
-self.onmessage=async(event:MessageEvent<LeafSourceTask|AggregateSourceTask|CommunicationSourceTask|LocalSourceTask|FusionSourceTask>)=>{
+self.onmessage=async(event:MessageEvent<LeafSourceTask|AggregateSourceTask|CommunicationSourceTask|LocalSourceTask|FusionSourceTask|LogicalWorkSourceTask>)=>{
  const task=event.data;
  try{
   if(typeof task.taskId!=='string'||!task.taskId)throw Error('无效的来源任务');
@@ -26,9 +27,13 @@ self.onmessage=async(event:MessageEvent<LeafSourceTask|AggregateSourceTask|Commu
    self.postMessage({taskId:task.taskId,phase:task.phase,status:'available',report:await replayFusionCostSource(task.request)} satisfies FusionSourceReply);
    return;
   }
+  if(task.phase==='logical_work_source'){
+   self.postMessage({taskId:task.taskId,phase:task.phase,status:'available',report:await replayLogicalWorkSource(task.request)} satisfies LogicalWorkSourceReply);
+   return;
+  }
   if(task.phase!=='exact_leaf_source')throw Error('无效的精确来源任务');
   self.postMessage({taskId:task.taskId,phase:task.phase,status:'available',report:await replayExactLeafSource({...task.request,proofVersion:leafSourceProofVersion(task.request)})} satisfies LeafSourceReply);
  }catch(error){
-  self.postMessage({taskId:task.taskId,phase:task.phase,status:'error',message:error instanceof Error?error.message:'来源复核失败'} satisfies LeafSourceReply|AggregateSourceReply|CommunicationSourceReply|LocalSourceReply|FusionSourceReply);
+  self.postMessage({taskId:task.taskId,phase:task.phase,status:'error',message:error instanceof Error?error.message:'来源复核失败'} satisfies LeafSourceReply|AggregateSourceReply|CommunicationSourceReply|LocalSourceReply|FusionSourceReply|LogicalWorkSourceReply);
  }
 };

@@ -3,12 +3,14 @@ import { Unit,type ScenarioComparisonResult } from '@model-analyser/contracts';
 import { AllocationMetricProof as MetricProof } from './memory-allocation-source.js';
 import { comparisonRows,comparisonMetricEvidence,comparisonDeltaEvidence,type ComparisonRow } from './comparison-metrics.js';
 import { useDisplayUnits } from './display-units.js';
+import {CostSourceInspector} from './cost-source-view.js';
 
 export type ComparisonSourceSelection={report:ScenarioComparisonResult;rowKey:string;entryIndex:number;delta:boolean};
 function OperandProof({report,rowKey,row,entryIndex,label,initialDetailsOpen}:{report:ScenarioComparisonResult;rowKey:string;row:ComparisonRow|undefined;entryIndex:number;label:string;initialDetailsOpen:boolean}){
   const display=useDisplayUnits(),evidence=useMemo(()=>comparisonMetricEvidence(report,rowKey,entryIndex),[report,rowKey,entryIndex]),entry=report.entries[entryIndex],n=row?.values[entryIndex];
-  const [partIndex,setPartIndex]=useState(0),[limit,setLimit]=useState(20),[expanded,setExpanded]=useState(initialDetailsOpen);
+  const [partIndex,setPartIndex]=useState(0),[limit,setLimit]=useState(20),[expanded,setExpanded]=useState(initialDetailsOpen),[logicalOpen,setLogicalOpen]=useState(false);
   const parts=evidence.kind==='metric'||evidence.kind==='sum'?evidence.parts:[],part=parts[partIndex];
+  const logicalSelection=useMemo(()=>part?.targetId.startsWith('logical:')?{targetId:part.targetId,metricId:part.metricId,nonce:0}:undefined,[part?.targetId,part?.metricId]);
   return <article className="comparison-source-operand" aria-label={label+'指标依据'}><h4>{label} · {entry?.scenario.name??'缺失配置'}</h4>
     {entry&&<p><code>{entry.scenario.scenarioId}</code></p>}
     <p className="comparison-source-value">{row&&n!==undefined?display.quantity(n,Unit.parse(row.unit)):'不可用'}{row&&n!==undefined&&<small>原始 {n} {row.unit}</small>}</p>
@@ -23,6 +25,10 @@ function OperandProof({report,rowKey,row,entryIndex,label,initialDetailsOpen}:{r
       {parts.length>limit&&<button onClick={()=>setLimit(n=>n+20)}>再显示 20 个通信事件</button>}
       <p>原始合计：{evidence.sum===undefined?'不可用':evidence.sum+' byte'}</p></>}
     {part&&entry?.analysis.status==='available'&&<><p>精确来源 <code>{part.targetId} / {part.metricId}</code></p><p className="scope-note">保留该指标实际记录的公式、参数、单位、假设与覆盖；共用依赖清单不代表每项独立贡献，不从当前默认值补填。</p><details className="comparison-metric-proof" open={expanded} onToggle={e=>setExpanded(e.currentTarget.open)}><summary>展开{label}公式、参数与假设</summary>{expanded&&<MetricProof key={part.targetId+':'+part.metricId} label={part.label} value={part.metric} context={{assets:report.assets,parameters:entry.analysis.result.parameterTrace,diagnostics:entry.analysis.result.diagnostics,missingParameterReason:entry.analysis.result.decode?'序列汇总涉及不同实际调用；此处未改选某一步。请在逐步分析查看该步记录的参数。':undefined}}/>}</details></>}
+    {logicalSelection&&entry?.analysis.status==='available'&&<div className="comparison-logical-source">
+      <button aria-expanded={logicalOpen} onClick={()=>setLogicalOpen(open=>!open)}>{logicalOpen?'收起':'打开'}{label}逻辑工作来源</button>
+      {logicalOpen&&<CostSourceInspector result={entry.analysis.result} scenario={entry.scenario} assets={report.assets} selection={logicalSelection}/>}
+    </div>}
   </article>;
 }
 export function ComparisonMetricSource({selection,onClose}:{selection:ComparisonSourceSelection;onClose:()=>void}){

@@ -58,7 +58,22 @@ export function evaluateFusions(resolved:ResolvedGraph,scenario:Scenario,assets:
       }
       return {deviceId,outcome:{status:'available',bindings:[],cost}};
     });
-    const classes=new Map<string,typeof application.extraCost.compute>();for(const c of application.extraCost.compute){const key=canonical(c.computeClass);classes.set(key,[...(classes.get(key)??[]),c]);}const logicalExtraCompute=[...classes.values()].map(cs=>{const c=cs[0];if(!c)throw Error('Empty fusion compute class');const value=(key:'usefulOperations'|'executedOperations')=>metrics.sum(cs.map(s=>{try{return metrics.available(numericValue(s[key],'operation',{symbols:{},assets}),'operation');}catch{return metrics.unavailable('invalid_fusion_cost','融合附加数学成本不可计算');}}),'operation');return ComputeCostResult.parse({computeClass:c.computeClass,usefulOperations:value('usefulOperations'),executedOperations:value('executedOperations')});});
+    const classes=new Map<string,typeof application.extraCost.compute>();
+    for(const c of application.extraCost.compute){const key=canonical(c.computeClass);classes.set(key,[...(classes.get(key)??[]),c]);}
+    const logicalExtraCompute=[...classes.values()].map(segments=>{
+      const first=segments[0];if(!first)throw Error('Empty fusion compute class');
+      function value(field:'usefulOperations'|'executedOperations'){
+        const operands=segments.map(segment=>{
+          let metric:MetricValue;
+          try{metric=metrics.available(numericValue(segment[field],'operation',{symbols:{},assets}),'operation');}
+          catch{metric=metrics.unavailable('invalid_fusion_cost','融合附加数学成本不可计算');}
+          capture?.logicalExtra?.(structuredClone({segmentId:segment.segmentId,computeClass:segment.computeClass,field,metric}));
+          return metric;
+        });
+        return metrics.sum(operands,'operation');
+      }
+      return ComputeCostResult.parse({computeClass:first.computeClass,usefulOperations:value('usefulOperations'),executedOperations:value('executedOperations')});
+    });
     return FusionEvaluation.parse({application,participation:unknown?'unknown':'known',perDevice,extraPerDevice,logicalExtraCompute});
   });
 }

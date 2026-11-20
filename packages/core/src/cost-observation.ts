@@ -1,4 +1,4 @@
-import type {CostDefinition,HardwareDefinition} from '@model-analyser/contracts';
+import type {CostDefinition,HardwareDefinition,MetricValue} from '@model-analyser/contracts';
 type ComputeClass=CostDefinition['compute'][number]['computeClass'];
 /** Internal evaluator observations carry semantic roles, never value-based joins. */
 export type CostDurationOrigin=
@@ -15,3 +15,7 @@ export type CostObservation=
  |{kind:'overlap';operation:'max'|'sum';computeSeconds:number;memorySeconds:number;value:number}
  |{kind:'launch';operation:'add';combined:number;launchSeconds:number;seconds:number};
 export type CostObserver=(event:CostObservation)=>void;
+export type CostTermObserver={
+ access?:(index:number,logical:MetricValue,hbm:MetricValue)=>void;
+ compute?:(index:number,useful:MetricValue,executed:MetricValue)=>void;
+};

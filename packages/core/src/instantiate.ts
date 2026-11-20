@@ -82,7 +82,13 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
       }}return expansion;
     }
     function observeDeclaration(path:string,owner:AssetDocument,definition:CostDefinition,symbols:Record<string,Quantity>,kind:'local'|'global'){
-      if(observer?.nodeId===path&&observer.declaration)observer.declaration(structuredClone({asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},cost:definition,symbols:communicationSymbols(symbols)}),kind);
+      if(observer?.nodeId!==path||!observer.declaration)return;
+      const frameId=parameterCapture?.frame(symbols);
+      observer.declaration(structuredClone({
+        asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},cost:definition,
+        symbols:parameterCapture?.symbolsSnapshot(symbols)??communicationSymbols(symbols),
+        ...(parameterCapture?{bindingContext:{...(frameId?{frameId}:{}),trace:parameterCapture.snapshot()}}:{}),
+      }),kind);
     }
     function localRule(rule:Parameters<typeof bindLocalCostRule>[0],symbols:Record<string,Quantity>,tensors:Parameters<typeof bindLocalCostRule>[2],tensorMap:Map<string,TensorId>,storageMap:Map<string,StorageId>,path:string,owner:AssetDocument){
       observeDeclaration(path,owner,rule.cost,symbols,'local');

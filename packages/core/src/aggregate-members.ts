@@ -8,9 +8,13 @@ export function modelCostInputs(nodes:NodeRow[],fusions:FusionRow[],absorbed:Rea
  return [...nodes.filter(node=>!absorbed.has(node.nodeId)).map(node=>node.cost),...fusions.map(fusion=>fusion.cost)];
 }
 
-export function moduleCostInputs(leafNodeIds:NodeId[],nodeById:ReadonlyMap<NodeId,NodeRow>,fusions:FusionRow[]){
+export function containedFusions(leafNodeIds:readonly NodeId[],fusions:readonly FusionRow[]){
  const leaves=new Set(leafNodeIds);
- const contained=fusions.filter(fusion=>fusion.evaluation.application.memberNodeIds.every(id=>leaves.has(id)));
+ return fusions.filter(fusion=>fusion.evaluation.application.memberNodeIds.every(id=>leaves.has(id)));
+}
+
+export function moduleCostInputs(leafNodeIds:NodeId[],nodeById:ReadonlyMap<NodeId,NodeRow>,fusions:FusionRow[]){
+ const contained=containedFusions(leafNodeIds,fusions);
  const absorbed=new Set(contained.flatMap(fusion=>fusion.evaluation.application.memberNodeIds));
  const leafCosts=leafNodeIds.filter(id=>!absorbed.has(id)).map(id=>{
   const leaf=nodeById.get(id);

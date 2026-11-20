@@ -18,18 +18,19 @@ import { analyzeDistributedScenario } from './distributed-analysis.js';
 import { ENGINE_VERSION } from './version.js';
 import { analyzeDecodeSequence } from './decode.js';
 import {moduleCostInputs} from './aggregate-members.js';
-import type {FusionPlanObserver} from './fusion-observation.js';
+import {logicalDeclarationObserver,type AnalysisObserver} from './logical-work-observation.js';
 
 export { ENGINE_VERSION } from './version.js';
-export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:FusionPlanObserver):Promise<AnalysisAttempt>{
+export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:AnalysisObserver):Promise<AnalysisAttempt>{
   const diagnostics:Diagnostic[]=[];
   try{
     const pack=calculationInput(input,library),scenario=pack.scenario,assets=pack.assets;
     const invalid=validateScenario(scenario,assets).filter(d=>d.severity==='error');if(invalid.length)return AnalysisAttempt.parse({status:'unavailable',diagnostics:invalid});
     if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1){if(stepContext)throw new FormulaError('invalid_decode_step','序列不能嵌套逐步上下文');return await analyzeDecodeSequence(scenario,assets,analyzeScenario);}
     if(scenario.modulePeakOverrides?.some(r=>r.phases.includes(scenario.workload.kind))||scenario.executionPlan.kind==='streams'||scenario.fusionGroups.length||scenario.deviceTopology.devices.length!==1||scenario.parallelPlan.assignments.length||scenario.parallelPlan.communications.length)return await analyzeDistributedScenario(scenario,assets,stepContext,observer);
-    const expanded=instantiateModel(scenario,assets,undefined,stepContext);if(expanded.status==='unavailable')return AnalysisAttempt.parse(expanded);
-    const resolved=expanded.resolved;if(resolved.graph.nodes.some(n=>n.body.kind==='collective'))return await analyzeDistributedScenario(scenario,assets,stepContext);diagnostics.push(...expanded.diagnostics);
+    const logical=observer&&'logicalLeaf'in observer?observer.logicalLeaf:undefined;
+    const expanded=instantiateModel(scenario,assets,undefined,stepContext,logicalDeclarationObserver(logical));if(expanded.status==='unavailable')return AnalysisAttempt.parse(expanded);
+    const resolved=expanded.resolved;if(resolved.graph.nodes.some(n=>n.body.kind==='collective'))return await analyzeDistributedScenario(scenario,assets,stepContext,observer);diagnostics.push(...expanded.diagnostics);
     const device=scenario.deviceTopology.devices[0];if(!device)throw new FormulaError('missing_reference','设备不存在');
     const hardwareAsset=assets.find(a=>a.assetId===device.hardware.assetId&&a.revision===device.hardware.revision);if(hardwareAsset?.definition.kind!=='hardware')throw new FormulaError('missing_reference','硬件快照不存在');
     const hardware=hardwareAsset.definition.hardware,assumptions=[
@@ -61,7 +62,13 @@ export async function analyzeScenario(input:Scenario,library:AssetDocument[],ste
     const metrics=new MetricFactory(diagnostics,provenance,scenario.scenarioId),order=topologicalOrder(resolved.graph),scope:MetricScope={phase:resolved.phase,target:{kind:'model'},deviceIds:[device.deviceId],aggregation:'per_device'};
     const nodes:AnalysisResult['nodes']=[],definitions=new Map<NodeId,CostDefinition>(),nodeMetrics=new Map<NodeId,MetricFactory>();
     for(const nodeId of order){const node=resolved.graph.nodes.find(n=>n.nodeId===nodeId);if(node?.body.kind!=='opaque')throw new FormulaError('unsupported_graph_node','分析输入不是已解析叶节点');
-      const localProvenance={...provenance,parameterSources:targetParameterSources(resolved,nodeId)},factory=new MetricFactory(diagnostics,localProvenance,scenario.scenarioId),nodeScope:MetricScope={...scope,target:{kind:'node',nodeId}},evaluated=evaluateCost(node.body.cost,nodeScope,{...accessContext,provenance:localProvenance},hardware);nodeMetrics.set(nodeId,factory);diagnostics.push(...evaluated.diagnostics);
+      const {cost:definition}=node.body,capture=logical?.nodeId===nodeId?logical:undefined;
+      const localProvenance={...provenance,parameterSources:targetParameterSources(resolved,nodeId)},factory=new MetricFactory(diagnostics,localProvenance,scenario.scenarioId),nodeScope:MetricScope={...scope,target:{kind:'node',nodeId}};
+      const evaluated=evaluateCost(definition,nodeScope,{...accessContext,provenance:localProvenance},hardware,undefined,capture?{compute:(index,usefulOperations,executedOperations)=>{
+        const segment=definition.compute[index];
+        if(segment)capture.term(structuredClone({index,segmentId:segment.segmentId,computeClass:segment.computeClass,usefulOperations,executedOperations}));
+      }}:undefined);
+      nodeMetrics.set(nodeId,factory);diagnostics.push(...evaluated.diagnostics);
       if(evaluated.cost.hbmBytes.status==='available')evaluated.cost.hbmBytes.basis='estimated';
       const cost=aggregateCosts([evaluated.cost],nodeScope,factory);nodes.push({nodeId,cost});definitions.set(nodeId,node.body.cost);
     }

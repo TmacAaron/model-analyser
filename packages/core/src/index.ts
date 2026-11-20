@@ -42,3 +42,5 @@ export * from './aggregate-cost-source.js';
 export * from './communication-cost-source.js';
 export * from './local-cost-source.js';
 export * from './fusion-cost-source.js';
+export * from './logical-work-source.js';
+export {logicalWorkRows,logicalFusionExtraRows} from './logical-work-members.js';
