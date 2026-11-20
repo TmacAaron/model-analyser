@@ -2,10 +2,10 @@ import { analyzeScenario } from '@model-analyser/core';
 import type { Scenario,AssetDocument,AnalysisResult } from '@model-analyser/contracts';
 import {selectExportContents,type AnalysisExportRequest,type AnalysisExportReply} from './analysis-export.js';
 import type {AnalysisSerializationReply} from './analysis-export-worker.js';
-import type {AnalysisCompletion} from './analysis-result-transport.js';
+import {encodeAnalysisCompletion,type AnalysisCompletion} from './analysis-result-transport.js';
 
 export type AnalysisWorkerRequest={kind:'analyze';taskId:number;scenario:Scenario;assets:AssetDocument[]}|AnalysisExportRequest|{kind:'cancel_export';taskId:number};
-const endpoint=globalThis as unknown as {onmessage:((event:MessageEvent<AnalysisWorkerRequest>)=>void)|null;postMessage:(reply:AnalysisCompletion|AnalysisExportReply)=>void};
+const endpoint=globalThis as unknown as {onmessage:((event:MessageEvent<AnalysisWorkerRequest>)=>void)|null;postMessage:(reply:AnalysisCompletion|AnalysisExportReply,transfer?:Transferable[])=>void};
 let result:AnalysisResult|undefined;
 let activeExport:{worker:Worker;taskId:number}|undefined;
 
@@ -39,7 +39,9 @@ endpoint.onmessage=({data:request})=>{
     case 'analyze':
       void analyzeScenario(request.scenario,request.assets).then(attempt=>{
         result=attempt.status==='available'?attempt.result:undefined;
-        endpoint.postMessage({kind:'analyzed',taskId:request.taskId,attempt});
+        const reply=encodeAnalysisCompletion(attempt,request.taskId);
+        if('payload'in reply)endpoint.postMessage(reply,[reply.payload]);
+        else endpoint.postMessage(reply);
       });
       break;
     case 'export':exportResult(request);break;

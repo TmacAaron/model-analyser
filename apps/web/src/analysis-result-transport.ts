@@ -1,10 +1,32 @@
 import {AnalysisAttempt,MetricScope,type AnalysisResult} from '@model-analyser/contracts';
 
-export type AnalysisCompletion={kind:'analyzed';taskId:number;attempt:AnalysisAttempt};
+export type AnalysisCompletion={kind:'analyzed';taskId:number}&({attempt:AnalysisAttempt}|{payload:ArrayBuffer});
 const record=(value:unknown):value is Record<string,unknown>=>typeof value==='object'&&value!==null&&!Array.isArray(value);
 const resultArrays=['nodes','modules','memory','schedule','roofline','diagnostics'] as const;
 const optionalResultArrays=['memoryEvidence','parameterTrace','quantizationApplications','fusions'] as const;
 const scalarTotals=['seconds','logicalReadBytes','logicalWriteBytes','hbmBytes'] as const;
+
+/** Transfer the bytes of a JSON result and retain exact non-JSON values via structured cloning. */
+export function encodeAnalysisCompletion(attempt:AnalysisAttempt,taskId:number):AnalysisCompletion{
+  const identity={kind:'analyzed' as const,taskId};
+  if(attempt.status==='available'){
+    try{
+      const json=JSON.stringify(attempt,(_key,value:unknown)=>{
+        if(value===undefined||typeof value==='number'&&(!Number.isFinite(value)||Object.is(value,-0)))throw Error('The result requires structured cloning');
+        return value;
+      });
+      return {...identity,payload:new TextEncoder().encode(json).buffer};
+    }catch{/* The original validated attempt is still available for structured cloning. */}
+  }
+  return {...identity,attempt};
+}
+
+function decodeAttempt(data:Record<string,unknown>):unknown{
+  if(!('payload'in data))return data.attempt;
+  if('attempt'in data||!(data.payload instanceof ArrayBuffer)||!data.payload.byteLength)throw Error('分析线程返回了无效结果');
+  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data.payload));}
+  catch{throw Error('分析线程返回了无法读取的结果');}
+}
 
 function isMetricEnvelope(value:unknown){
   return record(value)&&Array.isArray(value.diagnosticIds)&&(value.status==='unavailable'||value.status==='available'&&
@@ -27,7 +49,7 @@ function isResultEnvelope(value:unknown):value is AnalysisResult{
 export function readAnalysisCompletion(data:unknown,taskId:number):AnalysisAttempt{
   if(record(data)&&data.kind==='analyzed'){
     if(data.taskId!==taskId)throw Error('分析回复的任务身份与当前请求不同');
-    const attempt=data.attempt;
+    const attempt=decodeAttempt(data);
     if(record(attempt)&&attempt.status==='available'){
       if(!isResultEnvelope(attempt.result))throw Error('分析线程返回了无效结果');
       return {status:'available',result:attempt.result};

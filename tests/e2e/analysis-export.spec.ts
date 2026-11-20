@@ -31,16 +31,26 @@ test('exports the complete maximum-size model with its original input and numeri
         if(!String(url).includes('analysis-worker-'))return;
         this.addEventListener('message',event=>{
           const start=performance.now(),attempt=event.data?.attempt??event.data;
-          if(attempt?.status!=='available'||!Array.isArray(attempt.result?.nodes))return;
+          const transferredBytes=event.data?.payload instanceof ArrayBuffer?event.data.payload.byteLength:0;
+          if(!transferredBytes&&(attempt?.status!=='available'||!Array.isArray(attempt.result?.nodes)))return;
           requestAnimationFrame(()=>requestAnimationFrame(()=>{
-            document.documentElement.dataset.analysisResultTwoFrameMs=String(performance.now()-start);
+            const now=performance.now(),data=document.documentElement.dataset;
+            data.analysisResultTwoFrameMs=String(now-start);
+            data.analysisClickThroughResultMs=String(now-Number(data.analysisStart));
+            data.analysisTransferBytes=String(transferredBytes);
           }));
         });
       }
     };
   });
   const raw=await readFile('examples/runtime-baseline/synthetic-chain-9999.json','utf8');
-  await open(page,ProjectDocument.parse(JSON.parse(raw)));
+  await openWorkspace(page,ProjectDocument.parse(JSON.parse(raw)));
+  const analyze=page.getByRole('button',{name:'分析此配置 ↗',exact:true});
+  await analyze.evaluate(el=>el.addEventListener('click',()=>{
+    document.documentElement.dataset.analysisStart=String(performance.now());
+  },{once:true}));
+  await analyze.click();
+  await expect(page.locator('.analysis-cards')).toBeVisible({timeout:45000});
   const button=page.getByRole('button',{name:'导出结果 JSON',exact:true});
   await button.evaluate(el=>el.addEventListener('click',()=>{
     const start=performance.now();
@@ -60,9 +70,14 @@ test('exports the complete maximum-size model with its original input and numeri
   const afterTwoFrames=Number(await button.getAttribute('data-export-two-frame-ms'));
   expect(afterTwoFrames).toBeGreaterThan(0);
   const resultToTwoFrames=Number(await page.locator('html').getAttribute('data-analysis-result-two-frame-ms'));
+  const analyzeToTwoFrames=Number(await page.locator('html').getAttribute('data-analysis-click-through-result-ms'));
+  const transferredBytes=Number(await page.locator('html').getAttribute('data-analysis-transfer-bytes'));
+  expect(transferredBytes).toBeGreaterThan(0);
   expect(resultToTwoFrames).toBeGreaterThan(0);
+  expect(analyzeToTwoFrames).toBeGreaterThan(resultToTwoFrames);
   await writeFile('test-results/analysis-export-observation.json',JSON.stringify({chrome:browser.version(),bytes:bytes.length,
-    sha256:createHash('sha256').update(bytes).digest('hex'),resultToTwoAnimationFramesMilliseconds:resultToTwoFrames,clickToTwoAnimationFramesMilliseconds:afterTwoFrames},null,2));
+    sha256:createHash('sha256').update(bytes).digest('hex'),transferredBytes,analysisThroughResultTwoFramesMilliseconds:analyzeToTwoFrames,
+    resultToTwoAnimationFramesMilliseconds:resultToTwoFrames,clickToTwoAnimationFramesMilliseconds:afterTwoFrames},null,2));
 });
 
 test('cancel and configuration changes discard stale exports and retry reuses the current result',async({page})=>{
@@ -142,10 +157,13 @@ test('rejects a mismatched or malformed analysis completion and a late completio
         if(!String(url).includes('analysis-worker-'))return;
         this.addEventListener('message',event=>{
           const reply=event.data;
-          if(reply?.kind!=='analyzed'||reply.attempt?.status!=='available'||probe.mode==='normal')return;
+          if(reply?.kind!=='analyzed'||probe.mode==='normal'||!(reply.payload instanceof ArrayBuffer))return;
+          const attempt=JSON.parse(new TextDecoder().decode(reply.payload));
+          if(attempt?.status!=='available')return;
           event.stopImmediatePropagation();
-          const result={...reply.attempt.result,...(probe.mode==='malformed'?{nodes:null}:{inputHash:'0'.repeat(64)})};
-          const completion=new MessageEvent('message',{data:{...reply,attempt:{status:'available',result}}});
+          const result={...attempt.result,...(probe.mode==='malformed'?{nodes:null}:{inputHash:'0'.repeat(64)})};
+          const payload=new TextEncoder().encode(JSON.stringify({status:'available',result})).buffer;
+          const completion=new MessageEvent('message',{data:{kind:'analyzed',taskId:reply.taskId,payload}});
           const call=()=>this.onmessage?.call(this,completion);
           if(probe.mode==='hold')probe.held.push(call);
           else call();
