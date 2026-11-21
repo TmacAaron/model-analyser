@@ -51,5 +51,5 @@ export function loadDeepSeekV4() {
     !matches(ratios, config.compress_ratios) || !matches(ratios, reference.compress_ratios)) {
     throw Error('DeepSeek-V4 backbone no longer matches the authored schedule');
   }
-  return { dimensions, periods };
+  return { dimensions, periods, quantization: config.quantization_config, expertFormat: reference.expert_dtype };
 }

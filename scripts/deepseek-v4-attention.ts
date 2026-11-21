@@ -26,7 +26,7 @@ export function state(graph: GraphAuthor, id: string, kind: GraphTemplate['state
   });
 }
 
-function addCompressor(graph: GraphAuthor, prefix: 'main' | 'index', ratio: 4 | 128, width: 'D' | 'ID', reader: string) {
+function addCompressor(graph: GraphAuthor, prefix: 'main' | 'index', ratio: 4 | 128, width: 'D' | 'ID', reader: string, checkpointStorage: boolean) {
   const overlap = ratio === 4 ? 2 : 1;
   const doubled = overlap + ' * ' + width;
   const n = (suffix: string) => prefix + '-' + suffix;
@@ -36,10 +36,11 @@ function addCompressor(graph: GraphAuthor, prefix: 'main' | 'index', ratio: 4 | 
   for (const id of [value, score]) graph.tensor(id, ring, { dtype: fp32, category: 'state' });
   graph.tensor(valueNext, ring, { dtype: fp32, storageId: value });
   graph.tensor(scoreNext, ring, { dtype: fp32, storageId: score });
-  weight(graph, n('value-weight'), ['H', doubled], fp32);
-  weight(graph, n('score-weight'), ['H', doubled], fp32);
+  const checkpointDtype = checkpointStorage ? bf16 : fp32;
+  weight(graph, n('value-weight'), ['H', doubled], checkpointDtype);
+  weight(graph, n('score-weight'), ['H', doubled], checkpointDtype);
   weight(graph, n('position-weight'), [String(ratio), doubled], fp32);
-  weight(graph, n('norm-weight'), [width], fp32);
+  weight(graph, n('norm-weight'), [width], checkpointDtype);
   graph.tensor(n('values'), sequence(doubled), { dtype: fp32 });
   graph.tensor(n('scores'), sequence(doubled), { dtype: fp32 });
   graph.node(n('value-proj'), 'Compressor value projection', ['attn-input', n('value-weight')], [n('values')],
@@ -88,8 +89,8 @@ export function groupTotal(tokens: string, ratio: number, capped: boolean) {
   return '(' + uncapped + (capped ? ' + ((' + tokens + ') - ' + n + ') * IK' : '') + ')';
 }
 
-export function prepareV4Attention(graph: GraphAuthor, v41 = false) {
-  const qType = heads('N', 'D'), norm = v41 ? bf16 : fp32;
+export function prepareV4Attention(graph: GraphAuthor, v41 = false, checkpointStorage = false) {
+  const qType = heads('N', 'D'), norm = v41 || checkpointStorage ? bf16 : fp32;
   weight(graph, 'qa-weight', ['H', 'QR']); weight(graph, 'qb-weight', ['QR', 'N', 'D']);
   weight(graph, 'qr-norm-weight', ['QR'], norm);
   graph.tensor('qa', sequence('QR')); graph.tensor('qr', sequence('QR')); graph.tensor('q0', qType);
@@ -119,15 +120,15 @@ export function prepareV4Attention(graph: GraphAuthor, v41 = false) {
 
 }
 
-export function addV4Attention(graph: GraphAuthor, ratio: 0 | 4 | 128, parallel = false) {
-  prepareV4Attention(graph);
+export function addV4Attention(graph: GraphAuthor, ratio: 0 | 4 | 128, parallel = false, checkpointStorage = false) {
+  prepareV4Attention(graph, false, checkpointStorage);
   const rows = completed(length, ratio || 1);
   const groupSlots = ratio === 4 ? 'min(IK, ' + rows + ')' : ratio ? rows : '0';
   const groupPairs = ratio ? '(' + groupTotal(length, ratio, ratio === 4) + ' - ' + groupTotal('C', ratio, ratio === 4) + ')' : '0';
   const sparseInputs: string[] = [];
-  if (ratio) sparseInputs.push(addCompressor(graph, 'main', ratio, 'D', 'sparse-qk'));
+  if (ratio) sparseInputs.push(addCompressor(graph, 'main', ratio, 'D', 'sparse-qk', checkpointStorage));
   if (ratio === 4) {
-    const index = addCompressor(graph, 'index', ratio, 'ID', 'index-score');
+    const index = addCompressor(graph, 'index', ratio, 'ID', 'index-score', checkpointStorage);
     weight(graph, 'index-q-weight', ['QR', 'IH', 'ID']); weight(graph, 'index-head-weight', ['H', 'IH']);
     graph.tensor('index-q-raw', heads('IH', 'ID')); graph.tensor('index-q', heads('IH', 'ID'));
     graph.tensor('index-weights', sequence('IH'));

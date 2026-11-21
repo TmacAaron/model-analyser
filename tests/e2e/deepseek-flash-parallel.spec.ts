@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { makeDeepSeekFlashParallelAssets } from '../../scripts/deepseek-v4-parallel.js';
 import { makeModelProject } from '../../scripts/model-project.js';
 
-test('upgrades V4.1 and keeps Engram on the shared Attention TP8 and MoE EP4 × TP2 pool', async ({ page }) => {
+test('upgrades V4.1, keeps Engram sharded and enables the published FP4／FP8 weights', async ({ page }) => {
   test.setTimeout(420_000);
   const project = makeModelProject(makeDeepSeekFlashParallelAssets(true, 2),
     { kind: 'prefill', batchSize: 1, queryTokensPerRequest: 4, pastTokensPerRequest: 0 }, 'DeepSeek-V4.1-Flash r2 workspace');
@@ -15,9 +15,9 @@ test('upgrades V4.1 and keeps Engram on the shared Attention TP8 and MoE EP4 × 
   await expect(save).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '设备', exact: true }).click();
   const device = page.getByLabel('设备型号', { exact: true });
-  const mi300x = 'builtin:hardware:amd-mi300x-192gb@1';
-  await device.selectOption(mi300x);
-  await expect(device).toHaveValue(mi300x);
+  const h100 = 'builtin:hardware:nvidia-h100-sxm-80gb@2';
+  await device.selectOption(h100);
+  await expect(device).toHaveValue(h100);
   await expect(save).toContainText('已保存 · 修订 2');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await page.getByLabel('Attention TP', { exact: true }).fill('8');
@@ -29,7 +29,7 @@ test('upgrades V4.1 and keeps Engram on the shared Attention TP8 and MoE EP4 × 
   await layout.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.canvas-status')).toContainText('8 物理设备');
   await expect(save).toContainText('已保存 · 修订 3');
-  await page.getByRole('button', { name: '更新模型到 r3', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
   await expect(save).toContainText('已保存 · 修订 4', { timeout: 120_000 });
   await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('8');
   await page.getByLabel('MoE EP', { exact: true }).fill('4');
@@ -42,6 +42,13 @@ test('upgrades V4.1 and keeps Engram on the shared Attention TP8 and MoE EP4 × 
 
   await page.getByRole('button', { name: '容量', exact: true }).click();
   const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('显存不足', { timeout: 120_000 });
+  await page.getByRole('button', { name: '量化', exact: true }).click();
+  const published = page.getByRole('button', { name: '官方 FP4／FP8 权重', exact: true });
+  await published.click();
+  await expect(published).toHaveAttribute('aria-pressed', 'true');
+  await expect(save).toContainText('已保存 · 修订 6');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
   await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 120_000 });
   await expect(capacity).toContainText('每卡复制 1,313,920 B / token');
   await expect(capacity).toContainText('每 2 个 token 生成一行压缩缓存');
@@ -54,4 +61,6 @@ test('upgrades V4.1 and keeps Engram on the shared Attention TP8 and MoE EP4 × 
   await expect(page.getByLabel('Attention TP', { exact: true })).toHaveValue('8');
   await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('4');
   await expect(page.getByLabel('MoE TP', { exact: true })).toHaveValue('2');
+  await page.getByRole('button', { name: '量化', exact: true }).click();
+  await expect(published).toHaveAttribute('aria-pressed', 'true');
 });

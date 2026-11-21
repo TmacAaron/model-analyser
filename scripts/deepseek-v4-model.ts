@@ -41,9 +41,9 @@ export function hyperInput(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: s
     [n('reduced'), norm], [output], vectorWork('5 * B * Q * H'));
 }
 
-function hyperPre(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string) {
+function hyperPre(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string, checkpointStorage: boolean) {
   hyperCoefficients(graph, prefix, stream);
-  hyperInput(graph, prefix, stream, prefix + '-hc-pre');
+  hyperInput(graph, prefix, stream, prefix + '-hc-pre', checkpointStorage);
 }
 
 export function hyperPost(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: string, branch: string, output: string) {
@@ -53,7 +53,7 @@ export function hyperPost(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: st
     vectorWork('B * Q * H * HC * (2 * HC + 1)'));
 }
 
-export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, parallel = false) {
+export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, parallel = false, checkpointStorage = false) {
   const routedShape = (width: string): Axis[] => [...token, ['e', 'expert', 'K'], ['d', 'hidden', width]];
   weight(graph, 'router-weight', ['H', 'E']);
   graph.tensor('router-raw', sequence('E'), { dtype: fp32 });
@@ -62,9 +62,9 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
   graph.node('router-affinity', 'Square root of softplus router scores', ['router-raw'], ['affinities'], vectorWork('5 * B * Q * E'));
   graph.tensor('selected-experts', sequence('K'), { dtype: int32 });
   if (hashRoute) {
-    weight(graph, 'token-expert-table', ['V', 'K'], int32);
+    weight(graph, 'token-expert-table', ['V', 'K'], checkpointStorage ? int64 : int32);
     graph.node('hash-experts', 'Token ID to expert lookup', ['token-ids', 'token-expert-table'], ['selected-experts'], undefined,
-      { accessBytes: { 'token-expert-table': '4 * B * Q * K' } });
+      { accessBytes: { 'token-expert-table': (checkpointStorage ? '8' : '4') + ' * B * Q * K' } });
   } else {
     weight(graph, 'router-bias', ['E'], fp32);
     graph.tensor('corrected', sequence('E'), { dtype: fp32 });
@@ -87,6 +87,8 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
       ['dispatched', ownerIds, ownerScores], undefined, { accessBytes: { 'ffn-input': '2 * B * Q * ' + slots + ' * H' } });
   } else graph.node('route-dispatch', 'Dispatch tokens to selected experts', ['ffn-input', 'selected-experts'], ['dispatched']);
   const activeWeightBytes = '2 * min(E, B * Q * ' + slots + ') * H * I';
+  const weightReads = (matrix: string) => checkpointStorage ? { allocationPasses: { [matrix]: 'min(E, B * Q * ' + slots + ') / E' } }
+    : { accessBytes: { [matrix]: activeWeightBytes } };
   for (const [path, groups] of [['routed', slots], ['shared', '1']] as const) {
     const routed = path === 'routed', route = routed ? ' * ' + slots : '';
     const n = (suffix: string) => path + '-' + suffix;
@@ -98,7 +100,7 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
       const matrix = n(gate + '-weight');
       graph.node(n(gate + '-proj'), (routed ? 'Routed' : 'Shared') + ' expert ' + gate + ' projection',
         [input, matrix], [n(gate)], { useful: '2 * B * Q * ' + groups + ' * H * I' },
-        routed ? { accessBytes: { [matrix]: activeWeightBytes } } : {});
+        routed ? weightReads(matrix) : {});
     }
     graph.tensor(n('mix'), shape('I'));
     graph.node(n('swiglu'), 'Clamped SwiGLU' + (routed ? ' and route weighting' : ''),
@@ -107,7 +109,7 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
     graph.tensor(n('output'), shape('H'));
     graph.node(n('down-proj'), (routed ? 'Routed' : 'Shared') + ' expert down projection',
       [n('mix'), n('down-weight')], [n('output')], { useful: '2 * B * Q * ' + groups + ' * H * I' },
-      routed ? { accessBytes: { [n('down-weight')]: activeWeightBytes } } : {});
+      routed ? weightReads(n('down-weight')) : {});
   }
   graph.tensor('routed-reduced', hidden, parallel ? { dtype: fp32 } : {});
   graph.node('route-combine', 'Accumulate routed expert outputs', ['routed-output', ownerIds], ['routed-reduced'],
@@ -116,12 +118,13 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
   graph.node('shared-add', 'Routed and shared expert merge', ['routed-reduced', 'shared-output'], ['ffn-output'], vectorWork('B * Q * H'));
 }
 
-export function makeDeepSeekV4Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
+export function makeDeepSeekV4Assets(revision: 1 | 2 | 3 | 4 = 1): AssetDocument[] {
   const profile = loadDeepSeekV4();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
   const rootParams = [...parameters, parameter('Periods', profile.periods)];
   const parallel = revision >= 2;
+  const checkpointStorage = revision >= 4;
   const equations = new Equations('builtin:formula:deepseek-v4', parallel ? [...rootParams, parameter('RouteSlots', 0, 0)] : rootParams,
     deepSeekV4Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
   const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV4Sources, tags: ['deepseek', 'deepseek-v4', 'text'] };
@@ -133,11 +136,11 @@ export function makeDeepSeekV4Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
     const graph = new GraphAuthor(equations);
     graph.tensor('x', residual); graph.input('x');
     if (hashRoute) { graph.tensor('token-ids', token, { dtype: int64 }); graph.input('token-ids'); }
-    hyperPre(graph, 'attn', 'x');
-    addV4Attention(graph, ratio, parallel);
+    hyperPre(graph, 'attn', 'x', checkpointStorage);
+    addV4Attention(graph, ratio, parallel, checkpointStorage);
     hyperPost(graph, 'attn', 'x', 'attn-output', 'attention-residual');
-    hyperPre(graph, 'ffn', 'attention-residual');
-    addV4Moe(graph, hashRoute, false, parallel);
+    hyperPre(graph, 'ffn', 'attention-residual', checkpointStorage);
+    addV4Moe(graph, hashRoute, false, parallel, checkpointStorage);
     hyperPost(graph, 'ffn', 'attention-residual', 'ffn-output', 'y');
     graph.output('y');
     const mode = ratio === 0 ? '滑窗' : ratio === 4 ? 'CSA · R4' : 'HCA · R128';
@@ -173,10 +176,10 @@ export function makeDeepSeekV4Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
   graph.node('head-hc', 'Project, gate and reduce the final residual streams',
     ['decoder-output', 'head-hc-fn', 'head-hc-scale', 'head-hc-base'], ['head-hc-output'],
     vectorWork('B * Q * (2 * HC * HC * H + 4 * HC * H + 6 * HC + H * (2 * HC - 1))'));
-  weight(graph, 'final-norm-weight', ['H'], fp32);
+  weight(graph, 'final-norm-weight', ['H'], checkpointStorage ? bf16 : fp32);
   graph.tensor('normalized', hidden);
   graph.node('final-rmsnorm', 'Final RMSNorm', ['head-hc-output', 'final-norm-weight'], ['normalized'], vectorWork('5 * B * Q * H'));
-  weight(graph, 'lm-head-weight', ['V', 'H'], fp32);
+  weight(graph, 'lm-head-weight', ['V', 'H'], checkpointStorage ? bf16 : fp32);
   graph.tensor('logits', [['b', 'batch', 'B'], ['v', 'vocab', 'V']], { dtype: fp32 });
   graph.node('lm-head', 'Last-token untied FP32 output head', ['normalized', 'lm-head-weight'], ['logits'],
     vectorWork('2 * B * H * V'), { accessBytes: { normalized: '2 * B * H' } });

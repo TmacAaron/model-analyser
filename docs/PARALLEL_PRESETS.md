@@ -122,7 +122,7 @@ r5 的 Attention TP8 ＋ MoE EP4 × TP2 布局启用「官方 FP8 权重」后�
 
 ## DeepSeek-V4 Flash 系列
 
-V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。r3 增加 MoE TP 和 MoE EP × TP，并能让 Attention TP 复用专家卡池。已有工作区可在「并行方式」更新模型，再校验并应用布局。请求 DP 均分完整请求，每个请求副本持有一份完整逻辑权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)
+V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。r3 增加 MoE TP 和 MoE EP × TP，并能让 Attention TP 复用专家卡池。r4 支持「官方 FP4／FP8 权重」。已有工作区可在「并行方式」或「量化」更新模型。请求 DP 均分完整请求，每个请求副本持有一份完整逻辑权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)
 
 - Attention TP 切分查询头、索引头及匹配的输出组。索引分数在 Top‑K、候选块选择或候选掩码前执行 FP32 AllReduce。注意力输出在转换到 BF16 前执行 FP32 AllReduce。滑窗、压缩 KV、索引 K 和压缩历史在每卡复制。V4.1 的跨层共享缓存每卡只分配一次。
 - MoE EP 均分 256 或 384 个路由专家。每个 token 的全局 Top‑K 都是 6。EP8 的理论负载是 6 个有效槽位分到 6 张卡，每卡预留 1 个槽位。有效槽位决定有用工作和专家权重读量。每层先归约 FP32 路由输出，再加共享专家。
@@ -131,12 +131,16 @@ V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共�
 
 Attention TP8 与 MoE EP4 × TP2 共用八张卡时，Engram 表继续跨整池切分。下表的权重、每卡 KV 和通信数也适用于这个布局。
 
-在单请求、Prefill 结束时 4 个 token 的 TP8 ＋ EP8 参考配置下，以下为每卡分配和全模型归约数量。网络使用可编辑的带宽和延迟，路由负载按均衡假设估算。
+在单请求、Prefill 结束时 4 个 token 的 r3 TP8 ＋ EP8 参考配置下，以下为每卡分配和全模型归约数量。网络使用可编辑的带宽和延迟，路由负载按均衡假设估算。
 
 | 型号 | 每卡权重 | 每卡 KV 含索引 | AllReduce |
 | --- | ---: | ---: | ---: |
 | DeepSeek-V4-Flash | 77,725,277,116 B | 5,662,976 B | 107 |
 | DeepSeek-V4.1-Flash | 170,975,675,656 B | 5,255,680 B | 90 |
+
+r4 的 Attention TP8 ＋ MoE EP4 × TP2 使用发布权重时，V4 每卡权重为 `23,290,695,548 B`，V4.1 每卡为 `67,135,199,496 B`。两者均计入每卡分片的 E8M0 缩放因子，V4.1 还计入 Engram 表。稀疏读取按有效槽位估算，理论执行沿用模型方程。
+
+上述 V4.1 布局在 8 张 80 GB H100 的单请求、4 token Prefill 样本中，原始权重超出容量。使用发布权重后的显存预算为 `4,015,415 token / 请求`，模型配置的上下文上限为 `1,048,576 token`。
 
 ## GLM-5.2
 

@@ -57,5 +57,6 @@ export function loadDeepSeekV41() {
       EN: value('engram_max_ngram_size'), EL: 2, M: value('max_position_embeddings'),
       ER1: 384006168, ER14: 384016682, EB: 32,
     },
+    quantization: config.quantization_config, expertFormat: reference.expert_dtype,
   };
 }

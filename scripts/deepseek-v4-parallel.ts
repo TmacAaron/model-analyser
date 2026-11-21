@@ -51,13 +51,14 @@ const expertNote = 'Each EP rank owns a contiguous, equal count of routed expert
 const featureNote = 'Routed-expert TP shards matched gate and up channels, SwiGLU results and down-projection input channels. TP peers within each owner group duplicate its route metadata. FP32 routed partials are summed across owner and feature ranks before the replicated shared expert is added.';
 const engramNote = 'The combined V4.1 preset also shards the Engram weight and scale tables by rows, reserving ceil(rows/ranks) rows per rank. The lookup charges one read per requested hash on each rank, including the masked dummy row, and reduces the BF16 values before the replicated projection.';
 const projectionNote = 'Local equations bind allocated request, head and expert extents. Lookup and sparse expert reads use explicit traffic equations. Link rates and analytical work proxies describe the configured estimate.';
+const checkpointStorageNote = 'Non-quantized matrices retain the sampled checkpoint storage dtype. Routed memory traffic uses the touched fraction of local weights and scales. Published quantized matrices are available via the fixed weight preset.';
 const formulaSources: AssetDocument['sources'] = [{ kind: 'note', text: 'Logical payload of an uncompressed reduction, before ring traffic and startup factors.' }];
 
 function reduction(tensorId: string, producer: string, consumer: string, payloadBytes: ValueExpr, payloadDtype = fp32) {
   return { tensorId: TensorId.parse(tensorId), producerNodeId: NodeId.parse(producer), consumerNodeIds: [NodeId.parse(consumer)], payloadBytes, payloadDtype };
 }
 
-export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 = 3): AssetDocument[] {
+export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 | 4 = 4): AssetDocument[] {
   const [root, ...dependencies] = v41 ? makeDeepSeekV41Assets(revision) : makeDeepSeekV4Assets(revision);
   if (root?.definition.kind !== 'model') throw Error('Missing Flash decoder');
   const formulaParams = ['B', 'Q', 'H', 'Rows', 'EH', 'EN', 'ED'].map(key => parameter(key, 1, key === 'Rows' ? 0 : 1));
@@ -66,7 +67,7 @@ export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 = 
   const sources: AssetDocument['sources'] = [...root.sources.map(source => source.kind === 'note' ? {
     ...source, text: source.text.replace(' and distributed layout are outside', ' are outside').replace(' and parallel layouts need', ' need'),
   } : source), ...[projectionNote, attentionNote, expertNote, ...(v41 ? [engramNote] : []),
-    ...(revision === 3 ? [featureNote] : [])].map(text => ({ kind: 'note' as const, text }))];
+    ...(revision >= 3 ? [featureNote] : []), ...(revision === 4 ? [checkpointStorageNote] : [])].map(text => ({ kind: 'note' as const, text }))];
 
   const modules = dependencies.flatMap(asset => asset.definition.kind === 'module' ? [{ ...asset, definition: asset.definition }] : []);
   const rules = modules.flatMap(module => {
@@ -99,7 +100,7 @@ export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 = 
   });
 
   const indexHeads = (id: string): AxisBinding[] => [['IH', id, v41 ? 'h' : 'n']];
-  const flashAxes = { ...(revision === 3 ? featureAxes : axes), 'index-query': indexHeads('index-q-raw'), 'index-query-rope': indexHeads('index-q-raw'),
+  const flashAxes = { ...(revision >= 3 ? featureAxes : axes), 'index-query': indexHeads('index-q-raw'), 'index-query-rope': indexHeads('index-q-raw'),
     'index-weight': [['IH', 'index-weights', v41 ? 'h' : 'd']] as AxisBinding[], 'index-score': indexHeads('index-q'),
     'index-reduce': [['IH', 'index-dot', 'n']] as AxisBinding[] };
   const local = (graph: GraphTemplate) => withLocalCost(graph, flashAxes, projectionNote, activeAccesses);
@@ -118,7 +119,7 @@ export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 = 
       description: v41 ? '共用卡池分片注意力头、专家和 Engram 表。' : '共用卡池分片注意力头与专家。',
       strategy: 'tensor_sharded', sharedPoolDegrees: ['attentionTp', 'moeEp'], networkDefaults, moduleRules: rules.map(rule => rule.combined),
       assumptions: [...common.assumptions, attentionNote, expertNote, ...(v41 ? [engramNote] : [])] },
-    ...(revision === 3 ? [
+    ...(revision >= 3 ? [
       { ...common, presetId: 'tp-flash-routed', name: 'MoE TP', description: '切分路由专家的中间通道。', strategy: 'tensor_sharded',
         sharedPoolDegrees: ['moeTp'], networkDefaults, moduleRules: rules.map(rule => rule.moeTp), assumptions: [...common.assumptions, featureNote] },
       { ...common, presetId: 'tp-flash-attention-moe', name: 'Attention TP ＋ MoE TP',

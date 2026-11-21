@@ -32,15 +32,15 @@ export function candidateTensor(graph: GraphAuthor) {
   graph.tensor('candidate-mask', scoreRows(1), { dtype: predicate });
 }
 
-function compress(graph: GraphAuthor, ratio: Ratio) {
+function compress(graph: GraphAuthor, ratio: Ratio, checkpointStorage: boolean) {
   const current = newlyCompleted(ratio), normWeight = weight(graph, 'main-norm-weight', ['D']);
-  weight(graph, 'main-value-weight', ['H', 'D'], ratio === 2 ? fp32 : undefined);
+  weight(graph, 'main-value-weight', ['H', 'D'], ratio === 2 && !checkpointStorage ? fp32 : undefined);
   graph.tensor('main-values', sequence('D'), ratio === 2 ? { dtype: fp32 } : {});
   graph.node('main-value-proj', 'Project compressed KV values', ['attn-input', 'main-value-weight'], ['main-values'],
     ratio === 2 ? vectorWork('2 * B * Q * H * D') : { useful: '2 * B * Q * H * D' });
   let normalInput = 'main-values';
   if (ratio === 2) {
-    weight(graph, 'main-score-weight', ['H', 'D'], fp32);
+    weight(graph, 'main-score-weight', ['H', 'D'], checkpointStorage ? undefined : fp32);
     graph.tensor('main-scores', sequence('D'), { dtype: fp32 });
     graph.node('main-score-proj', 'Project FP32 pooling scores', ['attn-input', 'main-score-weight'], ['main-scores'],
       vectorWork('2 * B * Q * H * D'));
@@ -93,7 +93,7 @@ function publishIndex(graph: GraphAuthor, ratio: Ratio) {
   graph.output('index-cache');
 }
 
-function selectRows(graph: GraphAuthor, { ratio, mode }: SparseBranch) {
+function selectRows(graph: GraphAuthor, { ratio, mode }: SparseBranch, checkpointStorage: boolean) {
   const rows = cacheRows(ratio), queries = 'if(' + rows + ' > 0, Q, 0)';
   const pairs = '(' + groupTotal('C + Q', ratio, false) + ' - ' + groupTotal('C', ratio, false) + ')';
   const exec = 'B * Q * ' + rows;
@@ -103,7 +103,9 @@ function selectRows(graph: GraphAuthor, { ratio, mode }: SparseBranch) {
   graph.tensor('index-weights', [['b', 'batch', 'B'], ['q', 'token', queries], ['h', 'head', 'IH']]);
   graph.node('index-query', 'Indexer query projection', ['qr', 'index-q-weight'], ['index-q-raw'],
     { useful: '2 * B * ' + queries + ' * QR * IH * ID' }, {
-      accessBytes: { qr: '2 * B * ' + queries + ' * QR', 'index-q-weight': 'if(' + rows + ' > 0, 2 * QR * IH * ID, 0)' },
+      accessBytes: { qr: '2 * B * ' + queries + ' * QR',
+        ...(!checkpointStorage ? { 'index-q-weight': 'if(' + rows + ' > 0, 2 * QR * IH * ID, 0)' } : {}) },
+      ...(checkpointStorage ? { allocationPasses: { 'index-q-weight': 'if(' + rows + ' > 0, 1, 0)' } } : {}),
     });
   graph.node('index-query-rope', 'Rotate index queries and simulate FP4', ['index-q-raw'], ['index-q'],
     vectorWork('B * ' + queries + ' * IH * (3 * R + 2 * ID)'));
@@ -141,7 +143,7 @@ function selectRows(graph: GraphAuthor, { ratio, mode }: SparseBranch) {
   graph.output('selected-rows');
 }
 
-export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch, parallel = false) {
+export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch, parallel = false, checkpointStorage = false) {
   prepareV4Attention(graph, true);
   if (!sparse) {
     finishV4Attention(graph, '0', '0', [], {}, true, parallel);
@@ -152,7 +154,7 @@ export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch, paral
   cacheTensor(graph, 'main', ratio);
   cacheState(graph, 'main', ratio, ['sparse-qk', 'sparse-av'], owner ? 'main-write' : undefined);
   if (owner) {
-    compress(graph, ratio);
+    compress(graph, ratio, checkpointStorage);
     publishMain(graph, ratio);
   } else graph.input('main-cache');
   if (reusesSelection) {
@@ -167,7 +169,7 @@ export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch, paral
         toNodeId: NodeId.parse('main-rope'), kind: 'control' });
     }
     else graph.input('index-cache');
-    selectRows(graph, sparse);
+    selectRows(graph, sparse, checkpointStorage);
   }
   const rows = cacheRows(ratio), groupPairs = '(' + groupTotal('C + Q', ratio, true) + ' - ' + groupTotal('C', ratio, true) + ')';
   finishV4Attention(graph, 'min(IK, ' + rows + ')', groupPairs, ['main-cache', 'selected-rows'],

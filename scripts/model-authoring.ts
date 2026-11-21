@@ -45,9 +45,16 @@ export class GraphAuthor {
   input(id:string,portId=id){this.graph.inputs.push({portId,tensorId:TensorId.parse(id)});this.producers.set(id,{kind:'graph_input',portId});}
   output(id:string,portId=id){this.graph.outputs.push({portId,tensorId:TensorId.parse(id)});const from=this.producers.get(id);if(!from)throw Error('Missing producer '+id);this.graph.edges.push({edgeId:'out-'+portId,from,to:{kind:'graph_output',portId},tensorId:TensorId.parse(id)});}
   ports(ids:string[]){return ids.map(tensorId=>({portId:tensorId,tensorId:TensorId.parse(tensorId)}));}
-  node(id:string,name:string,inputs:string[],outputs:string[],work?:{useful:string;executed?:string;computeClass?:ComputeClass},options:{accessBytes?:Record<string,string>;temporaries?:string[]}={}){
+  node(id:string,name:string,inputs:string[],outputs:string[],work?:{useful:string;executed?:string;computeClass?:ComputeClass},options:{accessBytes?:Record<string,string>;allocationPasses?:Record<string,string>;temporaries?:string[]}={}){
     const ports=[...this.ports(inputs),...this.ports(outputs)],cost:CostDefinition={compute:work?[{segmentId:'arithmetic',computeClass:work.computeClass??matrix,usefulOperations:this.equations.value(work.useful,'operation'),executedOperations:this.equations.value(work.executed??work.useful,'operation')}]:[],memoryAccess:[],temporaryStorageIds:(options.temporaries??[]).map(id=>StorageId.parse(id)),timing:{kind:'roofline_bound',computeEfficiency:1,memoryEfficiency:1,computeMemoryOverlap:'ideal',launchSeconds:0}};
-    for(const [mode,list] of [['read',inputs],['write',outputs]] as const)for(const tensor of list){const t=this.graph.tensors.find(t=>t.tensorId===tensor);if(!t)throw Error('Unknown tensor '+tensor);const bytes=options.accessBytes?.[tensor];cost.memoryAccess.push({accessId:mode+'-'+tensor,storageId:t.storageId,mode,logicalBytes:bytes?this.equations.value(bytes,'byte'):{kind:'storage_allocation',passes:literal(1)},hbmEstimate:{kind:'factor',value:1}});}
+    for(const [mode,list] of [['read',inputs],['write',outputs]] as const)for(const tensor of list){
+      const binding=this.graph.tensors.find(t=>t.tensorId===tensor);
+      if(!binding)throw Error('Unknown tensor '+tensor);
+      const bytes=options.accessBytes?.[tensor],passes=options.allocationPasses?.[tensor];
+      cost.memoryAccess.push({accessId:mode+'-'+tensor,storageId:binding.storageId,mode,
+        logicalBytes:bytes?this.equations.value(bytes,'byte'):{kind:'storage_allocation',passes:passes?this.equations.value(passes,'ratio'):literal(1)},
+        hbmEstimate:{kind:'factor',value:1}});
+    }
     for(const temporary of options.temporaries??[])for(const mode of ['read','write'] as const)cost.memoryAccess.push({accessId:mode+'-scratch-'+temporary,storageId:StorageId.parse(temporary),mode,logicalBytes:{kind:'storage_allocation',passes:literal(1)},hbmEstimate:{kind:'factor',value:1}});
     this.graph.nodes.push({nodeId:NodeId.parse(id),name,phases:['prefill','decode'],portBindings:ports,stateBindings:[],body:{kind:'opaque',inputs:this.ports(inputs),outputs:this.ports(outputs),cost}});this.connect(id,inputs,outputs);
   }

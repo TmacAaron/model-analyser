@@ -1,5 +1,5 @@
 import { AssetDocument, type GraphTemplate } from '@model-analyser/contracts';
-import { Equations, GraphAuthor, fp32, int64, literal, symbol } from './model-authoring.js';
+import { Equations, GraphAuthor, bf16, fp32, int64, literal, symbol } from './model-authoring.js';
 import { int32, sequence, vectorWork, weight } from './deepseek-v4-attention.js';
 import { addV4Moe, hidden, hyperCoefficients, hyperInput, hyperPost, parameter, residual, token } from './deepseek-v4-model.js';
 import { addV41Attention, cacheState, cacheTensor, candidateTensor, selectedRows, type Ratio, type SparseBranch } from './deepseek-v41-attention.js';
@@ -29,11 +29,12 @@ function sharedPair(graph: GraphAuthor, ratio: Ratio, input = false) {
   }
 }
 
-export function makeDeepSeekV41Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
+export function makeDeepSeekV41Assets(revision: 1 | 2 | 3 | 4 = 1): AssetDocument[] {
   const profile = loadDeepSeekV41();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
   const parallel = revision >= 2;
+  const checkpointStorage = revision >= 4;
   const equations = new Equations('builtin:formula:deepseek-v41', parallel ? [...parameters, parameter('RouteSlots', 0, 0)] : parameters,
     deepSeekV41Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
   const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV41Sources, tags: ['deepseek', 'deepseek-v41', 'text'] };
@@ -64,11 +65,11 @@ export function makeDeepSeekV41Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] 
     const attentionResidual = engram ? addEngramLookup(graph, engram) : 'x';
     hyperCoefficients(graph, 'attn', attentionResidual);
     hyperInput(graph, 'attn', attentionResidual, 'pre', true);
-    addV41Attention(graph, sparse, parallel);
+    addV41Attention(graph, sparse, parallel, checkpointStorage);
     hyperPost(graph, 'attn', attentionResidual, 'attn-output', 'attention-residual');
     hyperCoefficients(graph, 'ffn', 'attention-residual');
     hyperInput(graph, 'ffn', 'attention-residual', 'attn-hc-pre', true);
-    addV4Moe(graph, false, true, parallel);
+    addV4Moe(graph, false, true, parallel, checkpointStorage);
     hyperPost(graph, 'ffn', 'attention-residual', 'ffn-output', 'y');
     exit(graph, { x: 'y', pre: 'ffn-hc-pre' });
     return define('block-' + id, name, graph);
@@ -136,7 +137,7 @@ export function makeDeepSeekV41Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] 
   weight(graph, 'final-norm-weight', ['H']);
   graph.tensor('normalized', hidden);
   graph.node('final-rmsnorm', 'Final RMSNorm', ['collapsed', 'final-norm-weight'], ['normalized'], vectorWork('5 * B * Q * H'));
-  weight(graph, 'lm-head-weight', ['V', 'H'], fp32);
+  weight(graph, 'lm-head-weight', ['V', 'H'], checkpointStorage ? bf16 : fp32);
   graph.tensor('logits', [['b', 'batch', 'B'], ['v', 'vocab', 'V']], { dtype: fp32 });
   graph.node('lm-head', 'Last-token untied FP32 output head', ['normalized', 'lm-head-weight'], ['logits'],
     vectorWork('2 * B * H * V'), { accessBytes: { normalized: '2 * B * H' } });

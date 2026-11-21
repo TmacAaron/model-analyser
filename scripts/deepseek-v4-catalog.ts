@@ -5,11 +5,14 @@ import { canonical, validateAssets } from '../packages/contracts/src/validation.
 import { makeDeepSeekV4Assets } from './deepseek-v4-model.js';
 import { makeDeepSeekV41Assets } from './deepseek-v41-model.js';
 import { makeDeepSeekFlashParallelAssets } from './deepseek-v4-parallel.js';
+import { makeDeepSeekFlashPublishedWeightPreset } from './deepseek-flash-published-weights.js';
 
 const v41 = process.argv.includes('--v41');
 const unique = new Map<string, AssetDocument>();
+const latest = makeDeepSeekFlashParallelAssets(v41);
 for (const asset of [...(v41 ? makeDeepSeekV41Assets() : makeDeepSeekV4Assets()),
-  ...makeDeepSeekFlashParallelAssets(v41, 2), ...makeDeepSeekFlashParallelAssets(v41)]) {
+  ...makeDeepSeekFlashParallelAssets(v41, 2), ...makeDeepSeekFlashParallelAssets(v41, 3), ...latest,
+  makeDeepSeekFlashPublishedWeightPreset(latest, v41)]) {
   const key = asset.assetId + '@' + asset.revision;
   const prior = unique.get(key);
   if (prior) assert.equal(canonical(prior), canonical(asset), key);
