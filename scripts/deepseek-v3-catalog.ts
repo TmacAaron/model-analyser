@@ -9,7 +9,7 @@ import { makeDeepSeekV3FP8WeightPreset } from './deepseek-v3-fp8-weights.js';
 
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
-  const previous = ([5, 6] as const).flatMap(revision => {
+  const previous = ([5, 6, 7] as const).flatMap(revision => {
     const assets = makeDeepSeekV3ParallelAssets(release, revision);
     return [...assets, makeDeepSeekV3FP8WeightPreset(assets, release)];
   });

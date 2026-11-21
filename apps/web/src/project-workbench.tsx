@@ -18,7 +18,7 @@ import { useEffect,useRef,useState } from 'react';
 import { z } from 'zod';
 import { Id,AssetDocument,ProjectDocument,ProjectDraft,ProjectImportDocument,ProjectRecoveryDocument,SaveProjectResponse,Scenario,WorkspaceCatalog,ProjectDraftIndexEntry,type AssetRef,type ParallelPresetTemplate } from '@model-analyser/contracts';
 import { canonical } from '../../../packages/contracts/src/validation.js';
-import { pipelineChainIds } from '../../../packages/contracts/src/parallel-bindings.js';
+import { decodeContextModules, pipelineChainIds } from '../../../packages/contracts/src/parallel-bindings.js';
 import { ProjectAutosaver } from './project-autosave.js';
 import { type SaveState } from './serialized-autosave.js';
 import { request,lookupProject,getProjectDraft } from './api.js';
@@ -168,8 +168,10 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
       }
       next.parallelPlan={...active.parallelPlan,generatedFrom:{...origin,modelRevision:model.revision}};
       if(decodeContext){
-        if(origin.modelRevision!==active.model.revision||!preset.decodeContext||canonical(preset.decodeContext.module)!==canonical(decodeContext.module)||
-           preset.decodeContext.replacement.assetId!==decodeContext.replacement.assetId)throw Error('新模型修订没有兼容的 Decode KV 布局');
+        const key=(context:typeof decodeContext)=>canonical(decodeContextModules(context).map(({module,replacement})=>[module,replacement.assetId]));
+        if(origin.modelRevision!==active.model.revision||!preset.decodeContext||key(preset.decodeContext)!==key(decodeContext)){
+          throw Error('新模型修订没有兼容的 Decode KV 布局');
+        }
         next.parallelPlan.decodeContext=preset.decodeContext;
       }else if(previous?.queryParallel&&(!preset.queryParallel||canonical(preset.queryParallel)!==canonical(previous.queryParallel))){
         throw Error('新模型修订没有兼容的 Prefill 查询分片布局');

@@ -685,20 +685,27 @@
           "additionalProperties": false
         },
         "decodeContext": {
-          "type": "object",
-          "properties": {
-            "module": {
-              "$ref": "#/$defs/__schema1"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/__schema18"
             },
-            "replacement": {
-              "$ref": "#/$defs/__schema1"
+            {
+              "type": "object",
+              "properties": {
+                "replacements": {
+                  "minItems": 2,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/__schema18"
+                  }
+                }
+              },
+              "required": [
+                "replacements"
+              ],
+              "additionalProperties": false
             }
-          },
-          "required": [
-            "module",
-            "replacement"
-          ],
-          "additionalProperties": false
+          ]
         }
       },
       "required": [
@@ -820,7 +827,7 @@
                       "const": "user_efficiency"
                     },
                     "efficiency": {
-                      "$ref": "#/$defs/__schema18"
+                      "$ref": "#/$defs/__schema19"
                     }
                   },
                   "required": [
@@ -858,13 +865,13 @@
             }
           },
           "weight": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           },
           "activation": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           },
           "state": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           },
           "preset": {
             "$ref": "#/$defs/__schema1"
@@ -1176,13 +1183,13 @@
           "mappings": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema21"
+              "$ref": "#/$defs/__schema22"
             }
           },
           "appliedMappings": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema21"
+              "$ref": "#/$defs/__schema22"
             }
           },
           "appliedNote": {
@@ -1245,7 +1252,7 @@
             "additionalProperties": false
           },
           "extraCost": {
-            "$ref": "#/$defs/__schema22"
+            "$ref": "#/$defs/__schema23"
           },
           "extraLocalCost": {
             "type": "object",
@@ -1441,7 +1448,7 @@
                     }
                   },
                   "cost": {
-                    "$ref": "#/$defs/__schema22"
+                    "$ref": "#/$defs/__schema23"
                   },
                   "description": {
                     "$ref": "#/$defs/__schema0"
@@ -1485,7 +1492,7 @@
                     "const": "override"
                   },
                   "timing": {
-                    "$ref": "#/$defs/__schema23"
+                    "$ref": "#/$defs/__schema24"
                   },
                   "description": {
                     "$ref": "#/$defs/__schema0"
@@ -2104,11 +2111,27 @@
       "additionalProperties": false
     },
     "__schema18": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "replacement": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "module",
+        "replacement"
+      ],
+      "additionalProperties": false
+    },
+    "__schema19": {
       "type": "number",
       "exclusiveMinimum": 0,
       "maximum": 1
     },
-    "__schema19": {
+    "__schema20": {
       "type": "object",
       "properties": {
         "payloadBits": {
@@ -2211,7 +2234,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema20"
+                          "$ref": "#/$defs/__schema21"
                         }
                       }
                     },
@@ -2241,7 +2264,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema20": {
+    "__schema21": {
       "type": "object",
       "properties": {
         "axisId": {
@@ -2257,7 +2280,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema21": {
+    "__schema22": {
       "type": "object",
       "properties": {
         "sourceKey": {
@@ -2275,7 +2298,7 @@
           ]
         },
         "specification": {
-          "$ref": "#/$defs/__schema19"
+          "$ref": "#/$defs/__schema20"
         },
         "note": {
           "$ref": "#/$defs/__schema0"
@@ -2290,7 +2313,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema22": {
+    "__schema23": {
       "type": "object",
       "properties": {
         "compute": {
@@ -2458,7 +2481,7 @@
           }
         },
         "timing": {
-          "$ref": "#/$defs/__schema23"
+          "$ref": "#/$defs/__schema24"
         }
       },
       "required": [
@@ -2469,7 +2492,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema23": {
+    "__schema24": {
       "oneOf": [
         {
           "type": "object",
@@ -2479,10 +2502,10 @@
               "const": "roofline_bound"
             },
             "computeEfficiency": {
-              "$ref": "#/$defs/__schema18"
+              "$ref": "#/$defs/__schema19"
             },
             "memoryEfficiency": {
-              "$ref": "#/$defs/__schema18"
+              "$ref": "#/$defs/__schema19"
             },
             "computeMemoryOverlap": {
               "type": "string",

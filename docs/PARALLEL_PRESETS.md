@@ -130,6 +130,10 @@ r7 的 Prefill 支持 PCP，可叠加请求 DP。查询 token 按连续位置均
 
 PCP 每卡存放完整权重，官方 FP8 权重为 `673,150,611,808 B`／卡。KV 每卡每请求每 token 为 `70,272 B`。DP2 × PCP2 使用四张卡，批次均分到两个请求组，每条请求各有两份 KV。批次须整除 DP，当前查询长度须整除 PCP。
 
+r8 支持单 token Decode 的 DCP 和请求 DP × DCP。每组沿 token 轴均分模型参数 `M` 指定的固定 MLA 槽位。当前 token 只由所在槽位的卡写入 512 维潜向量和 64 维位置键。每层先归约 FP32 局部最大值，再归约 softmax 分母和 512 维加权潜向量，最后完成归一化及值上投影。执行量按固定槽位计入，有效量按各卡已用槽位计算。每卡存放完整权重，支持官方 FP8 存储。
+
+默认 `M=163840`、DCP2 时，每卡每请求预留 81,920 个槽位，BF16 MLA 缓存占 `5,756,682,240 B`。两卡合计每请求每 token 为 `70,272 B`。完整 61 层每步执行 183 次逻辑归约。请求 DP 将独立请求组的归约和状态分开，批次须整除 DP，槽位数须整除 DCP。
+
 ## DeepSeek-V4 Flash 系列
 
 V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。r3 增加 MoE TP 和 MoE EP × TP，并能让 Attention TP 复用专家卡池。r4 支持「官方 FP4／FP8 权重」。已有工作区可在「并行方式」或「量化」更新模型。请求 DP 均分完整请求，每个请求副本持有一份完整逻辑权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)

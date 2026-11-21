@@ -518,20 +518,27 @@
       "additionalProperties": false
     },
     "decodeContext": {
-      "type": "object",
-      "properties": {
-        "module": {
-          "$ref": "#/$defs/__schema7"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/__schema12"
         },
-        "replacement": {
-          "$ref": "#/$defs/__schema7"
+        {
+          "type": "object",
+          "properties": {
+            "replacements": {
+              "minItems": 2,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema12"
+              }
+            }
+          },
+          "required": [
+            "replacements"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "module",
-        "replacement"
-      ],
-      "additionalProperties": false
+      ]
     }
   },
   "required": [
@@ -985,6 +992,22 @@
         "sendBytes",
         "receiveBytes",
         "trafficFactor"
+      ],
+      "additionalProperties": false
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "replacement": {
+          "$ref": "#/$defs/__schema7"
+        }
+      },
+      "required": [
+        "module",
+        "replacement"
       ],
       "additionalProperties": false
     }

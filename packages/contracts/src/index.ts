@@ -140,10 +140,11 @@ export const NativeCollectiveBindings = z.strictObject({groups:z.array(z.strictO
   meshAxes:z.array(z.strictObject({logicalAxisId:Id,physicalAxisId:Id}))})),devices:z.array(z.strictObject({logicalDeviceId:DeviceId,physicalDeviceId:DeviceId})),
   network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional()});
 const DecodeContextModule = z.strictObject({module:AssetRef,replacement:AssetRef});
+const DecodeContext = z.union([DecodeContextModule,z.strictObject({replacements:z.array(DecodeContextModule).min(2)})]);
 export const ParallelPlan = z.strictObject({assignments:z.array(z.strictObject({selector:NodeSelector,phases:Phases,
   tensorDistributions:z.array(z.strictObject({tensorId:TensorId,distribution:TensorDistribution})),storageDistributions:z.array(z.strictObject({storageId:StorageId,distribution:TensorDistribution}))})),
   communications:z.array(CommunicationDefinition),assumptions:z.array(z.string()),generatedFrom:ParallelPresetOrigin.optional(),nativeBindings:NativeCollectiveBindings.optional(),
-  decodeContext:DecodeContextModule.optional()});
+  decodeContext:DecodeContext.optional()});
 export const GraphTemplate = z.strictObject({inputs:z.array(PortSpec),outputs:z.array(PortSpec),
   nodes:z.array(z.strictObject({nodeId:NodeId,name:Id,phases:Phases,portBindings:z.array(PortSpec),stateBindings:z.array(z.strictObject({localStateId:StateId,parentStateId:StateId})),
     repeat:z.strictObject({axis:Id,count:ValueExpr,wiring:z.enum(['chain','independent']),carry:z.array(z.strictObject({outputPortId:Id,inputPortId:Id}))}).optional(),
@@ -197,7 +198,7 @@ export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,descri
   assumptions:z.array(Id).min(1),declaredPlan:ParallelPresetRecipe.optional(),
   pipeline:z.union([PipelineBoundary.extend({chainNodeId:NodeId}),PipelineBoundary.extend({chainNodeIds:z.array(NodeId).min(2)})]).optional(),
   queryParallel:z.strictObject({axisId:Id,moduleGathers:z.array(z.strictObject({module:AssetRef,gathers:z.array(PresetReduction.omit({operation:true})).min(1)})).min(1)}).optional(),
-  decodeContext:DecodeContextModule.optional()});
+  decodeContext:DecodeContext.optional()});
 export const FusionGroup = z.strictObject({groupId:Id,memberNodeIds:z.array(NodeId).min(1),eliminatedTensorIds:z.array(TensorId),
   origin:z.strictObject({asset:AssetRef,presetId:Id,scopeNodeId:NodeId}).optional(),extraCost:CostDefinition,extraLocalCost:z.strictObject({contextNodeId:NodeId,rule:LocalCostRule}).optional(),timeStrategy:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('sum_members')}),

@@ -37,7 +37,7 @@ test('upgrades an FP8 pipeline and keeps a separate DP × PCP configuration', as
   const save = page.locator('.studio-save');
   await expect(save).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
-  await page.getByRole('button', { name: '更新模型到 r7', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r8', exact: true }).click();
   await expect(save).toContainText('已保存 · 修订 2', { timeout: 120_000 });
   await expect(page.getByLabel('序列与流水线 PP', { exact: true })).toHaveValue('2');
   await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('2');
@@ -59,10 +59,10 @@ test('upgrades an FP8 pipeline and keeps a separate DP × PCP configuration', as
   await expect(capacity).toContainText('140,544 B / token', { timeout: 120_000 });
   await expect(capacity).toContainText('163,840 token / 请求');
   const saved = ProjectDocument.parse((await (await page.request.get('/api/v1/project?id=' + project.projectId)).json()).data);
-  expect(saved.scenarios.map(row => row.quantizationOverrides[0]?.preset?.revision)).toEqual([3, 3]);
+  expect(saved.scenarios.map(row => row.quantizationOverrides[0]?.preset?.revision)).toEqual([4, 4]);
   expect(saved.scenarios.map(row => row.parallelPlan.generatedFrom)).toMatchObject([
-    { modelRevision: 7, presetId: 'pp-decoder', pipelineStage: { degree: 4 }, expertMesh: { ep: 2, tp: 2 } },
-    { modelRevision: 7, presetId: 'pcp-queries', requestDp: 2 },
+    { modelRevision: 8, presetId: 'pp-decoder', pipelineStage: { degree: 4 }, expertMesh: { ep: 2, tp: 2 } },
+    { modelRevision: 8, presetId: 'pcp-queries', requestDp: 2 },
   ]);
   await page.reload();
   await page.getByRole('tab').nth(1).click();

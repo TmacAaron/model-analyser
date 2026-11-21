@@ -157,7 +157,7 @@ export function addQwenDecodeRequestParallel(decoder: AssetDocument, models: Ass
   const module = AssetDocument.parse({ ...decoder, revision: decoder.revision + 1,
     sources: [...decoder.sources, { kind: 'note', text: batchNote }], definition: { kind: 'module', graph } });
   const roots = models.map(model => AssetDocument.parse({ ...model, revision: model.revision + 1,
-    parallelPresets: model.parallelPresets?.map(preset => preset.decodeContext ? {
+    parallelPresets: model.parallelPresets?.map(preset => preset.decodeContext && 'module' in preset.decodeContext ? {
       ...preset, requestBatchSharding: true, assumptions: [...preset.assumptions, batchNote],
       decodeContext: { ...preset.decodeContext, replacement: ref(module) },
       moduleRules: preset.moduleRules?.map(rule => rule.module.assetId === decoder.assetId && rule.module.revision === decoder.revision ?

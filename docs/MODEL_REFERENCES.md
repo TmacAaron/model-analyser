@@ -75,6 +75,8 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 修订 r7 增加 Prefill PCP 及请求 DP × PCP。组内各卡分摊查询计算，收集 MLA 缓存所需的当前潜向量与位置键。 [查询位置、权重与 KV](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
 
+修订 r8 增加 Decode DCP 及请求 DP × DCP。各卡对所属 MLA 缓存槽位计算，按组归约最大值、分母及加权潜向量。 [固定槽位与逐卡归约](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
+
 在画布中选中吸收式 MLA、分组 MoE 路由或 SwiGLU 的算子，可以查看实际计算步骤及固定推理源码。路由步骤区分参与排序的修正分数与用于加权的原始分数，并保留全局 Top‑K 的口径。 [DeepSeek 固定推理源码](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
 
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。

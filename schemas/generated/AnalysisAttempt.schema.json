@@ -104,7 +104,7 @@
                   "minItems": 2,
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema84"
+                    "$ref": "#/$defs/__schema85"
                   }
                 }
               },
@@ -7315,20 +7315,27 @@
               "additionalProperties": false
             },
             "decodeContext": {
-              "type": "object",
-              "properties": {
-                "module": {
-                  "$ref": "#/$defs/__schema8"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/__schema83"
                 },
-                "replacement": {
-                  "$ref": "#/$defs/__schema8"
+                {
+                  "type": "object",
+                  "properties": {
+                    "replacements": {
+                      "minItems": 2,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/__schema83"
+                      }
+                    }
+                  },
+                  "required": [
+                    "replacements"
+                  ],
+                  "additionalProperties": false
                 }
-              },
-              "required": [
-                "module",
-                "replacement"
-              ],
-              "additionalProperties": false
+              ]
             }
           },
           "required": [
@@ -7636,13 +7643,13 @@
               "mappings": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema83"
+                  "$ref": "#/$defs/__schema84"
                 }
               },
               "appliedMappings": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/__schema83"
+                  "$ref": "#/$defs/__schema84"
                 }
               },
               "appliedNote": {
@@ -7777,6 +7784,22 @@
     "__schema83": {
       "type": "object",
       "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema8"
+        },
+        "replacement": {
+          "$ref": "#/$defs/__schema8"
+        }
+      },
+      "required": [
+        "module",
+        "replacement"
+      ],
+      "additionalProperties": false
+    },
+    "__schema84": {
+      "type": "object",
+      "properties": {
         "sourceKey": {
           "$ref": "#/$defs/__schema0"
         },
@@ -7807,7 +7830,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema84": {
+    "__schema85": {
       "type": "object",
       "properties": {
         "index": {
@@ -7915,10 +7938,10 @@
                 ]
               },
               "policy": {
-                "$ref": "#/$defs/__schema85"
+                "$ref": "#/$defs/__schema86"
               },
               "afterPolicy": {
-                "$ref": "#/$defs/__schema85"
+                "$ref": "#/$defs/__schema86"
               },
               "beforeVersion": {
                 "$ref": "#/$defs/__schema4"
@@ -8147,10 +8170,10 @@
                       ]
                     },
                     "beforeStorage": {
-                      "$ref": "#/$defs/__schema86"
+                      "$ref": "#/$defs/__schema87"
                     },
                     "afterStorage": {
-                      "$ref": "#/$defs/__schema86"
+                      "$ref": "#/$defs/__schema87"
                     },
                     "beforeCopies": {
                       "$ref": "#/$defs/__schema4"
@@ -8275,7 +8298,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema85": {
+    "__schema86": {
       "oneOf": [
         {
           "type": "object",
@@ -8345,7 +8368,7 @@
         }
       ]
     },
-    "__schema86": {
+    "__schema87": {
       "type": "object",
       "properties": {
         "storageId": {

@@ -5,19 +5,36 @@ import { FormulaError } from './formula.js';
 import { allocateStorage,numericValue } from './storage.js';
 import { quantizationRuleIssues } from '../../contracts/src/quantization-validation.js';
 import { scopedNumericSymbols } from './evaluation-scope.js';
+import { decodeContextModules } from '../../contracts/src/parallel-bindings.js';
 
 const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(root+'/')||id.startsWith(root+'[');
 type WeightProfile=NonNullable<Extract<AssetDocument['definition'],{kind:'quantization'}>['modelWeights']>;
 type WeightTarget=WeightProfile['moduleRules'][number]['targets'][number];
 
-function resolveWeightTargets(profile:WeightProfile,resolved:ResolvedGraph,scenario:Scenario){
+function resolveWeightTargets(profile:WeightProfile,resolved:ResolvedGraph,scenario:Scenario,assets:AssetDocument[]){
   if(profile.model.kind!=='model'||profile.model.assetId!==scenario.model.assetId||profile.model.revision!==scenario.model.revision){
     throw new FormulaError('incompatible_model_weight_profile','发布权重预设只适用于 '+profile.model.assetId+' r'+profile.model.revision);
   }
   const bindings=new Map(resolved.objectBindings.map(binding=>[binding.nodeId,binding]));
   const byStorage=new Map<StorageId,WeightTarget>();
+  const context=scenario.workload.kind==='decode'?scenario.parallelPlan.decodeContext:undefined;
+  const replacements=context?decodeContextModules(context):[];
+  const sameRef=(a:WeightProfile['moduleRules'][number]['module'],b:typeof a)=>a.assetId===b.assetId&&a.revision===b.revision&&a.kind===b.kind;
   for(const section of profile.moduleRules){
-    const calls=resolved.containers.filter(row=>row.asset.assetId===section.module.assetId&&row.asset.revision===section.module.revision&&bindings.has(row.nodeId));
+    const replacement=replacements.find(row=>sameRef(row.module,section.module))?.replacement;
+    if(replacement){
+      const original=assets.find(asset=>asset.assetId===section.module.assetId&&asset.revision===section.module.revision);
+      const substituted=assets.find(asset=>asset.assetId===replacement.assetId&&asset.revision===replacement.revision);
+      if(original?.definition.kind!=='module'||substituted?.definition.kind!=='module'||section.execution?.length){
+        throw new FormulaError('incompatible_model_weight_profile','Decode 替代模块需要兼容的发布权重存储与执行声明');
+      }
+      const before=original.definition.graph.storages,after=substituted.definition.graph.storages;
+      for(const target of section.targets){
+        const a=before.find(row=>row.storageId===target.storageId),b=after.find(row=>row.storageId===target.storageId);
+        if(!a||!b||canonical(a)!==canonical(b))throw new FormulaError('incompatible_model_weight_profile','Decode 替代模块的发布权重存储发生变化 '+target.storageId);
+      }
+    }
+    const calls=resolved.containers.filter(row=>bindings.has(row.nodeId)&&(sameRef(row.asset,section.module)||replacement&&sameRef(row.asset,replacement)));
     if(!calls.length)throw new FormulaError('invalid_model_weight_profile','当前图缺少发布权重模块 '+section.module.assetId);
     for(const call of calls){
       const binding=bindings.get(call.nodeId);
@@ -50,7 +67,7 @@ export function applyQuantization(resolved:ResolvedGraph,scenario:Scenario,asset
   const selections=rules.map((rule,index)=>{
     const preset=rule.preset&&assets.find(asset=>asset.assetId===rule.preset?.assetId&&asset.revision===rule.preset.revision);
     const profile=preset?.definition.kind==='quantization'?preset.definition.modelWeights:undefined;
-    const targets=profile?resolveWeightTargets(profile,resolved,scenario):undefined;
+    const targets=profile?resolveWeightTargets(profile,resolved,scenario,assets):undefined;
     for(const id of rule.storageIds??[])if(!storages.has(id)||canonicalStorage(id)!==id)throw new FormulaError('invalid_quantization_storage','精确量化目标必须为当前图的规范存储 '+id);
     const roots=rule.selector.kind==='nodes'?rule.selector.nodeIds:[rule.selector.rootNodeId];
     for(const root of roots)if(!scopes.has(root))throw new FormulaError('empty_selector','量化规则 #'+(index+1)+' 未匹配当前阶段范围 '+root);

@@ -4,6 +4,7 @@ import { makeDeepSeekAssets } from './deepseek-model.js';
 import { loadDeepSeekV3Profile, type DeepSeekV3Release } from './deepseek-v3-profile.js';
 import { withLocalCost, type AxisBinding } from './local-cost-authoring.js';
 import { deepSeekV3QueryCost, deepSeekV3QueryEquations, deepSeekV3QueryPreset } from './deepseek-v3-query.js';
+import { makeDeepSeekDecodeContext } from './deepseek-v3-decode-context.js';
 
 const attentionTensors = [
   ['q-weight', 'out'], ['kv-b-k-weight', 'out'], ['kv-b-v-weight', 'out'], ['o-weight', 'in'],
@@ -74,7 +75,7 @@ function withSparseReads(graph: GraphTemplate, passes: ValueExpr): GraphTemplate
   }) };
 }
 
-export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 | 5 | 6 | 7 = 7) {
+export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 | 5 | 6 | 7 | 8 = 8) {
   const profile = loadDeepSeekV3Profile(release);
   const balanced = revision >= 3;
   const splitFeatures = revision >= 4;
@@ -104,6 +105,7 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
         featureSharding ? localNote + ' ' + expertFeatureNote : localNote, balanced ? activeRouteReads : undefined) } });
   };
   const denseModule = publishModule(dense, false), moeModule = publishModule(moe, splitFeatures);
+  const decode = revision >= 8 ? makeDeepSeekDecodeContext([denseModule, moeModule]) : undefined;
   const embedding = root.definition.graph.nodes.find(node => node.nodeId === 'embedding');
   const payload = embedding?.body.kind === 'opaque' && embedding.body.cost.memoryAccess.find(access => access.storageId === 'embedding')?.logicalBytes;
   if (!payload || payload.kind === 'storage_allocation') throw Error('Missing BF16 hidden output tile equation');
@@ -145,6 +147,7 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
     }] : []),
   ].map(preset => ParallelPresetTemplate.parse(preset));
   if (queryEquations) presets.push(deepSeekV3QueryPreset([denseModule, moeModule], queryEquations, networkDefaults));
+  if (decode) presets.push(decode.preset);
   const graph = local(root.definition.graph, {}, localNote);
   const modules = new Map([denseModule, moeModule].map(module => [module.assetId, module]));
   graph.nodes = graph.nodes.map(node => {
@@ -160,5 +163,5 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
     graph,
     assumptions: modelSources.flatMap(source => source.kind === 'note' ? [source.text] : []),
   } });
-  return [model, denseModule, moeModule, ...formulas, ...sparseReads.assets, ...queryEquations?.assets ?? []];
+  return [model, denseModule, moeModule, ...formulas, ...sparseReads.assets, ...(queryEquations?.assets ?? []), ...(decode?.assets ?? [])];
 }

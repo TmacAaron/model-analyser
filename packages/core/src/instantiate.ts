@@ -13,7 +13,7 @@ import { applyQuantization } from './quantization.js';
 import { applyFusion } from './fusion.js';
 import type {FusionDeclarationObserver} from './fusion-observation.js';
 import { collectivePorts } from '../../contracts/src/collective.js';
-import { bindNativeCommunication,nativeBindingIssues } from '../../contracts/src/parallel-bindings.js';
+import { bindNativeCommunication,decodeContextModules,nativeBindingIssues } from '../../contracts/src/parallel-bindings.js';
 import {communicationSymbols,type BoundCollectiveObservation} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
 import type {LayoutDeclaration,LayoutObjectObserver,RepeatCountObservation,ShapeDeclaration} from './layout-observation.js';
@@ -52,12 +52,16 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     track(scenario.fusionGroups);
     const root=lookup(scenario.model);if(root.definition.kind!=='model')throw new FormulaError('reference_kind_mismatch','根资产必须为 model');track(root.definition,[root.assetId+'@'+root.revision]);
     const decodeContext=phase==='decode'?scenario.parallelPlan.decodeContext:undefined;
+    const decodeModules=new Map<string,AssetRef>();
     if(decodeContext){
       const origin=scenario.parallelPlan.generatedFrom,preset=root.parallelPresets?.find(row=>row.presetId===origin?.presetId&&row.strategy==='decode_context_sharded'),declared=preset?.decodeContext;
       if(origin?.modelId!==root.assetId||origin.modelRevision!==root.revision||!declared||canonical(declared)!==canonical(decodeContext))throw new FormulaError('invalid_decode_context','Decode 上下文图须与当前固定模型预设匹配');
       if(origin.requestDp&&!preset?.requestBatchSharding)throw new FormulaError('invalid_decode_context','此固定 Decode 模块未声明逐请求组的局部方程');
       if(scenario.workload.queryTokensPerRequest!==1)throw new FormulaError('invalid_decode_context','DCP 每步需要一个查询 token');
-      track(decodeContext.replacement);
+      for(const {module,replacement} of decodeContextModules(decodeContext)){
+        decodeModules.set(module.assetId+'@'+module.revision,replacement);
+        track(replacement);
+      }
     }
     const executionProfiles:AssetDocument[]=[],executionByModule=new Map<string,Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>>();
     for(const [ruleIndex,rule] of scenario.quantizationOverrides.entries()){
@@ -76,7 +80,7 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
         if(recipes.size)executionByModule.set(key,recipes);
       }
     }
-    const templateIssues=validateAssets([root,...(decodeContext?[lookup(decodeContext.replacement)]:[]),...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
+    const templateIssues=validateAssets([root,...[...decodeModules.values()].map(lookup),...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
     const executionInputs:{nodeId:string;ruleIndex:number;weights:StorageId[];activation:StorageId}[]=[];
     const graph:GraphTemplate={inputs:[],outputs:[],nodes:[],edges:[],dependencies:[],tensors:[],storages:[],states:[]};
     const containers:ResolvedGraph['containers']=[],parameters:ResolvedParameter[]=[],objectBindings:ResolvedGraph['objectBindings']=[];
@@ -194,9 +198,9 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     function expandNode(node:Node,owner:AssetDocument,parentPath:string,parentSymbols:Record<string,Quantity>,parentTensors:Map<string,TensorId>,parentStorages:Map<string,StorageId>,parentStates:Map<string,StateId>,stack:string[]):Expansion{
       const path=nodePath(parentPath,node.nodeId);cursor=path;
       const body=node.body,intrinsic=body.kind==='opaque'||body.kind==='collective';
-      const useDecodeContext=decodeContext&&body.kind==='module'&&owner.assetId===root.assetId&&owner.revision===root.revision&&
-        body.asset.assetId===decodeContext.module.assetId&&body.asset.revision===decodeContext.module.revision;
-      const target=intrinsic?owner:lookup(useDecodeContext?decodeContext.replacement:body.asset);
+      const replacement=body.kind==='module'&&owner.assetId===root.assetId&&owner.revision===root.revision
+        ?decodeModules.get(body.asset.assetId+'@'+body.asset.revision):undefined;
+      const target=intrinsic?owner:lookup(replacement??body.asset);
       if(body.kind==='collective'){const iface=collectivePorts(body.communication);if(node.portBindings.length!==2||[...iface.inputs,...iface.outputs].some(p=>!node.portBindings.some(b=>b.portId===p.portId&&b.tensorId===p.tensorId)))throw new FormulaError('invalid_port','collective 必须绑定 source/destination 固定端口到对应张量');}
       if(!intrinsic&&target.definition.kind!==body.kind)throw new FormulaError('reference_kind_mismatch','节点引用类型不符');
       const source=intrinsic?{...(body.kind==='opaque'?{inputs:body.inputs,outputs:body.outputs}:collectivePorts(body.communication)),tensors:[],storages:[],states:[]}:target.definition.kind==='operator'?target.definition.operator:target.definition.kind==='module'?target.definition.graph:undefined;

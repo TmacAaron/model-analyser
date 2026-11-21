@@ -27,7 +27,7 @@ test('uses DeepSeek published FP8 weights to open a KV budget in a separate canv
   const save = page.locator('.studio-save');
   await expect(save).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '量化', exact: true }).click();
-  await page.getByRole('button', { name: '更新模型到 r7', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r8', exact: true }).click();
   await expect(save).toContainText('已保存 · 修订 2');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await page.getByLabel('Attention TP', { exact: true }).fill('8');

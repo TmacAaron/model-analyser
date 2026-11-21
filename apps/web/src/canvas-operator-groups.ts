@@ -16,7 +16,8 @@ const qwenGroups:AuthoredGroup[]=[
   {key:'ffn',name:'SwiGLU',members:['gate-up-proj','silu-multiply','down-proj']},
 ];
 const mlaGroups:AuthoredGroup[]=[
-  {key:'attention',name:'MLA Attention',members:['kv-a-norm','rope','q-absorb','kv-b','cache-update','qk','softmax','av','v-up','o-proj']},
+  {key:'attention',name:'MLA Attention',members:['kv-a-norm','rope','q-absorb','kv-b','cache-update','qk','softmax','av',
+    'local-max','shift-exp','sum-exp','cast-weights','weighted-values','normalize','v-up','o-proj']},
 ];
 const v3MoeGroups:AuthoredGroup[]=[
   ...mlaGroups,
@@ -89,8 +90,8 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
     hybrid?[hybrid[2]==='delta'?qwenHybridDelta:qwenHybridGqa,...(hybrid[1]==='moe'?qwenHybridMoe:[qwenHybridDense])]:
     deepSeekV4?deepSeekV4Groups(deepSeekV4[1]!):
     deepSeekV41?deepSeekV4Groups(deepSeekV41[1]==='window'?'0':deepSeekV41[1]!.slice(1),true):
-    id==='builtin:module:deepseek-v3-absorbed-moe'?v3MoeGroups:
-    /^builtin:module:deepseek-(v2-(expanded|absorbed)-(dense|moe)|v3-absorbed-dense)$/.test(id)?mlaGroups:[];
+    /^builtin:module:deepseek-v3-(absorbed|dcp)-moe$/.test(id)?v3MoeGroups:
+    /^builtin:module:deepseek-(v2-(expanded|absorbed)-(dense|moe)|v3-(absorbed|dcp)-dense)$/.test(id)?mlaGroups:[];
   if(!specs.length)return [];
   const leaves=new Set<string>(container.leafNodeIds);
   return specs.flatMap(spec=>{

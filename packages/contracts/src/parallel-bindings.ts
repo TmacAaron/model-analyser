@@ -43,6 +43,10 @@ export function pipelineChainIds(pipeline:NonNullable<ParallelPresetTemplate['pi
   return 'chainNodeIds' in pipeline ? pipeline.chainNodeIds : [pipeline.chainNodeId];
 }
 
+export function decodeContextModules(context:NonNullable<Scenario['parallelPlan']['decodeContext']>){
+  return 'replacements' in context ? context.replacements : [context];
+}
+
 export function pipelineExpertPreset(pipeline:ParallelPresetTemplate,presets:ParallelPresetTemplate[],presetId:string,phase:ParallelPresetTemplate['phases'][number]){
   if(pipeline.strategy!=='pipeline'||!pipeline.pipeline||!pipeline.phases.includes(phase))return undefined;
   return presets.find(preset=>{
@@ -61,9 +65,15 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
   if((p.strategy==='decode_context_sharded')!==(p.decodeContext!==undefined))errors.push('Decode 上下文预设须声明固定模块与替代模块');
   if(p.requestBatchSharding&&p.strategy!=='decode_context_sharded'&&p.strategy!=='query_sharded'&&p.strategy!=='pipeline')errors.push('此请求分片声明仅适用于上下文并行或流水线预设');
-  if(p.decodeContext&&(p.decodeContext.module.kind!=='module'||p.decodeContext.replacement.kind!=='module'||
-    p.phases.some(phase=>phase!=='decode')||!p.moduleRules?.some(rule=>rule.module.assetId===p.decodeContext?.replacement.assetId&&rule.module.revision===p.decodeContext.replacement.revision)))
-    errors.push('Decode 上下文预设仅用于 Decode，需声明替代模块的实际分片和归约');
+  if(p.decodeContext){
+    const modules=decodeContextModules(p.decodeContext);
+    unique(modules.map(({module})=>module.assetId+'@'+module.revision),'Decode 上下文源模块');
+    unique(modules.map(({replacement})=>replacement.assetId+'@'+replacement.revision),'Decode 上下文替代模块');
+    if(p.phases.some(phase=>phase!=='decode')||modules.some(({module,replacement})=>module.kind!=='module'||
+      replacement.kind!=='module'||!p.moduleRules?.some(rule=>rule.module.assetId===replacement.assetId&&rule.module.revision===replacement.revision))){
+      errors.push('Decode 上下文预设仅用于 Decode，需声明每个替代模块的实际分片和归约');
+    }
+  }
   if(p.queryParallel){
     if(p.tensorShards.length||p.reductions.length||p.moduleRules||p.phases.some(phase=>phase!=='prefill'))errors.push('查询分片布局适用于 Prefill，按声明查询轴和收集边界生成');
     unique(p.queryParallel.moduleGathers.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块收集规则');

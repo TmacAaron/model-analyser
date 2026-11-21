@@ -64,8 +64,10 @@ export function makeDeepSeekV3FP8WeightPreset(assets: AssetDocument[], release: 
   const source = (filename: string, commit = pin.revision) => `https://huggingface.co/deepseek-ai/${profile.name}/blob/${commit}/${filename}`;
   const modelId = `builtin:model:deepseek-${release}`;
   const model = assets.find(row => row.assetId === modelId && row.definition.kind === 'model');
-  if (model?.revision !== 5 && model?.revision !== 6 && model?.revision !== 7) throw Error('Missing compatible DeepSeek decoder for published FP8');
-  const queryPartitioning = model.revision === 7;
+  if (model?.revision !== 5 && model?.revision !== 6 && model?.revision !== 7 && model?.revision !== 8) {
+    throw Error('Missing compatible DeepSeek decoder for published FP8');
+  }
+  const queryPartitioning = model.revision >= 7;
   return AssetDocument.parse({ documentType: 'asset', schemaVersion: 1, assetId: `builtin:quantization:deepseek-${release}-fp8-weights`, revision: model.revision - 4,
     name: '官方 FP8 权重', parameters: [], tags: ['deepseek', 'fp8', 'block128', 'published-weights'], sources: [
       ...[source('config.json'), source('model.safetensors.index.json'), ...pin.headers.map(header => source(header.shard, header.revision)),
