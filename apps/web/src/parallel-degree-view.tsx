@@ -169,8 +169,9 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           return <option key={key} value={key}>{stageName && stageName + ' × '}{preset.name}</option>;
         })}
       </select></label>}
-      <p>{match.expertMesh ? `均分专家，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
-        (degrees.attentionTp > 1 ? (match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') :
+      <p>{match.expertMesh ? (match.pipelineStage ? `每阶段 ${match.pipelineStage.degree} 卡。` : '') +
+        `均分专家，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
+        (degrees.attentionTp > 1 ? (match.pipelineStage ? 'Attention TP 复用阶段内设备。' : match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') :
         stagePreset && match.pipelineStage ? `每阶段 ${match.pipelineStage.degree} 卡。${stagePreset.description}` : match.preset.description}</p>
       <p>{match.slots} 个逻辑槽位{match.requestDp && ` · ${match.requestDp} 组请求，每组 ${match.slots / match.requestDp} 卡`}
         {match.preset.declaredPlan && ' · ' + match.preset.declaredPlan.groups.map(group => group.groupId + ' ' + group.members.length).join(' · ')}</p>

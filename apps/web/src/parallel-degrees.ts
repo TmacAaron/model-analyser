@@ -1,5 +1,5 @@
 import { DeviceId, type ParallelPresetTemplate, type Scenario, type ParallelPresetRequest } from '@model-analyser/contracts';
-import { expertMeshPresets, pipelineAttentionPreset, pipelineExpertPreset, pipelineTensorMeshAxis, requestReplicaMeshAxis, supportsRequestReplicas } from '@model-analyser/core';
+import { expertMeshPresets, pipelineAttentionPreset, pipelineExpertMeshPresets, pipelineExpertPreset, pipelineTensorMeshAxis, requestReplicaMeshAxis, supportsRequestReplicas } from '@model-analyser/core';
 
 export const parallelFields = [
   { area: 'Attention', fields: [{ id: 'attentionTp', label: 'TP' }, { id: 'attentionDp', label: 'DP' }] },
@@ -65,6 +65,17 @@ export function matchingParallelPresets(degrees: Degrees, presets: ParallelPrese
       ?[{preset,slots,pipelineTp:degrees.attentionTp}]:[]);
   }
   if(degrees.pp>1&&(degrees.moeEp>1||degrees.moeTp>1)){
+    const {moeEp:ep,moeTp:tp,attentionTp,sp,pcp,dcp}=degrees;
+    if(sp>1||pcp>1||dcp>1)return [];
+    if(ep>1&&tp>1){
+      const width=ep*tp,slots=degrees.pp*width;
+      if(slots>64||attentionTp!==1&&attentionTp!==width)return [];
+      return presets.flatMap(preset=>{
+        const recipes=pipelineExpertMeshPresets(preset,presets,scenario.workload.kind);
+        const stage=attentionTp===1?recipes?.ep:recipes?.shared;
+        return stage?[{preset,slots,expertMesh:{ep,tp},pipelineStage:{presetId:stage.presetId,degree:width}}]:[];
+      });
+    }
     const width=Math.max(degrees.moeEp,degrees.moeTp,degrees.attentionTp),slots=degrees.pp*width;
     if(slots>64)return [];
     const wanted={...degrees,pp:1};
@@ -102,7 +113,7 @@ export function currentDegrees(scenario: Scenario, presets: ParallelPresetTempla
   const stageCount=width/stageWidth;
   if ((requestDp||stageWidth>1)&&(!Number.isInteger(stageCount)||group.mesh?.axes.find(axis=>axis.axisId===origin.meshAxisId)?.size!==stageCount))return undefined;
   if (requestDp && (!supportsRequestReplicas(preset) || group.mesh?.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp)) return undefined;
-  if(stageWidth>1&&group.mesh?.axes.find(axis=>axis.axisId===pipelineTensorMeshAxis)?.size!==stageWidth)return undefined;
+  if(stageWidth>1&&!origin.expertMesh&&group.mesh?.axes.find(axis=>axis.axisId===pipelineTensorMeshAxis)?.size!==stageWidth)return undefined;
   if(origin.pipelineTp&&(origin.pipelineStage||!pipelineAttentionPreset(preset,presets,scenario.workload.kind)))return undefined;
   const degrees = declaredDegrees(scenario.model, preset, stageCount);
   if (!degrees) return undefined;
@@ -110,13 +121,17 @@ export function currentDegrees(scenario: Scenario, presets: ParallelPresetTempla
   if(origin.pipelineTp)degrees.attentionTp=origin.pipelineTp;
   if(origin.pipelineStage){
     const stage=pipelineExpertPreset(preset,presets,origin.pipelineStage.presetId,scenario.workload.kind);
-    if(!stage||origin.expertMesh)return undefined;
-    for(const axis of stage.sharedPoolDegrees??[])degrees[axis]=stageWidth;
+    if(!stage)return undefined;
+    if(origin.expertMesh){
+      const recipes=pipelineExpertMeshPresets(preset,presets,scenario.workload.kind);
+      if(!recipes||stage!==recipes.ep&&stage!==recipes.shared||origin.expertMesh.groupId!==group.groupId)return undefined;
+      if(stage===recipes.shared)degrees.attentionTp=stageWidth;
+    }else for(const axis of stage.sharedPoolDegrees??[])degrees[axis]=stageWidth;
   }
   if (!origin.expertMesh) return degrees;
   const { ep, tp, groupId } = origin.expertMesh;
   const expert = scenario.deviceTopology.groups.find(item => item.groupId === groupId);
-  if (!expert || expert.members.length !== group.members.length || ep * tp !== width ||
+  if (!expert || expert.members.length !== group.members.length || ep * tp !== (origin.pipelineStage?stageWidth:width) ||
       expert.members.some((member, index) => member !== group.members[index]) ||
       expert.mesh?.axes.find(axis => axis.axisId === 'expert')?.size !== ep ||
       expert.mesh.axes.find(axis => axis.axisId === 'feature')?.size !== tp ||

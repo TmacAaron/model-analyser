@@ -93,7 +93,7 @@ test('Qwen3.5-397B EP8 shards experts separately from the global TopK selection'
   await expect(page.getByRole('region', { name: '逻辑分片与通信' })).toContainText('按均衡路由估算负载');
 });
 
-test('applies stage-local MoE EP and reopens the Qwen3.5 pipeline layout', async ({ page }) => {
+test('applies stage-local MoE EP × TP and reopens the Qwen3.5 pipeline layout', async ({ page }) => {
   test.setTimeout(180_000);
   const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
   const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
@@ -111,8 +111,10 @@ test('applies stage-local MoE EP and reopens the Qwen3.5 pipeline layout', async
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   const pp = page.getByLabel('序列与流水线 PP', { exact: true });
   const ep = page.getByLabel('MoE EP', { exact: true });
+  const tp = page.getByLabel('MoE TP', { exact: true });
   await pp.fill('2');
-  await ep.fill('4');
+  await ep.fill('2');
+  await tp.fill('2');
   const layout = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(layout).toContainText('每阶段 4 卡');
   await expect(layout).toContainText('8 个逻辑槽位');
@@ -132,11 +134,13 @@ test('applies stage-local MoE EP and reopens the Qwen3.5 pipeline layout', async
   expect(response.ok()).toBe(true);
   const saved = ProjectDocument.parse((await response.json()).data).scenarios[0];
   expect(saved?.parallelPlan.generatedFrom?.pipelineStage).toEqual({ presetId: 'ep-routed', degree: 4 });
+  expect(saved?.parallelPlan.generatedFrom?.expertMesh).toMatchObject({ ep: 2, tp: 2 });
   expect(saved?.parallelPlan.communications.find(row => row.operation === 'send_recv')?.peerPairs).toHaveLength(4);
   await page.reload();
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(pp).toHaveValue('2');
-  await expect(ep).toHaveValue('4');
+  await expect(ep).toHaveValue('2');
+  await expect(tp).toHaveValue('2');
   await layout.getByText(/^通信参数/).click();
   await expect(intraBand).toHaveValue('50000000000');
 });

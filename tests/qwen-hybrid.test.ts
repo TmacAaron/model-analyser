@@ -101,7 +101,7 @@ it('shards both GQA cache and DeltaNet state within the two Qwen3.8 pipeline sta
   }});
 }, 140_000);
 
-it('shards the owning-stage experts independently of the global TopK in DP × PP × EP', async () => {
+it.each([1, 2])('shards the owning-stage experts independently of global TopK with DP × PP × EP and expert TP %i', async moeTp => {
   const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
   const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
   const project = makeModelProject([model, ...dependencies], {
@@ -109,12 +109,14 @@ it('shards the owning-stage experts independently of the global TopK in DP × PP
   }, model.name);
   const scenario = project.scenarios[0]!, presets = model.parallelPresets!;
   scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 3 } }];
-  const dimensions = { ...serialDegrees, attentionDp: 2, pp: 2, moeEp: 4 };
+  const dimensions = { ...serialDegrees, attentionDp: 2, pp: 2, moeEp: 4, moeTp };
+  const stageWidth = 4 * moeTp, slots = 4 * stageWidth;
   const [match] = matchingParallelPresets(dimensions, presets, scenario);
-  expect(match).toMatchObject({ slots: 16, requestDp: 2, pipelineStage: { presetId: 'ep-routed', degree: 4 } });
-  expect(matchingParallelPresets({ ...dimensions, moeTp: 2 }, presets, scenario)).toEqual([]);
-  const input = { ...bindDegreePool(scenario, 16), assets: project.assetSnapshots, presetId: match!.preset.presetId,
-    requestDp: match!.requestDp, pipelineStage: match!.pipelineStage, network: { bytesPerSecond: 20e9, latencySeconds: 5e-6 },
+  expect(match).toMatchObject({ slots, requestDp: 2, pipelineStage: { presetId: 'ep-routed', degree: stageWidth } });
+  if (moeTp > 1) expect(match?.expertMesh).toEqual({ ep: 4, tp: moeTp });
+  expect(matchingParallelPresets({ ...dimensions, moeTp: 2, attentionTp: 2 }, presets, scenario)).toEqual([]);
+  const input = { ...bindDegreePool(scenario, slots), assets: project.assetSnapshots, presetId: match!.preset.presetId,
+    requestDp: match!.requestDp, pipelineStage: match!.pipelineStage, expertMesh: match!.expertMesh, network: { bytesPerSecond: 20e9, latencySeconds: 5e-6 },
     pipelineTpNetwork: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } };
   const attempt = await previewParallelPreset(input);
   if (attempt.status !== 'available') throw Error(attempt.message);
@@ -122,15 +124,15 @@ it('shards the owning-stage experts independently of the global TopK in DP × PP
   expect(currentDegrees(preview.scenario, presets)).toEqual(dimensions);
   expect(preview.communicationCount).toBe(13);
   expect(preview.communications?.find(row => row.operation === 'send_recv')).toMatchObject({
-    peerPairs: Array(8).fill(expect.any(Object)), timing: { bytePerSecond: 20e9, latencySeconds: 5e-6 },
+    peerPairs: Array(2 * stageWidth).fill(expect.any(Object)), timing: { bytePerSecond: 20e9, latencySeconds: 5e-6 },
   });
   expect(preview.communications?.filter(row => row.operation === 'all_reduce').every(row =>
     row.timing.kind === 'bandwidth_latency' && row.timing.bytePerSecond === 100e9)).toBe(true);
   const fixture = cases[0], period = ledger(fixture, 1), base = ledger(fixture, 0);
   const expertBytes = 2 * 4 * 3 * fixture.hidden * fixture.ffn * fixture.experts;
-  const localPeriodWeight = period.weightBytes - base.weightBytes - expertBytes * 3 / 4;
+  const localPeriodWeight = period.weightBytes - base.weightBytes - expertBytes * (1 - 1 / stageWidth);
   const embedding = 2 * 248320 * fixture.hidden;
-  const periods = [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1];
+  const periods = [2, 1, 2, 1].flatMap(count => Array(stageWidth).fill(count));
   expect(preview.allocations.map(row => row.weightBytes)).toEqual(periods.map(count =>
     count * localPeriodWeight + embedding + (count === 1 ? 2 * fixture.hidden : 0)));
   const kvBytes = 2 * 3 * period.kvPerToken, recurrentBytes = 2 * period.recurrentBytes;
@@ -139,20 +141,57 @@ it('shards the owning-stage experts independently of the global TopK in DP × PP
   const result = await analyzeScenario(preview.scenario, preview.assets);
   if (result.status !== 'available') throw Error(JSON.stringify(result.diagnostics.slice(0, 6)));
   expect(amount(result.result.total.seconds)).toBeGreaterThan(0);
-  const nodes = result.result.distributed?.layout.localCosts.nodes;
+  const layout = result.result.distributed?.layout, nodes = layout?.localCosts.nodes;
+  const weights = layout?.storageAllocations.find(row => row.storageId === 'decoder[2]/full::expert-gate-up-weight');
+  expect(weights?.allocation.distribution).toMatchObject({ kind: 'sharded', axes: [{ tensorAxisId: 'expert' },
+    ...(moeTp > 1 ? [{ tensorAxisId: 'i', meshAxisId: 'rank:feature' }] : [])] });
+  if (moeTp > 1) {
+    const owner = preview.scenario.parallelPlan.generatedFrom?.expertMesh?.groupId;
+    expect(preview.scenario.deviceTopology.groups.find(group => group.groupId === owner)?.mesh?.axes.slice(-2))
+      .toEqual([{ axisId: 'expert', size: 4 }, { axisId: 'feature', size: moeTp }]);
+    const reducedToSerialStages = await previewParallelPreset({ ...bindDegreePool(preview.scenario, 2), assets: preview.assets,
+      presetId: match!.preset.presetId, network: input.network });
+    if (reducedToSerialStages.status !== 'available') throw Error(reducedToSerialStages.message);
+    expect(currentDegrees(reducedToSerialStages.preview.scenario, presets)).toEqual({ ...serialDegrees, pp: 2 });
+  }
   const expert = nodes?.find(row => row.nodeId === 'decoder[2]/full/expert-gate-up')?.placement;
   if (expert?.kind !== 'placed') throw Error('Missing last-stage experts');
   expect(expert.perDevice.map(row => row.deviceId)).toEqual(preview.allocations.filter((_, index) => periods[index] === 1).map(row => row.deviceId));
-  const operationsPerSlot = 4 * 2 * fixture.hidden * fixture.ffn;
+  const operationsPerSlot = 4 * 2 * fixture.hidden * fixture.ffn / moeTp;
   expect(expert.perDevice.map(({ outcome }) => outcome.status === 'available' ? [
     amount(outcome.cost.compute[0]?.usefulOperations), amount(outcome.cost.compute[0]?.executedOperations),
-  ] : null)).toEqual([3, 3, 2, 2, 3, 3, 2, 2].map(routes => [routes * operationsPerSlot, 3 * operationsPerSlot]));
+  ] : null)).toEqual([3, 3, 2, 2, 3, 3, 2, 2].flatMap(routes =>
+    Array(moeTp).fill([routes * operationsPerSlot, 3 * operationsPerSlot])));
   expect(await estimateKvCapacity(preview.scenario, preview.assets)).toMatchObject({ status: 'available', report: {
-    averageBytesPerToken: 4 * 3 * period.kvPerToken, budget: { status: 'available' },
+    averageBytesPerToken: stageWidth * 3 * period.kvPerToken, budget: { status: 'available' },
     devices: periods.map(count => ({ kvBytes: count * kvBytes, otherStateBytes: count * recurrentBytes })),
   } });
-  expect(await previewParallelPreset({ ...input, ...bindDegreePool(scenario, 6), requestDp: undefined,
-    pipelineStage: { presetId: 'ep-routed', degree: 3 } })).toMatchObject({ status: 'unavailable', message: expect.stringContaining('可均分到 3') });
+  expect(await previewParallelPreset({ ...input, ...bindDegreePool(scenario, 6 * moeTp), requestDp: undefined,
+    expertMesh: moeTp > 1 ? { ep: 3, tp: moeTp } : undefined,
+    pipelineStage: { presetId: 'ep-routed', degree: 3 * moeTp } })).toMatchObject({ status: 'unavailable', message: expect.stringContaining('可均分到 3') });
+}, 120_000);
+
+it('reuses the expert grid for flattened Attention TP only when the stage dimensions fit', async () => {
+  const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
+  const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
+  const project = makeModelProject([model, ...dependencies], {
+    kind: 'prefill', batchSize: 1, pastTokensPerRequest: 2, queryTokensPerRequest: 1,
+  }, model.name);
+  const scenario = project.scenarios[0]!;
+  scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 2 } }];
+  const degrees = { ...serialDegrees, pp: 2, moeEp: 2, moeTp: 2, attentionTp: 4 };
+  const [match] = matchingParallelPresets(degrees, model.parallelPresets!, scenario);
+  expect(match).toMatchObject({ slots: 8, pipelineStage: { presetId: 'tp-hybrid-attention-ep-routed', degree: 4 } });
+  const input = { ...bindDegreePool(scenario, 8), assets: project.assetSnapshots, presetId: 'pp-decoder',
+    pipelineStage: match!.pipelineStage, expertMesh: match!.expertMesh, network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } };
+  expect(await previewParallelPreset(input)).toMatchObject({ status: 'unavailable', message: expect.stringContaining('可均分到 4') });
+  input.scenario.bindings = [...scenario.bindings, { parameterKey: 'NK', value: { kind: 'integer', value: 4 } }];
+  const attempt = await previewParallelPreset(input);
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  expect(currentDegrees(attempt.preview.scenario, model.parallelPresets!)).toEqual(degrees);
+  expect(attempt.preview.communicationCount).toBe(17);
+  const perStageState = 3 * 2 * 2 * 256 + ledger(cases[0], 1).recurrentBytes / 4;
+  expect(attempt.preview.allocations.map(row => row.stateBytes)).toEqual(Array(8).fill(perStageState));
 }, 120_000);
 
 it.each([

@@ -6,7 +6,7 @@ import { DisplayUnitsControl } from './display-units.js';
 import { copyConfiguration } from '../../../packages/contracts/src/configuration-edit.js';
 import { removeQuantizationRule } from '../../../packages/contracts/src/ascend-quantization.js';
 import { AscendQuantizationEditor } from './ascend-quantization-view.js';
-import { calculationInput, pipelineExpertPreset, supportsRequestReplicas } from '@model-analyser/core';
+import { calculationInput, pipelineExpertMeshPresets, pipelineExpertPreset, supportsRequestReplicas } from '@model-analyser/core';
 import { publishCanvasEdit,type CanvasEditPlan } from './canvas-editing.js';
 import {runCanvasEditTask} from './canvas-edit-task.js';
 import type {CanvasEditIntent,CanvasEditControls} from './canvas-edit-worker.js';
@@ -160,6 +160,14 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
           const oldStage=pipelineExpertPreset(previous,previousPresets,stageId,phase);
           const newStage=pipelineExpertPreset(preset,target?.parallelPresets??[],stageId,phase);
           if(!oldStage||!newStage||canonical(oldStage)!==canonical(newStage))throw Error('新模型修订没有兼容的阶段内专家布局');
+          if(origin.expertMesh){
+            const oldMesh=pipelineExpertMeshPresets(previous,previousPresets,phase);
+            const newMesh=pipelineExpertMeshPresets(preset,target?.parallelPresets??[],phase);
+            if(!oldMesh||!newMesh||canonical([oldMesh.ep,oldMesh.tp,oldStage===oldMesh.shared?oldMesh.attention:null])!==
+              canonical([newMesh.ep,newMesh.tp,newStage===newMesh.shared?newMesh.attention:null])){
+              throw Error('新模型修订没有兼容的阶段内专家网格');
+            }
+          }
         }
       }
       if(preset.phases.includes(next.workload.kind)){

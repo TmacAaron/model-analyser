@@ -10,11 +10,12 @@ import { canonical } from '../../contracts/src/validation.js';
 const requestAxis = 'request';
 const tensorAxis = 'tp';
 export const pipelineTensorMeshAxis = '$pipeline-tp';
-type StageShard = Pick<ParallelPresetTemplate['tensorShards'][number], 'axisId'|'policy'>;
+export type PipelineStagePart = Pick<ParallelPresetTemplate,'tensorShards'|'reductions'> & {axis:'tp'|'expert'|'feature';size:number};
+type StageShard = Pick<Extract<TensorDistribution,{kind:'sharded'}>,'axes'|'policy'>;
 
 /** Balance consecutive chain occurrences and materialize the declared local layout of each stage. */
 export function materializePipelinePreset(request: ParallelPresetRequest, preset: ParallelPresetTemplate, resolved: ResolvedGraph,
-  stageLayout?: Pick<ParallelPresetTemplate,'tensorShards'|'reductions'>) {
+  stageParts: PipelineStagePart[]) {
   const declaration = preset.pipeline;
   const network = request.network;
   const replicas = request.requestDp ?? 1;
@@ -56,32 +57,33 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     return device;
   }
   const groups: NonNullable<ParallelPresetTemplate['declaredPlan']>['groups'] = [];
-  const groupFor = (stages: Iterable<number>) => {
+  const groupFor = (stages: Iterable<number>, expertGrid = false) => {
     const indices = [...new Set(stages)].sort((a, b) => a - b);
     if (!indices.length || indices.some(index => index < 0 || index >= stageCount)) throw Error('流水线设备组没有完整的阶段归属');
-    const groupId = 'stages:' + indices.map(index => index + 1).join('-');
+    const groupId = 'stages:' + indices.map(index => index + 1).join('-') + (expertGrid ? ':expert' : '');
     if (groups.some(group => group.groupId === groupId)) return groupId;
+    const factors = expertGrid ? request.expertMesh : undefined;
     const members = Array.from({ length: replicas }, (_, replica) =>
       indices.flatMap(stage => Array.from({ length: lanes }, (_, lane) => stageDevice(replica, stage, lane)))).flat();
     groups.push({ groupId, members, ...(request.requestDp||lanes>1 ? { mesh: {
       axes: [...(request.requestDp?[{ axisId: requestAxis, size: replicas }]:[]),
         ...(indices.length > 1 ? [{ axisId: 'stage', size: indices.length }] : []),
-        ...(lanes>1?[{axisId:tensorAxis,size:lanes}]:[])],
+        ...(factors?[{axisId:'expert',size:factors.ep},{axisId:'feature',size:factors.tp}]:lanes>1?[{axisId:tensorAxis,size:lanes}]:[])],
       coordinates: members.map((deviceId, index) => ({ deviceId, coordinates: [
         ...(request.requestDp?[Math.floor(index/(indices.length*lanes))]:[]),
         ...(indices.length > 1 ? [Math.floor(index/lanes)%indices.length] : []),
-        ...(lanes>1?[index%lanes]:[]),
+        ...(factors?[Math.floor((index%lanes)/factors.tp),index%factors.tp]:lanes>1?[index%lanes]:[]),
       ] })),
     } } : {}) });
     return groupId;
   };
-  function distribution(groupId: string, shape: Shape, shard?:StageShard): TensorDistribution {
+  function distribution(stages: Iterable<number>, shape: Shape, shard?:StageShard): TensorDistribution {
+    const groupId = groupFor(stages, shard?.axes.some(axis=>axis.meshAxisId!==tensorAxis));
     const batch = request.requestDp ? soleBatchAxis(shape) : undefined;
     if (batch&&(batch.size.kind!=='literal'||batch.size.quantity.value%replicas!==0)) throw Error('流水线请求轴无法均分');
-    if (shard && shard.axisId===batch?.axisId) throw Error('流水线请求轴与阶段内分片轴重复');
-    const axes=[...(batch?[{tensorAxisId:batch.axisId,meshAxisId:requestAxis}]:[]),
-      ...(shard?[{tensorAxisId:shard.axisId,meshAxisId:tensorAxis}]:[])];
-    return axes.length?{kind:'sharded',groupId,axes,policy:{kind:shard?.policy??'even'}}:{kind:'replicated',groupId};
+    if (shard?.axes.some(axis=>axis.tensorAxisId===batch?.axisId)) throw Error('流水线请求轴与阶段内分片轴重复');
+    const axes=[...(batch?[{tensorAxisId:batch.axisId,meshAxisId:requestAxis}]:[]),...shard?.axes??[]];
+    return axes.length?{kind:'sharded',groupId,axes,policy:shard?.policy??{kind:'even'}}:{kind:'replicated',groupId};
   }
   const stageTensors = layerCounts.map(() => new Map<TensorId, Shape>());
   const storageStages = new Map<StorageId, Set<number>>();
@@ -98,23 +100,34 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     return storage;
   }
   const tensorShards=new Map<TensorId,StageShard>(),storageShards=new Map<StorageId,StageShard>();
-  for(const rule of stageLayout?.tensorShards??[]){
-    const tensor=tensors.get(rule.tensorId),axis=tensor?.shape.find(row=>row.axisId===rule.axisId);
-    if(!tensor||tensorShards.has(rule.tensorId)||axis?.size.kind!=='literal'){
+  for(const part of stageParts)for(const rule of part.tensorShards){
+    const axis=tensors.get(rule.tensorId)?.shape.find(row=>row.axisId===rule.axisId);
+    if(axis?.size.kind!=='literal'){
       throw Error('阶段内分片缺少唯一的已知张量轴 '+rule.tensorId+'.'+rule.axisId);
     }
-    if((!rule.policy&&axis.size.quantity.value%lanes!==0)||(rule.policy&&!request.pipelineStage)){
-      throw Error('阶段内分片要求 '+rule.tensorId+'.'+rule.axisId+' 可均分到 '+lanes+' 张卡');
+    if((!rule.policy&&axis.size.quantity.value%part.size!==0)||(rule.policy&&!request.pipelineStage)){
+      throw Error('阶段内分片要求 '+rule.tensorId+'.'+rule.axisId+' 可均分到 '+part.size+' 张卡');
     }
+    const shard=tensorShards.get(rule.tensorId)??{axes:[],policy:{kind:'even'}};
+    if(shard.axes.some(axis=>axis.tensorAxisId===rule.axisId||axis.meshAxisId===part.axis||axis.meshAxisId===tensorAxis||part.axis===tensorAxis)){
+      throw Error('阶段内分片重复或混用了同一设备轴 '+rule.tensorId);
+    }
+    shard.axes.push({tensorAxisId:rule.axisId,meshAxisId:part.axis});
+    if(rule.policy)shard.policy={kind:rule.policy};
+    tensorShards.set(rule.tensorId,shard);
+  }
+  for(const [tensorId,shard] of tensorShards){
+    const tensor=tensors.get(tensorId);
+    if(!tensor)throw Error('流水线张量缺失 '+tensorId);
     const storage=backing(tensor.storageId),existing=storageShards.get(storage.storageId);
     if(storage.allocation.kind!=='tensor'||canonical(storage.allocation.shape)!==canonical(tensor.shape)||
-      existing&&(existing.axisId!==rule.axisId||existing.policy!==rule.policy)){
-      throw Error('流水线张量与底层分片轴或策略不一致 '+rule.tensorId);
-    }
-    tensorShards.set(rule.tensorId,rule);storageShards.set(storage.storageId,rule);
+      existing&&canonical(existing)!==canonical(shard))throw Error('流水线张量与底层分片轴或策略不一致 '+tensorId);
+    storageShards.set(storage.storageId,shard);
   }
   const reductions=new Map<TensorId,ParallelPresetTemplate['reductions'][number]>();
-  for(const rule of stageLayout?.reductions??[]){
+  for(const part of stageParts)for(const rule of part.reductions){
+    const previous=reductions.get(rule.tensorId);
+    if(previous&&request.expertMesh&&canonical(previous)===canonical(rule))continue;
     const source=nodes.find(row=>row.nodeId===rule.producerNodeId);
     const stage=stageByNode.get(rule.producerNodeId);
     if(reductions.has(rule.tensorId)||tensorShards.has(rule.tensorId)||source?.body.kind!=='opaque'||
@@ -154,13 +167,13 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
   const assignments: Scenario['parallelPlan']['assignments'] = stageTensors.map((used, stage) => ({
     selector: { kind: 'nodes', nodeIds: stageNodes[stage]??[] },
     phases: preset.phases, tensorDistributions: [...used].filter(([tensorId])=>!reductions.has(tensorId)).map(([tensorId, shape]) => ({
-      tensorId, distribution: distribution(groupFor([stage]), shape, tensorShards.get(tensorId)),
+      tensorId, distribution: distribution([stage], shape, tensorShards.get(tensorId)),
     })), storageDistributions: [],
   }));
   assignments.push({ selector: { kind: 'subtree', rootNodeId: NodeId.parse('$model') }, phases: preset.phases,
     tensorDistributions: [], storageDistributions: [...storageStages].map(([storageId, stages]) => {
       const allocation = storages.get(storageId)?.allocation;
-      return { storageId, distribution: distribution(groupFor(stages), allocation?.kind === 'tensor' ? allocation.shape : [],storageShards.get(storageId)) };
+      return { storageId, distribution: distribution(stages, allocation?.kind === 'tensor' ? allocation.shape : [],storageShards.get(storageId)) };
     }) });
 
   const transfers = new Map<string, { tensorId: TensorId; from: number; to: number; producer: NodeId; consumers: Set<NodeId> }>();
@@ -197,8 +210,8 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
       sourceDeviceId: stageDevice(replica, from,lane), destinationDeviceId: stageDevice(replica, to,lane),
     }))).flat() } : { sourceDeviceId: stageDevice(0, from), destinationDeviceId: stageDevice(0, to) };
     return { operation: 'send_recv', groupId: groupFor([from, to]), ...peers,
-      source: { tensorId, distribution: distribution(groupFor([from]), tensor.shape) },
-      destination: { tensorId, distribution: distribution(groupFor([to]), tensor.shape) },
+      source: { tensorId, distribution: distribution([from], tensor.shape) },
+      destination: { tensorId, distribution: distribution([to], tensor.shape) },
       payloadDtype: declaration.payloadDtype, sendBytesPerMember: payloadBytes, receiveBytesPerMember: payloadBytes,
       algorithm: { name: request.pipelineTp?'Concurrent replicated activation transfers between matching TP ranks':
         lanes>1?'Concurrent replicated activation transfers between matching stage ranks':
@@ -211,7 +224,7 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     const stage=stageByNode.get(rule.producerNodeId),tensor=tensors.get(rule.tensorId);
     const readers=reductionReaders.get(rule.tensorId);
     if(stage===undefined||!tensor||!readers?.length)throw Error('阶段内归约缺少布局 '+rule.tensorId);
-    const target=distribution(groupFor([stage]),tensor.shape);
+    const target=distribution([stage],tensor.shape);
     const communication=ringPresetReduction(rule,target,preset.phases,lanes,stageNetwork,request.requestDp?{degree:replicas,axisId:requestAxis}:undefined);
     communications.push(communication);
     assignments.push(
@@ -228,5 +241,6 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
       ...(request.requestDp ? [`${replicas} independent request groups each use their own devices. Paired stage transfers preserve each batch slice and run concurrently at that boundary.`] : []),
       ...(request.pipelineTp ? [`Each stage uses ${lanes} Attention TP ranks. Stage-local collectives merge partial attention outputs. Replicated hidden activations travel on matching TP lanes between stages.`] :
         request.pipelineStage ? [`Each stage uses ${lanes} device ranks. Stage-local collectives reduce partial outputs. Replicated hidden activations travel on matching lanes between stages.`] : []),
+      ...(request.expertMesh ? [`Each stage partitions experts across ${request.expertMesh.ep} owners and their intermediate features across ${request.expertMesh.tp} ranks per owner. A single stage-local reduction combines both partitions.`] : []),
     ] } } }, {preserveCommunicationTiming:true});
 }

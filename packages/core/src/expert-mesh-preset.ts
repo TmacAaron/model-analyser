@@ -20,3 +20,8 @@ export function expertMeshPresets(presets: ParallelPresetTemplate[], phase: Scen
     preset.sharedPoolDegrees?.length === 2 && preset.sharedPoolDegrees.includes('attentionTp') && preset.sharedPoolDegrees.includes('moeEp'));
   return { ep, tp, attention, shared };
 }
+
+export function pipelineExpertMeshPresets(pipeline: ParallelPresetTemplate, presets: ParallelPresetTemplate[], phase: Scenario['workload']['kind']) {
+  if (pipeline.strategy !== 'pipeline' || !pipeline.pipeline || !pipeline.phases.includes(phase)) return undefined;
+  return expertMeshPresets(presets.filter(preset => pipeline.phases.every(phase => preset.phases.includes(phase))), phase);
+}
