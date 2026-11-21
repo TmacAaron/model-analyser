@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { DeviceId, ProjectDocument } from '@model-analyser/contracts';
 import { makeQwen17Project } from '../../scripts/model-expansion.js';
+import { makeModelProject } from '../../scripts/model-project.js';
+import { makeQwenParallelAssets } from '../../scripts/qwen-parallel-assets.js';
 
 test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention TP', async ({ page }) => {
   test.setTimeout(120_000);
@@ -53,4 +55,46 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const hbm = cards.getByRole('button', { name: '查看估计 HBM 流量来源', exact: true });
   await expect(hbm).toContainText('算子');
   await expect(hbm).toContainText('通信本地 HBM 待核定');
+});
+
+test('uses isolated request groups for DP2 × TP2 and returns to two cards when DP is cleared', async ({ page }) => {
+  test.setTimeout(150_000);
+  const assets = makeQwenParallelAssets().filter(asset => asset.assetId !== 'builtin:model:qwen3-0.6b');
+  const project = makeModelProject(assets, { kind: 'prefill', batchSize: 4, queryTokensPerRequest: 1, pastTokensPerRequest: 2 }, 'Qwen3-1.7B DP × TP');
+  project.projectId = randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({
+    name: 'qwen17-dp-tp.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  const tp = page.getByLabel('Attention TP', { exact: true });
+  const dp = page.getByLabel('Attention DP', { exact: true });
+  await tp.fill('2');
+  await dp.fill('2');
+  const logical = page.getByRole('region', { name: '逻辑分片与通信' });
+  await expect(logical).toContainText('4 个逻辑槽位 · 2 组请求，每组 2 卡');
+  await page.getByLabel('通信带宽 (B/s)', { exact: true }).fill('100000000000');
+  await page.getByLabel('单轮延迟 (s)', { exact: true }).fill('0.000001');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('4 个实际设备 · 28 个通信', { timeout: 40_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量', exact: true });
+  await expect(capacity).toContainText('本组每卡 57,344 B / token', { timeout: 40_000 });
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
+  await capacity.getByText('逐卡显存与缓存分配', { exact: true }).click();
+  await expect(capacity.getByRole('row', { name: /^gpu0/ })).toContainText('336 KiB');
+
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(tp).toHaveValue('2');
+  await expect(dp).toHaveValue('2');
+  await dp.fill('1');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('2 个实际设备 · 28 个通信', { timeout: 40_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
 });

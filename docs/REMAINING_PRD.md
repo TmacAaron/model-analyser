@@ -18,6 +18,8 @@ Qwen3.5-397B-A17B 和 Qwen3.8-27B r2 提供[全模型 Attention TP 和请求 DP]
 
 Qwen3.5-397B-A17B r3／r4、GLM-5.2 r2 和 Kimi‑K3 r2／r3 的[全模型 MoE EP × TP](PARALLEL_PRESETS.md#全模型-moe-ep--tp)在同一布局切分路由专家及专家中间特征，经过一次全池归约再进入原合并点。可让 Attention TP 复用该池中的全部设备。FP8 和 MXFP4 权重使用各自分片及缩放因子计算显存。跨池激活传输和正式模型的上下文并行继续按 F03 核对。
 
+[请求 DP 与张量分片组合](PARALLEL_PRESETS.md#请求-dp-与张量分片组合)把 Batch 分给各个请求副本，副本内应用已声明的 Attention TP、MoE EP／TP 或专家双轴布局。归约保留各副本的请求切片，KV 预算使用副本内的实际请求数和分片。Qwen3-1.7B 的四卡 Attention DP2 × TP2 和 Qwen3.5-397B-A17B 每个请求副本内的 MoE EP2 × TP2 已按独立账本核对。
+
 Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重和 FP8 执行](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。逐卡计算权重缩放网格及稀疏专家读量。FP8 执行另计动态 FP32 激活缩放、E4M3FN 矩阵乘法和块缩放累加。H100 SXM r2 提供匹配的理论算力。其他模型的固定发布格式、W4A4/W4A8 执行覆盖和额外状态格式继续按 F09 验证。
 
 Qwen3.5-397B-A17B 与 Qwen3.8-27B 已提供[混合注意力文本解码器](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。GQA 的可增长 KV 与 DeltaNet 的固定状态分别计算。[DeepSeek-V4-Flash](MODEL_REFERENCES.md#deepseek-v4-flash) 已接入 43 层主解码器、4／128 token 压缩分组和固定滑窗容量。[DeepSeek-V4.1-Flash](MODEL_REFERENCES.md#deepseek-v41-flash) 已接入 40 层主文本解码器、跨层共享 KV 和索引、CSA2 候选掩码以及两处 Engram。[GLM-5.2](MODEL_REFERENCES.md#glm-52) 已接入 78 层主文本解码器、21 个 DSA 索引拥有层、吸收投影的稀疏 MLA 以及 BF16 KV 槽位预算。[Kimi-K3](MODEL_REFERENCES.md#kimi-k3) 已接入 93 层主文本解码器、Attention Residuals 跨块数据流、Latent MoE、Gated MLA 的 KV 槽位和 KDA 固定状态。正式大模型的多卡布局和发布量化配置继续按 F03／F09 核对。

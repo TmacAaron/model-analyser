@@ -40,7 +40,15 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     if(canonical(dims(from.result.globalShape))!==canonical(dims(to.result.globalShape)))throw new FormulaError('invalid_shape','通信前后逻辑张量维度必须一致；布局变换不隐式执行 reshape');
     const sk=c.source.distribution.kind,dk=c.destination.distribution.kind;
     if(sendRecv){const sourceView={...from.result,placements:from.result.placements.filter(p=>p.deviceId===sender).map(p=>({...p,deviceId:receiver??p.deviceId}))},targetView={...to.result,placements:to.result.placements.filter(p=>p.deviceId===receiver)};if(!canReadTensorLocally(sourceView,targetView))throw new FormulaError('invalid_distribution','send_recv 不能隐式归约 partial 或发送源设备不具备的目标切片');}
-    if(c.operation==='all_reduce'&&(sk!=='partial'||dk!=='replicated'))throw new FormulaError('invalid_distribution','all_reduce 需要 partial → replicated 布局');
+    const partition=c.source.distribution.kind==='partial'?c.source.distribution.partition:undefined;
+    if(partition){
+      const target=c.destination.distribution;
+      const slices=(result:typeof from.result)=>result.placements.map(({deviceId,slices})=>[deviceId,slices]).sort(([a],[b])=>String(a).localeCompare(String(b)));
+      if(c.operation!=='all_reduce'||target.kind!=='sharded'||target.policy.kind!=='even'||target.axes.length!==1||
+        target.axes[0]?.tensorAxisId!==partition.tensorAxisId||canonical(slices(from.result))!==canonical(slices(to.result))){
+        throw new FormulaError('invalid_distribution','分组 AllReduce 必须保留各设备的同一请求切片');
+      }
+    }else if(c.operation==='all_reduce'&&(sk!=='partial'||dk!=='replicated'))throw new FormulaError('invalid_distribution','all_reduce 需要 partial → replicated 布局');
     if(c.operation==='reduce_scatter'&&(sk!=='partial'||dk!=='sharded'))throw new FormulaError('invalid_distribution','reduce_scatter 需要 partial → sharded 布局');
     if(c.operation==='all_gather'&&(sk!=='sharded'||dk!=='replicated'))throw new FormulaError('invalid_distribution','all_gather 需要 sharded → replicated 布局');
     if(c.operation==='all_to_all'&&(!['sharded','manual'].includes(sk)||!['sharded','manual'].includes(dk)))throw new FormulaError('invalid_distribution','all_to_all 需要显式分片或手工局部布局');

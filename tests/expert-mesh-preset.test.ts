@@ -63,6 +63,18 @@ it('shards Qwen experts and their FP8 weights within each owner while keeping gl
   const invalid = await previewParallelPreset({ ...bindDegreePool(scenario, 6), assets: project.assetSnapshots,
     presetId: 'ep-routed', expertMesh: { ep: 2, tp: 3 }, network });
   expect(invalid).toMatchObject({ status: 'unavailable', message: expect.stringContaining('可整除 3') });
+
+  const workload = { ...scenario.workload, batchSize: 2 };
+  const requestReplicas = await previewParallelPreset({ ...bindDegreePool({ ...scenario, workload }, 8), assets: project.assetSnapshots,
+    presetId: 'ep-routed', expertMesh: { ep: 2, tp: 2 }, requestDp: 2, network });
+  if (requestReplicas.status !== 'available') throw Error(requestReplicas.message);
+  const combined = requestReplicas.preview;
+  expect(currentDegrees(combined.scenario, presets)).toEqual({ ...serialDegrees, attentionDp: 2, moeEp: 2, moeTp: 2 });
+  expect(combined.communications?.every(row => row.algorithm.startupRounds === 6)).toBe(true);
+  expect(combined.allocations.map(row => row.stateBytes)).toEqual(preview.allocations.map(row => row.stateBytes));
+  const elements = 4 * 3 * hidden * 1024 * (512 / 8);
+  const extraWeights = elements + elements / 128 ** 2 * 2;
+  expect(combined.allocations.map((row, index) => row.weightBytes - preview.allocations[index]!.weightBytes)).toEqual(Array(8).fill(extraWeights));
 }, 120_000);
 
 it('still matches the fixed native EP2 × TP2 reference layout', () => {

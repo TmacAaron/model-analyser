@@ -73,7 +73,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
         throw Error('请输入大于零的通信带宽和非负的单轮延迟。');
       }
       const input = ParallelPresetRequest.parse({ ...pool, assets: [...project.assetSnapshots, ...extra], presetId: match.preset.presetId,
-        network, expertMesh: match.expertMesh });
+        network, expertMesh: match.expertMesh, requestDp: match.requestDp });
       const worker = new Worker(new URL('./parallel-preset-worker.ts', import.meta.url), { type: 'module' });
       task.worker = worker;
       worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -131,8 +131,9 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
         {matches.map(({ preset }) => <option key={preset.presetId} value={preset.presetId}>{preset.name}</option>)}
       </select></label>}
       <p>{match.expertMesh ? `均分专家，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
-        (degrees.attentionTp > 1 ? 'Attention TP 复用全部设备。' : '') : match.preset.description}</p>
-      <p>{match.slots} 个逻辑槽位{match.preset.declaredPlan && ' · ' + match.preset.declaredPlan.groups.map(group => group.groupId + ' ' + group.members.length).join(' · ')}</p>
+        (degrees.attentionTp > 1 ? (match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') : match.preset.description}</p>
+      <p>{match.slots} 个逻辑槽位{match.requestDp && ` · ${match.requestDp} 组请求，每组 ${match.slots / match.requestDp} 卡`}
+        {match.preset.declaredPlan && ' · ' + match.preset.declaredPlan.groups.map(group => group.groupId + ' ' + group.members.length).join(' · ')}</p>
       {match.preset.tensorShards.length > 0 && match.slots > 1 && <p>张量轴分片 {match.preset.tensorShards.map(item => item.tensorId + '/' + item.axisId).join('、')}</p>}
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length

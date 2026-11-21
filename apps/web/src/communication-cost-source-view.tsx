@@ -61,12 +61,13 @@ function EndpointLayoutsProof({layouts}:{layouts:EndpointLayouts}){
  return <section className="storage-access-item" aria-label="通信端点布局">
   <h5>实际通信端点布局</h5><p>消息数据类型 {layouts.payloadDtype.format} · {layouts.payloadDtype.bits} bit</p>
   {(['source','destination'] as const).map(side=>{
-   const {tensorId,declaredTensorId,groupId,declaredGroupId,kind,dtype,placementCount,globalShape,operations,coverage,reduceOperation}=layouts[side];
+   const {tensorId,declaredTensorId,groupId,declaredGroupId,kind,dtype,placementCount,globalShape,operations,coverage,reduceOperation,partition}=layouts[side];
    const shape=globalShape.map(axis=>axis.size.kind==='literal'?`${axis.axisId}=${axis.size.quantity.value}`:axis.axisId).join(' × ')||'标量';
    return <div key={side}>
     <h5>{endpointNames[side]} {tensorId} · {layoutNames[kind]}</h5>
     <p>物理布局组 {groupId} · {placementCount} 台设备 · {coverageNames[coverage]} · 张量 {dtype.format} · {shape}</p>
     {reduceOperation&&<p>声明归约算式 {reduceOperation}</p>}
+    {partition&&<p>归约保留 {partition.tensorAxisId} 轴的 {partition.meshAxisId} 分片</p>}
     {(declaredTensorId!==tensorId||declaredGroupId!==groupId)&&<p>声明张量 {declaredTensorId} · 声明组 {declaredGroupId}</p>}
     {operations.map((operation,index)=><PartitionOperationProof key={index} operation={operation}/>)}
    </div>;

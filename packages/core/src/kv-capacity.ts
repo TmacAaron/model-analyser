@@ -27,6 +27,7 @@ export type KvCapacityReport={
   averageBytesPerToken?:number|undefined;
   replicatedBytesPerToken?:number;
   shardedBytesPerToken?:number;
+  requestPartitionedBytesPerToken?:number;
   fixedSlotsPerRequest?:number;
   rowProfile?:{groupSizes:number[];fixedWindows:number[];includesIndexer:boolean};
   devices:DeviceRow[];
@@ -174,7 +175,7 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     });
     const batchTokens=(fixedSlots??reference??0)*batchSize;
     const averageBytesPerToken=currentKvBytes!==undefined&&matchesBatch&&Number.isSafeInteger(batchTokens)&&batchTokens>0?currentKvBytes/batchTokens:undefined;
-    let budget:Budget,rowProfile:KvCapacityReport['rowProfile'],perDeviceRate:Pick<KvCapacityReport,'replicatedBytesPerToken'|'shardedBytesPerToken'>={};
+    let budget:Budget,rowProfile:KvCapacityReport['rowProfile'],perDeviceRate:Pick<KvCapacityReport,'replicatedBytesPerToken'|'shardedBytesPerToken'|'requestPartitionedBytesPerToken'>={};
     try{
       if(!states.length)throw Error('此模型在当前阶段没有声明 KV 或 MLA latent 缓存。');
       const rules=new Map<StorageId,SlotRows|undefined>();
@@ -206,10 +207,10 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
       const layout=frame.distributed?.layout,allocations=new Map(layout?.storageAllocations.map(record=>[record.storageId,record.allocation.distribution]));
       const firstBytes=rows[0]?.kvBytes;
       if(layout&&devices.length>1&&averageBytesPerToken!==undefined&&firstBytes!==undefined&&rows.every(row=>row.kvBytes===firstBytes)){
-        const groups=new Map(active.deviceTopology.groups.map(group=>[group.groupId,group.members.length]));
+        const groups=new Map(active.deviceTopology.groups.map(group=>[group.groupId,group]));
         const placement=specs.map(spec=>{
           const distribution=allocations.get(spec.storageId);
-          if(!distribution||groups.get(distribution.groupId)!==devices.length)return;
+          if(!distribution||groups.get(distribution.groupId)?.members.length!==devices.length)return;
           if(distribution.kind==='replicated')return 'replicated';
           if(distribution.kind!=='sharded'||spec.allocation.kind!=='tensor')return;
           const axes=new Set(spec.allocation.shape.filter(axis=>axis.semantic==='batch'||axis.semantic==='token').map(axis=>axis.axisId));
@@ -217,6 +218,17 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
         });
         if(placement.every(kind=>kind==='replicated'))perDeviceRate={replicatedBytesPerToken:firstBytes/batchTokens};
         if(placement.every(kind=>kind==='sharded'))perDeviceRate={shardedBytesPerToken:firstBytes/batchTokens};
+        const requestWidths=specs.map(spec=>{
+          const distribution=allocations.get(spec.storageId);
+          if(distribution?.kind!=='sharded'||distribution.policy.kind!=='even'||spec.allocation.kind!=='tensor')return;
+          const batch=spec.allocation.shape.find(axis=>axis.semantic==='batch');
+          const axis=distribution.axes.find(axis=>axis.tensorAxisId===batch?.axisId);
+          return groups.get(distribution.groupId)?.mesh?.axes.find(mesh=>mesh.axisId===axis?.meshAxisId)?.size;
+        });
+        const width=requestWidths[0];
+        if(width&&width>1&&requestWidths.every(value=>value===width)){
+          perDeviceRate.requestPartitionedBytesPerToken=firstBytes/(batchTokens/width);
+        }
       }
       const profile:SlotStorage[]=specs.map(spec=>{
         const allocation=spec.allocation;

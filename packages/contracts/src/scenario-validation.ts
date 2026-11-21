@@ -87,6 +87,7 @@ export function validateScenario(scenario:Scenario,assets:AssetDocument[]):Diagn
       if(d.policy.kind==='explicit')for(const s of d.policy.slices)if(!group.members.includes(s.deviceId)||s.end<=s.start)report('invalid_distribution','切片成员或范围非法',path);
     }
     if(d.kind==='manual'){unique(d.members.map(m=>m.deviceId),path+'.members');if(d.members.length!==group.members.length||d.members.some(m=>!group.members.includes(m.deviceId)))report('invalid_distribution','manual 必须覆盖每个设备成员',path);}
+    if(d.kind==='partial'&&d.partition&&!group.mesh?.axes.some(a=>a.axisId===d.partition?.meshAxisId))report('invalid_distribution','归约保留分片引用缺失 mesh 轴',path);
     if(d.kind==='partial'&&a.phases.includes(scenario.workload.kind)&&!communications.some(c=>{
       const tensors=assets.flatMap(a=>a.definition.kind==='operator'?a.definition.operator.tensors:a.definition.kind==='model'||a.definition.kind==='module'?a.definition.graph.tensors:[]);
       const sameObject='tensorId' in distribution?c.source.tensorId===distribution.tensorId:tensors.some(t=>t.tensorId===c.source.tensorId&&t.storageId===distribution.storageId);

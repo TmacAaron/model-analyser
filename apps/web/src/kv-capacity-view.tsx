@@ -42,6 +42,7 @@ function KvSummary({report}:{report:KvCapacityReport}){
         <strong>{report.averageBytesPerToken===undefined?'—':formatRate(report.averageBytesPerToken)}</strong>
         {report.replicatedBytesPerToken!==undefined&&<small>每卡复制 {formatRate(report.replicatedBytesPerToken)}</small>}
         {report.shardedBytesPerToken!==undefined&&<small>每卡分片 {formatRate(report.shardedBytesPerToken)}</small>}
+        {report.requestPartitionedBytesPerToken!==undefined&&<small>本组每卡 {formatRate(report.requestPartitionedBytesPerToken)}</small>}
         {report.currentKvBytes!==undefined&&<small>所有物理设备合计 {display.bytes(report.currentKvBytes)}{report.referenceTokensPerRequest!==undefined&&' · 每请求 '+integer.format(report.referenceTokensPerRequest)+' token'}</small>}
       </div>
     </div>

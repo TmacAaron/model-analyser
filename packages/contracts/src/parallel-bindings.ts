@@ -5,7 +5,9 @@ type Bindings=NonNullable<Scenario['parallelPlan']['nativeBindings']>;
 export function remapDistribution(d:TensorDistribution,b:Bindings):TensorDistribution{
   const group=b.groups.find(g=>g.logicalGroupId===d.groupId);if(!group)throw Error('未绑定通信/布局组角色 '+d.groupId);
   const device=(id:string)=>{const mapped=b.devices.find(x=>x.logicalDeviceId===id);if(!mapped)throw Error('未绑定设备槽位 '+id);return mapped.physicalDeviceId;};
-  if(d.kind==='sharded')return {...d,groupId:group.physicalGroupId,axes:d.axes.map(a=>{const axis=group.meshAxes.find(x=>x.logicalAxisId===a.meshAxisId);if(!axis)throw Error('未绑定 mesh 轴 '+d.groupId+'.'+a.meshAxisId);return {...a,meshAxisId:axis.physicalAxisId};}),policy:d.policy.kind==='explicit'?{...d.policy,slices:d.policy.slices.map(s=>({...s,deviceId:device(s.deviceId)}))}:d.policy};
+  const remapAxis=(a:{tensorAxisId:string;meshAxisId:string})=>{const axis=group.meshAxes.find(x=>x.logicalAxisId===a.meshAxisId);if(!axis)throw Error('未绑定 mesh 轴 '+d.groupId+'.'+a.meshAxisId);return {...a,meshAxisId:axis.physicalAxisId};};
+  if(d.kind==='sharded')return {...d,groupId:group.physicalGroupId,axes:d.axes.map(remapAxis),policy:d.policy.kind==='explicit'?{...d.policy,slices:d.policy.slices.map(s=>({...s,deviceId:device(s.deviceId)}))}:d.policy};
+  if(d.kind==='partial'&&d.partition)return {...d,groupId:group.physicalGroupId,partition:remapAxis(d.partition)};
   if(d.kind==='manual')return {...d,groupId:group.physicalGroupId,members:d.members.map(m=>({...m,deviceId:device(m.deviceId)}))};
   return {...d,groupId:group.physicalGroupId};
 }
@@ -56,6 +58,7 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   }
   const check=(d:TensorDistribution)=>{const g=r.groups.find(g=>g.groupId===d.groupId);if(!g){errors.push('布局引用未知组角色 '+d.groupId);return;}
     if(d.kind==='sharded'&&d.axes.some(a=>!g.mesh?.axes.some(m=>m.axisId===a.meshAxisId)))errors.push('分片引用未知模板 mesh 轴');
+    if(d.kind==='partial'&&d.partition&&!g.mesh?.axes.some(m=>m.axisId===d.partition?.meshAxisId))errors.push('归约保留分片引用未知模板 mesh 轴');
     if(d.kind==='manual'&&(d.members.length!==g.members.length||new Set(d.members.map(m=>m.deviceId)).size!==g.members.length||d.members.some(m=>!g.members.includes(m.deviceId))))errors.push('manual 布局必须完整覆盖角色成员');
     if(d.kind==='sharded'&&d.policy.kind==='explicit'&&d.policy.slices.some(s=>!g.members.includes(s.deviceId)||s.start>=s.end))errors.push('显式切片引用未知槽位或非法范围');
   };

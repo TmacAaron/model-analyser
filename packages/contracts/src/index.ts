@@ -110,10 +110,11 @@ export const LocalCostSource = z.discriminatedUnion('kind',[
 export const LocalCostRule = z.strictObject({participation:z.discriminatedUnion('kind',[
   z.strictObject({kind:z.literal('tensor_layout'),tensorId:TensorId}),z.strictObject({kind:z.literal('storage_layout'),storageId:StorageId}),
 ]),bindings:z.array(z.strictObject({symbol:z.string().regex(/^[A-Za-z_][A-Za-z_0-9]*$/),source:LocalCostSource})),cost:CostDefinition,description:Id});
+const MeshAxisBinding = z.strictObject({tensorAxisId:Id,meshAxisId:Id});
 export const TensorDistribution = z.discriminatedUnion('kind',[
   z.strictObject({kind:z.literal('replicated'),groupId:Id}),
-  z.strictObject({kind:z.literal('partial'),groupId:Id,reduceOperation:z.enum(['sum','max','min'])}),
-  z.strictObject({kind:z.literal('sharded'),groupId:Id,axes:z.array(z.strictObject({tensorAxisId:Id,meshAxisId:Id})).min(1),
+  z.strictObject({kind:z.literal('partial'),groupId:Id,reduceOperation:z.enum(['sum','max','min']),partition:MeshAxisBinding.optional()}),
+  z.strictObject({kind:z.literal('sharded'),groupId:Id,axes:z.array(MeshAxisBinding).min(1),
     policy:z.discriminatedUnion('kind',[z.strictObject({kind:z.literal('even')}),z.strictObject({kind:z.literal('padded')}),z.strictObject({kind:z.literal('balanced')}),
       z.strictObject({kind:z.literal('explicit'),slices:z.array(z.strictObject({deviceId:DeviceId,axisId:Id,start:Natural,end:Natural}))})])}),
   z.strictObject({kind:z.literal('manual'),groupId:Id,members:z.array(z.strictObject({deviceId:DeviceId,localShape:Shape,copies:PositiveInt})),description:Id}),
@@ -131,7 +132,7 @@ export const DependencyEdge = z.strictObject({edgeId:Id,fromNodeId:NodeId,toNode
 export const NodeSelector = z.discriminatedUnion('kind',[z.strictObject({kind:z.literal('nodes'),nodeIds:z.array(NodeId).min(1)}),z.strictObject({kind:z.literal('subtree'),rootNodeId:NodeId})]);
 const ExpertMeshFactors = z.strictObject({ep:z.number().int().min(2).max(64),tp:z.number().int().min(2).max(64)});
 export const ParallelPresetOrigin = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,modelId:AssetId,modelRevision:PositiveInt,groupId:Id,meshAxisId:Id,
-  expertMesh:ExpertMeshFactors.extend({groupId:Id}).optional()});
+  expertMesh:ExpertMeshFactors.extend({groupId:Id}).optional(),requestDp:z.number().int().min(2).max(64).optional()});
 export const NativeCollectiveBindings = z.strictObject({groups:z.array(z.strictObject({logicalGroupId:Id,physicalGroupId:Id,
   meshAxes:z.array(z.strictObject({logicalAxisId:Id,physicalAxisId:Id}))})),devices:z.array(z.strictObject({logicalDeviceId:DeviceId,physicalDeviceId:DeviceId})),
   network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional()});
@@ -228,7 +229,8 @@ export const Scenario = z.strictObject({scenarioId:Id,name:Id,model:AssetRef,bin
     z.strictObject({kind:z.literal('decode'),batchSize:PositiveInt,contextTokensPerRequest:Natural,queryTokensPerRequest:PositiveInt,steps:PositiveInt,approximation:z.literal('fixed_context').optional()}),
   ]),deviceTopology:DeviceTopology,parallelPlan:ParallelPlan,executionPlan:ExecutionPlan,quantizationOverrides:z.array(QuantizationDefinition),numericOverrides:z.array(NumericOverride),memoryPeakOverrides:z.array(MemoryPeakOverride).optional(),modulePeakOverrides:z.array(ModulePeakOverride).optional(),ascendQuantizationImports:z.array(AscendQuantizationReview).optional(),fusionGroups:z.array(FusionGroup)});
 export const ParallelPresetRequest = z.strictObject({scenario:Scenario,assets:z.array(AssetDocument),presetId:Id,groupId:Id,meshAxisId:Id,
-  network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional(),expertMesh:ExpertMeshFactors.optional()});
+  network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional(),expertMesh:ExpertMeshFactors.optional(),
+  requestDp:ParallelPresetOrigin.shape.requestDp});
 export const ParallelPresetPreview = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,presetName:Id,sourceModel:AssetRef,sourceInputHash:Id,scenario:Scenario,assets:z.array(AssetDocument),
   deviceIds:z.array(DeviceId),assignmentCount:Natural,communicationCount:Natural,communications:z.array(CommunicationDefinition).optional(),allocations:z.array(z.strictObject({deviceId:DeviceId,totalBytes:Natural,weightBytes:Natural,stateBytes:Natural})),warnings:z.array(Id)});
 export const ParallelPresetAttempt = z.discriminatedUnion('status',[

@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
-import { DeviceId, type MetricValue, type Scenario } from '@model-analyser/contracts';
-import { analyzeScenario, previewParallelPreset } from '@model-analyser/core';
+import { DeviceId, Scenario, type MetricValue } from '@model-analyser/contracts';
+import { analyzeScenario, estimateKvCapacity, previewParallelPreset, replayCommunicationCostSource, resolveParallelPlan } from '@model-analyser/core';
+import { currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenParallelAssets } from '../scripts/qwen-parallel-assets.js';
@@ -15,14 +16,14 @@ function count(metric: MetricValue | undefined) {
   return metric.quantity.value;
 }
 
-function prepare(workload: Scenario['workload'], layerCount = layers) {
+function prepare(workload: Scenario['workload'], layerCount = layers, deviceCount = 2) {
   const assets = makeQwenParallelAssets().filter(asset => asset.assetId !== 'builtin:model:qwen3-0.6b');
   const project = makeModelProject(assets, workload, 'Qwen3-1.7B parallel');
   const scenario = project.scenarios[0]!, primary = scenario.deviceTopology.devices[0]!;
-  const other = { ...primary, deviceId: DeviceId.parse('gpu1') };
+  const devices = Array.from({ length: deviceCount }, (_, index) => ({ ...primary, deviceId: DeviceId.parse('gpu' + index) }));
   scenario.deviceTopology = {
-    devices: [primary, other],
-    groups: [{ groupId: 'parallel', members: [primary.deviceId, other.deviceId] }],
+    devices,
+    groups: [{ groupId: 'parallel', members: devices.map(device => device.deviceId) }],
   };
   if (layerCount !== layers) scenario.numericOverrides.push({
     target: { kind: 'scenario', scenarioId: scenario.scenarioId }, field: 'parameter', parameterKey: 'L',
@@ -99,3 +100,60 @@ it('previews the first Decode call and keeps the applied layout for actual multi
     [3 * kvPerCardAndToken, 3 * kvPerCardAndToken], [4 * kvPerCardAndToken, 4 * kvPerCardAndToken],
   ]);
 }, 60_000);
+
+it('reduces TP outputs independently for each DP request group and sizes growing KV', async () => {
+  const input = prepare({ kind: 'decode', batchSize: 4, queryTokensPerRequest: 1, contextTokensPerRequest: 2, steps: 2 }, 2, 4);
+  const presets = input.assets.find(asset => asset.assetId === input.scenario.model.assetId)?.parallelPresets ?? [];
+  const degrees = { ...serialDegrees, attentionDp: 2, attentionTp: 2 };
+  const [match] = matchingParallelPresets(degrees, presets, input.scenario);
+  expect(match).toMatchObject({ slots: 4, requestDp: 2, preset: { presetId: 'tp-attention-heads' } });
+  const request = { ...input, requestDp: 2, presetId: match!.preset.presetId, network: { bytesPerSecond: 1e11, latencySeconds: 1e-6 } };
+  expect(await previewParallelPreset({ ...request, scenario: { ...input.scenario, workload: { ...input.scenario.workload, batchSize: 3 } } }))
+    .toMatchObject({ status: 'unavailable', message: expect.stringContaining('Batch') });
+  const attempt = await previewParallelPreset(request);
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  const { preview } = attempt;
+  const reopened = Scenario.parse(JSON.parse(JSON.stringify(preview.scenario)));
+  expect(currentDegrees(reopened, presets)).toEqual(degrees);
+  const weightBytes = 2 * (rootParameters + 2 * (replicaParameters + attentionMatrices / 2));
+  const perLocalRequestToken = 2 * 2 * 2 * width * kvHeads / 2;
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(4).fill([weightBytes, 2 * 3 * perLocalRequestToken]));
+  expect(preview.communications).toHaveLength(2);
+
+  const result = await analyzeScenario(reopened, preview.assets);
+  if (result.status !== 'available') throw Error(JSON.stringify(result.diagnostics.slice(0, 5)));
+  expect(validateResult(result.result)).toEqual([]);
+  const steps = result.result.decode?.steps;
+  expect(steps?.map(step => step.memory.map(device => count(device.categoryBreakdown.find(item => item.category === 'state')?.bytes))))
+    .toEqual([Array(4).fill(2 * 3 * perLocalRequestToken), Array(4).fill(2 * 4 * perLocalRequestToken)]);
+  const evaluation = steps?.[1]?.result.distributed?.layout.communications[0]?.evaluation;
+  expect(evaluation?.source.placements.map(row => row.slices.find(slice => slice.axisId === 'b'))).toMatchObject([
+    { start: 0, end: 2 }, { start: 0, end: 2 }, { start: 2, end: 4 }, { start: 2, end: 4 },
+  ]);
+  expect(evaluation?.definition.algorithm).toMatchObject({ startupRounds: 2, trafficFactor: 1 });
+  expect(evaluation?.perDevice.map(device => count(device.sendBytes))).toEqual(Array(4).fill(2 * 2 * hidden));
+  expect(count(evaluation?.cost.seconds)).toBeCloseTo(2e-6 + (2 * 2 * hidden) / 1e11, 12);
+  expect(await estimateKvCapacity(reopened, preview.assets)).toMatchObject({ status: 'available', report: {
+    requestPartitionedBytesPerToken: perLocalRequestToken, budget: { status: 'available' },
+  } });
+
+  const edited: Scenario = { ...reopened, workload: { kind: 'prefill', batchSize: 6, queryTokensPerRequest: 2, pastTokensPerRequest: 2 } };
+  const changed = await resolveParallelPlan(edited, preview.assets);
+  if (changed.status !== 'available') throw Error(JSON.stringify(changed.diagnostics.slice(0, 4)));
+  const communication = changed.result.communications[0]!.evaluation;
+  const metric = communication.cost.communications[0]!.sendBytesPerMember;
+  expect(count(metric)).toBe(2 * 3 * 2 * hidden);
+  const evidence = await replayCommunicationCostSource({ scenario: edited, assets: preview.assets, metric,
+    inputHash: changed.result.inputHash, engineVersion: changed.result.engineVersion, proofVersion: 3,
+    selector: { index: 0, scope: communication.cost.scope, field: 'sendBytesPerMember' },
+  });
+  expect(evidence.uniformMessages?.send.quantity.value).toBe(2 * 3 * 2 * hidden);
+  expect(evidence.endpointLayouts?.source.partition).toMatchObject({ tensorAxisId: 'b' });
+
+  const invalid = structuredClone(edited);
+  const first = invalid.parallelPlan.communications[0]!;
+  first.destination.distribution = { kind: 'replicated', groupId: first.groupId };
+  expect(await resolveParallelPlan(invalid, preview.assets)).toMatchObject({ status: 'unavailable', diagnostics: [
+    expect.objectContaining({ code: 'invalid_distribution', message: expect.stringContaining('同一请求切片') }),
+  ] });
+}, 90_000);

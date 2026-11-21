@@ -1,5 +1,5 @@
 import { DeviceId, type ParallelPresetTemplate, type Scenario, type ParallelPresetRequest } from '@model-analyser/contracts';
-import { expertMeshPresets } from '@model-analyser/core';
+import { expertMeshPresets, requestReplicaMeshAxis } from '@model-analyser/core';
 
 export const parallelFields = [
   { area: 'Attention', fields: [{ id: 'attentionTp', label: 'TP' }, { id: 'attentionDp', label: 'DP' }] },
@@ -12,7 +12,7 @@ export const serialDegrees: Degrees = { attentionTp: 1, attentionDp: 1, moeEp: 1
 const ids = parallelFields.flatMap(area => area.fields.map(field => field.id));
 const poolId = '$degree-pool';
 const rankPrefix = '$degree-rank:';
-type DegreeMatch = { preset: ParallelPresetTemplate; slots: number; expertMesh?: ParallelPresetRequest['expertMesh'] };
+type DegreeMatch = { preset: ParallelPresetTemplate; slots: number; expertMesh?: ParallelPresetRequest['expertMesh']; requestDp?: number };
 
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
   if (preset.strategy === 'batch_sharded') return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
@@ -46,6 +46,14 @@ function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplat
 
 export function matchingParallelPresets(degrees: Degrees, presets: ParallelPresetTemplate[], scenario: Scenario): DegreeMatch[] {
   if (ids.some(id => !Number.isSafeInteger(degrees[id]) || degrees[id] < 1 || degrees[id] > 64)) return [];
+  const requestDp = degrees.attentionDp;
+  if (requestDp > 1 && ids.some(id => id !== 'attentionDp' && degrees[id] > 1)) {
+    if (!presets.some(preset => preset.strategy === 'batch_sharded' && preset.phases.includes(scenario.workload.kind))) return [];
+    return matchingParallelPresets({ ...degrees, attentionDp: 1 }, presets, scenario).flatMap(match => {
+      const slots = match.slots * requestDp;
+      return match.preset.strategy === 'tensor_sharded' && slots <= 64 ? [{ ...match, slots, requestDp }] : [];
+    });
+  }
   const { moeEp: ep, moeTp: tp, attentionTp, ...other } = degrees;
   if (ep > 1 && tp > 1 && Object.values(other).every(degree => degree === 1)) {
     const slots = ep * tp;
@@ -66,14 +74,21 @@ export function currentDegrees(scenario: Scenario, presets: ParallelPresetTempla
   const preset = presets.find(p => p.presetId === origin?.presetId);
   const group = scenario.deviceTopology.groups.find(g => g.groupId === origin?.groupId);
   if (!preset || !group || origin?.modelId !== scenario.model.assetId || origin.modelRevision !== scenario.model.revision) return undefined;
-  const degrees = declaredDegrees(scenario.model, preset, group.members.length);
-  if (!degrees || !origin.expertMesh) return degrees;
+  const requestDp = origin.requestDp;
+  const width = group.members.length / (requestDp ?? 1);
+  if (requestDp && (!Number.isInteger(width) || group.mesh?.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp ||
+      group.mesh.axes.find(axis => axis.axisId === origin.meshAxisId)?.size !== width)) return undefined;
+  const degrees = declaredDegrees(scenario.model, preset, width);
+  if (!degrees) return undefined;
+  if (requestDp) degrees.attentionDp = requestDp;
+  if (!origin.expertMesh) return degrees;
   const { ep, tp, groupId } = origin.expertMesh;
   const expert = scenario.deviceTopology.groups.find(item => item.groupId === groupId);
-  if (!expert || expert.members.length !== group.members.length || ep * tp !== group.members.length ||
+  if (!expert || expert.members.length !== group.members.length || ep * tp !== width ||
       expert.members.some((member, index) => member !== group.members[index]) ||
-      expert.mesh?.axes[0]?.axisId !== 'expert' || expert.mesh.axes[0].size !== ep ||
-      expert.mesh.axes[1]?.axisId !== 'feature' || expert.mesh.axes[1].size !== tp) return undefined;
+      expert.mesh?.axes.find(axis => axis.axisId === 'expert')?.size !== ep ||
+      expert.mesh.axes.find(axis => axis.axisId === 'feature')?.size !== tp ||
+      requestDp && expert.mesh.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp) return undefined;
   return { ...degrees, moeEp: ep, moeTp: tp };
 }
 

@@ -45,17 +45,18 @@ export function partitionTensor(input:TensorSpec,layout:TensorDistribution,input
       placements.push({deviceId,logicalShape:shape(source,local),allocatedShape:shape(source,allocated),copies,logicalElements:elements(local,observe,'logical'),allocatedElements:elements(allocated,observe,'allocated'),slices});
     }
     const fullSlices=original.map((a,i)=>({axisId:a.axisId,start:0,end:sizes[i]??0,paddedExtent:sizes[i]??0}));
-    if(distribution.kind==='replicated'||distribution.kind==='partial')for(const id of group.members)add(id,sizes,sizes,fullSlices);
+    if(distribution.kind==='replicated'||distribution.kind==='partial'&&!distribution.partition)for(const id of group.members)add(id,sizes,sizes,fullSlices);
     else if(distribution.kind==='manual'){
       if(distribution.members.length!==group.members.length||new Set(distribution.members.map(m=>m.deviceId)).size!==group.members.length||distribution.members.some(m=>!group.members.includes(m.deviceId)))throw new FormulaError('invalid_distribution','手工布局必须完整且唯一地覆盖设备组成员');
       for(const m of distribution.members){if(m.localShape.length>32||new Set(m.localShape.map(a=>a.axisId)).size!==m.localShape.length)throw new FormulaError('invalid_distribution','手工局部张量轴重复或超过预算');const local=m.localShape.map(a=>numericValue(a.size,'count',context,true));add(m.deviceId,local,local,[],m.copies,m.localShape);}
     }else{
       const mesh=group.mesh;if(!mesh)throw new FormulaError('invalid_distribution','分片需要完整的设备 mesh');
-      if(new Set(distribution.axes.map(a=>a.tensorAxisId)).size!==distribution.axes.length||new Set(distribution.axes.map(a=>a.meshAxisId)).size!==distribution.axes.length)throw new FormulaError('invalid_distribution','一个逻辑轴和 mesh 轴不能重复用于多个分片维度');
-      const mappings=distribution.axes.map(a=>{const axis=original.findIndex(s=>s.axisId===a.tensorAxisId),meshAxis=mesh.axes.findIndex(s=>s.axisId===a.meshAxisId);if(axis<0||meshAxis<0)throw new FormulaError('invalid_distribution','分片引用的张量轴或 mesh 轴不存在');return {axis,meshAxis};});
-      const policy=distribution.policy,rectangles=new Map<string,TensorPartitionResult['placements'][number]['slices']>();
+      const axes=distribution.kind==='sharded'?distribution.axes:distribution.partition?[distribution.partition]:[];
+      if(new Set(axes.map(a=>a.tensorAxisId)).size!==axes.length||new Set(axes.map(a=>a.meshAxisId)).size!==axes.length)throw new FormulaError('invalid_distribution','一个逻辑轴和 mesh 轴不能重复用于多个分片维度');
+      const mappings=axes.map(a=>{const axis=original.findIndex(s=>s.axisId===a.tensorAxisId),meshAxis=mesh.axes.findIndex(s=>s.axisId===a.meshAxisId);if(axis<0||meshAxis<0)throw new FormulaError('invalid_distribution','分片引用的张量轴或 mesh 轴不存在');return {axis,meshAxis};});
+      const policy=distribution.kind==='sharded'?distribution.policy:{kind:'even' as const},rectangles=new Map<string,TensorPartitionResult['placements'][number]['slices']>();
       if(policy.kind==='explicit'){
-        if(policy.slices.length!==group.members.length*mappings.length||policy.slices.some(s=>!group.members.includes(s.deviceId)||!distribution.axes.some(a=>a.tensorAxisId===s.axisId)))throw new FormulaError('invalid_distribution','显式切片必须为每个设备的每个分片轴提供且只提供一项');
+        if(policy.slices.length!==group.members.length*mappings.length||policy.slices.some(s=>!group.members.includes(s.deviceId)||!axes.some(a=>a.tensorAxisId===s.axisId)))throw new FormulaError('invalid_distribution','显式切片必须为每个设备的每个分片轴提供且只提供一项');
       }
       for(const id of group.members){const coordinate=mesh.coordinates.find(c=>c.deviceId===id);if(!coordinate)throw new FormulaError('invalid_distribution','设备缺少 mesh 坐标');const local=[...sizes],allocated=[...sizes],slices=fullSlices.map(s=>({...s}));
         const observedAxes=observeDevice?.(id)?new Map<string,PartitionOperation>():undefined;

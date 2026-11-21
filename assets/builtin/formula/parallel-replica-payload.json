@@ -1,0 +1,22 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:parallel-replica-payload",
+  "revision": 1,
+  "name": "请求分组后的归约消息",
+  "parameters": [],
+  "tags": ["parallel", "request-dp"],
+  "sources": [{ "kind": "note", "text": "Uniform request partitions split the authored full-batch reduction payload into equal per-replica messages." }],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "bytes": { "unit": "byte", "integerRequired": true, "min": 0 },
+        "replicas": { "unit": "count", "integerRequired": true, "min": 2 }
+      },
+      "expression": "bytes / replicas",
+      "output": { "unit": "byte", "integerRequired": true, "nonNegative": true },
+      "description": "Reduce the payload of one independent request group."
+    }
+  }
+}

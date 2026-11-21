@@ -44,7 +44,7 @@ function endpointLayoutEvidence(evaluation:CommunicationEvaluation,authored:Comm
   if(operations[0]?.kind!=='elements'||operations[0].scope!=='global')throw Error('通信端点缺少实际全局张量运算');
   return {tensorId,declaredTensorId:declared.tensorId,groupId,declaredGroupId:declared.distribution.groupId,dtype,globalShape,coverage,
    kind:distribution.kind,placementCount:placements.length,operations,
-   ...(distribution.kind==='partial'?{reduceOperation:distribution.reduceOperation}:{})};
+   ...(distribution.kind==='partial'?{reduceOperation:distribution.reduceOperation,partition:distribution.partition}:{})};
  }
  const placements={source:new Map(evaluation.source.placements.map(placement=>[placement.deviceId,placement])),
   destination:new Map(evaluation.destination.placements.map(placement=>[placement.deviceId,placement]))};
