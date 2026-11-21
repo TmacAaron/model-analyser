@@ -1,44 +1,35 @@
 import {AnalysisAttempt,MetricScope,Provenance,type AnalysisResult} from '@model-analyser/contracts';
+import {decodeAnalysisSegments,encodeAnalysisSegments,requireExactJson,type AnalysisSegments} from './analysis-result-segments.js';
 
-export type AnalysisCompletion={kind:'analyzed';taskId:number}&({attempt:AnalysisAttempt}|{payload:ArrayBuffer;encoding?:'decode-provenance.1'});
+export type AnalysisCompletion={kind:'analyzed';taskId:number}&({attempt:AnalysisAttempt}|{payload:ArrayBuffer}|
+  {segments:AnalysisSegments;encoding:'analysis-segments.1'});
 const record=(value:unknown):value is Record<string,unknown>=>typeof value==='object'&&value!==null&&!Array.isArray(value);
 const hasMetricProvenance=(value:unknown)=>record(value)&&value.status==='available'&&record(value.quantity);
 const resultArrays=['nodes','modules','memory','schedule','roofline','diagnostics'] as const;
 const optionalResultArrays=['memoryEvidence','parameterTrace','quantizationApplications','fusions'] as const;
 const scalarTotals=['seconds','logicalReadBytes','logicalWriteBytes','hbmBytes'] as const;
 
-/** Transfer the bytes of a JSON result and retain exact non-JSON values via structured cloning. */
+/** Transfer JSON buffers and retain exact non-JSON values via structured cloning. */
 export function encodeAnalysisCompletion(attempt:AnalysisAttempt,taskId:number):AnalysisCompletion{
   const identity={kind:'analyzed' as const,taskId};
   if(attempt.status==='available'){
     try{
-      const pooled=!!(attempt.result.decode||attempt.result.distributed);
-      const refs=new Map<string,number>(),seen=new WeakMap<object,number>(),evidence:Provenance[]=[];
-      const json=JSON.stringify(attempt,function(this:unknown,key,value:unknown){
-        if(value===undefined||typeof value==='number'&&(!Number.isFinite(value)||Object.is(value,-0)))throw Error('The result requires structured cloning');
-        if(pooled&&key==='provenance'&&hasMetricProvenance(this)){
-          if(!record(value))throw Error('Invalid analysis evidence');
-          const byIdentity=seen.get(value);
-          if(byIdentity!==undefined)return byIdentity;
-          const signature=JSON.stringify(value);
-          const existing=refs.get(signature);
-          const index=existing??evidence.length;
-          if(existing===undefined){refs.set(signature,index);evidence.push(value as Provenance);}
-          seen.set(value,index);
-          return index;
-        }
+      if(attempt.result.decode||attempt.result.distributed){
+        return {...identity,encoding:'analysis-segments.1',segments:encodeAnalysisSegments(attempt)};
+      }
+      const json=JSON.stringify(attempt,(_key,value:unknown)=>{
+        requireExactJson(value);
         return value;
       });
-      // Large reports repeat source lists across metrics, devices and steps.
-      // The wire format shares those lists and restores the unchanged public result.
-      if(pooled){
-        const packet='{"provenance":'+JSON.stringify(evidence)+',"attempt":'+json+'}';
-        return {...identity,encoding:'decode-provenance.1',payload:new TextEncoder().encode(packet).buffer};
-      }
       return {...identity,payload:new TextEncoder().encode(json).buffer};
     }catch{/* The original validated attempt is still available for structured cloning. */}
   }
   return {...identity,attempt};
+}
+
+export function analysisCompletionTransfers(reply:AnalysisCompletion):ArrayBuffer[]{
+  if('segments'in reply)return [reply.segments.root,...reply.segments.provenance,...reply.segments.sections.flat()];
+  return 'payload'in reply?[reply.payload]:[];
 }
 
 function decodeProvenancePacket(packet:unknown):unknown{
@@ -57,7 +48,12 @@ function decodeProvenancePacket(packet:unknown):unknown{
   return packet.attempt;
 }
 
-function decodeAttempt(data:Record<string,unknown>):unknown{
+async function decodeAttempt(data:Record<string,unknown>,isCurrent:()=>boolean):Promise<unknown>{
+  if('segments'in data){
+    if('payload'in data||'attempt'in data||data.encoding!=='analysis-segments.1')throw Error('分析线程返回了无效结果');
+    try{return await decodeAnalysisSegments(data.segments,isCurrent);}
+    catch{throw Error('分析线程返回了无法读取的结果');}
+  }
   if(!('payload'in data)){
     if('encoding'in data)throw Error('分析线程返回了无效结果');
     return data.attempt;
@@ -89,10 +85,10 @@ export function isAnalysisResultEnvelope(value:unknown):value is AnalysisResult{
 }
 
 /** The bundled analysis worker returns the graph validated by the core contract. */
-export function readAnalysisCompletion(data:unknown,taskId:number):AnalysisAttempt{
+export async function readAnalysisCompletion(data:unknown,taskId:number,isCurrent:()=>boolean=()=>true):Promise<AnalysisAttempt>{
   if(record(data)&&data.kind==='analyzed'){
     if(data.taskId!==taskId)throw Error('分析回复的任务身份与当前请求不同');
-    const attempt=decodeAttempt(data);
+    const attempt=await decodeAttempt(data,isCurrent);
     if(record(attempt)&&attempt.status==='available'){
       if(!isAnalysisResultEnvelope(attempt.result))throw Error('分析线程返回了无效结果');
       return {status:'available',result:attempt.result};

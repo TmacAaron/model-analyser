@@ -53,8 +53,8 @@ it.each(['v3', 'r1'] as const)('runs %s attention and striped expert sharding on
   expect(layout.storageAllocations.find(row => row.storageId === 'moe[0]::cache-latent')?.allocation.distribution.kind).toBe('replicated');
   expect(amount(result.total.seconds)).toBeGreaterThan(0);
   const packet = encodeAnalysisCompletion(analyzed, 1);
-  expect(packet).toMatchObject({ encoding: 'decode-provenance.1' });
-  expect(readAnalysisCompletion(packet, 1)).toEqual(analyzed);
+  expect(packet).toMatchObject({ encoding: 'analysis-segments.1' });
+  expect(await readAnalysisCompletion(packet, 1)).toEqual(analyzed);
   const budget = await estimateKvCapacity(preview.scenario, preview.assets);
   expect(budget).toMatchObject({ status: 'available', report: { averageBytesPerToken: 4608, replicatedBytesPerToken: 2304,
     budget: { status: 'available', more: [{ bytes: 2304 }, { bytes: 2304 }] } } });

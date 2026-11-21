@@ -76,7 +76,8 @@ export function useTheoreticalAnalysis(scenario:Scenario,assets:AssetDocument[],
     };
     async function receiveAnalysis(data:unknown){
       try{
-        const attempt=readAnalysisCompletion(data,taskId);
+        const attempt=await readAnalysisCompletion(data,taskId,current);
+        if(!current())return;
         if(attempt.status==='available'){
           const {result}=attempt,hash=await expectedHash;
           if(!current())return;
