@@ -33,6 +33,7 @@ for (const [moeEp, moeTp] of [[8, 1], [4, 2]] as const) test(`eight shared cards
   await page.getByLabel('MoE TP', { exact: true }).fill(String(moeTp));
   const layout = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(layout).toContainText('8 个逻辑槽位');
+  await expect(layout).toContainText('路由专家均分 · 每 token 使用全局 Top‑K');
   await layout.getByRole('button', { name: '校验布局' }).click();
   await expect(layout).toContainText('8 个实际设备 · 119 个通信', { timeout: 100_000 });
   await layout.getByRole('button', { name: '应用并行度' }).click();

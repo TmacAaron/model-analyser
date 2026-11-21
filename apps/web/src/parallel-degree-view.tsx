@@ -62,6 +62,10 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const primaryDefaults = primarySaved ?? match?.preset.networkDefaults ?? hardwareLink(primaryScope);
   const stagePreset = match?.pipelineStage ? pipelineExpertPreset(match.preset, presets, match.pipelineStage.presetId, scenario.workload.kind)
     : match?.pipelineTp ? pipelineAttentionPreset(match.preset, presets, scenario.workload.kind) : undefined;
+  const expertPreset = stagePreset ?? match?.preset;
+  const balancedExpertRoutes = expertPreset?.sharedPoolDegrees?.includes('moeEp') &&
+    (expertPreset.tensorShards.some(shard => shard.policy === 'balanced') ||
+      expertPreset.moduleRules?.some(rule => rule.tensorShards.some(shard => shard.policy === 'balanced')));
   const stageReduces = !!stagePreset && (stagePreset.reductions.length > 0 || !!stagePreset.moduleRules?.some(rule => rule.reductions.length));
   const innerDefaults = innerSaved ?? stagePreset?.networkDefaults ?? hardwareLink('intra_group') ?? primaryDefaults;
   const [linkDraft, setLinkDraft] = useState<Partial<Record<LinkScope, Partial<LinkText>>>>({});
@@ -169,8 +173,9 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           return <option key={key} value={key}>{stageName && stageName + ' × '}{preset.name}</option>;
         })}
       </select></label>}
+      {balancedExpertRoutes && <p>路由专家均分 · 每 token 使用全局 Top‑K</p>}
       <p>{match.expertMesh ? (match.pipelineStage ? `每阶段 ${match.pipelineStage.degree} 卡。` : '') +
-        `均分专家，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
+        `${match.expertMesh.ep} 个专家组，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
         (degrees.attentionTp > 1 ? (match.pipelineStage ? 'Attention TP 复用阶段内设备。' : match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') :
         stagePreset && match.pipelineStage ? `每阶段 ${match.pipelineStage.degree} 卡。${stagePreset.description}` : match.preset.description}</p>
       <p>{match.slots} 个逻辑槽位{match.requestDp && ` · ${match.requestDp} 组请求，每组 ${match.slots / match.requestDp} 卡`}
