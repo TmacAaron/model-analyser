@@ -11,6 +11,7 @@ import { MetricFactory } from './metrics.js';
 import { FormulaError } from './formula.js';
 import { canonical } from '../../contracts/src/validation.js';
 import { validateScenario } from '../../contracts/src/scenario-validation.js';
+import { sendRecvPairs } from '../../contracts/src/communication-peers.js';
 import { validateParallelResolution } from '../../contracts/src/parallel-validation.js';
 import { evaluateDistributedCosts } from './distributed-cost.js';
 import { tensorLayoutSignature as tensorSignature,canReadTensorLocally } from './layout-compatibility.js';
@@ -268,7 +269,8 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
         if(before)overrideTrace.push({index:overrideIndex,override:o,before,after:structuredClone(definition.timing)});
         diagnostics.push({diagnosticId:'communication-override-'+diagnostics.length,severity:'info',code:'communication_override_applied',message:`通信 ${c.placement?.nodeId} 显式覆盖 ${o.field}=${o.value.value} ${o.value.unit}`,location});
       }
-      const deviceIds=c.operation==='send_recv'?group.members.filter(id=>id===c.sourceDeviceId||id===c.destinationDeviceId):group.members;
+      const pairs=sendRecvPairs(c);
+      const deviceIds=c.operation==='send_recv'?group.members.filter(id=>pairs.some(pair=>id===pair.sourceDeviceId||id===pair.destinationDeviceId)):group.members;
       const nativeSource=nativeCommunications[index-planCommunicationCount],communicationContext=nativeSource?{...context,provenance:{assetRefs:resolved.assetRefs,formulaRefs:resolved.assetRefs.filter(r=>r.kind==='formula'),parameterSources:resolved.parameters.filter(p=>inside(nativeSource.nodeId,p.nodeId)).map(p=>({parameterKey:p.nodeId+':'+p.parameterKey,source:p.source.kind})),assumptions:['Graph-native communication binds its owning frame parameters and actual tensor/storage/axis IDs before evaluation.','Explicit per-member payload and trafficFactor are applied once. Time is the group span, not the sum of device durations.','Network-only cost: local HBM, reduction arithmetic and conversion work require separate declarations. Temporary storage is explicitly allocated and live during communication.',...scenario.parallelPlan.assumptions]}}:context;
       let timing:CommunicationTimingArithmetic|undefined;
       const evaluation=evaluateCommunication(definition,{phase:resolved.phase,target:{kind:'node',nodeId:c.placement?.nodeId??NodeId.parse('$parallel-communication:'+index)},deviceIds,aggregation:'group_total'},graph.tensors,scenario.deviceTopology,communicationContext,capture?record=>{timing=record;}:undefined,capture?communication?.endpoints:undefined);

@@ -5,6 +5,7 @@ import { partitionTensor } from './partition.js';
 import { MetricFactory } from './metrics.js';
 import { canReadTensorLocally } from './layout-compatibility.js';
 import { canonical,collectRefs } from '../../contracts/src/validation.js';
+import { sendRecvIssue,sendRecvPairs } from '../../contracts/src/communication-peers.js';
 import type {CommunicationEndpointObserver,CommunicationEndpointSide,CommunicationTimingArithmetic} from './communication-observation.js';
 import type {PartitionPageObserver} from './layout-observation.js';
 
@@ -14,10 +15,11 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
   try{
     const c=CommunicationDefinition.parse(input),scope=MetricScope.parse(inputScope),topology=DeviceTopology.parse(inputTopology),group=topology.groups.find(g=>g.groupId===c.groupId);
     if(!group)throw new FormulaError('missing_reference','通信设备组不存在');
-    const sendRecv=c.operation==='send_recv',sender=c.sourceDeviceId,receiver=c.destinationDeviceId;
-    if(sendRecv){if(!sender||!receiver||sender===receiver||!group.members.includes(sender)||!group.members.includes(receiver))throw new FormulaError('invalid_distribution','send_recv 必须指定组内两个不同设备');}
-    else if(sender!==undefined||receiver!==undefined)throw new FormulaError('invalid_distribution','集体通信不能带 send_recv 端点字段');
-    const members=sendRecv?group.members.filter(id=>id===sender||id===receiver):group.members;
+    const issue=sendRecvIssue(c,group.members);if(issue)throw new FormulaError('invalid_distribution',issue);
+    const sendRecv=c.operation==='send_recv',pairs=sendRecvPairs(c);
+    const senders=new Map(pairs.map(pair=>[pair.sourceDeviceId,pair.destinationDeviceId]));
+    const receivers=new Set(senders.values());
+    const members=sendRecv?group.members.filter(id=>senders.has(id)||receivers.has(id)):group.members;
     if(c.perDevicePayloads&&(sendRecv||c.perDevicePayloads.length!==members.length||new Set(c.perDevicePayloads.map(p=>p.deviceId)).size!==members.length||c.perDevicePayloads.some(p=>!members.includes(p.deviceId))))throw new FormulaError('invalid_member_payloads','逐设备通信声明必须唯一完整地覆盖集体通信的全部物理成员；send_recv沿显式端点路径');
     if(scope.aggregation!=='group_total'||new Set(scope.deviceIds).size!==scope.deviceIds.length||canonical([...scope.deviceIds].sort())!==canonical([...members].sort()))throw new FormulaError('invalid_scope','通信求值需要所有参与物理设备的 group_total 范围；耗时为整个通信的跨度');
     const source=tensors.find(t=>t.tensorId===c.source.tensorId),destination=tensors.find(t=>t.tensorId===c.destination.tensorId);
@@ -25,15 +27,16 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     if(tensors.filter(t=>t.tensorId===source.tensorId).length!==1||tensors.filter(t=>t.tensorId===destination.tensorId).length!==1)throw new FormulaError('duplicate_id','通信张量 ID 不唯一');
     for(const [index,endpoint] of [c.source,c.destination].entries()){
       const layoutGroup=topology.groups.find(g=>g.groupId===endpoint.distribution.groupId);
-      const endpointDevice=index===0?sender:receiver;
-      const valid=layoutGroup&&(sendRecv?endpointDevice&&layoutGroup.members.includes(endpointDevice)&&layoutGroup.members.every(id=>group.members.includes(id)):
+      const endpointDevices=index===0?[...senders.keys()]:[...receivers];
+      const valid=layoutGroup&&(sendRecv?endpointDevices.every(id=>layoutGroup.members.includes(id))&&layoutGroup.members.every(id=>group.members.includes(id))&&
+        (!c.peerPairs||layoutGroup.members.length===endpointDevices.length):
         canonical([...layoutGroup.members].sort())===canonical([...group.members].sort()));
       if(!valid)throw new FormulaError('invalid_distribution','通信端点必须覆盖对应发送/接收设备，集体通信须覆盖同组成员');
     }
     const pageDevices=observeEndpoints?(c.perDevicePayloads?.map(payload=>payload.deviceId)??members).slice(observeEndpoints.start,observeEndpoints.start+observeEndpoints.limit):undefined;
     function partitionObserver(side:CommunicationEndpointSide):PartitionPageObserver|undefined{
       if(!observeEndpoints||!pageDevices)return;
-      const deviceIds=new Set(sendRecv?pageDevices.filter(id=>id===(side==='source'?sender:receiver)):pageDevices);
+      const deviceIds=new Set(sendRecv?pageDevices.filter(id=>side==='source'?senders.has(id):receivers.has(id)):pageDevices);
       return {deviceIds,record:(operation,deviceId)=>observeEndpoints.record(side,operation,deviceId)};
     }
     const from=partitionTensor(source,c.source.distribution,topology,context,partitionObserver('source'));
@@ -42,7 +45,16 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     const dims=(s:typeof from.result.globalShape)=>s.map(a=>({axisId:a.axisId,size:a.size}));
     if(canonical(dims(from.result.globalShape))!==canonical(dims(to.result.globalShape)))throw new FormulaError('invalid_shape','通信前后逻辑张量维度必须一致；布局变换不隐式执行 reshape');
     const sk=c.source.distribution.kind,dk=c.destination.distribution.kind;
-    if(sendRecv){const sourceView={...from.result,placements:from.result.placements.filter(p=>p.deviceId===sender).map(p=>({...p,deviceId:receiver??p.deviceId}))},targetView={...to.result,placements:to.result.placements.filter(p=>p.deviceId===receiver)};if(!canReadTensorLocally(sourceView,targetView))throw new FormulaError('invalid_distribution','send_recv 不能隐式归约 partial 或发送源设备不具备的目标切片');}
+    if(sendRecv){
+      const sourceView={...from.result,placements:from.result.placements.flatMap(p=>{
+        const receiver=senders.get(p.deviceId);return receiver?[{...p,deviceId:receiver}]:[];
+      })};
+      const targetView={...to.result,placements:to.result.placements.filter(p=>receivers.has(p.deviceId))};
+      if(sourceView.placements.length!==pairs.length||targetView.placements.length!==pairs.length||!canReadTensorLocally(sourceView,targetView)||
+         c.peerPairs&&canonical(from.result.dtype)!==canonical(c.payloadDtype)){
+        throw new FormulaError('invalid_distribution','send_recv 不能隐式归约、转换或发送源设备不具备的目标切片');
+      }
+    }
     const partition=c.source.distribution.kind==='partial'?c.source.distribution.partition:undefined;
     if(partition){
       const target=c.destination.distribution;
@@ -71,7 +83,7 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     const metrics=new MetricFactory(diagnostics,provenance,'communication','communication-'+c.groupId+'-'+(scope.target.kind==='model'?'model':scope.target.nodeId)),send=numericValue(c.sendBytesPerMember,'byte',context),receive=numericValue(c.receiveBytesPerMember,'byte',context),traffic=c.perDevicePayloads?0:send*c.algorithm.trafficFactor;
     const trafficUnderflow=!c.perDevicePayloads&&send>0&&c.algorithm.trafficFactor>0&&traffic===0;
     const sendMetric=metrics.available(send,'byte'),receiveMetric=metrics.available(receive,'byte'),trafficMetric=trafficUnderflow?metrics.unavailable('numeric_overflow','非零算法流量下溢，不能报告为零'):metrics.available(traffic,'byte');
-    const sendCount=sendRecv?1:members.length,receiveCount=sendCount;
+    const sendCount=sendRecv?pairs.length:members.length,receiveCount=sendCount;
     const declared=c.perDevicePayloads?.map(p=>{const sent=numericValue(p.sendBytes,'byte',context),received=numericValue(p.receiveBytes,'byte',context),remote=sent*p.trafficFactor;return {deviceId:p.deviceId,sendBytes:metrics.available(sent,'byte'),receiveBytes:metrics.available(received,'byte'),algorithmTrafficBytes:sent>0&&p.trafficFactor>0&&remote===0?metrics.unavailable('numeric_overflow','非零逐设备算法流量下溢'):metrics.available(remote,'byte')};});
     function common(values:typeof sendMetric[]){const unknown=values.filter(v=>v.status==='unavailable');if(unknown.length)return {status:'unavailable' as const,diagnosticIds:[...new Set(unknown.flatMap(v=>v.diagnosticIds))]};const first=values[0];return first?.status==='available'&&values.every(v=>v.status==='available'&&v.quantity.value===first.quantity.value)?first:metrics.unavailable('nonuniform_member_quantity','各rank数值不同，没有统一的每成员单值；完整数值见逐设备明细与组总量');}
     const communication=declared?{groupId:c.groupId,operation:c.operation,sendBytesPerMember:common(declared.map(p=>p.sendBytes)),receiveBytesPerMember:common(declared.map(p=>p.receiveBytes)),algorithmTrafficBytesPerMember:common(declared.map(p=>p.algorithmTrafficBytes)),groupSendBytes:metrics.sum(declared.map(p=>p.sendBytes),'byte'),groupReceiveBytes:metrics.sum(declared.map(p=>p.receiveBytes),'byte')}:{groupId:c.groupId,operation:c.operation,sendBytesPerMember:sendMetric,receiveBytesPerMember:receiveMetric,algorithmTrafficBytesPerMember:trafficMetric,groupSendBytes:metrics.available(send*sendCount,'byte'),groupReceiveBytes:metrics.available(receive*receiveCount,'byte')};
@@ -94,7 +106,7 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     }catch(e){seconds=metrics.unavailable(e instanceof FormulaError?e.code:'invalid_communication_time',e instanceof Error?e.message:'通信时间不可用');}
     const unmodeled=metrics.unavailable('missing_communication_memory','通信 payload 不确定本地读写/HBM 成本；请分别声明搬运和 staging 空间');
     const cost={scope,compute:[],logicalReadBytes:unmodeled,logicalWriteBytes:unmodeled,hbmBytes:unmodeled,communications:[communication],seconds};
-    const perDevice=declared??members.map(deviceId=>({deviceId,sendBytes:sendRecv&&deviceId!==sender?metrics.available(0,'byte'):sendMetric,receiveBytes:sendRecv&&deviceId!==receiver?metrics.available(0,'byte'):receiveMetric,algorithmTrafficBytes:sendRecv&&deviceId!==sender?metrics.available(0,'byte'):trafficMetric}));
+    const perDevice=declared??members.map(deviceId=>({deviceId,sendBytes:sendRecv&&!senders.has(deviceId)?metrics.available(0,'byte'):sendMetric,receiveBytes:sendRecv&&!receivers.has(deviceId)?metrics.available(0,'byte'):receiveMetric,algorithmTrafficBytes:sendRecv&&!senders.has(deviceId)?metrics.available(0,'byte'):trafficMetric}));
     return CommunicationAttempt.parse({status:'available',result:{definition:c,cost,source:from.result,destination:to.result,perDevice,diagnostics}});
   }catch(e){diagnostics.push({diagnosticId:'communication-failure',severity:'error',code:e instanceof FormulaError?e.code:'invalid_communication',message:e instanceof Error?e.message:'通信求值失败',location:{kind:'file',name:'communication'}});return CommunicationAttempt.parse({status:'unavailable',diagnostics});}
 }

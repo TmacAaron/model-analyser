@@ -1,15 +1,20 @@
 import { DeviceId, NodeId, type ParallelPresetRequest, type ParallelPresetTemplate, type Quantity,
-  type ResolvedGraph, type Scenario, type StorageId, type TensorDistribution, type TensorId } from '@model-analyser/contracts';
+  type ResolvedGraph, type Scenario, type Shape, type StorageId, type TensorDistribution, type TensorId } from '@model-analyser/contracts';
 import { materializeDeclaredPreset } from './declared-parallel-preset.js';
 import { parallelObjectUses } from './parallel-object-uses.js';
 import { numericValue } from './storage.js';
+import { payloadPerReplica, soleBatchAxis } from './request-replica.js';
+
+const requestAxis = 'request';
 
 /** Balance consecutive expanded chain occurrences, with one physical device per stage. */
 export function materializePipelinePreset(request: ParallelPresetRequest, preset: ParallelPresetTemplate, resolved: ResolvedGraph) {
   const declaration = preset.pipeline;
   const network = request.network;
-  const stageCount = request.scenario.deviceTopology.groups.find(group => group.groupId === request.groupId)?.members.length ?? 0;
-  if (!declaration || stageCount < 2) throw Error('流水线布局至少需要两个实际设备');
+  const replicas = request.requestDp ?? 1;
+  const poolSize = request.scenario.deviceTopology.groups.find(group => group.groupId === request.groupId)?.members.length ?? 0;
+  const stageCount = poolSize / replicas;
+  if (!declaration || !Number.isInteger(stageCount) || stageCount < 2) throw Error('流水线布局需要每个请求组至少两个实际设备');
   if (!network) throw Error('请为阶段间传输指定通信带宽和延迟');
   if (resolved.graph.nodes.some(node => node.body.kind === 'collective')) throw Error('流水线层链需要单独声明已有图内通信的阶段放置');
   const chain = resolved.containers.filter(container => {
@@ -33,18 +38,36 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     else if (!stageByNode.has(node.nodeId)) throw Error('层链内部存在未归属的计算节点 '+node.nodeId);
   }
 
-  const deviceSlots = layerCounts.map((_, stage) => DeviceId.parse('stage-device-' + stage));
+  const deviceSlots = Array.from({ length: replicas }, (_, replica) => layerCounts.map((_, stage) =>
+    DeviceId.parse((request.requestDp ? 'replica-'+replica+'-' : '')+'stage-device-'+stage),
+  )).flat();
+  function stageDevice(replica: number, stage: number) {
+    const device = deviceSlots[replica*stageCount+stage];
+    if (!device) throw Error('流水线缺少请求组的阶段设备');
+    return device;
+  }
   const groups: NonNullable<ParallelPresetTemplate['declaredPlan']>['groups'] = [];
   const groupFor = (stages: Iterable<number>) => {
     const indices = [...new Set(stages)].sort((a, b) => a - b);
-    const members = indices.map(index => deviceSlots[index]);
-    if (!members.length || members.some(deviceId => deviceId === undefined)) throw Error('流水线设备组没有完整的阶段归属');
+    if (!indices.length || indices.some(index => index < 0 || index >= stageCount)) throw Error('流水线设备组没有完整的阶段归属');
     const groupId = 'stages:' + indices.map(index => index + 1).join('-');
-    if (!groups.some(group => group.groupId === groupId)) groups.push({ groupId, members: members.filter(deviceId => deviceId !== undefined) });
+    if (groups.some(group => group.groupId === groupId)) return groupId;
+    const members = Array.from({ length: replicas }, (_, replica) => indices.map(stage => stageDevice(replica, stage))).flat();
+    groups.push({ groupId, members, ...(request.requestDp ? { mesh: {
+      axes: [{ axisId: requestAxis, size: replicas }, ...(indices.length > 1 ? [{ axisId: 'stage', size: indices.length }] : [])],
+      coordinates: members.map((deviceId, index) => ({ deviceId, coordinates: [
+        Math.floor(index/indices.length), ...(indices.length > 1 ? [index%indices.length] : []),
+      ] })),
+    } } : {}) });
     return groupId;
   };
-  const replicated = (groupId: string): TensorDistribution => ({ kind: 'replicated', groupId });
-  const stageTensors = layerCounts.map(() => new Set<TensorId>());
+  function distribution(groupId: string, shape: Shape): TensorDistribution {
+    const batch = request.requestDp ? soleBatchAxis(shape) : undefined;
+    if (!batch) return { kind: 'replicated', groupId };
+    if (batch.size.kind !== 'literal' || batch.size.quantity.value % replicas !== 0) throw Error('流水线请求轴无法均分');
+    return { kind: 'sharded', groupId, axes: [{ tensorAxisId: batch.axisId, meshAxisId: requestAxis }], policy: { kind: 'even' } };
+  }
+  const stageTensors = layerCounts.map(() => new Map<TensorId, Shape>());
   const storageStages = new Map<StorageId, Set<number>>();
   const storages = new Map(resolved.graph.storages.map(storage => [storage.storageId, storage]));
   const tensors = new Map(resolved.graph.tensors.map(tensor => [tensor.tensorId, tensor]));
@@ -69,17 +92,22 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     for (const tensorId of uses.tensors) {
       const tensor = tensors.get(tensorId);
       if (!tensor) throw Error('流水线张量缺失 '+tensorId);
-      usedTensors.add(tensorId);
+      usedTensors.set(tensorId, tensor.shape);
       recordStorage(tensor.storageId, stage);
     }
     for (const storageId of uses.storages) recordStorage(storageId, stage);
   }
   const assignments: Scenario['parallelPlan']['assignments'] = stageTensors.map((used, stage) => ({
     selector: { kind: 'nodes', nodeIds: nodes.filter(node => stageByNode.get(node.nodeId) === stage).map(node => node.nodeId) },
-    phases: preset.phases, tensorDistributions: [...used].map(tensorId => ({ tensorId, distribution: replicated(groupFor([stage])) })), storageDistributions: [],
+    phases: preset.phases, tensorDistributions: [...used].map(([tensorId, shape]) => ({
+      tensorId, distribution: distribution(groupFor([stage]), shape),
+    })), storageDistributions: [],
   }));
   assignments.push({ selector: { kind: 'subtree', rootNodeId: NodeId.parse('$model') }, phases: preset.phases,
-    tensorDistributions: [], storageDistributions: [...storageStages].map(([storageId, stages]) => ({ storageId, distribution: replicated(groupFor(stages)) })) });
+    tensorDistributions: [], storageDistributions: [...storageStages].map(([storageId, stages]) => {
+      const allocation = storages.get(storageId)?.allocation;
+      return { storageId, distribution: distribution(groupFor(stages), allocation?.kind === 'tensor' ? allocation.shape : []) };
+    }) });
 
   const transfers = new Map<string, { tensorId: TensorId; from: number; to: number; producer: NodeId; consumers: Set<NodeId> }>();
   for (const { from, to, tensorId } of resolved.graph.edges) {
@@ -101,23 +129,30 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
   const context = { symbols, assets: request.assets };
   const payload = numericValue(declaration.payloadBytes, 'byte', context, true);
   const communications: Scenario['parallelPlan']['communications'] = [...transfers.values()].map(({ tensorId, from, to, producer, consumers }) => {
-    const tensor = tensors.get(tensorId), sourceDeviceId = deviceSlots[from], destinationDeviceId = deviceSlots[to];
-    if (!tensor || !sourceDeviceId || !destinationDeviceId || tensor.dtype.format !== declaration.payloadDtype.format ||
+    const tensor = tensors.get(tensorId);
+    if (!tensor || tensor.dtype.format !== declaration.payloadDtype.format ||
         tensor.dtype.bits !== declaration.payloadDtype.bits || tensor.dtype.category !== declaration.payloadDtype.category ||
         Math.ceil(tensor.shape.reduce((elements, axis) => elements * numericValue(axis.size, 'count', context, true), 1) * tensor.dtype.bits / 8) !== payload) {
       throw Error('跨阶段张量与声明的完整激活消息不符 '+tensorId);
     }
-    return { operation: 'send_recv', groupId: groupFor([from, to]), sourceDeviceId, destinationDeviceId,
-      source: { tensorId, distribution: replicated(groupFor([from])) }, destination: { tensorId, distribution: replicated(groupFor([to])) },
-      payloadDtype: declaration.payloadDtype, sendBytesPerMember: declaration.payloadBytes, receiveBytesPerMember: declaration.payloadBytes,
-      algorithm: { name: 'One full activation transfer', trafficFactor: 1, startupRounds: 1 },
+    if (request.requestDp && !soleBatchAxis(tensor.shape)) throw Error('流水线激活缺少可保留的请求轴 '+tensorId);
+    const payloadBytes = request.requestDp ? payloadPerReplica(declaration.payloadBytes, replicas) : declaration.payloadBytes;
+    const peers = request.requestDp ? { peerPairs: Array.from({ length: replicas }, (_, replica) => ({
+      sourceDeviceId: stageDevice(replica, from), destinationDeviceId: stageDevice(replica, to),
+    })) } : { sourceDeviceId: stageDevice(0, from), destinationDeviceId: stageDevice(0, to) };
+    return { operation: 'send_recv', groupId: groupFor([from, to]), ...peers,
+      source: { tensorId, distribution: distribution(groupFor([from]), tensor.shape) },
+      destination: { tensorId, distribution: distribution(groupFor([to]), tensor.shape) },
+      payloadDtype: declaration.payloadDtype, sendBytesPerMember: payloadBytes, receiveBytesPerMember: payloadBytes,
+      algorithm: { name: request.requestDp ? 'Concurrent request-group activation transfers' : 'One full activation transfer', trafficFactor: 1, startupRounds: 1 },
       timing: { kind: 'bandwidth_latency', bytePerSecond: network.bytesPerSecond, latencySeconds: network.latencySeconds },
       placement: { nodeId: NodeId.parse('$pipeline-transfer:' + JSON.stringify([from, to, tensorId])), phases: preset.phases,
         afterNodeIds: [producer], beforeNodeIds: [...consumers] }, temporaryStorageIds: [] };
   });
-  const { pipeline, ...declared } = preset;
+  const { pipeline, requestBatchSharding, ...declared } = preset;
   return materializeDeclaredPreset(request, { ...declared, strategy: 'declared_plan',
     declaredPlan: { deviceSlots, groups, plan: { assignments, communications, assumptions: [
       'Consecutive chain blocks by stage: '+layerCounts.join(', ')+'. Explicit tensor backing includes physical copies on the stages that use it.',
+      ...(request.requestDp ? [`${replicas} independent request groups each use their own devices. Paired stage transfers preserve each batch slice and run concurrently at that boundary.`] : []),
     ] } } });
 }

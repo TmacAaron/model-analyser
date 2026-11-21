@@ -1,14 +1,38 @@
 import type { CommunicationEvaluation,MetricValue } from './index.js';
+import { participatesOnCommunicationSide,sendRecvIssue,sendRecvPairs } from './communication-peers.js';
 
 /** Check the explicit member ledger independently of the numerical evaluator. */
 export function validateMemberPayloadResult(c:CommunicationEvaluation):string[]{
   const declarations=c.definition.perDevicePayloads;
-  if(!declarations)return [];
+  if(!declarations&&!c.definition.peerPairs)return [];
   const issues:string[]=[],members=c.cost.scope.deviceIds,rows=c.perDevice,summary=c.cost.communications[0];
   const value=(m:MetricValue|undefined)=>m?.status==='available'?m.quantity.value:undefined;
   const close=(a:number,b:number)=>Math.abs(a-b)<=1e-12*Math.max(Math.abs(a),Math.abs(b),Number.MIN_VALUE);
   const check=(m:MetricValue|undefined,n:number|undefined,label:string)=>{const actual=value(m);if(n===undefined?!m||m.status!=='unavailable':actual===undefined||!close(actual,n))issues.push(label);};
   const exactMembers=(ids:string[])=>ids.length===members.length&&new Set(ids).size===members.length&&ids.every(id=>members.includes(id as typeof members[number]));
+  if(c.definition.peerPairs){
+    const pairs=sendRecvPairs(c.definition);
+    if(declarations||sendRecvIssue(c.definition,members)||pairs.length*2!==members.length||!exactMembers(rows.map(p=>p.deviceId)))issues.push('点对点明细必须覆盖全部且仅覆盖当前配对');
+    if(!summary||c.cost.communications.length!==1)return [...issues,'通信必须有唯一完整汇总'];
+    for(const row of rows){
+      const sends=participatesOnCommunicationSide(c.definition,'source',row.deviceId),receives=participatesOnCommunicationSide(c.definition,'destination',row.deviceId);
+      check(row.sendBytes,sends?value(summary.sendBytesPerMember):0,'点对点发送量须对应发送端');
+      check(row.receiveBytes,receives?value(summary.receiveBytesPerMember):0,'点对点接收量须对应接收端');
+      check(row.algorithmTrafficBytes,sends?value(summary.algorithmTrafficBytesPerMember):0,'点对点算法流量须对应发送端');
+    }
+    for(const pair of pairs){
+      const source=c.source.placements.find(p=>p.deviceId===pair.sourceDeviceId),target=c.destination.placements.find(p=>p.deviceId===pair.destinationDeviceId);
+      if(!source||!target||target.slices.some(slice=>!source.slices.some(from=>from.axisId===slice.axisId&&from.start<=slice.start&&from.end>=slice.end))){
+        issues.push('点对点发送端必须持有接收端的切片');
+      }
+    }
+    for(const [total,perPeer] of [[summary.groupSendBytes,summary.sendBytesPerMember],[summary.groupReceiveBytes,summary.receiveBytesPerMember]] as const){
+      const bytes=value(perPeer),sum=bytes===undefined?NaN:bytes*pairs.length;
+      check(total,Number.isFinite(sum)?sum:undefined,'组消息量必须按实际配对数累加');
+    }
+    return issues;
+  }
+  if(!declarations)return issues;
   if(c.definition.operation==='send_recv'||!exactMembers(declarations.map(p=>p.deviceId))||!exactMembers(rows.map(p=>p.deviceId)))issues.push('逐设备通信明细必须唯一完整地覆盖物理成员');
   for(const row of rows){const p=declarations.find(p=>p.deviceId===row.deviceId);if(!p)continue;
     for(const key of ['sendBytes','receiveBytes'] as const)if(p[key].kind==='literal')check(row[key],p[key].quantity.value,'逐设备payload与常量声明不符');

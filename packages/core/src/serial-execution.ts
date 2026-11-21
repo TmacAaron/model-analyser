@@ -3,6 +3,7 @@ import { orderDependencies } from './graph.js';
 import { canReadTensorPieces,canReadTensorLocally } from './layout-compatibility.js';
 import { FormulaError } from './formula.js';
 import { MetricFactory } from './metrics.js';
+import { participatesOnCommunicationSide } from '../../contracts/src/communication-peers.js';
 
 type Inputs=Pick<ParallelResolution,'tensorLayouts'|'communications'|'localCosts'>;
 const inside=(id:string,root:string)=>root==='$model'||id===root||id.startsWith(root+'/')||id.startsWith(root+'[');
@@ -36,8 +37,12 @@ export function buildSerialExecution(resolved:ResolvedGraph,scenario:Scenario,in
     for(const n of graph.nodes)if(n.body.kind==='opaque'){for(const p of n.body.outputs)producers.set(p.tensorId,[...new Set([...(producers.get(p.tensorId)??[]),n.nodeId])]);for(const p of n.body.inputs)consumers.set(p.tensorId,[...new Set([...(consumers.get(p.tensorId)??[]),n.nodeId])]);}
     const blocked=new Set<NodeId>();
     function block(id:NodeId,code:string,message:string){if(!blocked.has(id))unavailable(code,message);blocked.add(id);}
-    const sourceFor=(c:typeof scheduled[number])=>{const d=c.evaluation.definition;return d.operation==='send_recv'?{...c.evaluation.source,placements:c.evaluation.source.placements.filter(p=>p.deviceId===d.sourceDeviceId)}:c.evaluation.source;};
-    const destinationFor=(c:typeof scheduled[number])=>{const d=c.evaluation.definition;return d.operation==='send_recv'?{...c.evaluation.destination,placements:c.evaluation.destination.placements.filter(p=>p.deviceId===d.destinationDeviceId)}:c.evaluation.destination;};
+    const endpointFor=(c:typeof scheduled[number],side:'source'|'destination')=>{
+      const view=c.evaluation[side],d=c.evaluation.definition;
+      return d.operation==='send_recv'?{...view,placements:view.placements.filter(p=>participatesOnCommunicationSide(d,side,p.deviceId))}:view;
+    };
+    const sourceFor=(c:typeof scheduled[number])=>endpointFor(c,'source');
+    const destinationFor=(c:typeof scheduled[number])=>endpointFor(c,'destination');
     for(const [id,c] of commById){const d=c.evaluation.definition,writers=producers.get(d.source.tensorId)??[];if(writers.length>1)block(id,'ambiguous_communication_producer','通信 '+id+' 的源有多个阶段内写入者，需要独立张量版本明确数据来源');else if(writers[0])add(writers[0],id,'communication');
       const source=sourceFor(c),destination=destinationFor(c);for(const consumer of consumers.get(d.destination.tensorId)??[]){if(consumer===writers[0]&&d.source.tensorId===d.destination.tensorId)continue;const required=tensorLayout(consumer,d.destination.tensorId);if(!required)continue;const sourceProvides=d.source.tensorId===d.destination.tensorId&&canReadTensorLocally(source,required),destinationProvides=canReadTensorLocally(destination,required);if(destinationProvides&&!sourceProvides)add(id,consumer,'communication');else if(sourceProvides&&!destinationProvides&&d.source.tensorId===d.destination.tensorId)add(consumer,id,'communication');}
     }

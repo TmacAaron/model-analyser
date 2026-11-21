@@ -93,7 +93,7 @@ test('Qwen3.5-397B EP8 shards experts separately from the global TopK selection'
   await expect(page.getByRole('region', { name: '逻辑分片与通信' })).toContainText('按均衡路由估算负载');
 });
 
-test('updates a saved Qwen3.8 r1 workspace to r3 while keeping its workload and device', async ({ page }) => {
+test('updates a saved Qwen3.8 r1 workspace to r4 while keeping its workload and device', async ({ page }) => {
   const project = makeModelProject(makeQwenHybridAssets('qwen38'), {
     kind: 'prefill', batchSize: 3, queryTokensPerRequest: 2, pastTokensPerRequest: 31,
   }, 'Qwen3.8 previous revision');
@@ -104,21 +104,21 @@ test('updates a saved Qwen3.8 r1 workspace to r3 while keeping its workload and 
   });
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
-  await page.getByRole('button', { name: '更新模型到 r3' }).click();
+  await page.getByRole('button', { name: '更新模型到 r4' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const updated = ProjectDocument.parse((await response.json()).data);
-  expect(updated.scenarios[0]).toEqual({ ...project.scenarios[0]!, model: { ...project.scenarios[0]!.model, revision: 3 } });
-  expect(updated.assetSnapshots.filter(asset => asset.assetId === project.scenarios[0]!.model.assetId).map(asset => asset.revision)).toEqual([1, 3]);
+  expect(updated.scenarios[0]).toEqual({ ...project.scenarios[0]!, model: { ...project.scenarios[0]!.model, revision: 4 } });
+  expect(updated.assetSnapshots.filter(asset => asset.assetId === project.scenarios[0]!.model.assetId).map(asset => asset.revision)).toEqual([1, 4]);
 });
 
-test('uses two pipeline stages of Qwen3.8, calculates KV and reopens the same layout', async ({ page }) => {
+test('upgrades Qwen3.8 PP and applies two independent request pipelines', async ({ page }) => {
   test.setTimeout(180_000);
   const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen38');
   const model = addQwenPipelinePreset(root!);
   const project = makeModelProject([model, ...dependencies], {
-    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+    kind: 'prefill', batchSize: 4, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
   }, model.name);
   project.projectId = randomUUID();
   await page.goto('/');
@@ -128,6 +128,7 @@ test('uses two pipeline stages of Qwen3.8, calculates KV and reopens the same la
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   const pp = page.getByLabel('序列与流水线 PP', { exact: true });
+  const dp = page.getByLabel('Attention DP', { exact: true });
   await pp.fill('2');
   const preview = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(preview).toContainText('阶段间 SendRecv');
@@ -135,6 +136,16 @@ test('uses two pipeline stages of Qwen3.8, calculates KV and reopens the same la
   await expect(preview).toContainText('2 个实际设备 · 1 个通信', { timeout: 75_000 });
   await preview.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(pp).toHaveValue('2');
+  await dp.fill('2');
+  await expect(preview).toContainText('4 个逻辑槽位 · 2 组请求，每组 2 卡');
+  await expect(preview).toContainText('各请求组独立执行阶段间 SendRecv');
+  await preview.getByRole('button', { name: '校验布局' }).click();
+  await expect(preview).toContainText('4 个实际设备 · 1 个通信', { timeout: 75_000 });
+  await preview.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 4');
   await page.getByRole('button', { name: '容量', exact: true }).click();
   const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
   await expect(capacity).toContainText('65,536 B / token', { timeout: 75_000 });
@@ -142,13 +153,28 @@ test('uses two pipeline stages of Qwen3.8, calculates KV and reopens the same la
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const scenario = ProjectDocument.parse((await response.json()).data).scenarios[0];
-  expect(scenario?.parallelPlan.communications).toMatchObject([{ operation: 'send_recv', sourceDeviceId: 'gpu0', destinationDeviceId: '$degree-rank:1' }]);
+  expect(scenario?.parallelPlan.communications).toMatchObject([{ operation: 'send_recv', peerPairs: [
+    { sourceDeviceId: 'gpu0', destinationDeviceId: '$degree-rank:1' },
+    { sourceDeviceId: '$degree-rank:2', destinationDeviceId: '$degree-rank:3' },
+  ] }]);
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  await expect(page.locator('.analysis-cards')).toBeVisible({ timeout: 75_000 });
+  const inspector = page.locator('.cost-source-inspector');
+  await inspector.locator(':scope > summary').click();
+  await inspector.getByLabel('查找成本来源范围', { exact: true }).fill('communication:0');
+  await inspector.getByLabel('成本来源范围', { exact: true }).selectOption('communication:0');
+  const communication = inspector.getByRole('region', { name: '通信运算来源' });
+  await communication.getByRole('button', { name: '复核此通信的实际运算', exact: true }).click();
+  await expect(communication.getByRole('heading', { name: 'gpu0 · 发送端 · 对端 $degree-rank:1', exact: true })).toBeVisible({ timeout: 75_000 });
+  await expect(communication.getByRole('heading', { name: '$degree-rank:3 · 接收端 · 对端 $degree-rank:2', exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(pp).toHaveValue('2');
+  await expect(dp).toHaveValue('2');
   await pp.fill('1');
+  await dp.fill('1');
   await preview.getByRole('button', { name: '校验布局' }).click();
   await expect(preview).toContainText('1 个实际设备 · 0 个通信', { timeout: 75_000 });
   await preview.getByRole('button', { name: '应用并行度' }).click();
-  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 5');
 });

@@ -1,6 +1,7 @@
 import { type Scenario,type AssetDocument,type Diagnostic,type Quantity } from './index.js';
 import { quantizationRuleIssues } from './quantization-validation.js';
 import { nativeBindingIssues } from './parallel-bindings.js';
+import { sendRecvIssue } from './communication-peers.js';
 
 export function validateScenario(scenario:Scenario,assets:AssetDocument[]):Diagnostic[]{
   const issues:Diagnostic[]=[];
@@ -73,9 +74,7 @@ export function validateScenario(scenario:Scenario,assets:AssetDocument[]):Diagn
     const path=`parallelPlan.communications.${i}`,group=groups.find(g=>g.groupId===c.groupId);
     if(c.placement){unique(c.placement.afterNodeIds,path+'.placement.afterNodeIds');unique(c.placement.beforeNodeIds,path+'.placement.beforeNodeIds');if([...c.placement.afterNodeIds,...c.placement.beforeNodeIds].includes(c.placement.nodeId))report('dependency_cycle','通信不能依赖自身',path+'.placement');}
     if(!group)report('missing_reference','通信设备组不存在',path);
-    if(c.operation==='send_recv'){
-      if(c.sourceDeviceId===undefined||c.destinationDeviceId===undefined||c.sourceDeviceId===c.destinationDeviceId||!group?.members.some(id=>id===c.sourceDeviceId)||!group?.members.some(id=>id===c.destinationDeviceId))report('invalid_distribution','send_recv 需不同且在组内的发送/接收设备',path);
-    }else if(c.sourceDeviceId!==undefined||c.destinationDeviceId!==undefined)report('invalid_distribution','只有 send_recv 使用单独发送/接收设备字段',path);
+    const peerIssue=sendRecvIssue(c,group?.members??[]);if(peerIssue)report('invalid_distribution',peerIssue,path);
     for(const d of [c.source.distribution,c.destination.distribution])if(!groups.some(g=>g.groupId===d.groupId))report('missing_reference','通信端点布局设备组不存在',path);
   }
   for(const [i,a] of scenario.parallelPlan.assignments.entries())for(const distribution of [...a.tensorDistributions,...a.storageDistributions]){

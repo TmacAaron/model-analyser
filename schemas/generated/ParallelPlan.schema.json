@@ -188,6 +188,13 @@
           "receiveBytesPerMember": {
             "$ref": "#/$defs/__schema6"
           },
+          "peerPairs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema9"
+            }
+          },
           "algorithm": {
             "type": "object",
             "properties": {
@@ -195,7 +202,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "trafficFactor": {
-                "$ref": "#/$defs/__schema9"
+                "$ref": "#/$defs/__schema10"
               },
               "startupRounds": {
                 "$ref": "#/$defs/__schema5"
@@ -212,7 +219,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema10"
+              "$ref": "#/$defs/__schema11"
             }
           },
           "timing": {
@@ -246,7 +253,7 @@
                     "const": "fixed"
                   },
                   "seconds": {
-                    "$ref": "#/$defs/__schema9"
+                    "$ref": "#/$defs/__schema10"
                   },
                   "description": {
                     "$ref": "#/$defs/__schema0"
@@ -271,7 +278,7 @@
                     "exclusiveMinimum": 0
                   },
                   "latencySeconds": {
-                    "$ref": "#/$defs/__schema9"
+                    "$ref": "#/$defs/__schema10"
                   }
                 },
                 "required": [
@@ -471,7 +478,7 @@
               "exclusiveMinimum": 0
             },
             "latencySeconds": {
-              "$ref": "#/$defs/__schema9"
+              "$ref": "#/$defs/__schema10"
             }
           },
           "required": [
@@ -915,10 +922,26 @@
       "$ref": "#/$defs/__schema5"
     },
     "__schema9": {
+      "type": "object",
+      "properties": {
+        "sourceDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "destinationDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "sourceDeviceId",
+        "destinationDeviceId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema10": {
       "type": "number",
       "minimum": 0
     },
-    "__schema10": {
+    "__schema11": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -931,7 +954,7 @@
           "$ref": "#/$defs/__schema6"
         },
         "trafficFactor": {
-          "$ref": "#/$defs/__schema9"
+          "$ref": "#/$defs/__schema10"
         }
       },
       "required": [

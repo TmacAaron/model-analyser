@@ -85,6 +85,13 @@
     "receiveBytesPerMember": {
       "$ref": "#/$defs/__schema4"
     },
+    "peerPairs": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema6"
+      }
+    },
     "algorithm": {
       "type": "object",
       "properties": {
@@ -92,7 +99,7 @@
           "$ref": "#/$defs/__schema0"
         },
         "trafficFactor": {
-          "$ref": "#/$defs/__schema6"
+          "$ref": "#/$defs/__schema7"
         },
         "startupRounds": {
           "$ref": "#/$defs/__schema3"
@@ -109,7 +116,7 @@
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema7"
+        "$ref": "#/$defs/__schema8"
       }
     },
     "timing": {
@@ -143,7 +150,7 @@
               "const": "fixed"
             },
             "seconds": {
-              "$ref": "#/$defs/__schema6"
+              "$ref": "#/$defs/__schema7"
             },
             "description": {
               "$ref": "#/$defs/__schema0"
@@ -168,7 +175,7 @@
               "exclusiveMinimum": 0
             },
             "latencySeconds": {
-              "$ref": "#/$defs/__schema6"
+              "$ref": "#/$defs/__schema7"
             }
           },
           "required": [
@@ -190,7 +197,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema8"
+            "$ref": "#/$defs/__schema9"
           }
         },
         "afterNodeIds": {
@@ -621,10 +628,26 @@
       "$ref": "#/$defs/__schema3"
     },
     "__schema6": {
+      "type": "object",
+      "properties": {
+        "sourceDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "destinationDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "sourceDeviceId",
+        "destinationDeviceId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema7": {
       "type": "number",
       "minimum": 0
     },
-    "__schema7": {
+    "__schema8": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -637,7 +660,7 @@
           "$ref": "#/$defs/__schema4"
         },
         "trafficFactor": {
-          "$ref": "#/$defs/__schema6"
+          "$ref": "#/$defs/__schema7"
         }
       },
       "required": [
@@ -648,7 +671,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema8": {
+    "__schema9": {
       "type": "string",
       "enum": [
         "prefill",

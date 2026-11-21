@@ -20,3 +20,12 @@ export function addQwenPipelinePreset(model: AssetDocument) {
       { ...preset, sharedPoolDegrees: ['attentionTp'] } : preset) ?? [], pipeline],
   });
 }
+
+export function addQwenPipelineRequestParallel(model: AssetDocument) {
+  return AssetDocument.parse({ ...model, revision: model.revision + 1,
+    parallelPresets: model.parallelPresets?.map(preset => preset.strategy === 'pipeline' ? {
+      ...preset, requestBatchSharding: true,
+      assumptions: [...preset.assumptions, 'Each independent request group has its own pipeline. Stage transfers use only the local batch slice.'],
+    } : preset),
+  });
+}

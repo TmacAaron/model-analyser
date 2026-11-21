@@ -1,5 +1,6 @@
 import { ascendProjectProblems } from './ascend-quantization.js';
 import { declaredRecipeIssues } from './parallel-bindings.js';
+import { sendRecvIssue } from './communication-peers.js';
 import { AssetDocument, type AssetRef, type GraphTemplate, type Diagnostic, ProjectDocument, type ValueExpr, type Quantity, type CostDefinition,type LocalCostRule } from './index.js';
 import { validateScenario } from './scenario-validation.js';
 import { parseExpression, expressionSymbols } from './expression.js';
@@ -231,6 +232,7 @@ export function validateAssets(roots:AssetDocument[],library:AssetDocument[]=roo
       if(!tensors.has(c.source.tensorId)||!tensors.has(c.destination.tensorId))report(asset,'missing_reference','collective 通信端点张量缺失',path);
       unique(asset,c.temporaryStorageIds??[],path+'.temporaryStorageIds');for(const id of c.temporaryStorageIds??[])if(!storages.has(id))report(asset,'missing_reference','collective 临时存储缺失 '+id,path);
       const scoped=node.repeat?{...asset,parameters:[...asset.parameters.filter(p=>p.key!==node.repeat?.axis),{key:node.repeat.axis,name:node.repeat.axis,type:'integer' as const,unit:'count' as const,min:0}]}:asset;
+      const peerIssue=sendRecvIssue(c);if(peerIssue)report(asset,'invalid_distribution',peerIssue,path);
       if(c.perDevicePayloads){unique(asset,c.perDevicePayloads.map(p=>p.deviceId),path+'.perDevicePayloads');if(c.operation==='send_recv')report(asset,'invalid_member_payloads','send_recv不能声明集体通信的逐rank覆盖',path);for(const [i,p] of c.perDevicePayloads.entries()){expression(scoped,p.sendBytes,'byte',path+'.perDevicePayloads.'+i+'.sendBytes');expression(scoped,p.receiveBytes,'byte',path+'.perDevicePayloads.'+i+'.receiveBytes');}}
       expression(scoped,c.sendBytesPerMember,'byte',path+'.sendBytesPerMember');expression(scoped,c.receiveBytesPerMember,'byte',path+'.receiveBytesPerMember');if(c.timing.kind==='custom_formula')expression(scoped,c.timing.seconds,'second',path+'.timing.seconds');
       for(const endpoint of [c.source,c.destination]){const tensor=g.tensors.find(t=>t.tensorId===endpoint.tensorId),d=endpoint.distribution;if(d.kind==='sharded')for(const a of d.axes)if(!tensor?.shape.some(axis=>axis.axisId===a.tensorAxisId))report(asset,'missing_reference','collective 分片张量轴缺失 '+a.tensorAxisId,path);if(d.kind==='manual')for(const member of d.members)for(const axis of member.localShape)expression(scoped,axis.size,'count',path+'.distribution.localShape',true);}

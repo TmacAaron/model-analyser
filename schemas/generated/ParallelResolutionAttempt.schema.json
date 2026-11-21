@@ -827,6 +827,13 @@
                           "receiveBytesPerMember": {
                             "$ref": "#/$defs/__schema11"
                           },
+                          "peerPairs": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema34"
+                            }
+                          },
                           "algorithm": {
                             "type": "object",
                             "properties": {
@@ -851,7 +858,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema34"
+                              "$ref": "#/$defs/__schema35"
                             }
                           },
                           "timing": {
@@ -893,7 +900,7 @@
                                 "$ref": "#/$defs/__schema0"
                               },
                               "phases": {
-                                "$ref": "#/$defs/__schema35"
+                                "$ref": "#/$defs/__schema36"
                               },
                               "afterNodeIds": {
                                 "type": "array",
@@ -949,7 +956,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema36"
+                          "$ref": "#/$defs/__schema37"
                         }
                       },
                       "diagnostics": {
@@ -1261,24 +1268,24 @@
               "additionalProperties": false
             },
             "execution": {
-              "$ref": "#/$defs/__schema37"
+              "$ref": "#/$defs/__schema38"
             },
             "memory": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/__schema38"
+                "$ref": "#/$defs/__schema39"
               }
             },
             "serialBaseline": {
               "type": "object",
               "properties": {
                 "execution": {
-                  "$ref": "#/$defs/__schema37"
+                  "$ref": "#/$defs/__schema38"
                 },
                 "memory": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/$defs/__schema38"
+                    "$ref": "#/$defs/__schema39"
                   }
                 }
               },
@@ -4062,6 +4069,22 @@
     "__schema34": {
       "type": "object",
       "properties": {
+        "sourceDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "destinationDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "sourceDeviceId",
+        "destinationDeviceId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema35": {
+      "type": "object",
+      "properties": {
         "deviceId": {
           "$ref": "#/$defs/__schema0"
         },
@@ -4083,14 +4106,14 @@
       ],
       "additionalProperties": false
     },
-    "__schema35": {
+    "__schema36": {
       "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema1"
       }
     },
-    "__schema36": {
+    "__schema37": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -4279,7 +4302,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema37": {
+    "__schema38": {
       "oneOf": [
         {
           "type": "object",
@@ -5019,25 +5042,25 @@
         }
       ]
     },
-    "__schema38": {
+    "__schema39": {
       "type": "object",
       "properties": {
         "deviceScope": {
-          "$ref": "#/$defs/__schema39"
-        },
-        "categoryBreakdown": {
           "$ref": "#/$defs/__schema40"
         },
-        "peakBytes": {
+        "categoryBreakdown": {
           "$ref": "#/$defs/__schema41"
+        },
+        "peakBytes": {
+          "$ref": "#/$defs/__schema42"
         },
         "peakPoint": {
           "oneOf": [
             {
-              "$ref": "#/$defs/__schema42"
+              "$ref": "#/$defs/__schema43"
             },
             {
-              "$ref": "#/$defs/__schema43"
+              "$ref": "#/$defs/__schema44"
             },
             {
               "type": "object",
@@ -5065,10 +5088,10 @@
           "$ref": "#/$defs/__schema5"
         },
         "capacityStatus": {
-          "$ref": "#/$defs/__schema44"
+          "$ref": "#/$defs/__schema45"
         },
         "moduleOverrides": {
-          "$ref": "#/$defs/__schema45"
+          "$ref": "#/$defs/__schema46"
         },
         "totalOverride": {
           "type": "object",
@@ -5080,7 +5103,7 @@
                   "$ref": "#/$defs/__schema0"
                 },
                 "phases": {
-                  "$ref": "#/$defs/__schema35"
+                  "$ref": "#/$defs/__schema36"
                 },
                 "target": {
                   "oneOf": [
@@ -5160,25 +5183,25 @@
               "type": "object",
               "properties": {
                 "deviceScope": {
-                  "$ref": "#/$defs/__schema39"
-                },
-                "categoryBreakdown": {
                   "$ref": "#/$defs/__schema40"
                 },
-                "peakBytes": {
+                "categoryBreakdown": {
                   "$ref": "#/$defs/__schema41"
                 },
+                "peakBytes": {
+                  "$ref": "#/$defs/__schema42"
+                },
                 "peakPoint": {
-                  "$ref": "#/$defs/__schema47"
+                  "$ref": "#/$defs/__schema48"
                 },
                 "capacityBytes": {
                   "$ref": "#/$defs/__schema5"
                 },
                 "capacityStatus": {
-                  "$ref": "#/$defs/__schema44"
+                  "$ref": "#/$defs/__schema45"
                 },
                 "moduleOverrides": {
-                  "$ref": "#/$defs/__schema45"
+                  "$ref": "#/$defs/__schema46"
                 }
               },
               "required": [
@@ -5203,7 +5226,7 @@
           "additionalProperties": false
         },
         "sequenceTheoretical": {
-          "$ref": "#/$defs/__schema46"
+          "$ref": "#/$defs/__schema47"
         }
       },
       "required": [
@@ -5216,7 +5239,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema39": {
+    "__schema40": {
       "oneOf": [
         {
           "type": "object",
@@ -5262,7 +5285,7 @@
         }
       ]
     },
-    "__schema40": {
+    "__schema41": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5336,7 +5359,7 @@
         "additionalProperties": false
       }
     },
-    "__schema41": {
+    "__schema42": {
       "oneOf": [
         {
           "type": "object",
@@ -5394,7 +5417,7 @@
         }
       ]
     },
-    "__schema42": {
+    "__schema43": {
       "type": "object",
       "properties": {
         "kind": {
@@ -5414,7 +5437,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema43": {
+    "__schema44": {
       "type": "object",
       "properties": {
         "kind": {
@@ -5434,7 +5457,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema44": {
+    "__schema45": {
       "oneOf": [
         {
           "type": "object",
@@ -5620,7 +5643,7 @@
         }
       ]
     },
-    "__schema45": {
+    "__schema46": {
       "type": "object",
       "properties": {
         "policy": {
@@ -5635,13 +5658,13 @@
           ]
         },
         "theoretical": {
-          "$ref": "#/$defs/__schema46"
+          "$ref": "#/$defs/__schema47"
         },
         "applications": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema48"
+            "$ref": "#/$defs/__schema49"
           }
         },
         "allocations": {
@@ -5818,26 +5841,26 @@
       ],
       "additionalProperties": false
     },
-    "__schema46": {
+    "__schema47": {
       "type": "object",
       "properties": {
         "deviceScope": {
-          "$ref": "#/$defs/__schema39"
-        },
-        "categoryBreakdown": {
           "$ref": "#/$defs/__schema40"
         },
-        "peakBytes": {
+        "categoryBreakdown": {
           "$ref": "#/$defs/__schema41"
         },
+        "peakBytes": {
+          "$ref": "#/$defs/__schema42"
+        },
         "peakPoint": {
-          "$ref": "#/$defs/__schema47"
+          "$ref": "#/$defs/__schema48"
         },
         "capacityBytes": {
           "$ref": "#/$defs/__schema5"
         },
         "capacityStatus": {
-          "$ref": "#/$defs/__schema44"
+          "$ref": "#/$defs/__schema45"
         }
       },
       "required": [
@@ -5850,17 +5873,17 @@
       ],
       "additionalProperties": false
     },
-    "__schema47": {
+    "__schema48": {
       "oneOf": [
         {
-          "$ref": "#/$defs/__schema42"
+          "$ref": "#/$defs/__schema43"
         },
         {
-          "$ref": "#/$defs/__schema43"
+          "$ref": "#/$defs/__schema44"
         }
       ]
     },
-    "__schema48": {
+    "__schema49": {
       "type": "object",
       "properties": {
         "rule": {
@@ -5873,7 +5896,7 @@
               "$ref": "#/$defs/__schema0"
             },
             "phases": {
-              "$ref": "#/$defs/__schema35"
+              "$ref": "#/$defs/__schema36"
             },
             "peakBytes": {
               "$ref": "#/$defs/__schema11"

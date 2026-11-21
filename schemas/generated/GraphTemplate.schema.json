@@ -450,6 +450,13 @@
                       "receiveBytesPerMember": {
                         "$ref": "#/$defs/__schema4"
                       },
+                      "peerPairs": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema18"
+                        }
+                      },
                       "algorithm": {
                         "type": "object",
                         "properties": {
@@ -474,7 +481,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema18"
+                          "$ref": "#/$defs/__schema19"
                         }
                       },
                       "timing": {
@@ -589,10 +596,10 @@
             "$ref": "#/$defs/__schema1"
           },
           "from": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           },
           "to": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           },
           "tensorId": {
             "$ref": "#/$defs/__schema1"
@@ -819,7 +826,7 @@
                                       "minItems": 1,
                                       "type": "array",
                                       "items": {
-                                        "$ref": "#/$defs/__schema21"
+                                        "$ref": "#/$defs/__schema22"
                                       }
                                     }
                                   },
@@ -944,7 +951,7 @@
           "creator": {
             "anyOf": [
               {
-                "$ref": "#/$defs/__schema20"
+                "$ref": "#/$defs/__schema21"
               },
               {
                 "type": "object",
@@ -964,13 +971,13 @@
           "readers": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema20"
+              "$ref": "#/$defs/__schema21"
             }
           },
           "writers": {
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema20"
+              "$ref": "#/$defs/__schema21"
             }
           },
           "updatePolicy": {
@@ -1885,6 +1892,22 @@
     "__schema18": {
       "type": "object",
       "properties": {
+        "sourceDeviceId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "destinationDeviceId": {
+          "$ref": "#/$defs/__schema1"
+        }
+      },
+      "required": [
+        "sourceDeviceId",
+        "destinationDeviceId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema19": {
+      "type": "object",
+      "properties": {
         "deviceId": {
           "$ref": "#/$defs/__schema1"
         },
@@ -1906,10 +1929,10 @@
       ],
       "additionalProperties": false
     },
-    "__schema19": {
+    "__schema20": {
       "oneOf": [
         {
-          "$ref": "#/$defs/__schema20"
+          "$ref": "#/$defs/__schema21"
         },
         {
           "type": "object",
@@ -1947,7 +1970,7 @@
         }
       ]
     },
-    "__schema20": {
+    "__schema21": {
       "type": "object",
       "properties": {
         "kind": {
@@ -1968,7 +1991,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema21": {
+    "__schema22": {
       "type": "object",
       "properties": {
         "axisId": {

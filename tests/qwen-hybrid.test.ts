@@ -6,7 +6,7 @@ import { validateProject } from '../packages/contracts/src/validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenHybridAssets } from '../scripts/qwen-hybrid-model.js';
 import { makeQwenHybridParallelAssets } from '../scripts/qwen-hybrid-parallel.js';
-import { addQwenPipelinePreset } from '../scripts/qwen-pipeline.js';
+import { addQwenPipelinePreset, addQwenPipelineRequestParallel } from '../scripts/qwen-pipeline.js';
 import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 
 const cases = [
@@ -54,23 +54,26 @@ it.each(cases)('reproduces the full text decoder weights and separates persisten
   });
 }, 120_000);
 
-it('keeps whole GQA and DeltaNet periods in their Qwen3.8 pipeline stage', async () => {
+it.each([1, 2])('keeps whole GQA and DeltaNet periods in Qwen3.8 stages for %i request groups', async replicas => {
   const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen38');
-  const model = addQwenPipelinePreset(root!);
+  const pipeline = addQwenPipelinePreset(root!);
+  const model = replicas > 1 ? addQwenPipelineRequestParallel(pipeline) : pipeline;
+  const groupBatch = replicas > 1 ? 2 : 1;
   const project = makeModelProject([model, ...dependencies], {
-    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+    kind: 'prefill', batchSize: replicas * groupBatch, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
   }, model.name);
-  const attempt = await previewParallelPreset({ ...bindDegreePool(project.scenarios[0]!, 2), assets: project.assetSnapshots,
-    presetId: 'pp-decoder', network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
+  const attempt = await previewParallelPreset({ ...bindDegreePool(project.scenarios[0]!, 2 * replicas), assets: project.assetSnapshots,
+    presetId: 'pp-decoder', ...(replicas > 1 ? { requestDp: replicas } : {}), network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
   if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 5000));
   const { preview } = attempt;
   const full = ledger(cases[1]), base = ledger(cases[1], 0), embedding = 2 * 248320 * 5120;
   const stageWeight = embedding + (full.weightBytes - base.weightBytes) / 2;
-  expect(preview.allocations.map(row => row.weightBytes)).toEqual([stageWeight, stageWeight + 2 * 5120]);
-  expect(preview.allocations.map(row => row.stateBytes)).toEqual(Array(2).fill((full.recurrentBytes + 3 * full.kvPerToken) / 2));
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual(Array.from({ length: replicas }, () => [stageWeight, stageWeight + 2 * 5120]).flat());
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(Array(2 * replicas).fill(groupBatch * (full.recurrentBytes + 3 * full.kvPerToken) / 2));
   expect(preview.communications).toHaveLength(1);
   expect(await estimateKvCapacity(preview.scenario, preview.assets)).toMatchObject({ status: 'available', report: {
     averageBytesPerToken: full.kvPerToken, budget: { status: 'available' },
+    devices: Array(2 * replicas).fill(expect.objectContaining({ otherStateBytes: groupBatch * full.recurrentBytes / 2 })),
   } });
   const single = await previewParallelPreset({ ...bindDegreePool(preview.scenario, 1), assets: preview.assets, presetId: 'replicated' });
   if (single.status !== 'available') throw Error(single.message);

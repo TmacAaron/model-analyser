@@ -1000,6 +1000,13 @@
                           "receiveBytesPerMember": {
                             "$ref": "#/$defs/__schema16"
                           },
+                          "peerPairs": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/$defs/__schema52"
+                            }
+                          },
                           "algorithm": {
                             "type": "object",
                             "properties": {
@@ -1024,7 +1031,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema52"
+                              "$ref": "#/$defs/__schema53"
                             }
                           },
                           "timing": {
@@ -1122,7 +1129,7 @@
                         "minItems": 1,
                         "type": "array",
                         "items": {
-                          "$ref": "#/$defs/__schema53"
+                          "$ref": "#/$defs/__schema54"
                         }
                       },
                       "diagnostics": {
@@ -1434,7 +1441,7 @@
               "additionalProperties": false
             },
             "execution": {
-              "$ref": "#/$defs/__schema54"
+              "$ref": "#/$defs/__schema55"
             },
             "memory": {
               "type": "array",
@@ -1446,7 +1453,7 @@
               "type": "object",
               "properties": {
                 "execution": {
-                  "$ref": "#/$defs/__schema54"
+                  "$ref": "#/$defs/__schema55"
                 },
                 "memory": {
                   "type": "array",
@@ -5758,6 +5765,22 @@
     "__schema52": {
       "type": "object",
       "properties": {
+        "sourceDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "destinationDeviceId": {
+          "$ref": "#/$defs/__schema0"
+        }
+      },
+      "required": [
+        "sourceDeviceId",
+        "destinationDeviceId"
+      ],
+      "additionalProperties": false
+    },
+    "__schema53": {
+      "type": "object",
+      "properties": {
         "deviceId": {
           "$ref": "#/$defs/__schema0"
         },
@@ -5779,7 +5802,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema53": {
+    "__schema54": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -5968,7 +5991,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema54": {
+    "__schema55": {
       "oneOf": [
         {
           "type": "object",

@@ -143,7 +143,7 @@ function CommunicationProof({report,onStoragePage}:{report:CommunicationCostSour
   {report.items.map((item,index)=>{
    const device=endpointLayouts?.devices[index];
    return <article className="storage-access-item" key={item.deviceId}>
-   <h5>{item.deviceId}{item.role==='sender'?' · 发送端':item.role==='receiver'?' · 接收端':''}</h5>
+   <h5>{item.deviceId}{item.role==='sender'?' · 发送端':item.role==='receiver'?' · 接收端':''}{item.peerDeviceId&&' · 对端 '+item.peerDeviceId}</h5>
    <p>发送 {describe(item.send)} · 接收 {describe(item.receive)} · 发送量 × {item.factor} = {describe(item.traffic)}</p>
    {timing?.kind==='bandwidth_latency'&&item.traffic.status==='available'&&item.traffic.quantity.value===timing.maxTraffic&&<p>该设备的算法流量达到网络耗时使用的最大值。</p>}
    {item.sendSum&&item.receiveSum&&item.send.status==='available'&&item.receive.status==='available'&&<p>组发送累计 {item.sendSum.before} + {item.send.quantity.value} = {item.sendSum.after} byte · 组接收累计 {item.receiveSum.before} + {item.receive.quantity.value} = {item.receiveSum.after} byte</p>}

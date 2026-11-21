@@ -123,6 +123,7 @@ export const CommunicationMemberPayload = z.strictObject({deviceId:DeviceId,send
 export const CommunicationDefinition = z.strictObject({operation:z.enum(['all_reduce','all_gather','reduce_scatter','all_to_all','send_recv']),groupId:Id,
   source:z.strictObject({tensorId:TensorId,distribution:TensorDistribution}),destination:z.strictObject({tensorId:TensorId,distribution:TensorDistribution}),
   sourceDeviceId:DeviceId.optional(),destinationDeviceId:DeviceId.optional(),payloadDtype:DTypeSpec,sendBytesPerMember:ValueExpr,receiveBytesPerMember:ValueExpr,
+  peerPairs:z.array(z.strictObject({sourceDeviceId:DeviceId,destinationDeviceId:DeviceId})).min(1).optional(),
   algorithm:z.strictObject({name:Id,trafficFactor:NonNegative,startupRounds:Natural}),
   perDevicePayloads:z.array(CommunicationMemberPayload).min(1).optional(),
   timing:z.union([TimingDefinition.options[1],TimingDefinition.options[2],z.strictObject({kind:z.literal('bandwidth_latency'),bytePerSecond:z.number().positive(),latencySeconds:NonNegative})]),

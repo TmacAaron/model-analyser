@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {MetricScope,NodeId,type CommunicationDefinition,type CommunicationEvaluation,type DeviceId,type MetricValue,type ParallelResolution,type Quantity,type StorageId,type ValueExpr} from '@model-analyser/contracts';
 import {jsonBytes} from '../../contracts/src/json-size.js';
 import {canonical} from '../../contracts/src/validation.js';
+import {participatesOnCommunicationSide,sendRecvPairs} from '../../contracts/src/communication-peers.js';
 import {LeafCostSourceRequest} from './leaf-cost-context.js';
 import {computeInputHash,stableStringify} from './input-hash.js';
 import {ENGINE_VERSION} from './version.js';
@@ -49,7 +50,7 @@ function endpointLayoutEvidence(evaluation:CommunicationEvaluation,authored:Comm
  const placements={source:new Map(evaluation.source.placements.map(placement=>[placement.deviceId,placement])),
   destination:new Map(evaluation.destination.placements.map(placement=>[placement.deviceId,placement]))};
  function onDevice(side:CommunicationEndpointSide,deviceId:DeviceId){
-  if(definition.operation==='send_recv'&&deviceId!==(side==='source'?definition.sourceDeviceId:definition.destinationDeviceId))return;
+  if(!participatesOnCommunicationSide(definition,side,deviceId))return;
   const placement=placements[side].get(deviceId),operations=trace[side].devices.get(deviceId);
   if(!placement||!operations||operations.length!==placement.logicalShape.length+2)throw Error('通信端点缺少实际逐卡分片运算');
   return {...placement,operations};
@@ -82,8 +83,8 @@ function communicationStorageEvidence(layout:ParallelResolution,evaluation:Commu
  });
  const devices=deviceIds.map(deviceId=>({deviceId,allocations:rows.flatMap<StorageAllocationEvidence>(({storageId,allocation,perDevice})=>{
   const roles:StorageRole[]=[];
-  if(storageId===source.canonicalStorageId&&(definition.operation!=='send_recv'||deviceId===definition.sourceDeviceId))roles.push('source');
-  if(storageId===destination.canonicalStorageId&&(definition.operation!=='send_recv'||deviceId===definition.destinationDeviceId))roles.push('destination');
+  if(storageId===source.canonicalStorageId&&participatesOnCommunicationSide(definition,'source',deviceId))roles.push('source');
+  if(storageId===destination.canonicalStorageId&&participatesOnCommunicationSide(definition,'destination',deviceId))roles.push('destination');
   if(temporary.has(storageId))roles.push('temporary');
   if(!roles.length)return [];
   const base={storageId,roles},local=perDevice.get(deviceId);
@@ -161,7 +162,7 @@ export async function replayCommunicationCostSource(input:unknown){
  const uniformMessages=uniform?{
   send:formula(authored.sendBytesPerMember,'byte',available(summary.sendBytesPerMember),'每成员发送量'),
   receive:formula(authored.receiveBytesPerMember,'byte',available(summary.receiveBytesPerMember),'每成员接收量'),
-  factor,count:sendRecv?1:componentCount,
+  factor,count:sendRecv?sendRecvPairs(effective).length:componentCount,
  }:undefined;
  if(uniformMessages){
   const {send,receive,count}=uniformMessages;
@@ -169,6 +170,9 @@ export async function replayCommunicationCostSource(input:unknown){
   if(summary.algorithmTrafficBytesPerMember.status==='available'&&!isNumber(summary.algorithmTrafficBytesPerMember,send.quantity.value*factor))throw Error('算法流量与声明系数不同');
  }
  const rawByDevice=new Map(boundRoles.perDevicePayloads?.map(payload=>[payload.deviceId,payload])),effectiveByDevice=new Map(effective.perDevicePayloads?.map(payload=>[payload.deviceId,payload]));
+ const peerByDevice=new Map(effective.peerPairs?.flatMap(({sourceDeviceId,destinationDeviceId})=>[
+  [sourceDeviceId,destinationDeviceId] as const,[destinationDeviceId,sourceDeviceId] as const,
+ ]));
  const items=[];
  let totalSend=0,totalReceive=0,maxTraffic=0,missingTraffic=false;
  for(const [index,device] of evaluation.perDevice.entries()){
@@ -183,9 +187,11 @@ export async function replayCommunicationCostSource(input:unknown){
   }else missingTraffic=true;
   if(index<start||index>=start+pageSize)continue;
   if(!uniform&&(!raw||!bound))throw Error('设备有效荷载缺少实际声明');
+  const peerDeviceId=peerByDevice.get(device.deviceId);
   items.push({deviceId:device.deviceId,send:compact(device.sendBytes),receive:compact(device.receiveBytes),traffic:compact(traffic),factor:deviceFactor,
    ...(raw?{sendFormula:formula(raw.sendBytes,'byte',send,device.deviceId+' 发送量'),receiveFormula:formula(raw.receiveBytes,'byte',receive,device.deviceId+' 接收量'),sendSum:{before:beforeSend,after:totalSend},receiveSum:{before:beforeReceive,after:totalReceive}}:{}),
-   ...(sendRecv?{role:device.deviceId===effective.sourceDeviceId?'sender' as const:'receiver' as const}:{}),
+   ...(sendRecv?{role:participatesOnCommunicationSide(effective,'source',device.deviceId)?'sender' as const:'receiver' as const}:{}),
+   ...(peerDeviceId?{peerDeviceId}:{}),
   });
  }
  if(!uniform&&(summary.groupSendBytes.status==='available'&&!isNumber(summary.groupSendBytes,totalSend)||summary.groupReceiveBytes.status==='available'&&!isNumber(summary.groupReceiveBytes,totalReceive)))throw Error('逐设备消息求和与组总量不同');

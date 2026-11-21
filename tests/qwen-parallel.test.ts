@@ -5,7 +5,7 @@ import { currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenParallelAssets } from '../scripts/qwen-parallel-assets.js';
-import { addQwenPipelinePreset } from '../scripts/qwen-pipeline.js';
+import { addQwenPipelinePreset, addQwenPipelineRequestParallel } from '../scripts/qwen-pipeline.js';
 
 const hidden = 2048, width = 128, queries = 16, kvHeads = 8, layers = 28, intermediate = 6144, vocab = 151936;
 const attentionMatrices = hidden * width * (2 * queries + 2 * kvHeads);
@@ -204,4 +204,83 @@ it('places three stages of the full decoder, counts tied weights at both ends an
   const shorter: Scenario = { ...scenario, bindings: [{ parameterKey: 'L', value: { kind: 'integer', value: 2 } }] };
   expect(await previewParallelPreset({ ...input, scenario: shorter, assets, presetId: 'pp-decoder', network }))
     .toMatchObject({ status: 'unavailable', message: expect.stringContaining('层链块数 2') });
+}, 150_000);
+
+it('runs independent request pipelines with paired stage transfers, local weights and growing KV', async () => {
+  const input = prepare({ kind: 'decode', batchSize: 4, queryTokensPerRequest: 1, contextTokensPerRequest: 2, steps: 2 }, layers, 6);
+  const root = input.assets.find(asset => asset.definition.kind === 'model')!;
+  const legacy = addQwenPipelinePreset(root), model = addQwenPipelineRequestParallel(legacy);
+  const assets = input.assets.map(asset => asset === root ? model : asset);
+  const scenario = { ...input.scenario, model: { ...input.scenario.model, revision: model.revision } };
+  const degrees = { ...serialDegrees, pp: 3, attentionDp: 2 }, presets = model.parallelPresets!;
+  const [match] = matchingParallelPresets(degrees, presets, scenario);
+  expect(match).toMatchObject({ slots: 6, requestDp: 2, preset: { presetId: 'pp-decoder' } });
+  const network = { bytesPerSecond: 1e11, latencySeconds: 3e-6 };
+  const request = { ...input, scenario, assets, presetId: 'pp-decoder', requestDp: 2, network };
+  const attempt = await previewParallelPreset(request);
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 6000));
+  const { preview } = attempt, reopened = Scenario.parse(JSON.parse(JSON.stringify(preview.scenario)));
+  expect(currentDegrees(reopened, presets)).toEqual(degrees);
+  const layerBytes = 2 * (attentionMatrices + replicaParameters), tied = 2 * hidden * vocab;
+  const perLayerToken = 4 * width * kvHeads, stageCounts = [10, 9, 9, 10, 9, 9], localBatch = 2;
+  const weights = [10 * layerBytes + tied, 9 * layerBytes, 9 * layerBytes + tied + 2 * hidden];
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual([...weights, ...weights]);
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(stageCounts.map(l => l * localBatch * 3 * perLayerToken));
+  const peer = (sourceDeviceId: string, destinationDeviceId: string) => ({ sourceDeviceId, destinationDeviceId });
+  expect(preview.communications?.map(row => row.peerPairs)).toEqual([
+    [peer('gpu0', 'gpu1'), peer('gpu3', 'gpu4')], [peer('gpu1', 'gpu2'), peer('gpu4', 'gpu5')],
+  ]);
+
+  const analyzed = await analyzeScenario(reopened, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 8)));
+  expect(validateResult(analyzed.result)).toEqual([]);
+  const steps = analyzed.result.decode?.steps;
+  for (const [index, step] of steps!.entries()) {
+    expect(step.memory.map(row => count(row.categoryBreakdown.find(category => category.category === 'state')?.bytes)))
+      .toEqual(stageCounts.map(l => l * localBatch * (3 + index) * perLayerToken));
+    const layout = step.result.distributed!.layout;
+    expect(layout.execution).toMatchObject({ status: 'available', result: { completeness: 'complete' } });
+    const perMessage = 2 * localBatch * hidden;
+    const localEmbedding = layout.localCosts.nodes.find(row => row.nodeId === 'embedding')?.placement;
+    expect(localEmbedding).toMatchObject({ kind: 'placed', perDevice: [{ deviceId: 'gpu0' }, { deviceId: 'gpu3' }] });
+    if (localEmbedding?.kind === 'placed') for (const { outcome } of localEmbedding.perDevice) {
+      expect(outcome).toMatchObject({ status: 'available', cost: { logicalWriteBytes: { quantity: { value: perMessage } } } });
+    }
+    for (const { evaluation } of layout.communications) {
+      for (const endpoint of [evaluation.source, evaluation.destination]) {
+        expect(endpoint.placements.map(row => row.slices.find(slice => slice.axisId === 'b')))
+          .toMatchObject([{ start: 0, end: 2 }, { start: 2, end: 4 }]);
+      }
+      expect(evaluation.perDevice.map(row => [count(row.sendBytes), count(row.receiveBytes), count(row.algorithmTrafficBytes)]))
+        .toEqual([[perMessage, 0, perMessage], [0, perMessage, 0], [perMessage, 0, perMessage], [0, perMessage, 0]]);
+      expect(count(evaluation.cost.communications[0]?.groupSendBytes)).toBe(2 * perMessage);
+      expect(count(evaluation.cost.seconds)).toBeCloseTo(network.latencySeconds + perMessage / network.bytesPerSecond, 12);
+    }
+  }
+  const frame = steps![0]!, layout = frame.result.distributed!.layout;
+  const evaluated = layout.communications[0]!.evaluation;
+  const proof = await replayCommunicationCostSource({ scenario: frame.scenario, assets: preview.assets,
+    metric: evaluated.cost.communications[0]!.groupSendBytes, inputHash: frame.result.inputHash, engineVersion: frame.result.engineVersion,
+    ...(frame.result.stepContext ? { stepContext: frame.result.stepContext, decodeFrame: true } : {}), proofVersion: 4,
+    selector: { index: 0, scope: evaluated.cost.scope, field: 'groupSendBytes' },
+  });
+  expect(proof.uniformMessages?.count).toBe(2);
+  expect(proof.items.map(row => [row.deviceId, row.peerDeviceId])).toEqual([['gpu0', 'gpu1'], ['gpu1', 'gpu0'], ['gpu3', 'gpu4'], ['gpu4', 'gpu3']]);
+  expect(proof.endpointLayouts?.devices.map(row => [row.deviceId, !!row.source, !!row.destination]))
+    .toEqual([['gpu0', true, false], ['gpu1', false, true], ['gpu3', true, false], ['gpu4', false, true]]);
+  expect(await estimateKvCapacity(reopened, preview.assets)).toMatchObject({ status: 'available', report: {
+    averageBytesPerToken: layers * perLayerToken, budget: { status: 'available' },
+  } });
+
+  const crossed = structuredClone(reopened);
+  crossed.parallelPlan.communications[0]!.peerPairs = [
+    { sourceDeviceId: DeviceId.parse('gpu0'), destinationDeviceId: DeviceId.parse('gpu4') },
+    { sourceDeviceId: DeviceId.parse('gpu3'), destinationDeviceId: DeviceId.parse('gpu1') },
+  ];
+  expect(await resolveParallelPlan({ ...crossed, workload: frame.scenario.workload }, preview.assets)).toMatchObject({
+    status: 'unavailable', diagnostics: [expect.objectContaining({ code: 'invalid_distribution', message: expect.stringContaining('目标切片') })],
+  });
+  const old = { ...scenario, model: { ...scenario.model, revision: legacy.revision } };
+  expect(await previewParallelPreset({ ...request, scenario: old, assets: [...assets, legacy] }))
+    .toMatchObject({ status: 'unavailable', message: expect.stringContaining('未声明此布局可与请求 DP 组合') });
 }, 150_000);

@@ -1,4 +1,5 @@
 import { type Scenario,type TensorDistribution,type CommunicationDefinition,type ParallelPresetTemplate } from './index.js';
+import { sendRecvIssue } from './communication-peers.js';
 
 type Bindings=NonNullable<Scenario['parallelPlan']['nativeBindings']>;
 /** Bind authored roles without changing tensor/node identifiers or immutable assets. */
@@ -17,6 +18,7 @@ export function bindNativeCommunication(c:CommunicationDefinition,b:Bindings):Co
   if(b.network&&c.timing.kind!=='bandwidth_latency')throw Error('网络绑定不能替换 fixed/custom_formula 通信模型');
   return {...c,groupId:group.physicalGroupId,source:{...c.source,distribution:remapDistribution(c.source.distribution,b)},destination:{...c.destination,distribution:remapDistribution(c.destination.distribution,b)},
     ...(c.sourceDeviceId?{sourceDeviceId:device(c.sourceDeviceId)}:{}),...(c.destinationDeviceId?{destinationDeviceId:device(c.destinationDeviceId)}:{}),
+    ...(c.peerPairs?{peerPairs:c.peerPairs.map(pair=>({sourceDeviceId:device(pair.sourceDeviceId),destinationDeviceId:device(pair.destinationDeviceId)}))}:{}),
     ...(c.perDevicePayloads?{perDevicePayloads:c.perDevicePayloads.map(p=>({...p,deviceId:device(p.deviceId)}))}:{}),
     timing:b.network?{kind:'bandwidth_latency',bytePerSecond:b.network.bytesPerSecond,latencySeconds:b.network.latencySeconds}:c.timing};
 }
@@ -38,7 +40,7 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
   if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
   if((p.strategy==='decode_context_sharded')!==(p.decodeContext!==undefined))errors.push('Decode 上下文预设须声明固定模块与替代模块');
-  if(p.requestBatchSharding&&p.strategy!=='decode_context_sharded'&&p.strategy!=='query_sharded')errors.push('此请求分片声明仅适用于上下文并行预设');
+  if(p.requestBatchSharding&&p.strategy!=='decode_context_sharded'&&p.strategy!=='query_sharded'&&p.strategy!=='pipeline')errors.push('此请求分片声明仅适用于上下文并行或流水线预设');
   if(p.decodeContext&&(p.decodeContext.module.kind!=='module'||p.decodeContext.replacement.kind!=='module'||
     p.phases.some(phase=>phase!=='decode')||!p.moduleRules?.some(rule=>rule.module.assetId===p.decodeContext?.replacement.assetId&&rule.module.revision===p.decodeContext.replacement.revision)))
     errors.push('Decode 上下文预设仅用于 Decode，需声明替代模块的实际分片和归约');
@@ -79,6 +81,6 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
     if(d.kind==='sharded'&&d.policy.kind==='explicit'&&d.policy.slices.some(s=>!g.members.includes(s.deviceId)||s.start>=s.end))errors.push('显式切片引用未知槽位或非法范围');
   };
   for(const a of r.plan.assignments){if(a.phases.some(phase=>!p.phases.includes(phase)))errors.push('布局阶段超出预设支持范围');for(const d of [...a.tensorDistributions,...a.storageDistributions])check(d.distribution);}
-  for(const c of r.plan.communications){if(!r.groups.some(g=>g.groupId===c.groupId))errors.push('通信引用未知组角色');check(c.source.distribution);check(c.destination.distribution);}
+  for(const c of r.plan.communications){const group=r.groups.find(g=>g.groupId===c.groupId);if(!group)errors.push('通信引用未知组角色');const issue=sendRecvIssue(c,group?.members);if(issue)errors.push(issue);check(c.source.distribution);check(c.destination.distribution);}
   return errors;
 }

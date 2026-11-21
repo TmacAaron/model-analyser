@@ -15,7 +15,7 @@ export { requestReplicaMeshAxis } from './request-replica.js';
 
 export function supportsRequestReplicas(preset:ParallelPresetTemplate){
   return preset.strategy==='tensor_sharded'||
-    (preset.strategy==='decode_context_sharded'||preset.strategy==='query_sharded')&&preset.requestBatchSharding===true;
+    (preset.strategy==='decode_context_sharded'||preset.strategy==='query_sharded'||preset.strategy==='pipeline')&&preset.requestBatchSharding===true;
 }
 
 /** Map authored local ports through the same occurrence bindings used by the expanded graph. */
@@ -84,6 +84,10 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     }
     const expansionScenario=previousPipeline||previousDecodeContext||decodeContext
       ?{...scenario,deviceTopology:cleanTopology,parallelPlan:expansionPlan}:scenario;
+    const requestAxes=request.requestDp?[{axisId:requestAxis,size:requestDp}]:[];
+    const requestCoordinate=(i:number)=>request.requestDp?[Math.floor(i/replicaWidth)]:[];
+    const presetMesh={axes:[...requestAxes,{axisId:request.meshAxisId,size:replicaWidth}],
+      coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[...requestCoordinate(i),i%replicaWidth]}))};
     if(preset.strategy==='declared_plan'){
       if(request.expertMesh)throw Error('此声明式预设已固定设备网格');
       const {topology,plan}=materializeDeclaredPreset({...request,scenario:{...scenario,deviceTopology:cleanTopology}},preset);
@@ -95,15 +99,13 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       if(chain?.repeat?.wiring!=='chain')throw Error('流水线须声明根模型中的连续重复层链');
       const expanded=instantiateModel(expansionScenario,assets);
       if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.message).join('；'));
-      const {topology,plan}=materializePipelinePreset({...request,scenario:{...scenario,deviceTopology:cleanTopology}},preset,expanded.resolved);
+      const deviceTopology=request.requestDp?{...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh:presetMesh}:g)}:cleanTopology;
+      const {topology,plan}=materializePipelinePreset({...request,scenario:{...scenario,deviceTopology}},preset,expanded.resolved);
       return await finishPreset(request,model,preset,topology,plan);
     }
     const previousRequestMesh=origin?.requestDp&&origin.groupId===group.groupId&&origin.meshAxisId===request.meshAxisId;
     if(group.mesh&&!previousRequestMesh&&!group.mesh.axes.some(a=>a.axisId===request.meshAxisId&&a.size===degree))throw new FormulaError('invalid_preset_mesh','此预设需要有序设备池及其完整设备轴');
-    const requestAxes=request.requestDp?[{axisId:requestAxis,size:requestDp}]:[];
-    const requestCoordinate=(i:number)=>request.requestDp?[Math.floor(i/replicaWidth)]:[];
-    const mesh=group.mesh&&!request.requestDp&&!previousRequestMesh?group.mesh:{axes:[...requestAxes,{axisId:request.meshAxisId,size:replicaWidth}],
-      coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[...requestCoordinate(i),i%replicaWidth]}))};
+    const mesh=group.mesh&&!request.requestDp&&!previousRequestMesh?group.mesh:presetMesh;
     const topology={...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh}:g)};
     const expanded=instantiateModel(expansionScenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
     if(preset.strategy==='query_sharded'){

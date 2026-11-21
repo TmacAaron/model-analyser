@@ -14,6 +14,8 @@ Qwen3-0.6B r4、Qwen3-1.7B r3 和 Qwen3.8-27B r3 可在「并行方式」填写 
 
 Qwen3-1.7B 的 PP3 将 28 层分为 10、9、9 层。绑权的 embedding 和输出头各需要一份物理权重，分别驻留首尾卡。阶段之间以 SendRecv 发送完整 BF16 激活，Batch 2、单查询 token 时每处发送 8,192 B。Qwen3.8-27B 的 PP2 每卡各有 8 个 GQA／DeltaNet 周期，KV 合计为 65,536 B／token／请求。耗时使用单 microbatch 依次经过所有阶段的基线。
 
+Qwen3-0.6B r9、Qwen3-1.7B r8 和 Qwen3.8-27B r4 支持 DP × PP。DP2、PP2、Batch 4 使用四张卡，两组各处理两条请求，每组各有两个连续层阶段。SendRecv 在同一阶段边界并行传输各组的激活，通信来源列出实际配对、逐卡发送和接收量。对于 Qwen3.8-27B 的单查询 token，每组发送 20,480 B，两组共 40,960 B，耗时按单组消息和链路参数计算。每卡按本阶段和本组请求保存权重与状态。已应用 PP 的工作区可通过「并行方式」更新模型并保留原布局。
+
 ## Qwen3 Prefill 查询分片
 
 Qwen3-0.6B r5 和 Qwen3-1.7B r4 可在 Prefill 的「并行方式」填写 PCP。当前查询 token 按连续位置均分，各卡执行自己的 embedding、投影、Attention、MLP 和输出头。每层先对当前 BF16 K 和 V 分别做 AllGather，再在各卡更新完整的 KV 缓存。历史 KV 和权重按卡复制，logits 保留查询分片。查询数须整除 PCP，点击应用 PP、TP 或其他度数时会生成相应的新布局。

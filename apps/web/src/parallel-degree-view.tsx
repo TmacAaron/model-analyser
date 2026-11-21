@@ -138,7 +138,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
           : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
-          : match.preset.strategy === 'pipeline' ? '阶段间 SendRecv'
+          : match.preset.strategy === 'pipeline' ? (match.requestDp ? '各请求组独立执行阶段间 SendRecv' : '阶段间 SendRecv')
           : match.preset.strategy === 'query_sharded' ? (match.requestDp ? '每层在各请求组内收集 K 和 V' : '每个注意力层收集当前 K 和 V')
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">

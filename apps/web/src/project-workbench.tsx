@@ -111,20 +111,22 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
     const {decodeContext,generatedFrom:origin}=active.parallelPlan;
     const previous=project.assetSnapshots.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision)
       ?.parallelPresets?.find(preset=>preset.presetId===origin?.presetId);
-    if(decodeContext||previous?.queryParallel){
+    if(decodeContext||previous?.queryParallel||previous?.pipeline){
       const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
       const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
       if(!origin||!preset||origin.modelId!==active.model.assetId||
          origin.requestDp&&!preset.requestBatchSharding){
-        throw Error('新模型修订没有兼容的上下文并行布局');
+        throw Error('新模型修订没有兼容的并行布局');
       }
       next.parallelPlan={...active.parallelPlan,generatedFrom:{...origin,modelRevision:model.revision}};
       if(decodeContext){
         if(origin.modelRevision!==active.model.revision||!preset.decodeContext||canonical(preset.decodeContext.module)!==canonical(decodeContext.module)||
            preset.decodeContext.replacement.assetId!==decodeContext.replacement.assetId)throw Error('新模型修订没有兼容的 Decode KV 布局');
         next.parallelPlan.decodeContext=preset.decodeContext;
-      }else if(!preset.queryParallel||canonical(preset.queryParallel)!==canonical(previous?.queryParallel)){
+      }else if(previous?.queryParallel&&(!preset.queryParallel||canonical(preset.queryParallel)!==canonical(previous.queryParallel))){
         throw Error('新模型修订没有兼容的 Prefill 查询分片布局');
+      }else if(previous?.pipeline&&(!preset.pipeline||canonical(preset.pipeline)!==canonical(previous.pipeline))){
+        throw Error('新模型修订没有兼容的流水线布局');
       }
       if(preset.phases.includes(next.workload.kind)){
         await modelUpgradeValidation.run({kind:'model',scenario:next,assets,validateLayout:true});
