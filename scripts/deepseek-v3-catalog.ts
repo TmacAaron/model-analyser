@@ -6,6 +6,7 @@ import { makeDeepSeekAssets } from './deepseek-model.js';
 import { loadDeepSeekV3Profile } from './deepseek-v3-profile.js';
 import { makeDeepSeekV3ParallelAssets } from './deepseek-v3-parallel.js';
 import { makeDeepSeekV3FP8WeightPreset } from './deepseek-v3-fp8-weights.js';
+import { makeDeepSeekV3FP8ExecutionAssets } from './deepseek-v3-fp8-execution.js';
 
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
@@ -14,9 +15,10 @@ for (const release of ['v3', 'r1'] as const) {
     return [...assets, makeDeepSeekV3FP8WeightPreset(assets, release)];
   });
   const latest = makeDeepSeekV3ParallelAssets(release);
+  const published = makeDeepSeekV3FP8WeightPreset(latest, release);
   for (const asset of [...makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release)),
     ...([2, 3, 4] as const).flatMap(revision => makeDeepSeekV3ParallelAssets(release, revision)),
-    ...previous, ...latest, makeDeepSeekV3FP8WeightPreset(latest, release)]) {
+    ...previous, ...latest, published, ...makeDeepSeekV3FP8ExecutionAssets(latest, published, release)]) {
     const key = asset.assetId + '@' + asset.revision;
     const existing = catalog.get(key);
     if (existing) assert.equal(canonical(asset), canonical(existing), key);

@@ -12,7 +12,7 @@ Chrome 157 单次对照运行使用 Qwen3.5-397B-A17B、PP2 × EP2 × TP2、官�
 
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
-DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。r5 接入官方 FP8 权重，逐卡核对缩放网格和稀疏读取，并按所选权重配置计算 KV 预算。r6 支持跨 Dense 和 MoE 层链的流水线，并与请求 DP、阶段内 Attention TP 和 MoE EP × TP 组合。已通过八卡 FP8 的阶段权重、KV 与配对传输核对。独立 Attention／MoE 卡池、上下文并行与原生 FP8 执行继续按 F03／F09 核对。
+DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。r5 接入官方 FP8 权重，逐卡核对缩放网格和稀疏读取，并按所选权重配置计算 KV 预算。r6 支持跨 Dense 和 MoE 层链的流水线，并与请求 DP、阶段内 Attention TP 和 MoE EP × TP 组合。已通过八卡 FP8 的阶段权重、KV 与配对传输核对。独立 Attention／MoE 卡池继续按 F03 核对。
 
 DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。r3 增加 MoE TP 和 MoE EP × TP。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 的组合布局在整池切分两张 Engram 表及缩放项，保留两次查表归约，跨层共享 KV 仍按设备只分配一次。r4 增加官方 FP4／FP8 权重和逐卡缩放因子，覆盖稀疏专家读取与两代 FP8 网格的差异。跨池、上下文并行和原生低精度执行继续按 F03／F09 核对。
 
@@ -33,6 +33,8 @@ Qwen3.5-397B-A17B r5 增加[全解码器流水线](PARALLEL_PRESETS.md#qwen-解�
 Qwen3-0.6B r5 和 Qwen3-1.7B r4 的[全模型 PCP](PARALLEL_PRESETS.md#qwen3-prefill-查询分片)使用实际的连续查询起点，每层收集当前 K/V，再写入复制的缓存。r8／r7 的 DP × PCP 按请求组独立收集 K/V，并保留各组请求及因果位置。r6／r5 增加[全模型 DCP](PARALLEL_PRESETS.md#qwen3-decode-kv-分片)，均分固定 KV 槽位，并按 token 位置写缓存。r7／r6 的 DP × DCP 支持独立请求组，局部算量、三类归约和容量按组内请求与槽位计算。DeepSeek-V3／R1 r7 支持[全模型 PCP 与 DP × PCP](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)，按组收集 MLA 潜向量和位置键。r8 增加沿 MLA 槽位分片的 DCP 及请求 DP × DCP，使用稳定归约合并各卡的注意力并沿用发布 FP8 权重。其他模型的上下文并行及额外组合布局继续按 F03 核对。
 
 Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重和 FP8 执行](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。逐卡计算权重缩放网格及稀疏专家读量。FP8 执行另计动态 FP32 激活缩放、E4M3FN 矩阵乘法和块缩放累加。H100 SXM r2 提供匹配的理论算力。其他模型的固定发布格式、W4A4/W4A8 执行覆盖和额外状态格式继续按 F09 验证。
+
+DeepSeek-V3／R1 r8 添加[FP8 执行](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)，覆盖官方推理路径的量化线性层、动态激活缩放和分块累加。采用片上激活转换的理论假设。吸收式 MLA 的 K／V 上投影继续使用 BF16 收缩方程，单独的权重反量化成本仍待建模。
 
 Qwen3.5-397B-A17B 与 Qwen3.8-27B 已提供[混合注意力文本解码器](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。GQA 的可增长 KV 与 DeltaNet 的固定状态分别计算。[DeepSeek-V4-Flash](MODEL_REFERENCES.md#deepseek-v4-flash) 已接入 43 层主解码器、4／128 token 压缩分组和固定滑窗容量。[DeepSeek-V4.1-Flash](MODEL_REFERENCES.md#deepseek-v41-flash) 已接入 40 层主文本解码器、跨层共享 KV 和索引、CSA2 候选掩码以及两处 Engram。[GLM-5.2](MODEL_REFERENCES.md#glm-52) 已接入 78 层主文本解码器、21 个 DSA 索引拥有层、吸收投影的稀疏 MLA 以及 BF16 KV 槽位预算。[Kimi-K3](MODEL_REFERENCES.md#kimi-k3) 已接入 93 层主文本解码器、Attention Residuals 跨块数据流、Latent MoE、Gated MLA 的 KV 槽位和 KDA 固定状态。正式大模型的多卡布局和发布量化配置继续按 F03／F09 核对。
 

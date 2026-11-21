@@ -1,0 +1,65 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v3-fp8-execution:59ae99c34623c60a",
+  "revision": 1,
+  "name": "3 * O * ceil(F / Block) + O [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/kernel.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/configs/config_671B.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "The FP8 linear branch dynamically converts each input row in groups of 128 contraction elements. The estimate counts FP32 casts, absolute values, maxima, scale calculation, normalization and FP8 conversion as five operations per input element plus one per scale group. Separate gate and up projections each convert their input. Each FP8 dot tile uses two FP32 scales and accumulation, followed by one output cast per result element."
+    },
+    {
+      "kind": "note",
+      "text": "Absorbed MLA key and value contractions use the BF16 analytical baseline, as in the reference path with dequantized KV-B. KV-B dequantization has no separate cost in this estimate. Native FP8 linear work uses a fused analytical tile estimate with conversion tiles and scales on chip. Router, graph outputs, KV and communication use their existing formats."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "Block": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "F": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "O": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "3 * O * ceil(F / Block) + O",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

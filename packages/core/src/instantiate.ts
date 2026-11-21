@@ -19,6 +19,23 @@ import type {LocalPlanObserver} from './local-cost-observation.js';
 import type {LayoutDeclaration,LayoutObjectObserver,RepeatCountObservation,ShapeDeclaration} from './layout-observation.js';
 
 type Node=GraphTemplate['nodes'][number];
+
+function executionOperands(module:AssetDocument,recipe:ModelWeightExecution){
+  if(module.definition.kind!=='module')return;
+  const graph=module.definition.graph,node=graph.nodes.find(row=>row.nodeId===recipe.nodeId);
+  if(node?.body.kind!=='opaque'||!node.body.localCost)return;
+  const tensorIds=new Set(node.portBindings.map(port=>port.tensorId));
+  const storageIds=new Set([...recipe.weights,...node.body.cost.memoryAccess.map(access=>access.storageId),...node.body.cost.temporaryStorageIds]);
+  for(const {source} of [...node.body.localCost.bindings,...recipe.local.bindings]){
+    if(source.kind==='storage_bytes')storageIds.add(source.storageId);
+    else tensorIds.add(source.tensorId);
+  }
+  const tensors=graph.tensors.filter(tensor=>tensorIds.has(tensor.tensorId));
+  for(const {storageId} of tensors)storageIds.add(storageId);
+  const storages=graph.storages.filter(storage=>storageIds.has(storage.storageId));
+  if(tensors.length!==tensorIds.size||storages.length!==storageIds.size)return;
+  return canonical({body:node.body,portBindings:node.portBindings,tensors,storages});
+}
 type Port=GraphTemplate['inputs'][number];
 type Endpoint=GraphTemplate['edges'][number]['from'];
 type Frame=Pick<GraphTemplate,'inputs'|'outputs'|'tensors'|'storages'|'states'>;
@@ -71,13 +88,27 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
       if(profile.model.assetId!==scenario.model.assetId||profile.model.revision!==scenario.model.revision)throw new FormulaError('incompatible_model_weight_profile','量化执行预设须使用对应的固定模型版本');
       executionProfiles.push(preset);
       for(const section of profile.moduleRules){
-        const key=section.module.assetId+'@'+section.module.revision;
-        const recipes=executionByModule.get(key)??new Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>();
-        for(const recipe of section.execution??[]){
-          if(recipes.has(recipe.nodeId))throw new FormulaError('ambiguous_quantized_execution','一个算子只可使用一个量化执行预设 '+recipe.nodeId);
-          recipes.set(recipe.nodeId,{ruleIndex,recipe});
+        const sourceKey=section.module.assetId+'@'+section.module.revision;
+        const replacement=decodeModules.get(sourceKey);
+        const keys=[sourceKey];
+        if(replacement&&section.execution?.length){
+          const before=lookup(section.module),after=lookup(replacement);
+          for(const recipe of section.execution){
+            const operands=executionOperands(before,recipe);
+            if(!operands||operands!==executionOperands(after,recipe)){
+              throw new FormulaError('incompatible_model_weight_profile','Decode 替代模块的量化执行算子发生变化 '+recipe.nodeId);
+            }
+          }
+          keys.push(replacement.assetId+'@'+replacement.revision);
         }
-        if(recipes.size)executionByModule.set(key,recipes);
+        for(const key of new Set(keys)){
+          const recipes=executionByModule.get(key)??new Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>();
+          for(const recipe of section.execution??[]){
+            if(recipes.has(recipe.nodeId))throw new FormulaError('ambiguous_quantized_execution','一个算子只可使用一个量化执行预设 '+recipe.nodeId);
+            recipes.set(recipe.nodeId,{ruleIndex,recipe});
+          }
+          if(recipes.size)executionByModule.set(key,recipes);
+        }
       }
     }
     const templateIssues=validateAssets([root,...[...decodeModules.values()].map(lookup),...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});

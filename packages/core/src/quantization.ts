@@ -25,8 +25,8 @@ function resolveWeightTargets(profile:WeightProfile,resolved:ResolvedGraph,scena
     if(replacement){
       const original=assets.find(asset=>asset.assetId===section.module.assetId&&asset.revision===section.module.revision);
       const substituted=assets.find(asset=>asset.assetId===replacement.assetId&&asset.revision===replacement.revision);
-      if(original?.definition.kind!=='module'||substituted?.definition.kind!=='module'||section.execution?.length){
-        throw new FormulaError('incompatible_model_weight_profile','Decode 替代模块需要兼容的发布权重存储与执行声明');
+      if(original?.definition.kind!=='module'||substituted?.definition.kind!=='module'){
+        throw new FormulaError('incompatible_model_weight_profile','Decode 替代模块需要兼容的发布权重声明');
       }
       const before=original.definition.graph.storages,after=substituted.definition.graph.storages;
       for(const target of section.targets){

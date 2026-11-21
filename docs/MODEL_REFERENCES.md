@@ -77,6 +77,8 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 修订 r8 增加 Decode DCP 及请求 DP × DCP。各卡对所属 MLA 缓存槽位计算，按组归约最大值、分母及加权潜向量。 [固定槽位与逐卡归约](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
 
+修订 r8 可在「量化」选择「FP8 执行」。普通 FP8 线性层按每 128 个输入元素动态生成 FP32 激活缩放因子，计入 E4M3FN 矩阵乘法、FP32 块缩放累加及输出转换。SwiGLU 的 gate 和 up 各计一次激活量化。吸收式 MLA 的 K／V 上投影在源码中先反量化，再进行 BF16 收缩，分析暂仅计入收缩算量。激活转换使用片上模型，权重和 KV 分配沿用官方 FP8 权重预设。 [固定推理源码](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py) · [官方 FP8 内核](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/kernel.py)
+
 在画布中选中吸收式 MLA、分组 MoE 路由或 SwiGLU 的算子，可以查看实际计算步骤及固定推理源码。路由步骤区分参与排序的修正分数与用于加权的原始分数，并保留全局 Top‑K 的口径。 [DeepSeek 固定推理源码](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
 
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
