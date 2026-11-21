@@ -73,7 +73,7 @@ function withSparseReads(graph: GraphTemplate, passes: ValueExpr): GraphTemplate
   }) };
 }
 
-export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 | 5 = 5) {
+export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 | 5 | 6 = 6) {
   const profile = loadDeepSeekV3Profile(release);
   const balanced = revision >= 3;
   const splitFeatures = revision >= 4;
@@ -84,16 +84,16 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
   { kind: 'url', url: layoutSource, checkedOn: '2026-11-21' }, { kind: 'note', text: balanced ? balancedPlacementNote : placementNote }];
   const localNote = balanced ? balancedPlacementNote : placementNote;
   const featureSources: AssetDocument['sources'] = [...sources, { kind: 'note', text: expertFeatureNote },
-    ...(revision === 5 ? [{ kind: 'note' as const, text: sparseReadNote }] : [])];
+    ...(revision >= 5 ? [{ kind: 'note' as const, text: sparseReadNote }] : [])];
   const sparseReads = new Equations('builtin:formula:deepseek-v3-sparse-read', [
     ...root.parameters.filter(parameter => ['B', 'Q', 'E'].includes(parameter.key)),
     { key: 'RouteSlots', name: 'RouteSlots', type: 'integer', min: 0, unit: 'count' },
   ], [{ kind: 'note', text: sparseReadNote }], new Map([['RouteSlots', 'K']]));
   const publishModule = (asset: AssetDocument, featureSharding: boolean) => {
     if (asset.definition.kind !== 'module') throw Error('Expected a decoder module');
-    const graph = featureSharding && revision === 5 ?
+    const graph = featureSharding && revision >= 5 ?
       withSparseReads(asset.definition.graph, sparseReads.value('min(E, B * Q * RouteSlots) / E', 'ratio')) : asset.definition.graph;
-    return AssetDocument.parse({ ...asset, revision: featureSharding ? revision : Math.min(revision, 3), sources: featureSharding ? featureSources : sources,
+    return AssetDocument.parse({ ...asset, revision: featureSharding ? Math.min(revision, 5) : Math.min(revision, 3), sources: featureSharding ? featureSources : sources,
       definition: { ...asset.definition, graph: withLocalCost(withVectorRouting(graph), featureSharding ? featureAxes : axes,
         featureSharding ? localNote + ' ' + expertFeatureNote : localNote, balanced ? activeRouteReads : undefined) } });
   };
@@ -130,6 +130,13 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
         strategy: 'tensor_sharded', sharedPoolDegrees: ['attentionTp', 'moeTp'], networkDefaults, moduleRules: shared(moeTp),
         assumptions: [...common.assumptions, expertFeatureNote] },
     ] : []),
+    ...(revision >= 6 ? [{
+      ...common, presetId: 'pp-decoder', name: '解码层流水线', description: '沿模型顺序分配 Dense 与 MoE 层，阶段间传输激活。',
+      strategy: 'pipeline', requestBatchSharding: true,
+      networkDefaults: { ...networkDefaults, scope: 'inter_group', description: 'Editable analytical link for stage transfers.' },
+      pipeline: { chainNodeIds: ['dense', 'moe'], payloadBytes: payload, payloadDtype: bf16, attentionPresetId: 'tp-mla' },
+      assumptions: ['Dense and MoE layers form one ordered stack. Each stage owns its layer weights and MLA caches. A single microbatch traverses the stages in order.'],
+    }] : []),
   ].map(preset => ParallelPresetTemplate.parse(preset));
   const graph = withLocalCost(root.definition.graph, {}, localNote);
   const modules = new Map([denseModule, moeModule].map(module => [module.assetId, module]));
@@ -140,7 +147,9 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
     return { ...node, body: { ...node.body, asset: ref(module) } };
   });
   const modelSources = splitFeatures ? featureSources : sources;
-  const model = AssetDocument.parse({ ...root, revision, sources: modelSources, parallelPresets: presets, definition: { ...root.definition,
+  const model = AssetDocument.parse({ ...root, revision, sources: modelSources, parallelPresets: presets,
+    ...(revision >= 6 ? { extensions: { contextLimit: { kind: 'parameter', parameterKey: 'M' } } } : {}),
+    definition: { ...root.definition,
     graph,
     assumptions: modelSources.flatMap(source => source.kind === 'note' ? [source.text] : []),
   } });

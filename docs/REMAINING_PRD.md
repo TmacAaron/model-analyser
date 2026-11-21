@@ -12,7 +12,7 @@ Chrome 157 单次对照运行使用 Qwen3.5-397B-A17B、PP2 × EP2 × TP2、官�
 
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
-DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。r5 接入官方 FP8 权重，逐卡核对缩放网格和稀疏读取，并按所选权重配置计算 KV 预算。跨池、上下文并行与原生 FP8 执行继续按 F03／F09 核对。
+DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。r5 接入官方 FP8 权重，逐卡核对缩放网格和稀疏读取，并按所选权重配置计算 KV 预算。r6 支持跨 Dense 和 MoE 层链的流水线，并与请求 DP、阶段内 Attention TP 和 MoE EP × TP 组合。已通过八卡 FP8 的阶段权重、KV 与配对传输核对。独立 Attention／MoE 卡池、上下文并行与原生 FP8 执行继续按 F03／F09 核对。
 
 DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。r3 增加 MoE TP 和 MoE EP × TP。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 的组合布局在整池切分两张 Engram 表及缩放项，保留两次查表归约，跨层共享 KV 仍按设备只分配一次。r4 增加官方 FP4／FP8 权重和逐卡缩放因子，覆盖稀疏专家读取与两代 FP8 网格的差异。跨池、上下文并行和原生低精度执行继续按 F03／F09 核对。
 

@@ -108,7 +108,7 @@ TP degree=1 不生成归约。多卡归约使用 BF16 完整输出 `2*B*Q*H` byt
 
 ## DeepSeek-V3 与 DeepSeek-R1 全模型
 
-模型修订 r3 提供请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。r4 增加 MoE TP，支持与 Attention TP 共用卡池，也可与 MoE EP 组合。r5 进一步支持「官方 FP8 权重」预设。设备型号在「设备」选择，已有工作区可在「并行方式」或「量化」更新到 r5。
+模型修订 r3 提供请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。r4 增加 MoE TP，支持与 Attention TP 共用卡池，也可与 MoE EP 组合。r5 增加「官方 FP8 权重」预设。设备型号在「设备」选择，已有工作区可在「并行方式」或「量化」更新到 r6，并沿用已选的官方 FP8 权重。
 
 Attention TP 沿查询头切分 Q 上投影、吸收后的 K／V 上投影权重、注意力分数和输出投影。每卡保留完整的 MLA 潜向量和位置键。输出投影后的 BF16 隐藏向量在加入注意力残差前执行 AllReduce。61 层共插入 61 次归约。
 
@@ -119,6 +119,12 @@ MoE TP 配对切分 gate／up 的输出通道和 down 的输入通道。以 `MoE
 同池 Attention TP8 ＋ MoE EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。同池改用 MoE EP4 × TP2 得到相同预算。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
 
 r5 的 Attention TP8 ＋ MoE EP4 × TP2 布局启用「官方 FP8 权重」后，每卡权重为 `91,659,796,448 B`，含本地 FP32 缩放因子。8 张理论容量为 100 GB 的设备在单请求单 token 的 Prefill 配置下，得到 `118,673 token / 请求` 的 KV 显存预算。每卡的单 token MLA 缓存为 `70,272 B`。
+
+r6 支持 Prefill 和 Decode 的解码层流水线。3 层 Dense 和 58 层 MoE 沿实际模型顺序均分，PP2 的首尾阶段分别持有 31 和 30 层，各自保存所属层的权重和 MLA 缓存。阶段间按相同 rank 发送完整 BF16 隐藏激活，叠加请求 DP 时只传本组的请求切片。每个阶段可复用原 Attention TP 和 MoE EP／TP 布局，阶段内归约与阶段间传输使用各自的链路参数。耗时按单 microbatch 顺序经过各阶段估算。
+
+用官方 FP8 权重核对 PP2、Attention TP4 和 MoE EP2 × TP2 的八卡布局，首尾阶段的每卡权重分别为 `85,121,743,392 B` 和 `89,608,169,536 B`。对应的每请求每 token 的每卡 MLA 缓存为 `35,712 B` 和 `34,560 B`。每层 Attention 与每层 MoE 在所属阶段内合计执行 119 次归约，阶段间有一次逻辑发送，对应四对物理设备。
+
+在 128 GB／卡、单请求、2 个历史 token、1 步 Decode 的理论样本中，八张卡的 MLA 缓存合计 `281,088 B / token`，显存可容纳每请求 1,110,852 token，容量面板按模型上限给出 163,840 token／请求。
 
 ## DeepSeek-V4 Flash 系列
 

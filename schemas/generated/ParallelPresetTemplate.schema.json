@@ -452,27 +452,58 @@
       "additionalProperties": false
     },
     "pipeline": {
-      "type": "object",
-      "properties": {
-        "chainNodeId": {
-          "$ref": "#/$defs/__schema0"
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "payloadBytes": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "payloadDtype": {
+              "$ref": "#/$defs/__schema12"
+            },
+            "attentionPresetId": {
+              "$ref": "#/$defs/__schema19"
+            },
+            "chainNodeId": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "required": [
+            "payloadBytes",
+            "payloadDtype",
+            "chainNodeId"
+          ],
+          "additionalProperties": false
         },
-        "payloadBytes": {
-          "$ref": "#/$defs/__schema8"
-        },
-        "payloadDtype": {
-          "$ref": "#/$defs/__schema12"
-        },
-        "attentionPresetId": {
-          "$ref": "#/$defs/__schema0"
+        {
+          "type": "object",
+          "properties": {
+            "payloadBytes": {
+              "$ref": "#/$defs/__schema8"
+            },
+            "payloadDtype": {
+              "$ref": "#/$defs/__schema12"
+            },
+            "attentionPresetId": {
+              "$ref": "#/$defs/__schema19"
+            },
+            "chainNodeIds": {
+              "minItems": 2,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/__schema0"
+              }
+            }
+          },
+          "required": [
+            "payloadBytes",
+            "payloadDtype",
+            "chainNodeIds"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "chainNodeId",
-        "payloadBytes",
-        "payloadDtype"
-      ],
-      "additionalProperties": false
+      ]
     },
     "queryParallel": {
       "type": "object",
@@ -484,7 +515,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema19"
+            "$ref": "#/$defs/__schema20"
           }
         }
       },
@@ -1165,6 +1196,9 @@
       "additionalProperties": false
     },
     "__schema19": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema20": {
       "type": "object",
       "properties": {
         "module": {
@@ -1174,7 +1208,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema20"
+            "$ref": "#/$defs/__schema21"
           }
         }
       },
@@ -1184,7 +1218,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema20": {
+    "__schema21": {
       "type": "object",
       "properties": {
         "tensorId": {

@@ -1195,27 +1195,58 @@
                         "additionalProperties": false
                       },
                       "pipeline": {
-                        "type": "object",
-                        "properties": {
-                          "chainNodeId": {
-                            "$ref": "#/$defs/__schema0"
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "payloadBytes": {
+                                "$ref": "#/$defs/__schema13"
+                              },
+                              "payloadDtype": {
+                                "$ref": "#/$defs/__schema29"
+                              },
+                              "attentionPresetId": {
+                                "$ref": "#/$defs/__schema79"
+                              },
+                              "chainNodeId": {
+                                "$ref": "#/$defs/__schema0"
+                              }
+                            },
+                            "required": [
+                              "payloadBytes",
+                              "payloadDtype",
+                              "chainNodeId"
+                            ],
+                            "additionalProperties": false
                           },
-                          "payloadBytes": {
-                            "$ref": "#/$defs/__schema13"
-                          },
-                          "payloadDtype": {
-                            "$ref": "#/$defs/__schema29"
-                          },
-                          "attentionPresetId": {
-                            "$ref": "#/$defs/__schema0"
+                          {
+                            "type": "object",
+                            "properties": {
+                              "payloadBytes": {
+                                "$ref": "#/$defs/__schema13"
+                              },
+                              "payloadDtype": {
+                                "$ref": "#/$defs/__schema29"
+                              },
+                              "attentionPresetId": {
+                                "$ref": "#/$defs/__schema79"
+                              },
+                              "chainNodeIds": {
+                                "minItems": 2,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              }
+                            },
+                            "required": [
+                              "payloadBytes",
+                              "payloadDtype",
+                              "chainNodeIds"
+                            ],
+                            "additionalProperties": false
                           }
-                        },
-                        "required": [
-                          "chainNodeId",
-                          "payloadBytes",
-                          "payloadDtype"
-                        ],
-                        "additionalProperties": false
+                        ]
                       },
                       "queryParallel": {
                         "type": "object",
@@ -1227,7 +1258,7 @@
                             "minItems": 1,
                             "type": "array",
                             "items": {
-                              "$ref": "#/$defs/__schema79"
+                              "$ref": "#/$defs/__schema80"
                             }
                           }
                         },
@@ -1795,7 +1826,7 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
           "candidate": {
-            "$ref": "#/$defs/__schema81"
+            "$ref": "#/$defs/__schema82"
           },
           "editorFormat": {
             "type": "string",
@@ -5589,6 +5620,9 @@
       "additionalProperties": false
     },
     "__schema79": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema80": {
       "type": "object",
       "properties": {
         "module": {
@@ -5598,7 +5632,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema80"
+            "$ref": "#/$defs/__schema81"
           }
         }
       },
@@ -5608,7 +5642,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema80": {
+    "__schema81": {
       "type": "object",
       "properties": {
         "tensorId": {
@@ -5636,7 +5670,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema81": {
+    "__schema82": {
       "anyOf": [
         {
           "type": "string"
@@ -5653,7 +5687,7 @@
         {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema81"
+            "$ref": "#/$defs/__schema82"
           }
         },
         {
@@ -5662,7 +5696,7 @@
             "type": "string"
           },
           "additionalProperties": {
-            "$ref": "#/$defs/__schema81"
+            "$ref": "#/$defs/__schema82"
           }
         }
       ]

@@ -115,31 +115,31 @@
                 "$ref": "#/$defs/__schema4"
               },
               "bindings": {
-                "$ref": "#/$defs/__schema71"
-              },
-              "workload": {
                 "$ref": "#/$defs/__schema72"
               },
-              "deviceTopology": {
+              "workload": {
                 "$ref": "#/$defs/__schema73"
+              },
+              "deviceTopology": {
+                "$ref": "#/$defs/__schema74"
               },
               "parallelPlan": {
                 "$ref": "#/$defs/__schema45"
               },
               "executionPlan": {
-                "$ref": "#/$defs/__schema75"
-              },
-              "quantizationOverrides": {
                 "$ref": "#/$defs/__schema76"
               },
-              "numericOverrides": {
+              "quantizationOverrides": {
                 "$ref": "#/$defs/__schema77"
               },
-              "memoryPeakOverrides": {
+              "numericOverrides": {
                 "$ref": "#/$defs/__schema78"
               },
-              "modulePeakOverrides": {
+              "memoryPeakOverrides": {
                 "$ref": "#/$defs/__schema79"
+              },
+              "modulePeakOverrides": {
+                "$ref": "#/$defs/__schema80"
               },
               "ascendQuantizationImports": {
                 "type": "array",
@@ -179,13 +179,13 @@
                     "mappings": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema80"
+                        "$ref": "#/$defs/__schema81"
                       }
                     },
                     "appliedMappings": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/__schema80"
+                        "$ref": "#/$defs/__schema81"
                       }
                     },
                     "appliedNote": {
@@ -207,7 +207,7 @@
                 }
               },
               "fusionGroups": {
-                "$ref": "#/$defs/__schema81"
+                "$ref": "#/$defs/__schema82"
               }
             },
             "required": [
@@ -250,34 +250,34 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "bindings": {
-                    "$ref": "#/$defs/__schema71"
-                  },
-                  "workload": {
                     "$ref": "#/$defs/__schema72"
                   },
-                  "deviceTopology": {
+                  "workload": {
                     "$ref": "#/$defs/__schema73"
+                  },
+                  "deviceTopology": {
+                    "$ref": "#/$defs/__schema74"
                   },
                   "parallelPlan": {
                     "$ref": "#/$defs/__schema45"
                   },
                   "executionPlan": {
-                    "$ref": "#/$defs/__schema75"
-                  },
-                  "quantizationOverrides": {
                     "$ref": "#/$defs/__schema76"
                   },
-                  "numericOverrides": {
+                  "quantizationOverrides": {
                     "$ref": "#/$defs/__schema77"
                   },
-                  "memoryPeakOverrides": {
+                  "numericOverrides": {
                     "$ref": "#/$defs/__schema78"
                   },
-                  "modulePeakOverrides": {
+                  "memoryPeakOverrides": {
                     "$ref": "#/$defs/__schema79"
                   },
+                  "modulePeakOverrides": {
+                    "$ref": "#/$defs/__schema80"
+                  },
                   "fusionGroups": {
-                    "$ref": "#/$defs/__schema81"
+                    "$ref": "#/$defs/__schema82"
                   }
                 },
                 "required": [
@@ -1665,27 +1665,58 @@
                 "additionalProperties": false
               },
               "pipeline": {
-                "type": "object",
-                "properties": {
-                  "chainNodeId": {
-                    "$ref": "#/$defs/__schema0"
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "payloadBytes": {
+                        "$ref": "#/$defs/__schema17"
+                      },
+                      "payloadDtype": {
+                        "$ref": "#/$defs/__schema23"
+                      },
+                      "attentionPresetId": {
+                        "$ref": "#/$defs/__schema66"
+                      },
+                      "chainNodeId": {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    },
+                    "required": [
+                      "payloadBytes",
+                      "payloadDtype",
+                      "chainNodeId"
+                    ],
+                    "additionalProperties": false
                   },
-                  "payloadBytes": {
-                    "$ref": "#/$defs/__schema17"
-                  },
-                  "payloadDtype": {
-                    "$ref": "#/$defs/__schema23"
-                  },
-                  "attentionPresetId": {
-                    "$ref": "#/$defs/__schema0"
+                  {
+                    "type": "object",
+                    "properties": {
+                      "payloadBytes": {
+                        "$ref": "#/$defs/__schema17"
+                      },
+                      "payloadDtype": {
+                        "$ref": "#/$defs/__schema23"
+                      },
+                      "attentionPresetId": {
+                        "$ref": "#/$defs/__schema66"
+                      },
+                      "chainNodeIds": {
+                        "minItems": 2,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/__schema0"
+                        }
+                      }
+                    },
+                    "required": [
+                      "payloadBytes",
+                      "payloadDtype",
+                      "chainNodeIds"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "chainNodeId",
-                  "payloadBytes",
-                  "payloadDtype"
-                ],
-                "additionalProperties": false
+                ]
               },
               "queryParallel": {
                 "type": "object",
@@ -1697,7 +1728,7 @@
                     "minItems": 1,
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/__schema66"
+                      "$ref": "#/$defs/__schema67"
                     }
                   }
                 },
@@ -1755,16 +1786,16 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "memberNodeIds": {
-                    "$ref": "#/$defs/__schema68"
+                    "$ref": "#/$defs/__schema69"
                   },
                   "eliminatedTensorIds": {
-                    "$ref": "#/$defs/__schema69"
+                    "$ref": "#/$defs/__schema70"
                   },
                   "extraCost": {
                     "$ref": "#/$defs/__schema21"
                   },
                   "timeStrategy": {
-                    "$ref": "#/$defs/__schema70"
+                    "$ref": "#/$defs/__schema71"
                   }
                 },
                 "required": [
@@ -4759,6 +4790,9 @@
       "additionalProperties": false
     },
     "__schema66": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema67": {
       "type": "object",
       "properties": {
         "module": {
@@ -4768,7 +4802,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema67"
+            "$ref": "#/$defs/__schema68"
           }
         }
       },
@@ -4778,7 +4812,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema67": {
+    "__schema68": {
       "type": "object",
       "properties": {
         "tensorId": {
@@ -4806,20 +4840,20 @@
       ],
       "additionalProperties": false
     },
-    "__schema68": {
+    "__schema69": {
       "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema69": {
+    "__schema70": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema70": {
+    "__schema71": {
       "oneOf": [
         {
           "type": "object",
@@ -4857,13 +4891,13 @@
         }
       ]
     },
-    "__schema71": {
+    "__schema72": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema19"
       }
     },
-    "__schema72": {
+    "__schema73": {
       "oneOf": [
         {
           "type": "object",
@@ -4928,14 +4962,14 @@
         }
       ]
     },
-    "__schema73": {
+    "__schema74": {
       "type": "object",
       "properties": {
         "devices": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema74"
+            "$ref": "#/$defs/__schema75"
           }
         },
         "groups": {
@@ -5019,7 +5053,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema74": {
+    "__schema75": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -5035,7 +5069,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema75": {
+    "__schema76": {
       "oneOf": [
         {
           "type": "object",
@@ -5144,13 +5178,13 @@
         }
       ]
     },
-    "__schema76": {
+    "__schema77": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema51"
       }
     },
-    "__schema77": {
+    "__schema78": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5271,7 +5305,7 @@
         "additionalProperties": false
       }
     },
-    "__schema78": {
+    "__schema79": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5337,7 +5371,7 @@
         "additionalProperties": false
       }
     },
-    "__schema79": {
+    "__schema80": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5368,7 +5402,7 @@
         "additionalProperties": false
       }
     },
-    "__schema80": {
+    "__schema81": {
       "type": "object",
       "properties": {
         "sourceKey": {
@@ -5401,7 +5435,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema81": {
+    "__schema82": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5410,10 +5444,10 @@
             "$ref": "#/$defs/__schema0"
           },
           "memberNodeIds": {
-            "$ref": "#/$defs/__schema68"
+            "$ref": "#/$defs/__schema69"
           },
           "eliminatedTensorIds": {
-            "$ref": "#/$defs/__schema69"
+            "$ref": "#/$defs/__schema70"
           },
           "origin": {
             "type": "object",
@@ -5455,7 +5489,7 @@
             "additionalProperties": false
           },
           "timeStrategy": {
-            "$ref": "#/$defs/__schema70"
+            "$ref": "#/$defs/__schema71"
           }
         },
         "required": [

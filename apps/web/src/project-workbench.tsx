@@ -18,6 +18,7 @@ import { useEffect,useRef,useState } from 'react';
 import { z } from 'zod';
 import { Id,AssetDocument,ProjectDocument,ProjectDraft,ProjectImportDocument,ProjectRecoveryDocument,SaveProjectResponse,Scenario,WorkspaceCatalog,ProjectDraftIndexEntry,type AssetRef,type ParallelPresetTemplate } from '@model-analyser/contracts';
 import { canonical } from '../../../packages/contracts/src/validation.js';
+import { pipelineChainIds } from '../../../packages/contracts/src/parallel-bindings.js';
 import { ProjectAutosaver } from './project-autosave.js';
 import { type SaveState } from './serialized-autosave.js';
 import { request,lookupProject,getProjectDraft } from './api.js';
@@ -159,7 +160,7 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
         throw Error('新模型修订没有兼容的 Prefill 查询分片布局');
       }else if(previous?.pipeline){
         const before=previous.pipeline,after=preset.pipeline;
-        if(!after||before.chainNodeId!==after.chainNodeId||canonical(before.payloadBytes)!==canonical(after.payloadBytes)||
+        if(!after||canonical(pipelineChainIds(before))!==canonical(pipelineChainIds(after))||canonical(before.payloadBytes)!==canonical(after.payloadBytes)||
            canonical(before.payloadDtype)!==canonical(after.payloadDtype)||origin.pipelineTp&&before.attentionPresetId!==after.attentionPresetId){
           throw Error('新模型修订没有兼容的流水线布局');
         }

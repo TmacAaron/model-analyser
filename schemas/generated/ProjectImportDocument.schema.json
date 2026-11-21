@@ -1109,27 +1109,58 @@
                       "additionalProperties": false
                     },
                     "pipeline": {
-                      "type": "object",
-                      "properties": {
-                        "chainNodeId": {
-                          "$ref": "#/$defs/__schema1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "payloadBytes": {
+                              "$ref": "#/$defs/__schema12"
+                            },
+                            "payloadDtype": {
+                              "$ref": "#/$defs/__schema28"
+                            },
+                            "attentionPresetId": {
+                              "$ref": "#/$defs/__schema78"
+                            },
+                            "chainNodeId": {
+                              "$ref": "#/$defs/__schema1"
+                            }
+                          },
+                          "required": [
+                            "payloadBytes",
+                            "payloadDtype",
+                            "chainNodeId"
+                          ],
+                          "additionalProperties": false
                         },
-                        "payloadBytes": {
-                          "$ref": "#/$defs/__schema12"
-                        },
-                        "payloadDtype": {
-                          "$ref": "#/$defs/__schema28"
-                        },
-                        "attentionPresetId": {
-                          "$ref": "#/$defs/__schema1"
+                        {
+                          "type": "object",
+                          "properties": {
+                            "payloadBytes": {
+                              "$ref": "#/$defs/__schema12"
+                            },
+                            "payloadDtype": {
+                              "$ref": "#/$defs/__schema28"
+                            },
+                            "attentionPresetId": {
+                              "$ref": "#/$defs/__schema78"
+                            },
+                            "chainNodeIds": {
+                              "minItems": 2,
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/$defs/__schema1"
+                              }
+                            }
+                          },
+                          "required": [
+                            "payloadBytes",
+                            "payloadDtype",
+                            "chainNodeIds"
+                          ],
+                          "additionalProperties": false
                         }
-                      },
-                      "required": [
-                        "chainNodeId",
-                        "payloadBytes",
-                        "payloadDtype"
-                      ],
-                      "additionalProperties": false
+                      ]
                     },
                     "queryParallel": {
                       "type": "object",
@@ -1141,7 +1172,7 @@
                           "minItems": 1,
                           "type": "array",
                           "items": {
-                            "$ref": "#/$defs/__schema78"
+                            "$ref": "#/$defs/__schema79"
                           }
                         }
                       },
@@ -5331,6 +5362,9 @@
       "additionalProperties": false
     },
     "__schema78": {
+      "$ref": "#/$defs/__schema1"
+    },
+    "__schema79": {
       "type": "object",
       "properties": {
         "module": {
@@ -5340,7 +5374,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema79"
+            "$ref": "#/$defs/__schema80"
           }
         }
       },
@@ -5350,7 +5384,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema79": {
+    "__schema80": {
       "type": "object",
       "properties": {
         "tensorId": {

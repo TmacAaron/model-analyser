@@ -39,6 +39,10 @@ export function pipelineAttentionPreset(preset:ParallelPresetTemplate,presets:Pa
     row.sharedPoolDegrees?.length===1&&row.sharedPoolDegrees[0]==='attentionTp'):undefined;
 }
 
+export function pipelineChainIds(pipeline:NonNullable<ParallelPresetTemplate['pipeline']>){
+  return 'chainNodeIds' in pipeline ? pipeline.chainNodeIds : [pipeline.chainNodeId];
+}
+
 export function pipelineExpertPreset(pipeline:ParallelPresetTemplate,presets:ParallelPresetTemplate[],presetId:string,phase:ParallelPresetTemplate['phases'][number]){
   if(pipeline.strategy!=='pipeline'||!pipeline.pipeline||!pipeline.phases.includes(phase))return undefined;
   return presets.find(preset=>{
@@ -53,6 +57,7 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
   if((p.strategy==='pipeline')!==(p.pipeline!==undefined))errors.push('流水线预设必须独立声明层链与传输消息');
   if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
+  if(p.pipeline)unique(pipelineChainIds(p.pipeline),'流水线层链');
   if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
   if((p.strategy==='decode_context_sharded')!==(p.decodeContext!==undefined))errors.push('Decode 上下文预设须声明固定模块与替代模块');
   if(p.requestBatchSharding&&p.strategy!=='decode_context_sharded'&&p.strategy!=='query_sharded'&&p.strategy!=='pipeline')errors.push('此请求分片声明仅适用于上下文并行或流水线预设');

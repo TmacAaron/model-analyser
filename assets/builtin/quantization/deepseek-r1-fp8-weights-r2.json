@@ -1,0 +1,177 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:quantization:deepseek-r1-fp8-weights",
+  "revision": 2,
+  "name": "官方 FP8 权重",
+  "tags": [
+    "deepseek",
+    "fp8",
+    "block128",
+    "published-weights"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/model.safetensors.index.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/model-00001-of-000163.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/model-00160-of-000163.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/e815299b0bcbac849fa540c768ef21845365c9eb/README_WEIGHTS.md",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Main decoder matrix coverage is verified against the checkpoint index and sampled Safetensors headers. The storage profile uses E4M3FN with one FP32 inverse scale per 128 × 128 block. Key and value projections retain complete blocks when separated in the absorbed MLA graph. Experts only read the locally touched fraction of weights and scales. Matrix execution uses the BF16 analytical baseline. KV, routing and other non-FP8 tensors retain their declared formats."
+    }
+  ],
+  "definition": {
+    "kind": "quantization",
+    "quantization": {
+      "selector": {
+        "kind": "subtree",
+        "rootNodeId": "$model"
+      },
+      "weight": {
+        "payloadBits": 8,
+        "payloadDtype": {
+          "category": "float",
+          "bits": 8,
+          "format": "fp8_e4m3fn"
+        },
+        "packingUnitElements": 1,
+        "alignmentBytes": 1,
+        "auxiliaries": [
+          {
+            "name": "weight_scale_inv",
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            },
+            "count": {
+              "kind": "block",
+              "axes": [
+                {
+                  "axisId": "out",
+                  "blockSize": 128
+                },
+                {
+                  "axisId": "in",
+                  "blockSize": 128
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "modelWeights": {
+      "model": {
+        "assetId": "builtin:model:deepseek-r1",
+        "revision": 6,
+        "kind": "model"
+      },
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-dense",
+            "revision": 3,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "q-a-weight"
+            },
+            {
+              "storageId": "q-weight"
+            },
+            {
+              "storageId": "kv-a-weight"
+            },
+            {
+              "storageId": "kv-b-k-weight"
+            },
+            {
+              "storageId": "kv-b-v-weight"
+            },
+            {
+              "storageId": "o-weight"
+            },
+            {
+              "storageId": "gate-weight"
+            },
+            {
+              "storageId": "up-weight"
+            },
+            {
+              "storageId": "down-weight"
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "q-a-weight"
+            },
+            {
+              "storageId": "q-weight"
+            },
+            {
+              "storageId": "kv-a-weight"
+            },
+            {
+              "storageId": "kv-b-k-weight"
+            },
+            {
+              "storageId": "kv-b-v-weight"
+            },
+            {
+              "storageId": "o-weight"
+            },
+            {
+              "storageId": "shared-gate-weight"
+            },
+            {
+              "storageId": "shared-up-weight"
+            },
+            {
+              "storageId": "shared-down-weight"
+            },
+            {
+              "storageId": "expert-gate-weight"
+            },
+            {
+              "storageId": "expert-up-weight"
+            },
+            {
+              "storageId": "expert-down-weight"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1051,27 +1051,58 @@
                           "additionalProperties": false
                         },
                         "pipeline": {
-                          "type": "object",
-                          "properties": {
-                            "chainNodeId": {
-                              "$ref": "#/$defs/__schema0"
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "payloadBytes": {
+                                  "$ref": "#/$defs/__schema11"
+                                },
+                                "payloadDtype": {
+                                  "$ref": "#/$defs/__schema27"
+                                },
+                                "attentionPresetId": {
+                                  "$ref": "#/$defs/__schema77"
+                                },
+                                "chainNodeId": {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              },
+                              "required": [
+                                "payloadBytes",
+                                "payloadDtype",
+                                "chainNodeId"
+                              ],
+                              "additionalProperties": false
                             },
-                            "payloadBytes": {
-                              "$ref": "#/$defs/__schema11"
-                            },
-                            "payloadDtype": {
-                              "$ref": "#/$defs/__schema27"
-                            },
-                            "attentionPresetId": {
-                              "$ref": "#/$defs/__schema0"
+                            {
+                              "type": "object",
+                              "properties": {
+                                "payloadBytes": {
+                                  "$ref": "#/$defs/__schema11"
+                                },
+                                "payloadDtype": {
+                                  "$ref": "#/$defs/__schema27"
+                                },
+                                "attentionPresetId": {
+                                  "$ref": "#/$defs/__schema77"
+                                },
+                                "chainNodeIds": {
+                                  "minItems": 2,
+                                  "type": "array",
+                                  "items": {
+                                    "$ref": "#/$defs/__schema0"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "payloadBytes",
+                                "payloadDtype",
+                                "chainNodeIds"
+                              ],
+                              "additionalProperties": false
                             }
-                          },
-                          "required": [
-                            "chainNodeId",
-                            "payloadBytes",
-                            "payloadDtype"
-                          ],
-                          "additionalProperties": false
+                          ]
                         },
                         "queryParallel": {
                           "type": "object",
@@ -1083,7 +1114,7 @@
                               "minItems": 1,
                               "type": "array",
                               "items": {
-                                "$ref": "#/$defs/__schema77"
+                                "$ref": "#/$defs/__schema78"
                               }
                             }
                           },
@@ -5299,6 +5330,9 @@
       "additionalProperties": false
     },
     "__schema77": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "__schema78": {
       "type": "object",
       "properties": {
         "module": {
@@ -5308,7 +5342,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema78"
+            "$ref": "#/$defs/__schema79"
           }
         }
       },
@@ -5318,7 +5352,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema78": {
+    "__schema79": {
       "type": "object",
       "properties": {
         "tensorId": {

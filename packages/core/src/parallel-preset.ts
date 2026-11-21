@@ -10,7 +10,7 @@ import { expertMeshPresets, pipelineExpertMeshPresets } from './expert-mesh-pres
 import { canonical } from '../../contracts/src/validation.js';
 import { replicaPayloadFormula, requestReplicaMeshAxis as requestAxis, soleBatchAxis } from './request-replica.js';
 import { ringPresetReduction } from './preset-reduction.js';
-import { pipelineAttentionPreset, pipelineExpertPreset } from '../../contracts/src/parallel-bindings.js';
+import { pipelineAttentionPreset, pipelineChainIds, pipelineExpertPreset } from '../../contracts/src/parallel-bindings.js';
 
 type ExpertMesh = NonNullable<Scenario['parallelPlan']['generatedFrom']>['expertMesh'];
 export { requestReplicaMeshAxis } from './request-replica.js';
@@ -116,8 +116,11 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       return await finishPreset(request,model,preset,topology,plan);
     }
     if(preset.strategy==='pipeline'){
-      const chain=model.definition.graph.nodes.find(node=>node.nodeId===preset.pipeline?.chainNodeId);
-      if(chain?.repeat?.wiring!=='chain')throw Error('流水线须声明根模型中的连续重复层链');
+      const rootNodes=model.definition.graph.nodes;
+      if(!preset.pipeline||pipelineChainIds(preset.pipeline).some(id=>!rootNodes.some(node=>
+        node.nodeId===id&&node.repeat?.wiring==='chain'&&node.phases.includes(scenario.workload.kind)))){
+        throw Error('流水线须声明当前阶段根模型中的连续重复层链');
+      }
       const expanded=instantiateModel(expansionScenario,assets);
       if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.message).join('；'));
       const stageParts:{preset:ParallelPresetTemplate;axis:PipelineStagePart['axis'];size:number}[]=[];

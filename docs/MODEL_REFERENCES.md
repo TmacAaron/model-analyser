@@ -71,6 +71,8 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 修订 r5 可在「量化」选择「官方 FP8 权重」。主解码器的 MLA 投影、Dense SwiGLU 和路由／共享专家矩阵使用 E4M3FN，每个 128 × 128 块计一个 FP32 反缩放因子。吸收式 MLA 的 K／V 矩阵沿完整块拆分，路由专家读取按每卡命中的专家数计入权重与缩放因子。嵌入、输出头、归一化和路由器权重为 BF16，路由校正为 FP32。该预设沿用 BF16 矩阵执行与 MLA KV 格式。 [官方权重说明](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/e815299b0bcbac849fa540c768ef21845365c9eb/README_WEIGHTS.md) · [检查点索引与抽样头部摘要](../references/models/deepseek-v3/fp8-manifest.json)
 
+修订 r6 将 Dense 与 MoE 层纳入同一条可按阶段切分的流水线，支持在「并行方式」设置 PP，并与请求 DP、阶段内 Attention TP、MoE EP × TP 及固定发布权重组合。 [逐卡权重、KV 与传输](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
+
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
 
 ## DeepSeek-V4-Flash

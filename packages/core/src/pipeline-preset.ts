@@ -6,6 +6,7 @@ import { numericValue } from './storage.js';
 import { payloadPerReplica, soleBatchAxis } from './request-replica.js';
 import { ringPresetReduction } from './preset-reduction.js';
 import { canonical } from '../../contracts/src/validation.js';
+import { pipelineChainIds } from '../../contracts/src/parallel-bindings.js';
 
 const requestAxis = 'request';
 const tensorAxis = 'tp';
@@ -26,13 +27,36 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
   if (!network) throw Error('请为阶段间传输指定通信带宽和延迟');
   const stageNetwork=request.pipelineTpNetwork??network;
   if (resolved.graph.nodes.some(node => node.body.kind === 'collective')) throw Error('流水线层链需要单独声明已有图内通信的阶段放置');
-  const chain = resolved.containers.filter(container => {
-    const id = container.nodeId;
-    return id.startsWith(declaration.chainNodeId) && /^\[\d+\]$/.test(id.slice(declaration.chainNodeId.length));
-  });
+  const roots = pipelineChainIds(declaration).map(id => encodeURIComponent(id));
+  const occurrences = new Map(roots.map(id => [id, [] as ResolvedGraph['containers']]));
+  for (const container of resolved.containers) {
+    const repeatedRoot = /^(.*)\[\d+\]$/.exec(container.nodeId)?.[1];
+    if (repeatedRoot) occurrences.get(repeatedRoot)?.push(container);
+  }
+  const nodes = resolved.graph.nodes;
+  const positions = new Map(nodes.map((node, index) => [node.nodeId, index]));
+  const chain = [];
+  let previous: Set<NodeId> | undefined;
+  let end = -1;
+  for (const root of roots) {
+    const blocks = occurrences.get(root);
+    if (!blocks?.length) throw Error('当前阶段没有可用的流水线层链 '+root);
+    const producers = previous;
+    if (producers) {
+      const next = new Set(blocks[0]?.leafNodeIds);
+      if (!resolved.graph.edges.some(edge => edge.from.kind==='node' && edge.to.kind==='node' &&
+        producers.has(edge.from.nodeId) && next.has(edge.to.nodeId))) throw Error('流水线层链之间缺少顺序数据流 '+root);
+    }
+    for (const block of blocks) {
+      const indices = block.leafNodeIds.map(id => positions.get(id) ?? -1);
+      if (!indices.length || Math.min(...indices) <= end) throw Error('流水线层链必须按执行顺序声明 '+block.nodeId);
+      end = Math.max(...indices);
+      chain.push(block);
+    }
+    previous = new Set(blocks.at(-1)?.leafNodeIds);
+  }
   if (chain.length < stageCount) throw Error('流水线阶段数不能超过展开的层链块数 '+chain.length);
   const stageByNode = new Map<NodeId, number>(), chainNodes = new Set(chain.flatMap(row => row.leafNodeIds));
-  const nodes = resolved.graph.nodes;
   const first = nodes.findIndex(node => chainNodes.has(node.nodeId)), last = nodes.findLastIndex(node => chainNodes.has(node.nodeId));
   const width = Math.floor(chain.length / stageCount), remainder = chain.length % stageCount;
   const layerCounts = Array.from({ length: stageCount }, (_, i) => width + Number(i < remainder));
