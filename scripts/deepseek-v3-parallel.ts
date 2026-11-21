@@ -1,5 +1,5 @@
 import { AssetDocument, NodeId, ParallelPresetTemplate, TensorId, type GraphTemplate, type ValueExpr } from '@model-analyser/contracts';
-import { bf16, ref, vector } from './model-authoring.js';
+import { Equations, bf16, ref, vector } from './model-authoring.js';
 import { makeDeepSeekAssets } from './deepseek-model.js';
 import { loadDeepSeekV3Profile, type DeepSeekV3Release } from './deepseek-v3-profile.js';
 import { withLocalCost, type AxisBinding } from './local-cost-authoring.js';
@@ -47,6 +47,7 @@ const activeRouteReads = {
   'expert-gate-up': ['read-expert-gate-weight', 'read-expert-up-weight'],
   'expert-down': ['read-expert-down-weight'],
 };
+const sparseReadNote = 'Routed matrix traffic uses the fraction of locally resident experts touched by valid routes and includes their per-matrix storage auxiliaries.';
 const layoutSource = 'https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py';
 
 function withVectorRouting(graph: GraphTemplate): GraphTemplate {
@@ -62,23 +63,41 @@ function reduction(tensorId: string, producer: string, consumer: string, payload
     payloadBytes: payload, payloadDtype: bf16 };
 }
 
-export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 = 4) {
+function withSparseReads(graph: GraphTemplate, passes: ValueExpr): GraphTemplate {
+  return { ...graph, nodes: graph.nodes.map(node => {
+    const weights = node.nodeId === 'expert-gate-up' ? activeRouteReads['expert-gate-up'] : node.nodeId === 'expert-down' ? activeRouteReads['expert-down'] : undefined;
+    if (!weights || node.body.kind !== 'opaque') return node;
+    return { ...node, body: { ...node.body, cost: { ...node.body.cost, memoryAccess: node.body.cost.memoryAccess.map(access =>
+      weights.includes(access.accessId) ? { ...access, logicalBytes: { kind: 'storage_allocation', passes } } : access,
+    ) } } };
+  }) };
+}
+
+export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revision: 2 | 3 | 4 | 5 = 5) {
   const profile = loadDeepSeekV3Profile(release);
   const balanced = revision >= 3;
+  const splitFeatures = revision >= 4;
   const [root, dense, moe, ...formulas] = makeDeepSeekAssets('absorbed', profile, true, balanced);
   if (root?.definition.kind !== 'model' || dense?.definition.kind !== 'module' || moe?.definition.kind !== 'module') throw Error('Missing V3 decoder assets');
   const sources: AssetDocument['sources'] = [...profile.sources.map(source => source.kind === 'note' ?
     { ...source, text: source.text.replace(', kernel fusion and distributed layout', ' and kernel fusion') } : source),
   { kind: 'url', url: layoutSource, checkedOn: '2026-11-21' }, { kind: 'note', text: balanced ? balancedPlacementNote : placementNote }];
   const localNote = balanced ? balancedPlacementNote : placementNote;
-  const featureSources: AssetDocument['sources'] = [...sources, { kind: 'note', text: expertFeatureNote }];
-  const publishModule = (asset: AssetDocument, splitFeatures: boolean) => {
+  const featureSources: AssetDocument['sources'] = [...sources, { kind: 'note', text: expertFeatureNote },
+    ...(revision === 5 ? [{ kind: 'note' as const, text: sparseReadNote }] : [])];
+  const sparseReads = new Equations('builtin:formula:deepseek-v3-sparse-read', [
+    ...root.parameters.filter(parameter => ['B', 'Q', 'E'].includes(parameter.key)),
+    { key: 'RouteSlots', name: 'RouteSlots', type: 'integer', min: 0, unit: 'count' },
+  ], [{ kind: 'note', text: sparseReadNote }], new Map([['RouteSlots', 'K']]));
+  const publishModule = (asset: AssetDocument, featureSharding: boolean) => {
     if (asset.definition.kind !== 'module') throw Error('Expected a decoder module');
-    return AssetDocument.parse({ ...asset, revision: splitFeatures ? 4 : Math.min(revision, 3), sources: splitFeatures ? featureSources : sources,
-      definition: { ...asset.definition, graph: withLocalCost(withVectorRouting(asset.definition.graph), splitFeatures ? featureAxes : axes,
-        splitFeatures ? localNote + ' ' + expertFeatureNote : localNote, balanced ? activeRouteReads : undefined) } });
+    const graph = featureSharding && revision === 5 ?
+      withSparseReads(asset.definition.graph, sparseReads.value('min(E, B * Q * RouteSlots) / E', 'ratio')) : asset.definition.graph;
+    return AssetDocument.parse({ ...asset, revision: featureSharding ? revision : Math.min(revision, 3), sources: featureSharding ? featureSources : sources,
+      definition: { ...asset.definition, graph: withLocalCost(withVectorRouting(graph), featureSharding ? featureAxes : axes,
+        featureSharding ? localNote + ' ' + expertFeatureNote : localNote, balanced ? activeRouteReads : undefined) } });
   };
-  const denseModule = publishModule(dense, false), moeModule = publishModule(moe, revision === 4);
+  const denseModule = publishModule(dense, false), moeModule = publishModule(moe, splitFeatures);
   const embedding = root.definition.graph.nodes.find(node => node.nodeId === 'embedding');
   const payload = embedding?.body.kind === 'opaque' && embedding.body.cost.memoryAccess.find(access => access.storageId === 'embedding')?.logicalBytes;
   if (!payload || payload.kind === 'storage_allocation') throw Error('Missing BF16 hidden output tile equation');
@@ -104,7 +123,7 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
     { ...common, presetId: 'tp-mla-ep-routed', name: 'Attention TP ＋ MoE EP',
       description: '同一批卡分片 MLA 查询头和路由专家，复制潜向量 KV 与共享专家。路由负载按均衡分布估算。', strategy: 'tensor_sharded',
       sharedPoolDegrees: ['attentionTp', 'moeEp'], networkDefaults, moduleRules: shared(ep), assumptions: [...common.assumptions, localNote] },
-    ...(revision === 4 ? [
+    ...(splitFeatures ? [
       { ...common, presetId: 'tp-routed', name: 'MoE TP', description: '切分各路由专家的中间特征。', strategy: 'tensor_sharded',
         sharedPoolDegrees: ['moeTp'], networkDefaults, moduleRules: [moeTp], assumptions: [...common.assumptions, expertFeatureNote] },
       { ...common, presetId: 'tp-mla-tp-routed', name: 'Attention TP ＋ MoE TP', description: '共用卡池切分 MLA 查询头和各路由专家的中间特征。',
@@ -120,10 +139,10 @@ export function makeDeepSeekV3ParallelAssets(release: DeepSeekV3Release, revisio
     if (!module) throw Error('Missing DeepSeek module ' + node.body.asset.assetId);
     return { ...node, body: { ...node.body, asset: ref(module) } };
   });
-  const modelSources = revision === 4 ? featureSources : sources;
+  const modelSources = splitFeatures ? featureSources : sources;
   const model = AssetDocument.parse({ ...root, revision, sources: modelSources, parallelPresets: presets, definition: { ...root.definition,
     graph,
     assumptions: modelSources.flatMap(source => source.kind === 'note' ? [source.text] : []),
   } });
-  return [model, denseModule, moeModule, ...formulas];
+  return [model, denseModule, moeModule, ...formulas, ...sparseReads.assets];
 }

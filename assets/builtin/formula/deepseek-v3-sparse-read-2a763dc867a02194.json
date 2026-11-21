@@ -1,0 +1,51 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v3-sparse-read:2a763dc867a02194",
+  "revision": 1,
+  "name": "min(E, B * Q * RouteSlots) / E [ratio]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Routed matrix traffic uses the fraction of locally resident experts touched by valid routes and includes their per-matrix storage auxiliaries."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "E": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "RouteSlots": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "min(E, B * Q * RouteSlots) / E",
+      "output": {
+        "unit": "ratio",
+        "integerRequired": false,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

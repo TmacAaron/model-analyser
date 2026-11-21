@@ -21,6 +21,8 @@ const configSchema = z.object({
   qk_rope_head_dim: positive, v_head_dim: positive, n_group: positive, topk_group: positive, n_routed_experts: positive,
   num_experts_per_tok: positive, n_shared_experts: positive, vocab_size: positive, max_position_embeddings: positive,
   routed_scaling_factor: z.literal(2.5), rope_scaling: z.object({ type: z.literal('yarn') }),
+  quantization_config: z.object({ quant_method: z.literal('fp8'), fmt: z.literal('e4m3'), activation_scheme: z.literal('dynamic'),
+    weight_block_size: z.tuple([z.literal(128), z.literal(128)]) }),
 });
 
 export function loadDeepSeekV3Profile(release: DeepSeekV3Release) {
@@ -47,7 +49,7 @@ export function loadDeepSeekV3Profile(release: DeepSeekV3Release) {
     { kind: 'note', text: 'Main decoder only, with absorbed MLA and explicit rectangular attention temporaries. BF16 analytical weight residency except the FP32 routing correction; published checkpoint FP8 storage, MTP, speculative decoding, YaRN table creation, kernel fusion and distributed layout are outside this definition.' },
     { kind: 'note', text: 'Routed experts use sigmoid affinities. Group and expert selection use corrected scores; weights come from the original affinities, normalized over selected experts and scaled by 2.5. Comparison counts are analytical proxies. Routed weight traffic uses an upper bound on distinct experts touched per call.' },
   ];
-  return { release, name: entry.name, dimensions, dense: config.first_k_dense_replace, moe: config.num_hidden_layers - config.first_k_dense_replace, sources };
+  return { release, name: entry.name, revision: entry.revision, dimensions, dense: config.first_k_dense_replace, moe: config.num_hidden_layers - config.first_k_dense_replace, sources };
 }
 
 export type DeepSeekV3Profile = ReturnType<typeof loadDeepSeekV3Profile>;

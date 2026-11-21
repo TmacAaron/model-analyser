@@ -1,0 +1,3688 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:model:deepseek-v3",
+  "revision": 5,
+  "name": "DeepSeek-V3 · MLA / MoE",
+  "description": "Absorbed MLA with BF16 analytical residency and published V3-family routing.",
+  "tags": [
+    "deepseek-v3",
+    "moe",
+    "mla",
+    "bf16",
+    "analytical-reference",
+    "absorbed"
+  ],
+  "parameters": [
+    {
+      "key": "B",
+      "name": "B",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "Q",
+      "name": "Q",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "C",
+      "name": "C",
+      "type": "integer",
+      "unit": "count",
+      "min": 0,
+      "default": {
+        "kind": "integer",
+        "value": 0
+      }
+    },
+    {
+      "key": "H",
+      "name": "H",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 7168
+      }
+    },
+    {
+      "key": "NH",
+      "name": "NH",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "DN",
+      "name": "DN",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "DR",
+      "name": "DR",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 64
+      }
+    },
+    {
+      "key": "DV",
+      "name": "DV",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 128
+      }
+    },
+    {
+      "key": "R",
+      "name": "R",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 512
+      }
+    },
+    {
+      "key": "QR",
+      "name": "QR",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1536
+      }
+    },
+    {
+      "key": "I",
+      "name": "I",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 18432
+      }
+    },
+    {
+      "key": "J",
+      "name": "J",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 2048
+      }
+    },
+    {
+      "key": "E",
+      "name": "E",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 256
+      }
+    },
+    {
+      "key": "K",
+      "name": "K",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "S",
+      "name": "S",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 1
+      }
+    },
+    {
+      "key": "GN",
+      "name": "GN",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 8
+      }
+    },
+    {
+      "key": "TG",
+      "name": "TG",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 4
+      }
+    },
+    {
+      "key": "V",
+      "name": "V",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 129280
+      }
+    },
+    {
+      "key": "M",
+      "name": "M",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 163840
+      }
+    },
+    {
+      "key": "Lmoe",
+      "name": "Lmoe",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 58
+      }
+    },
+    {
+      "key": "Ldense",
+      "name": "Ldense",
+      "type": "integer",
+      "unit": "count",
+      "min": 1,
+      "default": {
+        "kind": "integer",
+        "value": 3
+      }
+    }
+  ],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-R1/resolve/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "url",
+      "url": "https://arxiv.org/html/2412.19437#S2.SS1",
+      "checkedOn": "2026-11-20"
+    },
+    {
+      "kind": "note",
+      "text": "Main decoder only, with absorbed MLA and explicit rectangular attention temporaries. BF16 analytical weight residency except the FP32 routing correction; published checkpoint FP8 storage, MTP, speculative decoding, YaRN table creation and kernel fusion are outside this definition."
+    },
+    {
+      "kind": "note",
+      "text": "Routed experts use sigmoid affinities. Group and expert selection use corrected scores; weights come from the original affinities, normalized over selected experts and scaled by 2.5. Comparison counts are analytical proxies. Routed weight traffic uses an upper bound on distinct experts touched per call."
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+    },
+    {
+      "kind": "note",
+      "text": "Analytical routed-expert TP slices matching gate and up channels and the same down-projection inputs. The packed gate/up activation stores channel pairs together. TP peers in an owner group use the same valid routes, and route-weighted hidden partials can be summed across owners and feature ranks in one reduction before adding replicated shared experts."
+    },
+    {
+      "kind": "note",
+      "text": "Routed matrix traffic uses the fraction of locally resident experts touched by valid routes and includes their per-matrix storage auxiliaries."
+    }
+  ],
+  "definition": {
+    "kind": "model",
+    "family": "deepseek-v3",
+    "variant": "v3-absorbed-mla",
+    "graph": {
+      "inputs": [
+        {
+          "portId": "tokens",
+          "tensorId": "tokens"
+        }
+      ],
+      "outputs": [
+        {
+          "portId": "logits",
+          "tensorId": "logits"
+        }
+      ],
+      "nodes": [
+        {
+          "nodeId": "embedding",
+          "name": "Token embedding lookup (untied head)",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "tokens",
+              "tensorId": "tokens"
+            },
+            {
+              "portId": "embedding",
+              "tensorId": "embedding"
+            },
+            {
+              "portId": "hidden",
+              "tensorId": "hidden"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-tokens",
+                  "storageId": "tokens",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-embedding",
+                  "storageId": "embedding",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-hidden",
+                  "storageId": "hidden",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "tokens"
+              },
+              "bindings": [
+                {
+                  "symbol": "logical_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "tokens",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "allocated_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "tokens",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-tokens",
+                    "storageId": "tokens",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-embedding",
+                    "storageId": "embedding",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "allocated_B"
+                          },
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-hidden",
+                    "storageId": "hidden",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+            },
+            "inputs": [
+              {
+                "portId": "tokens",
+                "tensorId": "tokens"
+              },
+              {
+                "portId": "embedding",
+                "tensorId": "embedding"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "hidden",
+                "tensorId": "hidden"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "dense",
+          "name": "Dense decoder",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "hidden"
+            },
+            {
+              "portId": "y",
+              "tensorId": "dense-output"
+            }
+          ],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "symbol",
+              "name": "Ldense"
+            },
+            "wiring": "chain",
+            "carry": [
+              {
+                "outputPortId": "y",
+                "inputPortId": "x"
+              }
+            ]
+          },
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:deepseek-v3-absorbed-dense",
+              "revision": 3,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DR"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "GN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "GN"
+                }
+              },
+              {
+                "parameterKey": "TG",
+                "value": {
+                  "kind": "symbol",
+                  "name": "TG"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "moe",
+          "name": "MoE decoder",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "x",
+              "tensorId": "dense-output"
+            },
+            {
+              "portId": "y",
+              "tensorId": "moe-output"
+            }
+          ],
+          "stateBindings": [],
+          "repeat": {
+            "axis": "layer",
+            "count": {
+              "kind": "symbol",
+              "name": "Lmoe"
+            },
+            "wiring": "chain",
+            "carry": [
+              {
+                "outputPortId": "y",
+                "inputPortId": "x"
+              }
+            ]
+          },
+          "body": {
+            "kind": "module",
+            "asset": {
+              "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+              "revision": 5,
+              "kind": "module"
+            },
+            "bindings": [
+              {
+                "parameterKey": "B",
+                "value": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "parameterKey": "Q",
+                "value": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "parameterKey": "C",
+                "value": {
+                  "kind": "symbol",
+                  "name": "C"
+                }
+              },
+              {
+                "parameterKey": "H",
+                "value": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              },
+              {
+                "parameterKey": "NH",
+                "value": {
+                  "kind": "symbol",
+                  "name": "NH"
+                }
+              },
+              {
+                "parameterKey": "DN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DN"
+                }
+              },
+              {
+                "parameterKey": "DR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DR"
+                }
+              },
+              {
+                "parameterKey": "DV",
+                "value": {
+                  "kind": "symbol",
+                  "name": "DV"
+                }
+              },
+              {
+                "parameterKey": "R",
+                "value": {
+                  "kind": "symbol",
+                  "name": "R"
+                }
+              },
+              {
+                "parameterKey": "QR",
+                "value": {
+                  "kind": "symbol",
+                  "name": "QR"
+                }
+              },
+              {
+                "parameterKey": "I",
+                "value": {
+                  "kind": "symbol",
+                  "name": "I"
+                }
+              },
+              {
+                "parameterKey": "J",
+                "value": {
+                  "kind": "symbol",
+                  "name": "J"
+                }
+              },
+              {
+                "parameterKey": "E",
+                "value": {
+                  "kind": "symbol",
+                  "name": "E"
+                }
+              },
+              {
+                "parameterKey": "K",
+                "value": {
+                  "kind": "symbol",
+                  "name": "K"
+                }
+              },
+              {
+                "parameterKey": "S",
+                "value": {
+                  "kind": "symbol",
+                  "name": "S"
+                }
+              },
+              {
+                "parameterKey": "GN",
+                "value": {
+                  "kind": "symbol",
+                  "name": "GN"
+                }
+              },
+              {
+                "parameterKey": "TG",
+                "value": {
+                  "kind": "symbol",
+                  "name": "TG"
+                }
+              },
+              {
+                "parameterKey": "V",
+                "value": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "parameterKey": "M",
+                "value": {
+                  "kind": "symbol",
+                  "name": "M"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "final-norm",
+          "name": "Final RMSNorm",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "moe-output",
+              "tensorId": "moe-output"
+            },
+            {
+              "portId": "final-norm-weight",
+              "tensorId": "final-norm-weight"
+            },
+            {
+              "portId": "normalized",
+              "tensorId": "normalized"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "vector"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:deepseek-v3:bb87c340653cc787",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:deepseek-v3:bb87c340653cc787",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-moe-output",
+                  "storageId": "moe-output",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-final-norm-weight",
+                  "storageId": "final-norm-weight",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-normalized",
+                  "storageId": "normalized",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "moe-output"
+              },
+              "bindings": [
+                {
+                  "symbol": "logical_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "moe-output",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "allocated_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "moe-output",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 32,
+                          "format": "fp32"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "vector"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:deepseek-v3:bb87c340653cc787",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "logical_B"
+                          },
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:deepseek-v3:bb87c340653cc787",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "allocated_B"
+                          },
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-moe-output",
+                    "storageId": "moe-output",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-final-norm-weight",
+                    "storageId": "final-norm-weight",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-normalized",
+                    "storageId": "normalized",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+            },
+            "inputs": [
+              {
+                "portId": "moe-output",
+                "tensorId": "moe-output"
+              },
+              {
+                "portId": "final-norm-weight",
+                "tensorId": "final-norm-weight"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "normalized",
+                "tensorId": "normalized"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "lm-head",
+          "name": "Untied full-position LM head",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "normalized",
+              "tensorId": "normalized"
+            },
+            {
+              "portId": "lm-head-weight",
+              "tensorId": "lm-head-weight"
+            },
+            {
+              "portId": "logits-bf16",
+              "tensorId": "logits-bf16"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [
+                {
+                  "segmentId": "arithmetic",
+                  "computeClass": {
+                    "arithmetic": "float",
+                    "inputDtypes": [
+                      {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      }
+                    ],
+                    "multiplyDtype": {
+                      "category": "float",
+                      "bits": 16,
+                      "format": "bf16"
+                    },
+                    "accumulateDtype": {
+                      "category": "float",
+                      "bits": 32,
+                      "format": "fp32"
+                    },
+                    "resource": "matrix"
+                  },
+                  "usefulOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:deepseek-v3:d0ae8766bb4b4933",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "V": {
+                          "kind": "symbol",
+                          "name": "V"
+                        }
+                      }
+                    }
+                  },
+                  "executedOperations": {
+                    "kind": "formula",
+                    "call": {
+                      "formula": {
+                        "assetId": "builtin:formula:deepseek-v3:d0ae8766bb4b4933",
+                        "revision": 1,
+                        "kind": "formula"
+                      },
+                      "bindings": {
+                        "B": {
+                          "kind": "symbol",
+                          "name": "B"
+                        },
+                        "H": {
+                          "kind": "symbol",
+                          "name": "H"
+                        },
+                        "Q": {
+                          "kind": "symbol",
+                          "name": "Q"
+                        },
+                        "V": {
+                          "kind": "symbol",
+                          "name": "V"
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "memoryAccess": [
+                {
+                  "accessId": "read-normalized",
+                  "storageId": "normalized",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "read-lm-head-weight",
+                  "storageId": "lm-head-weight",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-logits-bf16",
+                  "storageId": "logits-bf16",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "normalized"
+              },
+              "bindings": [
+                {
+                  "symbol": "logical_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "normalized",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "allocated_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "normalized",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [
+                  {
+                    "segmentId": "arithmetic",
+                    "computeClass": {
+                      "arithmetic": "float",
+                      "inputDtypes": [
+                        {
+                          "category": "float",
+                          "bits": 16,
+                          "format": "bf16"
+                        }
+                      ],
+                      "multiplyDtype": {
+                        "category": "float",
+                        "bits": 16,
+                        "format": "bf16"
+                      },
+                      "accumulateDtype": {
+                        "category": "float",
+                        "bits": 32,
+                        "format": "fp32"
+                      },
+                      "resource": "matrix"
+                    },
+                    "usefulOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:deepseek-v3:d0ae8766bb4b4933",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "logical_B"
+                          },
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          },
+                          "V": {
+                            "kind": "symbol",
+                            "name": "V"
+                          }
+                        }
+                      }
+                    },
+                    "executedOperations": {
+                      "kind": "formula",
+                      "call": {
+                        "formula": {
+                          "assetId": "builtin:formula:deepseek-v3:d0ae8766bb4b4933",
+                          "revision": 1,
+                          "kind": "formula"
+                        },
+                        "bindings": {
+                          "B": {
+                            "kind": "symbol",
+                            "name": "allocated_B"
+                          },
+                          "H": {
+                            "kind": "symbol",
+                            "name": "H"
+                          },
+                          "Q": {
+                            "kind": "symbol",
+                            "name": "Q"
+                          },
+                          "V": {
+                            "kind": "symbol",
+                            "name": "V"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-normalized",
+                    "storageId": "normalized",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "read-lm-head-weight",
+                    "storageId": "lm-head-weight",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-logits-bf16",
+                    "storageId": "logits-bf16",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+            },
+            "inputs": [
+              {
+                "portId": "normalized",
+                "tensorId": "normalized"
+              },
+              {
+                "portId": "lm-head-weight",
+                "tensorId": "lm-head-weight"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "logits-bf16",
+                "tensorId": "logits-bf16"
+              }
+            ]
+          }
+        },
+        {
+          "nodeId": "logits-cast",
+          "name": "Reference FP32 logits output (conversion throughput excluded)",
+          "phases": [
+            "prefill",
+            "decode"
+          ],
+          "portBindings": [
+            {
+              "portId": "logits-bf16",
+              "tensorId": "logits-bf16"
+            },
+            {
+              "portId": "logits",
+              "tensorId": "logits"
+            }
+          ],
+          "stateBindings": [],
+          "body": {
+            "kind": "opaque",
+            "cost": {
+              "compute": [],
+              "memoryAccess": [
+                {
+                  "accessId": "read-logits-bf16",
+                  "storageId": "logits-bf16",
+                  "mode": "read",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                },
+                {
+                  "accessId": "write-logits",
+                  "storageId": "logits",
+                  "mode": "write",
+                  "logicalBytes": {
+                    "kind": "storage_allocation",
+                    "passes": {
+                      "kind": "literal",
+                      "quantity": {
+                        "value": 1,
+                        "unit": "count"
+                      }
+                    }
+                  },
+                  "hbmEstimate": {
+                    "kind": "factor",
+                    "value": 1
+                  }
+                }
+              ],
+              "temporaryStorageIds": [],
+              "timing": {
+                "kind": "roofline_bound",
+                "computeEfficiency": 1,
+                "memoryEfficiency": 1,
+                "computeMemoryOverlap": "ideal",
+                "launchSeconds": 0
+              }
+            },
+            "localCost": {
+              "participation": {
+                "kind": "tensor_layout",
+                "tensorId": "logits-bf16"
+              },
+              "bindings": [
+                {
+                  "symbol": "logical_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "logits-bf16",
+                    "axisId": "b",
+                    "basis": "logical"
+                  }
+                },
+                {
+                  "symbol": "allocated_B",
+                  "source": {
+                    "kind": "tensor_axis",
+                    "tensorId": "logits-bf16",
+                    "axisId": "b",
+                    "basis": "allocated"
+                  }
+                }
+              ],
+              "cost": {
+                "compute": [],
+                "memoryAccess": [
+                  {
+                    "accessId": "read-logits-bf16",
+                    "storageId": "logits-bf16",
+                    "mode": "read",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  },
+                  {
+                    "accessId": "write-logits",
+                    "storageId": "logits",
+                    "mode": "write",
+                    "logicalBytes": {
+                      "kind": "storage_allocation",
+                      "passes": {
+                        "kind": "literal",
+                        "quantity": {
+                          "value": 1,
+                          "unit": "count"
+                        }
+                      }
+                    },
+                    "hbmEstimate": {
+                      "kind": "factor",
+                      "value": 1
+                    }
+                  }
+                ],
+                "temporaryStorageIds": [],
+                "timing": {
+                  "kind": "roofline_bound",
+                  "computeEfficiency": 1,
+                  "memoryEfficiency": 1,
+                  "computeMemoryOverlap": "ideal",
+                  "launchSeconds": 0
+                }
+              },
+              "description": "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+            },
+            "inputs": [
+              {
+                "portId": "logits-bf16",
+                "tensorId": "logits-bf16"
+              }
+            ],
+            "outputs": [
+              {
+                "portId": "logits",
+                "tensorId": "logits"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "edgeId": "embedding-in-tokens",
+          "from": {
+            "kind": "graph_input",
+            "portId": "tokens"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "embedding",
+            "portId": "tokens"
+          },
+          "tensorId": "tokens"
+        },
+        {
+          "edgeId": "dense-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "embedding",
+            "portId": "hidden"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "dense",
+            "portId": "x"
+          },
+          "tensorId": "hidden"
+        },
+        {
+          "edgeId": "moe-in",
+          "from": {
+            "kind": "node",
+            "nodeId": "dense",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "moe",
+            "portId": "x"
+          },
+          "tensorId": "dense-output"
+        },
+        {
+          "edgeId": "final-norm-in-moe-output",
+          "from": {
+            "kind": "node",
+            "nodeId": "moe",
+            "portId": "y"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "final-norm",
+            "portId": "moe-output"
+          },
+          "tensorId": "moe-output"
+        },
+        {
+          "edgeId": "lm-head-in-normalized",
+          "from": {
+            "kind": "node",
+            "nodeId": "final-norm",
+            "portId": "normalized"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "lm-head",
+            "portId": "normalized"
+          },
+          "tensorId": "normalized"
+        },
+        {
+          "edgeId": "logits-cast-in-logits-bf16",
+          "from": {
+            "kind": "node",
+            "nodeId": "lm-head",
+            "portId": "logits-bf16"
+          },
+          "to": {
+            "kind": "node",
+            "nodeId": "logits-cast",
+            "portId": "logits-bf16"
+          },
+          "tensorId": "logits-bf16"
+        },
+        {
+          "edgeId": "out-logits",
+          "from": {
+            "kind": "node",
+            "nodeId": "logits-cast",
+            "portId": "logits"
+          },
+          "to": {
+            "kind": "graph_output",
+            "portId": "logits"
+          },
+          "tensorId": "logits"
+        }
+      ],
+      "dependencies": [],
+      "tensors": [
+        {
+          "tensorId": "tokens",
+          "name": "tokens",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "int",
+            "bits": 64,
+            "format": "int64"
+          },
+          "storageId": "tokens"
+        },
+        {
+          "tensorId": "embedding",
+          "name": "embedding",
+          "shape": [
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "embedding"
+        },
+        {
+          "tensorId": "hidden",
+          "name": "hidden",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "hidden"
+        },
+        {
+          "tensorId": "dense-output",
+          "name": "dense-output",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "dense-output"
+        },
+        {
+          "tensorId": "moe-output",
+          "name": "moe-output",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "moe-output"
+        },
+        {
+          "tensorId": "final-norm-weight",
+          "name": "final-norm-weight",
+          "shape": [
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "final-norm-weight"
+        },
+        {
+          "tensorId": "normalized",
+          "name": "normalized",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "normalized"
+        },
+        {
+          "tensorId": "lm-head-weight",
+          "name": "lm-head-weight",
+          "shape": [
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            },
+            {
+              "axisId": "h",
+              "semantic": "hidden",
+              "size": {
+                "kind": "symbol",
+                "name": "H"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "lm-head-weight"
+        },
+        {
+          "tensorId": "logits-bf16",
+          "name": "logits-bf16",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 16,
+            "format": "bf16"
+          },
+          "storageId": "logits-bf16"
+        },
+        {
+          "tensorId": "logits",
+          "name": "logits",
+          "shape": [
+            {
+              "axisId": "b",
+              "semantic": "batch",
+              "size": {
+                "kind": "symbol",
+                "name": "B"
+              }
+            },
+            {
+              "axisId": "q",
+              "semantic": "token",
+              "size": {
+                "kind": "symbol",
+                "name": "Q"
+              }
+            },
+            {
+              "axisId": "v",
+              "semantic": "vocab",
+              "size": {
+                "kind": "symbol",
+                "name": "V"
+              }
+            }
+          ],
+          "dtype": {
+            "category": "float",
+            "bits": 32,
+            "format": "fp32"
+          },
+          "storageId": "logits"
+        }
+      ],
+      "storages": [
+        {
+          "storageId": "tokens",
+          "name": "tokens",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "int",
+              "bits": 64,
+              "format": "int64"
+            }
+          }
+        },
+        {
+          "storageId": "embedding",
+          "name": "embedding",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "hidden",
+          "name": "hidden",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "dense-output",
+          "name": "dense-output",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "moe-output",
+          "name": "moe-output",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "final-norm-weight",
+          "name": "final-norm-weight",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "normalized",
+          "name": "normalized",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "lm-head-weight",
+          "name": "lm-head-weight",
+          "category": "weight",
+          "sharingDomain": "instance",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              },
+              {
+                "axisId": "h",
+                "semantic": "hidden",
+                "size": {
+                  "kind": "symbol",
+                  "name": "H"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "logits-bf16",
+          "name": "logits-bf16",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 16,
+              "format": "bf16"
+            }
+          }
+        },
+        {
+          "storageId": "logits",
+          "name": "logits",
+          "category": "activation",
+          "sharingDomain": "request",
+          "allocation": {
+            "kind": "tensor",
+            "shape": [
+              {
+                "axisId": "b",
+                "semantic": "batch",
+                "size": {
+                  "kind": "symbol",
+                  "name": "B"
+                }
+              },
+              {
+                "axisId": "q",
+                "semantic": "token",
+                "size": {
+                  "kind": "symbol",
+                  "name": "Q"
+                }
+              },
+              {
+                "axisId": "v",
+                "semantic": "vocab",
+                "size": {
+                  "kind": "symbol",
+                  "name": "V"
+                }
+              }
+            ],
+            "dtype": {
+              "category": "float",
+              "bits": 32,
+              "format": "fp32"
+            }
+          }
+        }
+      ],
+      "states": []
+    },
+    "assumptions": [
+      "Main decoder only, with absorbed MLA and explicit rectangular attention temporaries. BF16 analytical weight residency except the FP32 routing correction; published checkpoint FP8 storage, MTP, speculative decoding, YaRN table creation and kernel fusion are outside this definition.",
+      "Routed experts use sigmoid affinities. Group and expert selection use corrected scores; weights come from the original affinities, normalized over selected experts and scaled by 2.5. Comparison counts are analytical proxies. Routed weight traffic uses an upper bound on distinct experts touched per call.",
+      "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts.",
+      "Analytical routed-expert TP slices matching gate and up channels and the same down-projection inputs. The packed gate/up activation stores channel pairs together. TP peers in an owner group use the same valid routes, and route-weighted hidden partials can be summed across owners and feature ranks in one reduction before adding replicated shared experts.",
+      "Routed matrix traffic uses the fraction of locally resident experts touched by valid routes and includes their per-matrix storage auxiliaries."
+    ],
+    "workloadBindings": [
+      {
+        "phase": "prefill",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "prefill",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "pastTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "B",
+        "value": {
+          "kind": "symbol",
+          "name": "batchSize"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "Q",
+        "value": {
+          "kind": "symbol",
+          "name": "queryTokensPerRequest"
+        }
+      },
+      {
+        "phase": "decode",
+        "parameterKey": "C",
+        "value": {
+          "kind": "symbol",
+          "name": "contextTokensPerRequest"
+        }
+      }
+    ]
+  },
+  "parallelPresets": [
+    {
+      "presetId": "replicated",
+      "name": "单副本",
+      "description": "单卡执行完整模型。",
+      "strategy": "replicated",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "reductions": [],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format."
+      ]
+    },
+    {
+      "presetId": "dp-batch",
+      "name": "请求 DP",
+      "description": "按请求均分 batch，每卡持有完整模型。",
+      "strategy": "batch_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "reductions": [],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format."
+      ]
+    },
+    {
+      "presetId": "tp-mla",
+      "name": "Attention TP",
+      "description": "分片 MLA 查询头，复制潜向量 KV，归约注意力输出。",
+      "strategy": "tensor_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "sharedPoolDegrees": [
+        "attentionTp"
+      ],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 100000000000,
+        "latencySeconds": 0.000003,
+        "description": "Editable analytical reference link. Rates are illustrative, not measured hardware capabilities."
+      },
+      "reductions": [],
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-dense",
+            "revision": 3,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format."
+      ]
+    },
+    {
+      "presetId": "ep-routed",
+      "name": "MoE EP",
+      "description": "均分专家权重，按均衡路由估算负载，归约路由输出。",
+      "strategy": "tensor_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "sharedPoolDegrees": [
+        "moeEp"
+      ],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 100000000000,
+        "latencySeconds": 0.000003,
+        "description": "Editable analytical reference link. Rates are illustrative, not measured hardware capabilities."
+      },
+      "reductions": [],
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "expert-gate-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-up-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-down-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-route-ids",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-route-weights",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-input",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-gate-up",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-activated",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-output",
+              "axisId": "selected",
+              "policy": "balanced"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "routed-output",
+              "producerNodeId": "combine",
+              "consumerNodeIds": [
+                "shared-add"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format.",
+        "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+      ]
+    },
+    {
+      "presetId": "tp-mla-ep-routed",
+      "name": "Attention TP ＋ MoE EP",
+      "description": "同一批卡分片 MLA 查询头和路由专家，复制潜向量 KV 与共享专家。路由负载按均衡分布估算。",
+      "strategy": "tensor_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "sharedPoolDegrees": [
+        "attentionTp",
+        "moeEp"
+      ],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 100000000000,
+        "latencySeconds": 0.000003,
+        "description": "Editable analytical reference link. Rates are illustrative, not measured hardware capabilities."
+      },
+      "reductions": [],
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-dense",
+            "revision": 3,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "expert-gate-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-up-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-down-weight",
+              "axisId": "owner-expert"
+            },
+            {
+              "tensorId": "expert-route-ids",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-route-weights",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-input",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-gate-up",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-activated",
+              "axisId": "selected",
+              "policy": "balanced"
+            },
+            {
+              "tensorId": "expert-output",
+              "axisId": "selected",
+              "policy": "balanced"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            },
+            {
+              "tensorId": "routed-output",
+              "producerNodeId": "combine",
+              "consumerNodeIds": [
+                "shared-add"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format.",
+        "Expert weights are evenly split by striped owner (expert e belongs to rank e mod P). Each token still selects K experts globally. The theoretical route budget distributes those K slots by quotient and remainder. Each owner reserves ceil(K/P) slots; useful work, token gathers and routed weight reads use valid slots, while executed slot work includes padding. Each owner packs its rows from the replicated token, IDs and original normalized scores, and the routed partials are summed before adding replicated shared experts."
+      ]
+    },
+    {
+      "presetId": "tp-routed",
+      "name": "MoE TP",
+      "description": "切分各路由专家的中间特征。",
+      "strategy": "tensor_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "sharedPoolDegrees": [
+        "moeTp"
+      ],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 100000000000,
+        "latencySeconds": 0.000003,
+        "description": "Editable analytical reference link. Rates are illustrative, not measured hardware capabilities."
+      },
+      "reductions": [],
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "expert-gate-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "expert-up-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "expert-down-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "expert-gate-up",
+              "axisId": "j"
+            },
+            {
+              "tensorId": "expert-activated",
+              "axisId": "j"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "routed-output",
+              "producerNodeId": "combine",
+              "consumerNodeIds": [
+                "shared-add"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format.",
+        "Analytical routed-expert TP slices matching gate and up channels and the same down-projection inputs. The packed gate/up activation stores channel pairs together. TP peers in an owner group use the same valid routes, and route-weighted hidden partials can be summed across owners and feature ranks in one reduction before adding replicated shared experts."
+      ]
+    },
+    {
+      "presetId": "tp-mla-tp-routed",
+      "name": "Attention TP ＋ MoE TP",
+      "description": "共用卡池切分 MLA 查询头和各路由专家的中间特征。",
+      "strategy": "tensor_sharded",
+      "phases": [
+        "prefill",
+        "decode"
+      ],
+      "tensorShards": [],
+      "sharedPoolDegrees": [
+        "attentionTp",
+        "moeTp"
+      ],
+      "networkDefaults": {
+        "scope": "intra_group",
+        "bytesPerSecond": 100000000000,
+        "latencySeconds": 0.000003,
+        "description": "Editable analytical reference link. Rates are illustrative, not measured hardware capabilities."
+      },
+      "reductions": [],
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-dense",
+            "revision": 3,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:deepseek-v3-absorbed-moe",
+            "revision": 5,
+            "kind": "module"
+          },
+          "tensorShards": [
+            {
+              "tensorId": "q-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-k-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "kv-b-v-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "o-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "q-raw",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-nope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-rope",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "q-absorbed",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "scores",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "probabilities",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "softmax-scratch",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "latent-attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "attended",
+              "axisId": "head"
+            },
+            {
+              "tensorId": "expert-gate-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "expert-up-weight",
+              "axisId": "out"
+            },
+            {
+              "tensorId": "expert-down-weight",
+              "axisId": "in"
+            },
+            {
+              "tensorId": "expert-gate-up",
+              "axisId": "j"
+            },
+            {
+              "tensorId": "expert-activated",
+              "axisId": "j"
+            }
+          ],
+          "reductions": [
+            {
+              "tensorId": "attention-output",
+              "producerNodeId": "o-proj",
+              "consumerNodeIds": [
+                "attention-residual"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            },
+            {
+              "tensorId": "routed-output",
+              "producerNodeId": "combine",
+              "consumerNodeIds": [
+                "shared-add"
+              ],
+              "payloadBytes": {
+                "kind": "formula",
+                "call": {
+                  "formula": {
+                    "assetId": "builtin:formula:deepseek-v3:7523a848555242bb",
+                    "revision": 1,
+                    "kind": "formula"
+                  },
+                  "bindings": {
+                    "B": {
+                      "kind": "symbol",
+                      "name": "B"
+                    },
+                    "H": {
+                      "kind": "symbol",
+                      "name": "H"
+                    },
+                    "Q": {
+                      "kind": "symbol",
+                      "name": "Q"
+                    }
+                  }
+                }
+              },
+              "payloadDtype": {
+                "category": "float",
+                "bits": 16,
+                "format": "bf16"
+              }
+            }
+          ]
+        }
+      ],
+      "assumptions": [
+        "Replicated tensors execute locally. The checkpoint is represented with the BF16 analytical weight format.",
+        "Analytical routed-expert TP slices matching gate and up channels and the same down-projection inputs. The packed gate/up activation stores channel pairs together. TP peers in an owner group use the same valid routes, and route-weighted hidden partials can be summed across owners and feature ranks in one reduction before adding replicated shared experts."
+      ]
+    }
+  ]
+}

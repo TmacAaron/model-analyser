@@ -5,11 +5,14 @@ import { canonical, validateAssets } from '../packages/contracts/src/validation.
 import { makeDeepSeekAssets } from './deepseek-model.js';
 import { loadDeepSeekV3Profile } from './deepseek-v3-profile.js';
 import { makeDeepSeekV3ParallelAssets } from './deepseek-v3-parallel.js';
+import { makeDeepSeekV3FP8WeightPreset } from './deepseek-v3-fp8-weights.js';
 
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
+  const latest = makeDeepSeekV3ParallelAssets(release, 5);
   for (const asset of [...makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release)),
-    ...([2, 3, 4] as const).flatMap(revision => makeDeepSeekV3ParallelAssets(release, revision))]) {
+    ...([2, 3, 4] as const).flatMap(revision => makeDeepSeekV3ParallelAssets(release, revision)),
+    ...latest, makeDeepSeekV3FP8WeightPreset(latest, release)]) {
     const key = asset.assetId + '@' + asset.revision;
     const existing = catalog.get(key);
     if (existing) assert.equal(canonical(asset), canonical(existing), key);

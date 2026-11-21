@@ -16,7 +16,7 @@ for (const [moeEp, moeTp] of [[8, 1], [4, 2]] as const) test(`eight shared cards
     });
     await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
     await page.getByRole('button', { name: '并行方式', exact: true }).click();
-    await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
+    await page.getByRole('button', { name: '更新模型到 r5', exact: true }).click();
     await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   } else {
     await page.getByLabel('当前模型', { exact: true }).selectOption('builtin:model:deepseek-v3');
