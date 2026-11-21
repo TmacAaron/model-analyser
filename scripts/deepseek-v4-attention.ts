@@ -119,7 +119,7 @@ export function prepareV4Attention(graph: GraphAuthor, v41 = false) {
 
 }
 
-export function addV4Attention(graph: GraphAuthor, ratio: 0 | 4 | 128) {
+export function addV4Attention(graph: GraphAuthor, ratio: 0 | 4 | 128, parallel = false) {
   prepareV4Attention(graph);
   const rows = completed(length, ratio || 1);
   const groupSlots = ratio === 4 ? 'min(IK, ' + rows + ')' : ratio ? rows : '0';
@@ -149,11 +149,11 @@ export function addV4Attention(graph: GraphAuthor, ratio: 0 | 4 | 128) {
   }
 
   finishV4Attention(graph, groupSlots, groupPairs, sparseInputs,
-    ratio ? { 'main-cache': '2 * B * D * min(' + rows + ', ' + groupPairs + ')' } : {});
+    ratio ? { 'main-cache': '2 * B * D * min(' + rows + ', ' + groupPairs + ')' } : {}, false, parallel);
 }
 
 export function finishV4Attention(graph: GraphAuthor, groupSlots: string, groupPairs: string, extraInputs: string[],
-  extraReads: Record<string, string>, quantizeOutput = false) {
+  extraReads: Record<string, string>, quantizeOutput = false, parallel = false) {
   const winSlots = 'min(W, C + Q)', winPairs = '(' + windowTotal(length) + ' - ' + windowTotal('C') + ')';
   const slots = '(' + winSlots + ' + ' + groupSlots + ')', pairs = '(' + winPairs + ' + ' + groupPairs + ')';
   const sparseInputs = ['window-current', 'window-cache', ...extraInputs], qType = heads('N', 'D');
@@ -178,9 +178,12 @@ export function finishV4Attention(graph: GraphAuthor, groupSlots: string, groupP
   }
   weight(graph, 'group-out-weight', ['N * D / OG', 'OG', 'OR']);
   weight(graph, 'out-weight', ['OG', 'OR', 'H']);
-  graph.tensor('group-output', sequence('OG * OR')); graph.tensor('attn-output', sequence('H'));
+  graph.tensor('group-output', parallel ? heads('OG', 'OR') : sequence('OG * OR'));
+  graph.tensor('attn-output', sequence('H'));
+  if (parallel) graph.tensor('attn-partial', sequence('H'), { dtype: fp32 });
   graph.node('group-output-proj', 'Grouped low-rank output projection', [quantizeOutput ? 'attended-quantized' : 'attended-rotated', 'group-out-weight'], ['group-output'],
     { useful: '2 * B * Q * N * D * OR' });
-  graph.node('output-proj', 'Attention output projection', ['group-output', 'out-weight'], ['attn-output'],
+  graph.node('output-proj', 'Attention output projection', ['group-output', 'out-weight'], [parallel ? 'attn-partial' : 'attn-output'],
     { useful: '2 * B * Q * OG * OR * H' });
+  if (parallel) graph.node('attn-output-cast', 'Convert reduced attention output to BF16', ['attn-partial'], ['attn-output'], vectorWork('B * Q * H'));
 }

@@ -1,0 +1,48 @@
+import { expect, test } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { AssetId } from '@model-analyser/contracts';
+import { makeDeepSeekFlashParallelAssets } from '../../scripts/deepseek-v4-parallel.js';
+import { makeModelProject } from '../../scripts/model-project.js';
+
+test('shares eight cards between V4.1 attention, expert and Engram layouts', async ({ page }) => {
+  test.setTimeout(420_000);
+  const [model, ...dependencies] = makeDeepSeekFlashParallelAssets(true);
+  if (!model) throw Error('Missing Flash model');
+  const project = makeModelProject([{ ...model, assetId: AssetId.parse('example:model:v41-parallel-' + randomUUID()) }, ...dependencies],
+    { kind: 'prefill', batchSize: 1, queryTokensPerRequest: 4, pastTokensPerRequest: 0 }, model.name);
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({ name: 'v41-parallel.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await expect(page.locator('.canvas-breadcrumb')).toContainText('DeepSeek-V4.1-Flash');
+  const save = page.locator('.studio-save');
+  await expect(save).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  const device = page.getByLabel('设备型号', { exact: true });
+  const mi300x = 'builtin:hardware:amd-mi300x-192gb@1';
+  await device.selectOption(mi300x);
+  await expect(device).toHaveValue(mi300x);
+  await expect(save).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await page.getByLabel('Attention TP', { exact: true }).fill('8');
+  await page.getByLabel('MoE EP', { exact: true }).fill('8');
+  const layout = page.getByRole('region', { name: '逻辑分片与通信' });
+  await expect(layout).toContainText('8 个逻辑槽位');
+  await layout.getByRole('button', { name: '校验布局' }).click();
+  await expect(layout).toContainText('8 个实际设备 · 90 个通信', { timeout: 120_000 });
+  await layout.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.canvas-status')).toContainText('8 物理设备');
+  await expect(save).toContainText('已保存 · 修订 3');
+
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 120_000 });
+  await expect(capacity).toContainText('每卡复制 1,313,920 B / token');
+  await expect(capacity).toContainText('每 2 个 token 生成一行压缩缓存');
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  const cards = page.locator('.analysis-cards');
+  await expect(cards).toContainText('最大每卡生命周期峰值', { timeout: 120_000 });
+  await expect(cards.getByRole('button', { name: '查看理论耗时 · 串行来源' })).not.toContainText('不可用');
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(page.getByLabel('Attention TP', { exact: true })).toHaveValue('8');
+  await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('8');
+});

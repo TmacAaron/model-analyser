@@ -141,10 +141,10 @@ function selectRows(graph: GraphAuthor, { ratio, mode }: SparseBranch) {
   graph.output('selected-rows');
 }
 
-export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch) {
+export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch, parallel = false) {
   prepareV4Attention(graph, true);
   if (!sparse) {
-    finishV4Attention(graph, '0', '0', [], {}, true);
+    finishV4Attention(graph, '0', '0', [], {}, true, parallel);
     return;
   }
   const { ratio, mode } = sparse;
@@ -171,5 +171,5 @@ export function addV41Attention(graph: GraphAuthor, sparse?: SparseBranch) {
   }
   const rows = cacheRows(ratio), groupPairs = '(' + groupTotal('C + Q', ratio, true) + ' - ' + groupTotal('C', ratio, true) + ')';
   finishV4Attention(graph, 'min(IK, ' + rows + ')', groupPairs, ['main-cache', 'selected-rows'],
-    { 'main-cache': '2 * B * D * min(' + rows + ', ' + groupPairs + ')' }, true);
+    { 'main-cache': '2 * B * D * min(' + rows + ', ' + groupPairs + ')' }, true, parallel);
 }

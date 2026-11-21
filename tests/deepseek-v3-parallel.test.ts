@@ -24,6 +24,7 @@ it.each(['v3', 'r1'] as const)('runs %s attention and striped expert sharding on
   const { scenario, assets } = setup(release);
   const model = assets.find(asset => asset.assetId === scenario.model.assetId)!;
   const modes = model.parallelPresets!;
+  expect(matchingParallelPresets({ ...serialDegrees, attentionDp: 2 }, modes, scenario).map(match => match.preset.presetId)).toEqual(['dp-batch']);
   expect(matchingParallelPresets({ ...serialDegrees, attentionTp: 2, moeEp: 2 }, modes, scenario).map(match => match.slots)).toEqual([2]);
   expect(matchingParallelPresets({ ...serialDegrees, attentionTp: 2, moeEp: 4 }, modes, scenario)).toEqual([]);
   const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, 2), assets, presetId: 'tp-mla-ep-routed',

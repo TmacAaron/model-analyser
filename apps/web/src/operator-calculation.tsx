@@ -141,7 +141,7 @@ function kimiK3Algorithm(localId:string):Algorithm|undefined {
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
   const v41=id==='builtin:model:deepseek-v4.1-flash'||id.startsWith('builtin:module:deepseek-v41-block-');
-  if(asset.revision===1&&(v41||id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
+  if(asset.revision<=2&&(v41||id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
     const algorithm=deepSeekV4Algorithm(localId,v41,v41?(id.includes('-r2-')?'2':'1'):'4');
     const filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':localId==='engram-hash'?'engram.py':'model.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
@@ -162,7 +162,7 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const hybrid=asset.revision<=4&&/^builtin:(module:qwen-hybrid-(moe|dense)-(delta|gqa)|model:qwen3\.(5-397b-a17b|8-27b))$/.test(id);
   const family = hybrid?'qwen-hybrid':asset.revision <= 3 && /^builtin:(module:qwen3-decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
     : asset.revision === 1 && /^builtin:(module:glm4-decoder|model:glm-4-9b)$/.test(id) ? 'glm'
-    : asset.revision <= 2 && /^builtin:(module:deepseek-(v2-(expanded|absorbed)|v3-absorbed)-(dense|moe)|model:deepseek-(v2-lite-(expanded|absorbed)|v3|r1))$/.test(id) ? 'deepseek'
+    : asset.revision <= 3 && /^builtin:(module:deepseek-(v2-(expanded|absorbed)|v3-absorbed)-(dense|moe)|model:deepseek-(v2-lite-(expanded|absorbed)|v3|r1))$/.test(id) ? 'deepseek'
     : undefined;
   if (!family) return;
   const epsilon = family === 'glm' ? '1.5625 × 10⁻⁷' : '10⁻⁶';

@@ -13,6 +13,8 @@ const poolId = '$degree-pool';
 const rankPrefix = '$degree-rank:';
 
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
+  if (preset.strategy === 'batch_sharded') return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
+  if (preset.strategy === 'replicated') return size === 1 ? serialDegrees : undefined;
   if (preset.strategy === 'tensor_sharded' && preset.sharedPoolDegrees?.length) {
     if (size <= 1) return;
     const degrees = { ...serialDegrees };
@@ -27,9 +29,7 @@ function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplat
   const ownerId = preset.strategy === 'declared_plan' ? 'builtin:model:parallel-' + preset.presetId : 'builtin:model:gqa-distributed-reference';
   if (!fullModelPresets && (model.revision !== 1 || model.assetId !== ownerId)) return undefined;
   switch (preset.strategy) {
-    case 'batch_sharded': return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
     case 'tensor_sharded': return size > 1 ? { ...serialDegrees, attentionTp: size } : undefined;
-    case 'replicated': return size === 1 ? serialDegrees : undefined;
     case 'declared_plan':
       switch (preset.presetId) {
         case 'ep2': return { ...serialDegrees, moeEp: 2 };

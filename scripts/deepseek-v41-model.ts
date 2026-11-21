@@ -29,12 +29,14 @@ function sharedPair(graph: GraphAuthor, ratio: Ratio, input = false) {
   }
 }
 
-export function makeDeepSeekV41Assets(): AssetDocument[] {
+export function makeDeepSeekV41Assets(revision: 1 | 2 = 1): AssetDocument[] {
   const profile = loadDeepSeekV41();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
-  const equations = new Equations('builtin:formula:deepseek-v41', parameters, deepSeekV41Sources);
-  const base = { documentType: 'asset', schemaVersion: 1, revision: 1, sources: deepSeekV41Sources, tags: ['deepseek', 'deepseek-v41', 'text'] };
+  const parallel = revision === 2;
+  const equations = new Equations('builtin:formula:deepseek-v41', parallel ? [...parameters, parameter('RouteSlots', 0, 0)] : parameters,
+    deepSeekV41Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
+  const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV41Sources, tags: ['deepseek', 'deepseek-v41', 'text'] };
   const modules: Module[] = [];
   function define(id: string, name: string, graph: GraphAuthor) {
     const asset = AssetDocument.parse({
@@ -62,11 +64,11 @@ export function makeDeepSeekV41Assets(): AssetDocument[] {
     const attentionResidual = engram ? addEngramLookup(graph, engram) : 'x';
     hyperCoefficients(graph, 'attn', attentionResidual);
     hyperInput(graph, 'attn', attentionResidual, 'pre', true);
-    addV41Attention(graph, sparse);
+    addV41Attention(graph, sparse, parallel);
     hyperPost(graph, 'attn', attentionResidual, 'attn-output', 'attention-residual');
     hyperCoefficients(graph, 'ffn', 'attention-residual');
     hyperInput(graph, 'ffn', 'attention-residual', 'attn-hc-pre', true);
-    addV4Moe(graph, false, true);
+    addV4Moe(graph, false, true, parallel);
     hyperPost(graph, 'ffn', 'attention-residual', 'ffn-output', 'y');
     exit(graph, { x: 'y', pre: 'ffn-hc-pre' });
     return define('block-' + id, name, graph);

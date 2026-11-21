@@ -1,0 +1,56 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-flash-parallel:6f917ef0294cb83d",
+  "revision": 1,
+  "name": "2 * B * Q * EH * (EN - 1) * ED [byte]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Logical payload of an uncompressed reduction, before ring traffic and startup factors."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "ED": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "EH": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "EN": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * Q * EH * (EN - 1) * ED",
+      "output": {
+        "unit": "byte",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

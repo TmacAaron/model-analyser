@@ -62,6 +62,21 @@ MoE EP 将 256 个路由专家的权重按 `expert_id mod EP` 分给各卡，并
 
 同池 TP8 ＋ EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
 
+## DeepSeek-V4 Flash 系列
+
+V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。已有工作区可在「并行方式」更新模型，再校验并应用布局。请求 DP 均分完整请求，每卡持有全模型权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)
+
+- Attention TP 切分查询头、索引头及匹配的输出组。索引分数在 Top‑K、候选块选择或候选掩码前执行 FP32 AllReduce。注意力输出在转换到 BF16 前执行 FP32 AllReduce。滑窗、压缩 KV、索引 K 和压缩历史在每卡复制。V4.1 的跨层共享缓存每卡只分配一次。
+- MoE EP 均分 256 或 384 个路由专家。每个 token 的全局 Top‑K 都是 6。EP8 的理论负载是 6 个有效槽位分到 6 张卡，每卡预留 1 个槽位。有效槽位决定有用工作和专家权重读量。每层先归约 FP32 路由输出，再加共享专家。
+- V4.1 同池预设还按行分片两张 Engram 表及缩放项，每卡按向上取整的行数分配。每卡查有效行或掩蔽的占位行，随后归约 BF16 查表结果。投影仍在各卡计算。整层的权重保留当前 BF16／FP32 理论格式，以及 Engram 的原有 FP8 表和 E8M0 缩放项。
+
+在单请求、Prefill 结束时 4 个 token 的 TP8 ＋ EP8 参考配置下，以下为每卡分配和全模型归约数量。网络使用可编辑的带宽和延迟，路由负载按均衡假设估算。
+
+| 型号 | 每卡权重 | 每卡 KV 含索引 | AllReduce |
+| --- | ---: | ---: | ---: |
+| DeepSeek-V4-Flash | 77,725,277,116 B | 5,662,976 B | 107 |
+| DeepSeek-V4.1-Flash | 170,975,675,656 B | 5,255,680 B | 90 |
+
 ## 独立 GQA 模型
 
 这是一个完整的**合成 attention/residual 子图**，包括 Q/K/V 投影、cache append、QK、softmax 代理、AV、输出投影和 residual 九个节点。它不包含 norm、RoPE、MLP、embedding 或 logits head，不称为完整生产语言模型。矩阵/存储为 BF16；softmax 使用 FP32 scratch，向量工作为显式代理。cache append 只写当前 BF16 token tile，已有缓存仍被 attention 读取。

@@ -53,7 +53,7 @@ export function hyperPost(graph: GraphAuthor, prefix: 'attn' | 'ffn', stream: st
     vectorWork('B * Q * H * HC * (2 * HC + 1)'));
 }
 
-export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false) {
+export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, parallel = false) {
   const routedShape = (width: string): Axis[] => [...token, ['e', 'expert', 'K'], ['d', 'hidden', width]];
   weight(graph, 'router-weight', ['H', 'E']);
   graph.tensor('router-raw', sequence('E'), { dtype: fp32 });
@@ -76,10 +76,19 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false) {
     ['affinities', 'selected-experts'], ['route-weights'], vectorWork(v41 ? 'B * Q * (3 * K + 1)' : '3 * B * Q * K'),
     { accessBytes: { affinities: '4 * B * Q * K' } });
   graph.tensor('dispatched', routedShape('H'));
-  graph.node('route-dispatch', 'Dispatch tokens to selected experts', ['ffn-input', 'selected-experts'], ['dispatched']);
-  const activeWeightBytes = '2 * min(E, B * Q * K) * H * I';
-  for (const [path, groups] of [['routed', 'K'], ['shared', '1']] as const) {
-    const routed = path === 'routed', route = routed ? ' * K' : '';
+  const slots = parallel ? 'RouteSlots' : 'K';
+  const ownerIds = parallel ? 'owner-experts' : 'selected-experts';
+  const ownerScores = parallel ? 'owner-weights' : 'route-weights';
+  if (parallel) {
+    const ownerShape: Axis[] = [...token, ['e', 'expert', 'K']];
+    graph.tensor(ownerIds, ownerShape, { dtype: int32 });
+    graph.tensor(ownerScores, ownerShape, { dtype: fp32 });
+    graph.node('route-dispatch', 'Pack tokens and weights by expert owner', ['ffn-input', 'selected-experts', 'route-weights'],
+      ['dispatched', ownerIds, ownerScores], undefined, { accessBytes: { 'ffn-input': '2 * B * Q * ' + slots + ' * H' } });
+  } else graph.node('route-dispatch', 'Dispatch tokens to selected experts', ['ffn-input', 'selected-experts'], ['dispatched']);
+  const activeWeightBytes = '2 * min(E, B * Q * ' + slots + ') * H * I';
+  for (const [path, groups] of [['routed', slots], ['shared', '1']] as const) {
+    const routed = path === 'routed', route = routed ? ' * ' + slots : '';
     const n = (suffix: string) => path + '-' + suffix;
     const shape = routed ? routedShape : sequence;
     for (const gate of ['gate', 'up', 'down'] as const) weight(graph, n(gate + '-weight'), routed ? ['E', 'H', 'I'] : ['H', 'I']);
@@ -93,27 +102,29 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false) {
     }
     graph.tensor(n('mix'), shape('I'));
     graph.node(n('swiglu'), 'Clamped SwiGLU' + (routed ? ' and route weighting' : ''),
-      [n('gate'), n('up'), ...(routed ? ['route-weights'] : [])], [n('mix')],
+      [n('gate'), n('up'), ...(routed ? [ownerScores] : [])], [n('mix')],
       vectorWork((routed ? '8' : '7') + ' * B * Q * I' + route));
     graph.tensor(n('output'), shape('H'));
     graph.node(n('down-proj'), (routed ? 'Routed' : 'Shared') + ' expert down projection',
       [n('mix'), n('down-weight')], [n('output')], { useful: '2 * B * Q * ' + groups + ' * H * I' },
       routed ? { accessBytes: { [n('down-weight')]: activeWeightBytes } } : {});
   }
-  graph.tensor('routed-reduced', hidden);
-  graph.node('route-combine', 'Accumulate routed expert outputs', ['routed-output', 'selected-experts'], ['routed-reduced'],
-    vectorWork('B * Q * K * H'));
+  graph.tensor('routed-reduced', hidden, parallel ? { dtype: fp32 } : {});
+  graph.node('route-combine', 'Accumulate routed expert outputs', ['routed-output', ownerIds], ['routed-reduced'],
+    vectorWork('B * Q * ' + slots + ' * H'));
   graph.tensor('ffn-output', hidden);
   graph.node('shared-add', 'Routed and shared expert merge', ['routed-reduced', 'shared-output'], ['ffn-output'], vectorWork('B * Q * H'));
 }
 
-export function makeDeepSeekV4Assets(): AssetDocument[] {
+export function makeDeepSeekV4Assets(revision: 1 | 2 = 1): AssetDocument[] {
   const profile = loadDeepSeekV4();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
   const rootParams = [...parameters, parameter('Periods', profile.periods)];
-  const equations = new Equations('builtin:formula:deepseek-v4', rootParams, deepSeekV4Sources);
-  const base = { documentType: 'asset', schemaVersion: 1, revision: 1, sources: deepSeekV4Sources, tags: ['deepseek', 'deepseek-v4', 'text'] };
+  const parallel = revision === 2;
+  const equations = new Equations('builtin:formula:deepseek-v4', parallel ? [...rootParams, parameter('RouteSlots', 0, 0)] : rootParams,
+    deepSeekV4Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
+  const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV4Sources, tags: ['deepseek', 'deepseek-v4', 'text'] };
   const module = (id: string, name: string, graph: GraphTemplate) => AssetDocument.parse({
     ...base, assetId: 'builtin:module:deepseek-v4-' + id, name, parameters, definition: { kind: 'module', graph },
   });
@@ -123,10 +134,10 @@ export function makeDeepSeekV4Assets(): AssetDocument[] {
     graph.tensor('x', residual); graph.input('x');
     if (hashRoute) { graph.tensor('token-ids', token, { dtype: int64 }); graph.input('token-ids'); }
     hyperPre(graph, 'attn', 'x');
-    addV4Attention(graph, ratio);
+    addV4Attention(graph, ratio, parallel);
     hyperPost(graph, 'attn', 'x', 'attn-output', 'attention-residual');
     hyperPre(graph, 'ffn', 'attention-residual');
-    addV4Moe(graph, hashRoute);
+    addV4Moe(graph, hashRoute, false, parallel);
     hyperPost(graph, 'ffn', 'attention-residual', 'ffn-output', 'y');
     graph.output('y');
     const mode = ratio === 0 ? '滑窗' : ratio === 4 ? 'CSA · R4' : 'HCA · R128';

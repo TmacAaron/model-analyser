@@ -75,7 +75,7 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 每请求的 BF16 缓存字节按 `2 × [43 × 128 × 512 + 21 × floor(L / 4) × (512 + 128) + 20 × floor(L / 128) × 512]` 计算。公式分别计入固定滑窗、CSA 潜向量与索引、HCA 潜向量。池化的 FP32 值与得分缓冲另占 12,206,080 B／请求。容量固定当前推理配置的理论非 KV 峰值，并按显存上限及缓存量化计算 token 槽位。平均占用随当前长度变化，分组完成时才增加一行。
 
-此预设采用主文本解码器的大矩阵 BF16 参考口径和推理源码中的 FP32 特定权重，包含 570,412,548,444 B 张量权重。发布检查点的 FP8／FP4 权重、MTP、具体稀疏内核和多卡局部规则需要对应配置。稀疏注意力以显式分数矩形估算临时缓冲，非线性及选择开销使用分项近似。默认 80 GB 单卡会显示零槽位与单 token 缓存平均占用。
+此预设采用主文本解码器的大矩阵 BF16 参考口径和推理源码中的 FP32 特定权重，包含 570,412,548,444 B 张量权重。发布检查点的 FP8／FP4 权重、MTP 和具体稀疏内核需要对应配置。稀疏注意力以显式分数矩形估算临时缓冲，非线性及选择开销使用分项近似。默认 80 GB 单卡会显示零槽位与单 token 缓存平均占用。r2 可用同一批设备组合 Attention TP 与 MoE EP。 [并行口径](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)
 
 `npm run reference:deepseek-v4` 校验两份原始配置摘要和内置资产。固定来源为 [模型配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/config.json)、[推理配置](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/config.json)、[解码器实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py)和 [Sinkhorn 内核](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/kernel.py)。
 
@@ -83,7 +83,7 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 内置预设按发布的 40 层主文本解码器展开。前两层使用局部滑窗；第 2–19 层采用 R2 分组，第 20–39 层采用 R1。层号从 0 开始。第 2、8、14、20 层各自写入一组共享 KV 和索引 K。第 24、28、32、36 层重新评分时读取第 20 层的索引 K 和候选掩码。其他复用层读取对应索引源选择好的位置。两条 Hyper-Connections 路径传递实际残差和下一子层的混合系数。
 
-第 1、14 层通过 Engram 向各自的残差流注入查表结果。两张 FP8 表与 E8M0 scale 合计 202,758,032,400 B。当前理论权重合计 1,307,953,639,888 B，由 BF16 矩阵基线、源码中的 FP32 权重及 Engram 表组成。文本路径采用发布的专家选择规则。图像专用分支、DSpark、采样、发布检查点的大矩阵 FP8／FP4，以及实际稀疏内核和多卡分片需要各自的配置。
+第 1、14 层通过 Engram 向各自的残差流注入查表结果。两张 FP8 表与 E8M0 scale 合计 202,758,032,400 B。当前理论权重合计 1,307,953,639,888 B，由 BF16 矩阵基线、源码中的 FP32 权重及 Engram 表组成。文本路径采用发布的专家选择规则。r2 在同池 TP／EP 布局下分片 Engram 表，并保留跨层共享 KV 和索引。图像分支、DSpark、采样及发布检查点的大矩阵 FP8／FP4 需要各自的配置。 [并行口径](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)
 
 每请求的滑窗、全局 KV 和索引缓存为 `2 × [40 × 128 × 512 + (3 × floor(L / 2) + L) × (512 + 128)]` B。固定状态另含三组 R2 的 FP32 压缩缓冲和 Engram 的 INT64 历史区；历史区按配置的上下文容量预留。容量预算在当前非 KV 峰值下计算，跨层复用只保留一次物理分配。索引计算先对可用位置求完整分数，再应用候选掩码。
 

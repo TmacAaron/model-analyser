@@ -64,7 +64,7 @@ function deepSeekV4Groups(ratio:string,v41=false):AuthoredGroup[]{
       ...['main','index'].flatMap(prefix=>v4Compressor.map(operation=>prefix+'-'+operation)),
       'index-query','index-query-rope','index-weight','index-key','index-key-norm','index-key-rope','index-score','index-reduce','index-topk',
       'candidate-block-scores','candidate-blocks','candidate-mask-apply',
-      'sparse-qk','sink-softmax','sparse-av','output-rope','output-fake-quant','group-output-proj','output-proj']},
+      'sparse-qk','sink-softmax','sparse-av','output-rope','output-fake-quant','group-output-proj','output-proj','attn-output-cast']},
     ...['attn','ffn'].map(prefix=>({key:prefix+'-hc',name:'Hyper-Connections',members:hyperMembers.map(operation=>prefix+'-hc-'+operation)})),
     {key:'routed',name:'Routed Experts',members:['router','router-affinity','hash-experts','route-bias','route-topk','route-normalize',
       'route-dispatch','routed-gate-proj','routed-up-proj','routed-swiglu','routed-down-proj','route-combine']},

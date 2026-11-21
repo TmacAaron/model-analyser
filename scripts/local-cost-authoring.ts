@@ -10,10 +10,10 @@ export function withLocalCost(graph: GraphTemplate, nodeAxes: Readonly<Record<st
   return { ...graph, nodes: graph.nodes.map(node => {
     if (node.body.kind !== 'opaque') return node;
     const body = node.body;
-    const input = body.inputs[0];
+    const input = body.inputs[0] ?? body.outputs[0];
     const batch = input && tensors.get(input.tensorId)?.shape.find(axis => axis.semantic === 'batch');
-    if (!input || !batch) throw Error('Missing batch port for ' + node.nodeId);
-    const axes: AxisBinding[] = [['B', input.tensorId, batch.axisId], ...(nodeAxes[node.nodeId] ?? [])];
+    if (!input || !batch && body.inputs.length) throw Error('Missing batch port for ' + node.nodeId);
+    const axes: AxisBinding[] = [...(batch ? [['B', input.tensorId, batch.axisId] as AxisBinding] : []), ...(nodeAxes[node.nodeId] ?? [])];
     const axisBindings = (basis: 'logical' | 'allocated') => axes.map(([parameter, tensorId, axisId]) => ({
       parameter,
       symbol: basis + '_' + parameter,
