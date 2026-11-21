@@ -67,6 +67,8 @@ GQA cache 使用 `layers × 2(K,V) × KVheads × headDim × BF16bytes`，不能�
 
 修订 r3 提供逐卡方程与设备布局。请求 DP 按 batch 分片。Attention TP 按头分片并复制 MLA KV。MoE EP 按交错专家归属分片，并可与 Attention TP 共用一个卡池。EP 的整除条件作用于专家总数，每个 token 的全局 TopK 保持不变，逐卡路由成本按均衡负载估算。 [并行说明](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
 
+修订 r4 增加理论 MoE TP，可切分路由专家的中间通道并与 MoE EP 组合。沿用 BF16 权重分析和 r3 的全局 Top‑8 路由规则。 [逐卡布局](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)
+
 来源为固定的 [DeepSeek-V3 配置](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/config.json)、[DeepSeek-R1 配置](https://huggingface.co/deepseek-ai/DeepSeek-R1/blob/00c6b9d6b8308971df69134e7b421ab7a7fe6f66/config.json)、[V3 推理结构源码](https://huggingface.co/deepseek-ai/DeepSeek-V3/resolve/bd0dd75c911b4a171ae9b1e0a71f7ae45641cf65/modeling_deepseek.py)和[架构报告](https://arxiv.org/html/2412.19437#S2.SS1)。
 
 ## DeepSeek-V4-Flash

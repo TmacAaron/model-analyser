@@ -3,7 +3,7 @@ import { AnalysisResult, ParallelResolutionAttempt, type MetricValue } from '@mo
 import { analyzeScenario, estimateKvCapacity, previewParallelPreset } from '@model-analyser/core';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeDeepSeekV3ParallelAssets } from '../scripts/deepseek-v3-parallel.js';
-import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
+import { bindDegreePool, currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { encodeAnalysisCompletion, readAnalysisCompletion } from '../apps/web/src/analysis-result-transport.js';
 
 function amount(value: MetricValue | undefined) {
@@ -102,3 +102,54 @@ it('still rejects a degree that cannot split the total expert weights evenly', a
     network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
   expect(attempt.status).toBe('unavailable');
 });
+
+it.each([
+  { release: 'v3', ep: 4, tp: 2, attentionTp: 8, presetId: 'tp-mla-ep-routed' },
+  { release: 'r1', ep: 1, tp: 4, attentionTp: 1, presetId: 'tp-routed' },
+] as const)('shards $release gate, up and down channels with unchanged global TopK', async ({ release, ep, tp, attentionTp, presetId }) => {
+  const { scenario, assets } = setup(release);
+  const presets = assets.find(asset => asset.assetId === scenario.model.assetId)!.parallelPresets!;
+  const degrees = { ...serialDegrees, moeEp: ep, moeTp: tp, attentionTp };
+  const [match] = matchingParallelPresets(degrees, presets, scenario);
+  const cards = ep * tp, network = { bytesPerSecond: 100e9, latencySeconds: 3e-6 };
+  expect(match).toMatchObject({ slots: cards, preset: { presetId } });
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, cards), assets, presetId,
+    expertMesh: match?.expertMesh, network });
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  const { preview } = attempt;
+  expect(currentDegrees(preview.scenario, presets)).toEqual(degrees);
+  expect(preview.communicationCount).toBe(attentionTp > 1 ? 3 : 1);
+  expect(preview.communications?.filter(row => row.placement?.beforeNodeIds.some(id => id === 'moe[0]/shared-add')))
+    .toMatchObject([{ operation: 'all_reduce', algorithm: { startupRounds: 2 * (cards - 1) } }]);
+  const analyzed = await analyzeScenario(preview.scenario, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 3)));
+  const layout = analyzed.result.distributed!.layout;
+  const H = 7168, width = 2048 / tp, experts = 256 / ep, routes = 8 / ep;
+  for (const [id, axis] of [['expert-gate-weight', 'out'], ['expert-up-weight', 'out'], ['expert-down-weight', 'in']] as const) {
+    const weight = layout.storageAllocations.find(row => row.storageId === 'moe[0]::' + id)?.allocation;
+    expect(weight?.distribution).toMatchObject({ kind: 'sharded', axes: [
+      ...(ep > 1 ? [{ tensorAxisId: 'owner-expert', meshAxisId: 'expert' }] : []),
+      { tensorAxisId: axis, ...(ep > 1 ? { meshAxisId: 'feature' } : {}) },
+    ] });
+    expect(weight?.perDevice.map(row => amount(row.totalBytes))).toEqual(Array(cards).fill(2 * experts * H * width));
+  }
+  const perDevice = (id: string) => {
+    const placement = layout.localCosts.nodes.find(node => node.nodeId === 'moe[0]/' + id)?.placement;
+    if (placement?.kind !== 'placed') throw Error('Missing placement ' + id);
+    return placement.perDevice.map(({ outcome }) => {
+      if (outcome.status !== 'available') throw Error('Missing local cost ' + id);
+      return outcome.cost;
+    });
+  };
+  expect(perDevice('route-weights').map(cost => amount(cost.compute[0]?.usefulOperations))).toEqual(Array(cards).fill(24));
+  for (const [id, work] of [['expert-gate-up', 4 * routes * H * width], ['expert-silu', 6 * routes * width],
+    ['expert-down', 2 * routes * H * width]] as const) {
+    expect(perDevice(id).map(cost => [amount(cost.compute[0]?.usefulOperations), amount(cost.compute[0]?.executedOperations)]))
+      .toEqual(Array(cards).fill([work, work]));
+  }
+  expect(perDevice('expert-gate-up').map(cost => amount(cost.logicalReadBytes)))
+    .toEqual(Array(cards).fill(routes * (2 * H + 8 + 4 * H * width)));
+  expect(layout.storageAllocations.find(row => row.storageId === 'moe[0]::shared-gate-weight')?.allocation.distribution.kind)
+    .toBe('replicated');
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(Array(cards).fill(6912));
+}, 90_000);

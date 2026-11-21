@@ -1,9 +1,26 @@
 import { expect, test } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { makeDeepSeekV3ParallelAssets } from '../../scripts/deepseek-v3-parallel.js';
+import { makeModelProject } from '../../scripts/model-project.js';
 
-test('eight shared cards run the real DeepSeek V3 configuration from the canvas', async ({ page }) => {
+for (const [moeEp, moeTp] of [[8, 1], [4, 2]] as const) test(`eight shared cards run DeepSeek V3 EP${moeEp} × MoE TP${moeTp} from the canvas`, async ({ page }) => {
   test.setTimeout(300_000);
   await page.goto('/');
-  await page.getByLabel('当前模型', { exact: true }).selectOption('builtin:model:deepseek-v3');
+  if (moeTp > 1) {
+    const project = makeModelProject(makeDeepSeekV3ParallelAssets('v3', 3), {
+      kind: 'prefill', batchSize: 1, pastTokensPerRequest: 0, queryTokensPerRequest: 1,
+    }, 'DeepSeek-V3 r3 workspace');
+    project.projectId = randomUUID();
+    await page.getByLabel('导入模型工作区', { exact: true }).setInputFiles({
+      name: 'deepseek-v3-r3.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)),
+    });
+    await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+    await page.getByRole('button', { name: '并行方式', exact: true }).click();
+    await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
+    await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  } else {
+    await page.getByLabel('当前模型', { exact: true }).selectOption('builtin:model:deepseek-v3');
+  }
   await expect(page.locator('.canvas-breadcrumb')).toContainText('DeepSeek-V3');
   await page.getByRole('button', { name: '设备', exact: true }).click();
   await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');
@@ -12,7 +29,8 @@ test('eight shared cards run the real DeepSeek V3 configuration from the canvas'
   await expect(page.locator('.studio-save')).toContainText('已保存');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await page.getByLabel('Attention TP', { exact: true }).fill('8');
-  await page.getByLabel('MoE EP', { exact: true }).fill('8');
+  await page.getByLabel('MoE EP', { exact: true }).fill(String(moeEp));
+  await page.getByLabel('MoE TP', { exact: true }).fill(String(moeTp));
   const layout = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(layout).toContainText('8 个逻辑槽位');
   await layout.getByRole('button', { name: '校验布局' }).click();
@@ -35,5 +53,6 @@ test('eight shared cards run the real DeepSeek V3 configuration from the canvas'
   await expect(page.locator('.canvas-breadcrumb')).toContainText('DeepSeek-V3');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.getByLabel('Attention TP', { exact: true })).toHaveValue('8');
-  await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('8');
+  await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue(String(moeEp));
+  await expect(page.getByLabel('MoE TP', { exact: true })).toHaveValue(String(moeTp));
 });

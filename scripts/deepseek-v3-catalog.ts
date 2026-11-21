@@ -9,7 +9,7 @@ import { makeDeepSeekV3ParallelAssets } from './deepseek-v3-parallel.js';
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
   for (const asset of [...makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release)),
-    ...makeDeepSeekV3ParallelAssets(release, 2), ...makeDeepSeekV3ParallelAssets(release)]) {
+    ...([2, 3, 4] as const).flatMap(revision => makeDeepSeekV3ParallelAssets(release, revision))]) {
     const key = asset.assetId + '@' + asset.revision;
     const existing = catalog.get(key);
     if (existing) assert.equal(canonical(asset), canonical(existing), key);

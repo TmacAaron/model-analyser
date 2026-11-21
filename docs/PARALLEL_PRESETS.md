@@ -8,7 +8,7 @@
 
 画布的「并行方式」按 Attention、MoE、序列与流水线录入并行度。Qwen3-0.6B r3 与 Qwen3-1.7B r2 支持 Attention TP 和请求 DP。内置 GQA 参考图也支持这两种方式，专用研究图支持 SP2、EP2、EP2×TP2、PCP2、DCP2 与 PP2。逻辑预览显示当前模型和阶段声明的分片、槽位和通信。「设备」为当前配置统一选择一种型号，也可在此自定义每卡参数。校验布局时，从已声明的逻辑槽位取得卡数并复用设备映射，或按所选型号生成所需设备。应用后，画布分析和 KV 容量使用同一份布局。
 
-采用均衡路由的 MoE EP 预设按总路由专家数校验并行度并均分专家权重。每个 token 仍使用模型的全局 Top‑K，理论路由在 EP 组之间按整数商和余数均摊。以 512 个路由专家、Top‑10 和 EP8 为例，每组驻留 64 个专家，每个 token 的有效路由按 `2、2、1、1、1、1、1、1` 估算。共享专家按其独立布局计费。DeepSeek‑V3／R1 的旧 r2 配置可从「并行方式」更新至 r3 使用该规则。
+采用均衡路由的 MoE EP 预设按总路由专家数校验并行度并均分专家权重。每个 token 仍使用模型的全局 Top‑K，理论路由在 EP 组之间按整数商和余数均摊。以 512 个路由专家、Top‑10 和 EP8 为例，每组驻留 64 个专家，每个 token 的有效路由按 `2、2、1、1、1、1、1、1` 估算。共享专家按其独立布局计费。DeepSeek‑V3／R1 的旧 r2 配置可从「并行方式」更新模型后使用该规则。
 
 ## Qwen 解码层流水线
 
@@ -58,7 +58,7 @@ Qwen3-0.6B r7 和 Qwen3-1.7B r6 可以同时填写 Attention DP 和 DCP。DP2、
 
 ## 全模型 MoE EP × TP
 
-Qwen3.5-397B-A17B r3 起、GLM-5.2 r2 和 Kimi-K3 r2／r3 可同时填写 MoE EP 和 MoE TP。以 EP2、TP2 为例，路由专家分成两组，每组两张卡切分专家的中间维度。四张卡共用一份逻辑请求，每个 token 仍按模型的全局 TopK 选专家。EP 按商和余数分发有效路由，TP 分片共享其专家组的路由，每卡用本地权重和有效槽位计算。专家数及专家中间维度须分别整除 EP 和 TP 度。
+Qwen3.5-397B-A17B r3 起、GLM-5.2 r2、Kimi-K3 r2／r3 和 DeepSeek-V3／R1 r4 可同时填写 MoE EP 和 MoE TP。以 EP2、TP2 为例，路由专家分成两组，每组两张卡切分专家的中间维度。四张卡共用一份逻辑请求，每个 token 仍按模型的全局 TopK 选专家。EP 按商和余数分发有效路由，TP 分片共享其专家组的路由，每卡用本地权重和有效槽位计算。专家数及专家中间维度须分别整除 EP 和 TP 度。
 
 「Attention TP」设为 `1` 时 Attention 在原设备上逐卡复制。设为 `EP × TP` 时 Attention 在同一批设备上分片，GPU 数仍为 `EP × TP`。每个 MoE 层在原合并点进行一次全池 AllReduce，对每张卡的局部专家贡献求和。Qwen／GLM 先归约再加共享专家，Kimi‑K3 在潜向量 RMSNorm 前归约。通信采用配置的环形模型，Attention 的归约单独计算。各卡的 KV 与发布权重缩放因子按生效布局计算。快捷入口支持最多 64 个实际设备槽位。
 
@@ -108,13 +108,15 @@ TP degree=1 不生成归约。多卡归约使用 BF16 完整输出 `2*B*Q*H` byt
 
 ## DeepSeek-V3 与 DeepSeek-R1 全模型
 
-模型修订 r3 支持请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。并行入口中的 `Attention TP=8`、`MoE EP=8` 使用同一个 8 卡设备池。设备型号在「设备」选择。已有工作区可升级到 r3 后重新应用布局。
+模型修订 r3 提供请求 DP、Attention TP、MoE EP，以及共用设备的 Attention TP ＋ MoE EP。r4 增加 MoE TP，支持与 Attention TP 共用卡池，也可与 MoE EP 组合。设备型号在「设备」选择。已有工作区可在「并行方式」更新到 r4。
 
 Attention TP 沿查询头切分 Q 上投影、吸收后的 K／V 上投影权重、注意力分数和输出投影。每卡保留完整的 MLA 潜向量和位置键。输出投影后的 BF16 隐藏向量在加入注意力残差前执行 AllReduce。61 层共插入 61 次归约。
 
 MoE EP 将 256 个路由专家的权重按 `expert_id mod EP` 分给各卡，并要求专家总数能整除 EP。每个 token 在全局仍选择 8 个专家，并保留分组 TopK、归一化权重和共享专家。理论负载按商和余数分配，EP16 时 8 张卡各处理 1 个有效槽位，另外 8 张卡处理 0 个。每卡按 `ceil(TopK / EP)` 预留槽位，理论执行计算包括填充，有效计算与路由专家权重读取按实际有效槽位计入。各卡完成本地专家后，在合并共享专家之前执行 AllReduce。58 个 MoE 层共插入 58 次归约。真实路由偏斜、互连拓扑与内核开销由实际执行决定。 [DeepSeek 官方推理参考](https://github.com/deepseek-ai/DeepSeek-V3/blob/b15f0dbbbe6a4bc403306175698439ef380f5fb5/inference/model.py)
 
-同池 TP8 ＋ EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
+MoE TP 配对切分 gate／up 的输出通道和 down 的输入通道。以 `MoE EP=4`、`MoE TP=2` 为例，四个专家组各持有 64 个专家，每组两张卡分别计算 1,024 个中间通道，并处理同一组的两条有效路由。八张卡归约带路由权重的部分输出，再加入共享专家。`Attention TP=8` 可复用这八张卡。该布局使用 BF16 理论方程。
+
+同池 Attention TP8 ＋ MoE EP8 的 BF16 权重为每卡 `179,355,099,136 B`。每卡每 token 保存 `70,272 B` 的 MLA 缓存，八个物理副本合计 `562,176 B`。DeepSeek-V3 在 8 张 192 GB MI300X、默认单请求单 token 的 Prefill 配置下，显存预算为 `179,931 token / 请求`。同池改用 MoE EP4 × TP2 得到相同预算。可用上下文长度由模型配置决定。通信预填可编辑的理论参考带宽 `100 GB/s`、每轮延迟 `3 µs`，算子 HBM 与通信本地 HBM 分别展示。 [模型和配置来源](MODEL_REFERENCES.md#deepseek-v3-与-deepseek-r1)
 
 ## DeepSeek-V4 Flash 系列
 
