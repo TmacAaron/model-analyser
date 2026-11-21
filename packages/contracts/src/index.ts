@@ -180,14 +180,15 @@ export const ParallelPresetRecipe = z.strictObject({deviceSlots:z.array(DeviceId
   plan:ParallelPlan.pick({assignments:true,communications:true,assumptions:true})});
 const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id,policy:z.literal('balanced').optional()});
 const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec});
-export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan','pipeline']),phases:Phases,
+export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan','pipeline','query_sharded']),phases:Phases,
   tensorShards:z.array(PresetTensorShard),
   sharedPoolDegrees:z.array(z.enum(['attentionTp','moeEp','moeTp'])).min(1).optional(),
   networkDefaults:z.strictObject({scope:z.enum(['intra_group','inter_group']),bytesPerSecond:z.number().positive(),latencySeconds:NonNegative,description:Id}).optional(),
   reductions:z.array(PresetReduction),
   moduleRules:z.array(z.strictObject({module:AssetRef,tensorShards:z.array(PresetTensorShard),reductions:z.array(PresetReduction)})).min(1).optional(),
   assumptions:z.array(Id).min(1),declaredPlan:ParallelPresetRecipe.optional(),
-  pipeline:z.strictObject({chainNodeId:NodeId,payloadBytes:ValueExpr,payloadDtype:DTypeSpec}).optional()});
+  pipeline:z.strictObject({chainNodeId:NodeId,payloadBytes:ValueExpr,payloadDtype:DTypeSpec}).optional(),
+  queryParallel:z.strictObject({axisId:Id,moduleGathers:z.array(z.strictObject({module:AssetRef,gathers:z.array(PresetReduction).min(1)})).min(1)}).optional()});
 export const FusionGroup = z.strictObject({groupId:Id,memberNodeIds:z.array(NodeId).min(1),eliminatedTensorIds:z.array(TensorId),
   origin:z.strictObject({asset:AssetRef,presetId:Id,scopeNodeId:NodeId}).optional(),extraCost:CostDefinition,extraLocalCost:z.strictObject({contextNodeId:NodeId,rule:LocalCostRule}).optional(),timeStrategy:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('sum_members')}),

@@ -5,7 +5,7 @@ import { makeQwen17Assets } from './model-expansion.js';
 import { makeQwenAssets } from './qwen-model.js';
 import { withLocalCost, type AxisBinding } from './local-cost-authoring.js';
 
-const attentionAxes: Record<string, AxisBinding[]> = {
+export const qwenAttentionAxes: Record<string, AxisBinding[]> = {
   qkv: [['NH', 'q-proj', 'head'], ['NK', 'k-proj', 'kvhead']],
   'qk-norm-rope': [['NH', 'q-proj', 'head'], ['NK', 'k-proj', 'kvhead']],
   'cache-update': [['NK', 'k-new', 'kvhead']],
@@ -26,7 +26,7 @@ export function makeQwenParallelAssets() {
   const decoder = AssetDocument.parse({
     ...originalDecoder,
     revision: 3,
-    definition: { ...originalDecoder.definition, graph: withLocalCost(originalDecoder.definition.graph, attentionAxes, description) },
+    definition: { ...originalDecoder.definition, graph: withLocalCost(originalDecoder.definition.graph, qwenAttentionAxes, description) },
     sources: [...originalDecoder.sources, { kind: 'note', text: 'Revision 3 declares local batch and attention-head equations and preserves the global equations.' }],
   });
   const localShards = [
@@ -64,7 +64,7 @@ export function makeQwenParallelAssets() {
         }],
       }),
     ];
-    const graph = withLocalCost(source, attentionAxes, description);
+    const graph = withLocalCost(source, qwenAttentionAxes, description);
     graph.nodes = graph.nodes.map(node => node.body.kind === 'module' && node.body.asset.assetId === decoder.assetId
       ? { ...node, body: { ...node.body, asset: ref(decoder) } } : node);
     return [AssetDocument.parse({

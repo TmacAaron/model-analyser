@@ -122,10 +122,10 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
   try{
     const pack=calculationInput(scenario,assets);
     const attempt=await analyzeScenario(pack.scenario,pack.assets);
-    if(attempt.status!=='available')return {status:'unavailable',message:attempt.diagnostics[0]?.message??'无法计算当前配置。'};
+    if(attempt.status!=='available')return {status:'unavailable',message:(attempt.diagnostics.find(row=>row.severity==='error')??attempt.diagnostics[0])?.message??'无法计算当前配置。'};
     const result=attempt.result,step=result.decode?.steps.at(-1),frame=step?.result??result,active=step?.scenario??pack.scenario;
     const expanded=instantiateModel(active,pack.assets,undefined,frame.stepContext);
-    if(expanded.status!=='available')return {status:'unavailable',message:expanded.diagnostics[0]?.message??'无法读取当前缓存结构。'};
+    if(expanded.status!=='available')return {status:'unavailable',message:(expanded.diagnostics.find(row=>row.severity==='error')??expanded.diagnostics[0])?.message??'无法读取当前缓存结构。'};
     const graph=expanded.resolved.graph;
     const model=pack.assets.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision);
     // These published research revisions describe their allocations in the model

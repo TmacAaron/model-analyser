@@ -36,6 +36,15 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
   if((p.strategy==='pipeline')!==(p.pipeline!==undefined))errors.push('流水线预设必须独立声明层链与传输消息');
   if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
+  if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
+  if(p.queryParallel){
+    if(p.tensorShards.length||p.reductions.length||p.moduleRules||p.phases.some(phase=>phase!=='prefill'))errors.push('查询分片布局适用于 Prefill，按声明查询轴和收集边界生成');
+    unique(p.queryParallel.moduleGathers.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块收集规则');
+    for(const rule of p.queryParallel.moduleGathers){
+      if(rule.module.kind!=='module')errors.push('查询分片收集边界必须引用固定模块修订');
+      unique(rule.gathers.map(gather=>gather.tensorId),'模块规则的收集张量');
+    }
+  }
   if(p.sharedPoolDegrees){
     if(p.strategy!=='tensor_sharded'||!(p.tensorShards.length||p.moduleRules?.length))errors.push('同池并行度需要轴分片预设和显式张量规则');
     unique(p.sharedPoolDegrees,'同池并行度');

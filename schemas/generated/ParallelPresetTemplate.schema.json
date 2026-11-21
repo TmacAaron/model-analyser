@@ -18,7 +18,8 @@
         "batch_sharded",
         "tensor_sharded",
         "declared_plan",
-        "pipeline"
+        "pipeline",
+        "query_sharded"
       ]
     },
     "phases": {
@@ -455,6 +456,26 @@
         "chainNodeId",
         "payloadBytes",
         "payloadDtype"
+      ],
+      "additionalProperties": false
+    },
+    "queryParallel": {
+      "type": "object",
+      "properties": {
+        "axisId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "moduleGathers": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema17"
+          }
+        }
+      },
+      "required": [
+        "axisId",
+        "moduleGathers"
       ],
       "additionalProperties": false
     }
@@ -1082,6 +1103,26 @@
         "sendBytes",
         "receiveBytes",
         "trafficFactor"
+      ],
+      "additionalProperties": false
+    },
+    "__schema17": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema8"
+        },
+        "gathers": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema6"
+          }
+        }
+      },
+      "required": [
+        "module",
+        "gathers"
       ],
       "additionalProperties": false
     }

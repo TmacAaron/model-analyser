@@ -4,9 +4,13 @@ import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeQwenParallelAssets } from './qwen-parallel-assets.js';
 import { addQwenPipelinePreset } from './qwen-pipeline.js';
+import { addQwenContextPreset } from './qwen-context-parallel.js';
 
 const assets = makeQwenParallelAssets();
-assets.push(...assets.filter(asset => asset.definition.kind === 'model').map(addQwenPipelinePreset));
+const pipeline = assets.filter(asset => asset.definition.kind === 'model').map(addQwenPipelinePreset);
+const decoder = assets.find(asset => asset.definition.kind === 'module');
+if (!decoder) throw Error('Missing Qwen decoder');
+assets.push(...pipeline, ...addQwenContextPreset(decoder, pipeline));
 assert.deepEqual(validateAssets(assets), []);
 for (const asset of assets) {
   const kind = asset.definition.kind;
@@ -17,7 +21,8 @@ for (const asset of assets) {
     const existing = AssetDocument.parse(JSON.parse(await readFile(file, 'utf8')));
     assert.equal(canonical(asset), canonical(existing), file);
   } catch (error) {
-    if (kind === 'formula' || !process.argv.includes('--write') || !(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+    if ((kind === 'formula' && !asset.assetId.startsWith('builtin:formula:qwen-pcp:')) ||
+        !process.argv.includes('--write') || !(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
     await writeFile(file, JSON.stringify(asset, null, 2) + '\n', { flag: 'wx' });
   }
 }

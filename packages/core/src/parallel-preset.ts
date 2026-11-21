@@ -4,6 +4,7 @@ import { calculationInput,computeInputHash } from './input-hash.js';
 import { resolveParallelPlan } from './parallel-plan.js';
 import { materializeDeclaredPreset } from './declared-parallel-preset.js';
 import { materializePipelinePreset } from './pipeline-preset.js';
+import { materializeQueryParallelPreset, queryGatherTileFormula } from './query-parallel-preset.js';
 import { FormulaError } from './formula.js';
 import { expertMeshPresets } from './expert-mesh-preset.js';
 import { canonical } from '../../contracts/src/validation.js';
@@ -96,6 +97,11 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[...requestCoordinate(i),i%replicaWidth]}))};
     const topology={...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh}:g)};
     const expanded=instantiateModel(expansionScenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
+    if(preset.strategy==='query_sharded'){
+      if(request.expertMesh)throw Error('PCP 预设只使用查询分片');
+      const plan=materializeQueryParallelPreset(request,preset,expanded.resolved,degree);
+      return await finishPreset(request,model,preset,topology,plan);
+    }
     if(preset.strategy!=='tensor_sharded'&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
     let parts=[{preset,groupId:group.groupId,meshAxisId:request.meshAxisId,size:replicaWidth}];
     let expertMesh:ExpertMesh;
@@ -178,9 +184,10 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
 
 async function finishPreset(request:ParallelPresetRequest,model:AssetDocument,preset:ParallelPresetTemplate,topology:Scenario['deviceTopology'],plan:Scenario['parallelPlan'],expertMesh?:ExpertMesh):Promise<ParallelPresetAttempt>{
     const {scenario,assets}=request;plan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,groupId:request.groupId,meshAxisId:request.meshAxisId,...(expertMesh?{expertMesh}:{}),...(request.requestDp?{requestDp:request.requestDp}:{})};
-    const existing=assets.find(asset=>asset.assetId===replicaPayloadFormula.assetId&&asset.revision===replicaPayloadFormula.revision);
-    if(request.requestDp&&existing&&canonical(existing)!==canonical(replicaPayloadFormula))throw Error('请求归约公式与固定内置修订冲突');
-    const layoutAssets=request.requestDp&&!existing?[...assets,replicaPayloadFormula]:assets;
+    const formula=request.requestDp?replicaPayloadFormula:preset.strategy==='query_sharded'?queryGatherTileFormula:undefined;
+    const existing=formula&&assets.find(asset=>asset.assetId===formula.assetId&&asset.revision===formula.revision);
+    if(formula&&existing&&canonical(existing)!==canonical(formula))throw Error('通信公式与固定内置修订冲突');
+    const layoutAssets=formula&&!existing?[...assets,formula]:assets;
     const next=Scenario.parse({...scenario,deviceTopology:topology,parallelPlan:plan});
     const firstDecode=next.workload.kind==='decode'&&next.workload.steps>1?{...next,workload:{...next.workload,steps:1}}:undefined;
     const resolved=await resolveParallelPlan(firstDecode??next,layoutAssets);if(resolved.status==='unavailable')throw Error(resolved.diagnostics.map(d=>d.code+' '+d.message).join('；'));const result=resolved.result;

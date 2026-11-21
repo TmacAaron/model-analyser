@@ -1,0 +1,22 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:parallel-query-gather-tile",
+  "revision": 1,
+  "name": "查询分片的逐卡收集消息",
+  "parameters": [],
+  "tags": ["parallel", "pcp"],
+  "sources": [{ "kind": "note", "text": "For an even contiguous query split, each rank sends one tile of the complete current K or V tensor." }],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "bytes": { "unit": "byte", "integerRequired": true, "min": 0 },
+        "parts": { "unit": "count", "integerRequired": true, "min": 2 }
+      },
+      "expression": "bytes / parts",
+      "output": { "unit": "byte", "integerRequired": true, "nonNegative": true },
+      "description": "The local tile size before a ring AllGather."
+    }
+  }
+}

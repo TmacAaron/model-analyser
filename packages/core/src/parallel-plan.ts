@@ -243,11 +243,17 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
       if(observedStorage?.storageId===id)storageOrigins.push({kind:explicit?'verified_backing':'inferred_from_tensor',nodeId:w.first.nodeId,objectId:tensor.tensorId,distribution,indices:w.indices,...(capacity?{capacity}:{})});
     }
     const communications:ParallelResolution['communications']=[];
+    const selectedPreset=assets.find(asset=>asset.assetId===scenario.model.assetId&&asset.revision===scenario.model.revision)?.parallelPresets
+      ?.find(preset=>preset.presetId===scenario.parallelPlan.generatedFrom?.presetId);
     const allSelection={roots:[NodeId.parse('$model')],frames:resolved.objectBindings,selected:leaves,inherited:new Set<NodeId>()};
     for(const [index,c] of scenario.parallelPlan.communications.entries()){
       if(c.placement&&!c.placement.phases.includes(resolved.phase))continue;
       location={kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'parallelPlan.communications.'+index};
       const from=targets('tensor',c.source.tensorId,allSelection),to=targets('tensor',c.destination.tensorId,allSelection);if(from.length!==1||to.length!==1||!from[0]||!to[0])throw new FormulaError('ambiguous_communication_target','通信端点需唯一的展开张量 ID');
+      if(selectedPreset?.strategy==='query_sharded'&&c.operation==='all_gather'){
+        const tensor=tensorsById.get(from[0].id),backing=tensor&&storagesById.get(canonicalStorage(tensor.storageId));
+        if(backing?.allocation.kind==='tensor'&&backing.allocation.quantization)throw new FormulaError('invalid_communication','当前 K/V 收集需保留声明的激活格式；量化传输需要独立的转换和消息规则');
+      }
       const temporaryStorageIds=c.temporaryStorageIds?.map(id=>{const matches=targets('storage',id,allSelection);if(matches.length!==1||!matches[0])throw new FormulaError('ambiguous_communication_buffer','通信临时存储需要唯一展开 ID');return StorageId.parse(matches[0].id);});
       const definition={...c,source:{tensorId:TensorId.parse(from[0].id),distribution:mappedLayout(c.source.distribution,from[0].axes)},destination:{tensorId:TensorId.parse(to[0].id),distribution:mappedLayout(c.destination.distribution,to[0].axes)},...(temporaryStorageIds?{temporaryStorageIds}:{})},group=scenario.deviceTopology.groups.find(g=>g.groupId===c.groupId);if(!group)throw new FormulaError('missing_reference','通信组缺失');
       const overrides=[...scenario.numericOverrides.entries()].filter(([,o])=>o.target.kind==='node'&&o.target.nodeId===c.placement?.nodeId),fields=new Set<string>();for(const [,o] of overrides){if(fields.has(o.field))throw new FormulaError('invalid_override','通信字段重复覆盖');fields.add(o.field);}if(fields.has('fixed_seconds')&&(fields.has('communication_bandwidth')||fields.has('communication_latency')))throw new FormulaError('invalid_override','固定通信时间不能同时覆盖带宽/延迟');

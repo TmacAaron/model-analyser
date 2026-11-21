@@ -134,31 +134,31 @@
                           "$ref": "#/$defs/__schema4"
                         },
                         "bindings": {
-                          "$ref": "#/$defs/__schema66"
-                        },
-                        "workload": {
                           "$ref": "#/$defs/__schema67"
                         },
-                        "deviceTopology": {
+                        "workload": {
                           "$ref": "#/$defs/__schema68"
+                        },
+                        "deviceTopology": {
+                          "$ref": "#/$defs/__schema69"
                         },
                         "parallelPlan": {
                           "$ref": "#/$defs/__schema44"
                         },
                         "executionPlan": {
-                          "$ref": "#/$defs/__schema70"
-                        },
-                        "quantizationOverrides": {
                           "$ref": "#/$defs/__schema71"
                         },
-                        "numericOverrides": {
+                        "quantizationOverrides": {
                           "$ref": "#/$defs/__schema72"
                         },
-                        "memoryPeakOverrides": {
+                        "numericOverrides": {
                           "$ref": "#/$defs/__schema73"
                         },
-                        "modulePeakOverrides": {
+                        "memoryPeakOverrides": {
                           "$ref": "#/$defs/__schema74"
+                        },
+                        "modulePeakOverrides": {
+                          "$ref": "#/$defs/__schema75"
                         },
                         "ascendQuantizationImports": {
                           "type": "array",
@@ -198,13 +198,13 @@
                               "mappings": {
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/$defs/__schema75"
+                                  "$ref": "#/$defs/__schema76"
                                 }
                               },
                               "appliedMappings": {
                                 "type": "array",
                                 "items": {
-                                  "$ref": "#/$defs/__schema75"
+                                  "$ref": "#/$defs/__schema76"
                                 }
                               },
                               "appliedNote": {
@@ -226,7 +226,7 @@
                           }
                         },
                         "fusionGroups": {
-                          "$ref": "#/$defs/__schema76"
+                          "$ref": "#/$defs/__schema77"
                         }
                       },
                       "required": [
@@ -269,34 +269,34 @@
                               "$ref": "#/$defs/__schema0"
                             },
                             "bindings": {
-                              "$ref": "#/$defs/__schema66"
-                            },
-                            "workload": {
                               "$ref": "#/$defs/__schema67"
                             },
-                            "deviceTopology": {
+                            "workload": {
                               "$ref": "#/$defs/__schema68"
+                            },
+                            "deviceTopology": {
+                              "$ref": "#/$defs/__schema69"
                             },
                             "parallelPlan": {
                               "$ref": "#/$defs/__schema44"
                             },
                             "executionPlan": {
-                              "$ref": "#/$defs/__schema70"
-                            },
-                            "quantizationOverrides": {
                               "$ref": "#/$defs/__schema71"
                             },
-                            "numericOverrides": {
+                            "quantizationOverrides": {
                               "$ref": "#/$defs/__schema72"
                             },
-                            "memoryPeakOverrides": {
+                            "numericOverrides": {
                               "$ref": "#/$defs/__schema73"
                             },
-                            "modulePeakOverrides": {
+                            "memoryPeakOverrides": {
                               "$ref": "#/$defs/__schema74"
                             },
+                            "modulePeakOverrides": {
+                              "$ref": "#/$defs/__schema75"
+                            },
                             "fusionGroups": {
-                              "$ref": "#/$defs/__schema76"
+                              "$ref": "#/$defs/__schema77"
                             }
                           },
                           "required": [
@@ -1610,7 +1610,8 @@
                   "batch_sharded",
                   "tensor_sharded",
                   "declared_plan",
-                  "pipeline"
+                  "pipeline",
+                  "query_sharded"
                 ]
               },
               "phases": {
@@ -1743,6 +1744,26 @@
                   "payloadDtype"
                 ],
                 "additionalProperties": false
+              },
+              "queryParallel": {
+                "type": "object",
+                "properties": {
+                  "axisId": {
+                    "$ref": "#/$defs/__schema0"
+                  },
+                  "moduleGathers": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/__schema63"
+                    }
+                  }
+                },
+                "required": [
+                  "axisId",
+                  "moduleGathers"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -1789,16 +1810,16 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "memberNodeIds": {
-                    "$ref": "#/$defs/__schema63"
+                    "$ref": "#/$defs/__schema64"
                   },
                   "eliminatedTensorIds": {
-                    "$ref": "#/$defs/__schema64"
+                    "$ref": "#/$defs/__schema65"
                   },
                   "extraCost": {
                     "$ref": "#/$defs/__schema21"
                   },
                   "timeStrategy": {
-                    "$ref": "#/$defs/__schema65"
+                    "$ref": "#/$defs/__schema66"
                   }
                 },
                 "required": [
@@ -4714,19 +4735,39 @@
       "additionalProperties": false
     },
     "__schema63": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema4"
+        },
+        "gathers": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema60"
+          }
+        }
+      },
+      "required": [
+        "module",
+        "gathers"
+      ],
+      "additionalProperties": false
+    },
+    "__schema64": {
       "minItems": 1,
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema64": {
+    "__schema65": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema0"
       }
     },
-    "__schema65": {
+    "__schema66": {
       "oneOf": [
         {
           "type": "object",
@@ -4764,13 +4805,13 @@
         }
       ]
     },
-    "__schema66": {
+    "__schema67": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema19"
       }
     },
-    "__schema67": {
+    "__schema68": {
       "oneOf": [
         {
           "type": "object",
@@ -4835,14 +4876,14 @@
         }
       ]
     },
-    "__schema68": {
+    "__schema69": {
       "type": "object",
       "properties": {
         "devices": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema69"
+            "$ref": "#/$defs/__schema70"
           }
         },
         "groups": {
@@ -4926,7 +4967,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema69": {
+    "__schema70": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -4942,7 +4983,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema70": {
+    "__schema71": {
       "oneOf": [
         {
           "type": "object",
@@ -5051,13 +5092,13 @@
         }
       ]
     },
-    "__schema71": {
+    "__schema72": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/__schema49"
       }
     },
-    "__schema72": {
+    "__schema73": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5178,7 +5219,7 @@
         "additionalProperties": false
       }
     },
-    "__schema73": {
+    "__schema74": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5244,7 +5285,7 @@
         "additionalProperties": false
       }
     },
-    "__schema74": {
+    "__schema75": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5275,7 +5316,7 @@
         "additionalProperties": false
       }
     },
-    "__schema75": {
+    "__schema76": {
       "type": "object",
       "properties": {
         "sourceKey": {
@@ -5308,7 +5349,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema76": {
+    "__schema77": {
       "type": "array",
       "items": {
         "type": "object",
@@ -5317,10 +5358,10 @@
             "$ref": "#/$defs/__schema0"
           },
           "memberNodeIds": {
-            "$ref": "#/$defs/__schema63"
+            "$ref": "#/$defs/__schema64"
           },
           "eliminatedTensorIds": {
-            "$ref": "#/$defs/__schema64"
+            "$ref": "#/$defs/__schema65"
           },
           "origin": {
             "type": "object",
@@ -5362,7 +5403,7 @@
             "additionalProperties": false
           },
           "timeStrategy": {
-            "$ref": "#/$defs/__schema65"
+            "$ref": "#/$defs/__schema66"
           }
         },
         "required": [

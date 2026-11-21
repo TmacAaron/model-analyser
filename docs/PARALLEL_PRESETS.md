@@ -14,6 +14,12 @@ Qwen3-0.6B r4、Qwen3-1.7B r3 和 Qwen3.8-27B r3 可在「并行方式」填写 
 
 Qwen3-1.7B 的 PP3 将 28 层分为 10、9、9 层。绑权的 embedding 和输出头各需要一份物理权重，分别驻留首尾卡。阶段之间以 SendRecv 发送完整 BF16 激活，Batch 2、单查询 token 时每处发送 8,192 B。Qwen3.8-27B 的 PP2 每卡各有 8 个 GQA／DeltaNet 周期，KV 合计为 65,536 B／token／请求。耗时使用单 microbatch 依次经过所有阶段的基线。
 
+## Qwen3 Prefill 查询分片
+
+Qwen3-0.6B r5 和 Qwen3-1.7B r4 可在 Prefill 的「并行方式」填写 PCP。当前查询 token 按连续位置均分，各卡执行自己的 embedding、投影、Attention、MLP 和输出头。每层先对当前 BF16 K 和 V 分别做 AllGather，再在各卡更新完整的 KV 缓存。历史 KV 和权重按卡复制，logits 保留查询分片。查询数须整除 PCP，点击应用 PP、TP 或其他度数时会生成相应的新布局。
+
+对每卡的查询长度 `q`、切片起点 `a`、历史长度 `C`，有效查询键对数为 `q(C+a) + q(q+1)/2`。物化矩形执行量使用 `q(C+Q)`，其中 `Q` 是当前全部查询数。Prefill 的 KV 预算逐卡包含复制量，两个型号的 BF16 缓存均为每卡 **114,688 B／token／请求**。理论通信按本卡当前 K/V tile 和环形模型计算。当前 K/V 激活沿用 BF16，KV 缓存存储可按配置单独量化。
+
 ## 请求 DP 与张量分片组合
 
 模型在当前阶段同时声明请求 DP 和张量分片时，可以组合两者。Attention DP2、TP2 使用两组独立请求，每组两张卡，共四张卡。Batch 4 会在每组安排两条请求，组内按原 TP 规则分配 Attention 权重和 KV 头。模型支持的 MoE EP 或 TP 布局也能在每个请求组内应用，沿用各自分片和全局 TopK。
