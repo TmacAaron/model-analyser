@@ -61,14 +61,15 @@ function reduction(tensorId: string, producer: string, consumers: string[], payl
   return { tensorId: TensorId.parse(tensorId), producerNodeId: NodeId.parse(producer), consumerNodeIds: consumers.map(id => NodeId.parse(id)), payloadBytes, payloadDtype: bf16 };
 }
 
-export function makeKimiK3ParallelAssets(): AssetDocument[] {
-  const [root, ...dependencies] = makeKimiK3Assets(2);
+export function makeKimiK3ParallelAssets(revision: 2 | 3 = 2): AssetDocument[] {
+  const [root, ...dependencies] = makeKimiK3Assets(revision);
   if (root?.definition.kind !== 'model') throw Error('Missing Kimi-K3 decoder');
   const notes = [equationNote, attention, expert, expertFeature];
   const sources: AssetDocument['sources'] = [
     ...root.sources.map(source => source.kind === 'note' ? { ...source, text: source.text.replace('device sharding and vision encoder', 'and vision encoder') } : source),
     { kind: 'url', url: 'https://vllm.ai/blog/2026-09-08-vllm-agentx', checkedOn: '2026-11-21' },
     ...notes.map(text => ({ kind: 'note' as const, text })),
+    ...(revision === 3 ? [{ kind: 'note' as const, text: 'The optional published MXFP4 weight preset replaces routed expert storage. Sparse reads use the local fraction of selected experts times the corresponding packed allocation.' }] : []),
   ];
   const equations = new Equations('builtin:formula:kimi-k3-parallel', ['B', 'Q', 'H', 'M'].map(key => parameter(key, 1)), [
     { kind: 'note', text: 'Logical BF16 tile for an AllReduce prior to ring traffic and launch factors.' },

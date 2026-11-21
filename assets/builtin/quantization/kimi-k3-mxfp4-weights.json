@@ -1,0 +1,162 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:quantization:kimi-k3-mxfp4-weights",
+  "revision": 1,
+  "name": "官方 MXFP4 权重",
+  "tags": [
+    "kimi-k3",
+    "mxfp4",
+    "published-weights"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/NVIDIA/Model-Optimizer/tree/main/examples/kimi",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "note",
+      "text": "Routed expert w1, w2 and w3 store two E2M1 values per byte with one E8M0 scale per 32 input channels. The preset covers text weight residency and sparse reads. Matrix execution, KV and other state follow the reference graph."
+    }
+  ],
+  "definition": {
+    "kind": "quantization",
+    "quantization": {
+      "selector": {
+        "kind": "subtree",
+        "rootNodeId": "$model"
+      },
+      "weight": {
+        "payloadBits": 4,
+        "payloadDtype": {
+          "category": "float",
+          "bits": 4,
+          "format": "fp4_e2m1"
+        },
+        "packingUnitElements": 2,
+        "alignmentBytes": 1,
+        "auxiliaries": [
+          {
+            "name": "weight_scale",
+            "dtype": {
+              "category": "float",
+              "bits": 8,
+              "format": "e8m0"
+            },
+            "count": {
+              "kind": "block",
+              "axes": [
+                {
+                  "axisId": "in",
+                  "blockSize": 32
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "modelWeights": {
+      "model": {
+        "assetId": "builtin:model:kimi-k3",
+        "revision": 3,
+        "kind": "model"
+      },
+      "moduleRules": [
+        {
+          "module": {
+            "assetId": "builtin:module:kimi-k3-layer-boundary",
+            "revision": 3,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "expert-gate-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-up-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-down-weight",
+              "axes": {
+                "in": "w1"
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:kimi-k3-layer-kda",
+            "revision": 3,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "expert-gate-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-up-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-down-weight",
+              "axes": {
+                "in": "w1"
+              }
+            }
+          ]
+        },
+        {
+          "module": {
+            "assetId": "builtin:module:kimi-k3-layer-mla",
+            "revision": 3,
+            "kind": "module"
+          },
+          "targets": [
+            {
+              "storageId": "expert-gate-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-up-weight",
+              "axes": {
+                "in": "w1"
+              }
+            },
+            {
+              "storageId": "expert-down-weight",
+              "axes": {
+                "in": "w1"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

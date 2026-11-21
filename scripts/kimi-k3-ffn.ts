@@ -18,11 +18,12 @@ function addSituMlp(graph: GraphAuthor, prefix: string, width: string, output: s
     { useful: '2 * B * Q * H * (' + width + ')' });
 }
 
-export function addKimiFfn(graph: GraphAuthor, dense: boolean, parallel = false) {
+export function addKimiFfn(graph: GraphAuthor, dense: boolean, revision: 1 | 2 | 3) {
   if (dense) {
     addSituMlp(graph, 'dense', 'I', 'ffn-output');
     return;
   }
+  const parallel = revision >= 2;
   weight(graph, 'router-weight', ['H', 'E']); weight(graph, 'router-bias', ['E'], fp32);
   for (const id of ['router-logits', 'router-affinities', 'router-corrected']) graph.tensor(id, sequence('E'), { dtype: fp32 });
   graph.tensor('expert-ids', sequence('K'), { dtype: int32 }); graph.tensor('expert-weights', sequence('K'), { dtype: fp32 });
@@ -59,6 +60,17 @@ export function addKimiFfn(graph: GraphAuthor, dense: boolean, parallel = false)
   graph.node('expert-situ', 'Routed expert SiTU-GLU', ['expert-gate-up-output'], ['expert-activation'], vectorWork(`15 * B * Q * ${slots} * J`));
   graph.node('expert-down', 'Routed expert latent down projections', ['expert-activation', 'expert-down-weight', ...packedIds], ['expert-output'],
     { useful: `2 * B * Q * ${slots} * M * J` }, { accessBytes: { 'expert-down-weight': read } });
+  if (revision === 3) {
+    const passes = graph.equations.value('min(E, B * Q * RouteSlots) / E', 'ratio');
+    for (const node of graph.graph.nodes) {
+      if (node.body.kind !== 'opaque') continue;
+      for (const access of node.body.cost.memoryAccess) {
+        if (access.mode === 'read' && /^expert-(gate|up|down)-weight$/.test(access.storageId)) {
+          access.logicalBytes = { kind: 'storage_allocation', passes };
+        }
+      }
+    }
+  }
   graph.node('combine', 'Weighted sum in the expert latent space', ['expert-output', scores], ['combined-latent'],
     vectorWork(parallel ? 'B * Q * M * max(0, 2 * RouteSlots - 1)' : 'B * Q * M * (2 * K - 1)'));
   weight(graph, 'latent-norm-weight', ['M']); graph.tensor('normalized-latent', sequence('M'));

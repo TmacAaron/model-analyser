@@ -3,10 +3,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeKimiK3Assets } from './kimi-k3-model.js';
+import { makeKimiK3MXFP4WeightPreset } from './kimi-k3-mxfp4-weights.js';
 import { makeKimiK3ParallelAssets } from './kimi-k3-parallel.js';
 
 const unique = new Map<string, AssetDocument>();
-for (const asset of [...makeKimiK3Assets(), ...makeKimiK3ParallelAssets()]) {
+const r3 = makeKimiK3ParallelAssets(3);
+for (const asset of [...makeKimiK3Assets(), ...makeKimiK3ParallelAssets(), ...r3, makeKimiK3MXFP4WeightPreset(r3)]) {
   const key = asset.assetId + '@' + asset.revision;
   const prior = unique.get(key);
   if (prior) assert.equal(canonical(prior), canonical(asset), key);

@@ -12,7 +12,7 @@ DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和
 
 GLM-5.2 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#glm-52)。每卡保留独立 MLA 缓存和 DSA 索引计算，MoE EP 保留全局 Top‑K，MoE TP 切分各专家的中间特征。
 
-Kimi-K3 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#kimi-k3)。KDA 固定状态随头数分片，MLA 可增长缓存逐卡复制。Latent MoE 在 RMSNorm 前归约，Attention 在深度混合与残差前归约。通用跨池和正式型号的上下文并行仍属于 F03，发布权重格式继续按 F09 核对。
+Kimi-K3 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#kimi-k3)。KDA 固定状态随头数分片，MLA 可增长缓存逐卡复制。Latent MoE 在 RMSNorm 前归约，Attention 在深度混合与残差前归约。r3 提供[官方 MXFP4 路由专家权重](MODEL_REFERENCES.md#kimi-k3)的显存与稀疏读取计算，含逐卡缩放因子。通用跨池和正式型号的上下文并行仍属于 F03，原生 MXFP4 执行和激活格式继续按 F09 核对。
 
 Qwen3.5-397B-A17B 和 Qwen3.8-27B r2 提供[全模型 Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen35-与-qwen38-混合注意力全模型)，按配对的头分片 GQA 缓存和 DeltaNet 固定状态。397B 进一步支持 MoE TP 和 r3 MoE EP，可独立分摊专家权重或与相同度数的 Attention TP 共用卡池。EP 下的逐卡路由按均衡估算，总专家分片时保留每 token 的全局 TopK。跨池和上下文并行仍需对应规则。
 

@@ -87,13 +87,15 @@ MoE EP 均分 256 个路由专家的权重。每个 token 选择 8 个专家，�
 
 ## Kimi-K3
 
-Kimi-K3 r2 支持请求 DP、Attention TP、MoE EP、MoE TP，以及 Attention TP 和同规模 MoE 并行共用卡池。请求 DP 分片完整请求及其深度归档、KDA 状态和 MLA 缓存，每卡持有完整权重。
+Kimi-K3 r2 和 r3 支持请求 DP、Attention TP、MoE EP、MoE TP，以及 Attention TP 和同规模 MoE 并行共用卡池。请求 DP 分片完整请求及其深度归档、KDA 状态和 MLA 缓存，每卡持有完整权重。
 
 Attention TP 分片 KDA 和 MLA 查询头。KDA 为每个头保存独立的卷积历史与递推矩阵，固定状态随头数分片。MLA 使用共享的潜向量和 NoPE 键缓存，在每卡复制。Attention 输出归约结束后再进入深度混合或残差累加。 [vLLM 的 Kimi-K3 并行说明](https://vllm.ai/blog/2026-07-27-k3) · [MLA 缓存与并行说明](https://vllm.ai/blog/2026-09-08-vllm-agentx)
 
 MoE EP 均分 896 个路由专家，每个 token 仍选择 16 个专家。理论有效槽位按商和余数分配，逐卡按向上取整的槽位数预留。MoE TP 切分每个专家内成对的 gate／up 特征和对应的 down 输入。两种方式都先归约 BF16 潜向量，再执行 RMSNorm 和升维投影。
 
 BF16 的 TP8＋EP8 配置每卡权重为 731,585,710,576 B。每个活跃请求每卡另有 56,807,424 B 的固定 KDA 状态，MLA 每 token 占 27,648 B。93 层 Attention 和 92 层 Latent MoE 共 185 次 AllReduce。正向浏览器测试采用自定义的 750 GB／卡容量，耗时使用可编辑的环形归约参数。
+
+r3 的同卡池 TP8＋EP8 配置选择「官方 MXFP4 权重」后，每卡权重为 231,707,511,280 B，含 112 个路由专家在各 MoE 层的本地缩放因子。以 256 GB／卡的自定义容量可获得正的 KV token 预算。 [权重覆盖范围](MODEL_REFERENCES.md#kimi-k3)
 
 ## 独立 GQA 模型
 

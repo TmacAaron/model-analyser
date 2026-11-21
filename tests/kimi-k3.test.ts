@@ -3,7 +3,9 @@ import type { MetricValue } from '@model-analyser/contracts';
 import { analyzeScenario, estimateKvCapacity, instantiateModel, previewParallelPreset } from '@model-analyser/core';
 import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { makeKimiK3Assets } from '../scripts/kimi-k3-model.js';
+import { makeKimiK3MXFP4WeightPreset } from '../scripts/kimi-k3-mxfp4-weights.js';
 import { makeKimiK3ParallelAssets } from '../scripts/kimi-k3-parallel.js';
+import { ref } from '../scripts/model-authoring.js';
 import { makeModelProject } from '../scripts/model-project.js';
 
 const H = 7168, V = 163840, N = 96, D = 128, W = 4, QR = 1536, R = 512, DN = 128, DX = 64, DV = 128;
@@ -110,3 +112,36 @@ it('partitions depth activations, fixed KDA state and MLA slots by request in DP
     .toEqual(Array(2).fill([allWeights, fixedState + 4 * kvPerToken]));
   expect(attempt.preview.communicationCount).toBe(0);
 }, 120_000);
+
+it('uses the published expert payload and input scales in the local EP ledger', async () => {
+  const assets = makeKimiK3ParallelAssets(3);
+  const preset = makeKimiK3MXFP4WeightPreset(assets);
+  if (preset.definition.kind !== 'quantization') throw Error('Missing Kimi-K3 weight preset');
+  const project = makeModelProject([...assets, preset], {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 3,
+  }, 'Kimi-K3 MXFP4');
+  const scenario = { ...project.scenarios[0]!, quantizationOverrides: [{ ...preset.definition.quantization, preset: ref(preset) }] };
+  const degree = 2;
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets: project.assetSnapshots,
+    presetId: 'tp-kimi-attention-ep', network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 6000));
+  const { preview } = attempt;
+  const perMatrix = M * J / 2 + M * J / 32;
+  const attentionShards = linearLayers * kdaShards + fullLayers * mlaShards;
+  const resident = allWeights - attentionShards * (1 - 1 / degree) - 92 * expertShards + 92 * 3 * (E / degree) * perMatrix;
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(
+    Array(degree).fill([resident, fixedState / degree + 4 * kvPerToken]));
+
+  const analyzed = await analyzeScenario(preview.scenario, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 4)));
+  const layout = analyzed.result.distributed?.layout;
+  const local = layout?.localCosts.nodes.find(node => node.nodeId === 'tail/final-full/expert-gate-up')?.placement;
+  if (local?.kind !== 'placed') throw Error('Missing local gate and up costs');
+  expect(local.perDevice).toHaveLength(degree);
+  for (const { outcome } of local.perDevice) {
+    if (outcome.status !== 'available') throw Error('Expected local EP gate and up cost');
+    expect(known(outcome.cost.compute[0]?.executedOperations)).toBe(4 * (K / degree) * M * J);
+    expect(outcome.cost.compute[0]?.computeClass.multiplyDtype.format).toBe('bf16');
+    expect(known(outcome.cost.logicalReadBytes)).toBe((K / degree) * (2 * perMatrix + 2 * M + 4));
+  }
+}, 200_000);

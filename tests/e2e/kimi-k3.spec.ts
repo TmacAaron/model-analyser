@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { makeKimiK3ParallelAssets } from '../../scripts/kimi-k3-parallel.js';
+import { makeModelProject } from '../../scripts/model-project.js';
 
 const node = (id: string) => '[data-node-id="' + id + '"]';
 
@@ -58,4 +61,51 @@ test('analyzes two actual Decode steps of the full Kimi-K3 model', async ({ page
   await expect(decode.getByRole('row').filter({ hasText: '3 → 4' })).toBeVisible();
   await decode.getByLabel('查看 Decode 步骤', { exact: true }).selectOption('1');
   await expect(decode).toContainText('步骤输入');
+});
+
+test('opens an EP8 KV budget with the published MXFP4 weights on the same canvas', async ({ page }) => {
+  test.setTimeout(480_000);
+  const project = makeModelProject(makeKimiK3ParallelAssets(), {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 3,
+  }, 'Kimi-K3 weight formats');
+  project.projectId = randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({ name: 'kimi-k3-weight-formats.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  const saved = page.locator('.studio-save');
+  await expect(saved).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '量化', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r3', exact: true }).click();
+  await expect(saved).toContainText('已保存 · 修订 2');
+
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');
+  await expect(saved).toContainText('已保存 · 修订 3');
+  await page.getByRole('button', { name: '自定义参数', exact: true }).click();
+  await page.getByLabel('硬件名称', { exact: true }).fill('Kimi 容量验证 · 256 GB');
+  await page.getByLabel('硬件容量 byte', { exact: true }).fill('256000000000');
+  await page.getByRole('button', { name: '应用自定义参数', exact: true }).click();
+  await expect(saved).toContainText('已保存 · 修订 4');
+
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await page.getByLabel('Attention TP', { exact: true }).fill('8');
+  await page.getByLabel('MoE EP', { exact: true }).fill('8');
+  const layout = page.getByRole('region', { name: '逻辑分片与通信' });
+  await layout.getByRole('button', { name: '校验布局' }).click();
+  await expect(layout).toContainText('8 个实际设备 · 185 个通信', { timeout: 160_000 });
+  await layout.getByRole('button', { name: '应用并行度' }).click();
+  await expect(saved).toContainText('已保存 · 修订 5');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('显存不足', { timeout: 150_000 });
+
+  await page.getByRole('button', { name: '量化', exact: true }).click();
+  const formats = page.getByRole('group', { name: '发布权重格式' });
+  const mxfp4 = formats.getByRole('button', { name: '官方 MXFP4 权重' });
+  await mxfp4.click();
+  await expect(mxfp4).toHaveAttribute('aria-pressed', 'true');
+  await expect(saved).toContainText('已保存 · 修订 6');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 150_000 });
+  await expect(capacity).toContainText('每卡复制 27,648 B / token');
+  await expect(page.locator('.canvas-status')).toContainText('8 物理设备');
 });

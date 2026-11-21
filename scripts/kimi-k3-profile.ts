@@ -44,5 +44,5 @@ export function loadKimiK3() {
     JSON.stringify(linear['full_attn_layers']) !== JSON.stringify(mla) || JSON.stringify(linear['kda_layers']) !== JSON.stringify(kda)) {
     throw Error('Kimi-K3 attention, routing or depth schedule changed');
   }
-  return { dimensions, fullBlocks };
+  return { dimensions, fullBlocks, quantization: text['quantization_config'] };
 }
