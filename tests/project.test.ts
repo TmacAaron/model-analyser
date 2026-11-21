@@ -7,7 +7,7 @@ import { fixture } from './fixtures.js';
 it('C06 project dependency snapshots remain unchanged after library updates and reopen without library',async()=>{
   const root=await mkdtemp(resolve('data-test-'));
   try {
-    const store=new FileStore(root,resolve('assets/builtin'));
+    const store=new FileStore(root,resolve(root,'builtins'));
     const a=AssetDocument.parse({...fixture(),assetId:'a'});
     if(a.definition.kind==='formula')a.definition.formula.output.unit='byte';
     const graph={inputs:[],outputs:[],nodes:[],edges:[],dependencies:[],tensors:[],storages:[],states:[]};
@@ -21,7 +21,7 @@ it('C06 project dependency snapshots remain unchanged after library updates and 
     const project=ProjectDocument.parse({documentType:'project',schemaVersion:1,projectId:'p',projectRevision:1,name:'旧项目',scenarios:[],assetSnapshots:snapshots,measurements:[],viewState:{nodes:[]}});
     await store.saveProject(project,null);
     const changed=AssetDocument.parse({...a,name:'A 新名称'});await store.saveDraft(AssetDraft.parse({documentType:'asset_draft',schemaVersion:1,draftId:'a',assetId:'a',assetKind:'formula',baseRevision:1,draftGeneration:2,updatedAt:new Date().toISOString(),candidate:changed}));await store.commit('a',2,1);
-    const isolated=new FileStore(root,resolve('does-not-exist'));expect((await isolated.projects())[0]?.assetSnapshots).toEqual(snapshots);
+    const isolated=new FileStore(root,resolve(root,'isolated-builtins'));expect((await isolated.projects())[0]?.assetSnapshots).toEqual(snapshots);
     expect((await store.read('b',1)).revision).toBe(1);await expect(store.saveProject(project,null)).rejects.toThrow('项目已变化');
   } finally {await rm(root,{force:true,recursive:true});}
 });

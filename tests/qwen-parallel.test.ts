@@ -1,11 +1,11 @@
 import { expect, it } from 'vitest';
-import { DeviceId, Scenario, type MetricValue } from '@model-analyser/contracts';
+import { DeviceId, NodeId, Scenario, type MetricValue } from '@model-analyser/contracts';
 import { analyzeScenario, estimateKvCapacity, previewParallelPreset, replayCommunicationCostSource, resolveParallelPlan } from '@model-analyser/core';
 import { currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenParallelAssets } from '../scripts/qwen-parallel-assets.js';
-import { addQwenPipelinePreset, addQwenPipelineRequestParallel } from '../scripts/qwen-pipeline.js';
+import { addQwenPipelineAttentionParallel, addQwenPipelinePreset, addQwenPipelineRequestParallel } from '../scripts/qwen-pipeline.js';
 
 const hidden = 2048, width = 128, queries = 16, kvHeads = 8, layers = 28, intermediate = 6144, vocab = 151936;
 const attentionMatrices = hidden * width * (2 * queries + 2 * kvHeads);
@@ -284,3 +284,71 @@ it('runs independent request pipelines with paired stage transfers, local weight
   expect(await previewParallelPreset({ ...request, scenario: old, assets: [...assets, legacy] }))
     .toMatchObject({ status: 'unavailable', message: expect.stringContaining('未声明此布局可与请求 DP 组合') });
 }, 150_000);
+
+it('partitions Qwen attention inside each pipeline stage and keeps two request groups independent', async () => {
+  const input = prepare({ kind: 'decode', batchSize: 4, queryTokensPerRequest: 1, contextTokensPerRequest: 2, steps: 2 }, layers, 8);
+  const root = input.assets.find(asset => asset.definition.kind === 'model')!;
+  const legacy = addQwenPipelineRequestParallel(addQwenPipelinePreset(root));
+  const model = addQwenPipelineAttentionParallel(legacy, 'tp-attention-heads');
+  const assets = input.assets.map(asset => asset === root ? model : asset);
+  const scenario = { ...input.scenario, model: { ...input.scenario.model, revision: model.revision } };
+  const degrees = { ...serialDegrees, pp: 2, attentionTp: 2, attentionDp: 2 };
+  const presets = model.parallelPresets!;
+  const [match] = matchingParallelPresets(degrees, presets, scenario);
+  expect(match).toMatchObject({ slots: 8, requestDp: 2, pipelineTp: 2, preset: { presetId: 'pp-decoder' } });
+  const network = { bytesPerSecond: 1e11, latencySeconds: 3e-6 };
+  const request = { ...input, scenario, assets, presetId: 'pp-decoder', requestDp: 2, pipelineTp: 2, network };
+  const attempt = await previewParallelPreset(request);
+  if(attempt.status!=='available')throw Error(attempt.message.slice(0,7000));
+  const { preview } = attempt, reopened = Scenario.parse(JSON.parse(JSON.stringify(preview.scenario)));
+  expect(currentDegrees(reopened, presets)).toEqual(degrees);
+  expect(preview.communicationCount).toBe(layers+1);
+  const layerBytes = 2 * (attentionMatrices/2 + replicaParameters);
+  const tied = 2 * hidden * vocab, stageWeight = 14*layerBytes+tied;
+  expect(preview.allocations.map(row=>row.weightBytes)).toEqual([0,0,1,1,0,0,1,1].map(tail=>stageWeight+tail*2*hidden));
+  const localBatch=2, kvPerRankAndToken=14*4*width*(kvHeads/2);
+  expect(preview.allocations.map(row=>row.stateBytes)).toEqual(Array(8).fill(localBatch*3*kvPerRankAndToken));
+
+  const result=await analyzeScenario(reopened,preview.assets);
+  if(result.status!=='available'||!result.result.decode)throw Error(JSON.stringify(result).slice(0,7000));
+  expect(validateResult(result.result)).toEqual([]);
+  for(const [stepIndex,step] of result.result.decode.steps.entries()){
+    const layout=step.result.distributed!.layout;
+    expect(layout.execution).toMatchObject({status:'available',result:{completeness:'complete'}});
+    expect(step.memory.map(row=>count(row.categoryBreakdown.find(category=>category.category==='state')?.bytes)))
+      .toEqual(Array(8).fill(localBatch*(3+stepIndex)*kvPerRankAndToken));
+    const stagePeers=[['gpu0','gpu2'],['gpu1','gpu3'],['gpu4','gpu6'],['gpu5','gpu7']];
+    const stageSend=layout.communications.find(row=>row.evaluation.definition.operation==='send_recv')?.evaluation;
+    const message=2*localBatch*hidden;
+    expect(stageSend?.definition.peerPairs?.map(pair=>[pair.sourceDeviceId,pair.destinationDeviceId])).toEqual(stagePeers);
+    expect(count(stageSend?.cost.communications[0]?.groupSendBytes)).toBe(stagePeers.length*message);
+    expect(count(stageSend?.cost.seconds)).toBeCloseTo(network.latencySeconds+message/network.bytesPerSecond,12);
+    const reductions=layout.communications.filter(row=>row.evaluation.definition.operation==='all_reduce');
+    expect(reductions).toHaveLength(28);
+    for(const [layer,{evaluation}] of reductions.entries()){
+      expect(evaluation.cost.scope.deviceIds).toEqual(layer<14?['gpu0','gpu1','gpu4','gpu5']:['gpu2','gpu3','gpu6','gpu7']);
+      expect(evaluation.source.placements.map(row=>row.slices.find(slice=>slice.axisId==='b')))
+        .toMatchObject([{start:0,end:2},{start:0,end:2},{start:2,end:4},{start:2,end:4}]);
+      expect(evaluation.perDevice.map(row=>count(row.sendBytes))).toEqual(Array(4).fill(message));
+      expect(count(evaluation.cost.seconds)).toBeCloseTo(2*network.latencySeconds+message/network.bytesPerSecond,12);
+    }
+    const oProj=layout.localCosts.nodes.find(row=>row.nodeId==='decoder[0]/o-proj')?.placement;
+    if(oProj?.kind!=='placed')throw Error('Missing stage-local TP output cost');
+    expect(oProj.perDevice.map(row=>row.outcome.status==='available'?count(row.outcome.cost.compute[0]?.usefulOperations):null))
+      .toEqual(Array(4).fill(2*localBatch*queries*width*hidden/2));
+  }
+  expect(await estimateKvCapacity(reopened,preview.assets)).toMatchObject({status:'available',report:{
+    averageBytesPerToken:layers*4*width*kvHeads,budget:{status:'available'},
+  }});
+  const quantized={...reopened,quantizationOverrides:[{
+    selector:{kind:'subtree' as const,rootNodeId:NodeId.parse('$model')},
+    state:{payloadBits:8,packingUnitElements:1,alignmentBytes:1,auxiliaries:[]},
+  }]};
+  expect(await estimateKvCapacity(quantized,preview.assets)).toMatchObject({status:'available',report:{
+    averageBytesPerToken:layers*2*width*kvHeads,budget:{status:'available'},
+    devices:Array(8).fill(expect.objectContaining({kvBytes:localBatch*4*kvPerRankAndToken/2})),
+  }});
+  const old={...scenario,model:{...scenario.model,revision:legacy.revision}};
+  expect(await previewParallelPreset({...request,scenario:old,assets:[...assets,legacy]}))
+    .toMatchObject({status:'unavailable',message:expect.stringContaining('未声明可用的阶段内 Attention TP')});
+}, 160_000);

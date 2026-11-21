@@ -6,16 +6,17 @@ import { makeQwenHybridAssets } from './qwen-hybrid-model.js';
 import { makeQwenHybridParallelAssets } from './qwen-hybrid-parallel.js';
 import { makeQwen35FP8WeightPreset } from './qwen35-fp8-weights.js';
 import { makeQwen35FP8ExecutionAssets } from './qwen35-fp8-execution.js';
-import { addQwenPipelinePreset, addQwenPipelineRequestParallel } from './qwen-pipeline.js';
+import { addQwenPipelineAttentionParallel, addQwenPipelinePreset, addQwenPipelineRequestParallel } from './qwen-pipeline.js';
 
 const assets = new Map<string, AssetDocument>();
 for (const release of ['qwen35', 'qwen38'] as const) {
   const latest = release === 'qwen35' ? makeQwenHybridParallelAssets(release, 4) : [];
   const parallel = makeQwenHybridParallelAssets(release);
   const pipeline = release === 'qwen38' ? parallel.filter(row => row.definition.kind === 'model').map(addQwenPipelinePreset) : [];
+  const pipelineRequest = pipeline.map(addQwenPipelineRequestParallel);
   const published = release === 'qwen35' ? makeQwen35FP8WeightPreset(latest) : undefined;
   for (const asset of [...makeQwenHybridAssets(release), ...parallel,
-    ...pipeline, ...pipeline.map(addQwenPipelineRequestParallel),
+    ...pipeline, ...pipelineRequest, ...pipelineRequest.map(model=>addQwenPipelineAttentionParallel(model,'tp-hybrid-attention')),
     ...(published ? [...makeQwenHybridParallelAssets(release, 3), ...latest, published, ...makeQwen35FP8ExecutionAssets(latest, published)] : [])]) {
     const key = asset.assetId + '@' + asset.revision;
     const prior = assets.get(key);

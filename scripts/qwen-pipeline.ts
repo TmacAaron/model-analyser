@@ -29,3 +29,11 @@ export function addQwenPipelineRequestParallel(model: AssetDocument) {
     } : preset),
   });
 }
+
+export function addQwenPipelineAttentionParallel(model: AssetDocument, attentionPresetId: string) {
+  return AssetDocument.parse({ ...model, revision: model.revision + 1,
+    parallelPresets: model.parallelPresets?.map(preset => preset.pipeline ? {
+      ...preset, pipeline: { ...preset.pipeline, attentionPresetId },
+    } : preset),
+  });
+}

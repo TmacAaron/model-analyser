@@ -125,8 +125,12 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
         next.parallelPlan.decodeContext=preset.decodeContext;
       }else if(previous?.queryParallel&&(!preset.queryParallel||canonical(preset.queryParallel)!==canonical(previous.queryParallel))){
         throw Error('新模型修订没有兼容的 Prefill 查询分片布局');
-      }else if(previous?.pipeline&&(!preset.pipeline||canonical(preset.pipeline)!==canonical(previous.pipeline))){
-        throw Error('新模型修订没有兼容的流水线布局');
+      }else if(previous?.pipeline){
+        const before=previous.pipeline,after=preset.pipeline;
+        if(!after||before.chainNodeId!==after.chainNodeId||canonical(before.payloadBytes)!==canonical(after.payloadBytes)||
+           canonical(before.payloadDtype)!==canonical(after.payloadDtype)||origin.pipelineTp&&before.attentionPresetId!==after.attentionPresetId){
+          throw Error('新模型修订没有兼容的流水线布局');
+        }
       }
       if(preset.phases.includes(next.workload.kind)){
         await modelUpgradeValidation.run({kind:'model',scenario:next,assets,validateLayout:true});

@@ -33,6 +33,12 @@ export function nativeBindingIssues(b:Bindings,topology:Scenario['deviceTopology
   }return errors;
 }
 
+export function pipelineAttentionPreset(preset:ParallelPresetTemplate,presets:ParallelPresetTemplate[],phase:ParallelPresetTemplate['phases'][number]){
+  const id=preset.strategy==='pipeline'?preset.pipeline?.attentionPresetId:undefined;
+  return id?presets.find(row=>row.presetId===id&&row.strategy==='tensor_sharded'&&row.phases.includes(phase)&&
+    row.sharedPoolDegrees?.length===1&&row.sharedPoolDegrees[0]==='attentionTp'):undefined;
+}
+
 export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   const r=p.declaredPlan,errors:string[]=[],unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)errors.push(label+' 重复');};
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');

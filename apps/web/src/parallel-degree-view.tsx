@@ -73,7 +73,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
         throw Error('请输入大于零的通信带宽和非负的单轮延迟。');
       }
       const input = ParallelPresetRequest.parse({ ...pool, assets: [...project.assetSnapshots, ...extra], presetId: match.preset.presetId,
-        network, expertMesh: match.expertMesh, requestDp: match.requestDp });
+        network, expertMesh: match.expertMesh, requestDp: match.requestDp, pipelineTp: match.pipelineTp });
       const worker = new Worker(new URL('./parallel-preset-worker.ts', import.meta.url), { type: 'module' });
       task.worker = worker;
       worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -138,6 +138,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
           : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
+          : match.pipelineTp ? '阶段内 AllReduce · 阶段间 SendRecv'
           : match.preset.strategy === 'pipeline' ? (match.requestDp ? '各请求组独立执行阶段间 SendRecv' : '阶段间 SendRecv')
           : match.preset.strategy === 'query_sharded' ? (match.requestDp ? '每层在各请求组内收集 K 和 V' : '每个注意力层收集当前 K 和 V')
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>

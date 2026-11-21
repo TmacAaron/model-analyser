@@ -25,7 +25,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.locator('.studio-layout-notice')).toContainText('2 张卡');
-  await page.getByRole('button', { name: '更新模型到 r8', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r9', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByLabel('Attention TP', { exact: true }).fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -39,7 +39,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const current = ProjectDocument.parse((await response.json()).data).scenarios[0]!;
-  expect(current.model.revision).toBe(8);
+  expect(current.model.revision).toBe(9);
   expect(current.deviceTopology.devices).toEqual([first, second]);
   expect(current.workload).toEqual(scenario.workload);
   expect(current.parallelPlan.communications).toHaveLength(28);
@@ -83,7 +83,7 @@ test('upgrades active Qwen3 PCP and gathers K/V independently for each request g
   await expect(logical).toContainText('2 个实际设备 · 56 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
-  await page.getByRole('button', { name: '更新模型到 r9', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r10', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
   await expect(pcp).toHaveValue('2');
   await dp.fill('2');
@@ -100,7 +100,7 @@ test('upgrades active Qwen3 PCP and gathers K/V independently for each request g
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const applied = ProjectDocument.parse((await response.json()).data).scenarios[0];
-  expect(applied).toMatchObject({ model: { revision: 9 }, parallelPlan: { generatedFrom: { modelRevision: 9, requestDp: 2 } } });
+  expect(applied).toMatchObject({ model: { revision: 10 }, parallelPlan: { generatedFrom: { modelRevision: 10, requestDp: 2 } } });
   expect(applied?.parallelPlan.communications).toHaveLength(56);
   expect(applied?.parallelPlan.communications.every(row => row.operation === 'all_gather' &&
     row.destination.distribution.kind === 'sharded' && row.destination.distribution.axes.length === 1)).toBe(true);
@@ -143,14 +143,14 @@ test('applies Qwen3 DCP within independent request groups and displays their cac
   await expect(logical).toContainText('2 个实际设备 · 84 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
-  await page.getByRole('button', { name: '更新模型到 r8', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r9', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
   await expect(dcp).toHaveValue('2');
   const upgrade = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(upgrade.ok()).toBe(true);
   const upgraded = ProjectDocument.parse((await upgrade.json()).data).scenarios[0]!;
-  expect(upgraded).toMatchObject({ model: { revision: 8 }, parallelPlan: {
-    generatedFrom: { modelRevision: 8 }, decodeContext: { replacement: { revision: 2 } },
+  expect(upgraded).toMatchObject({ model: { revision: 9 }, parallelPlan: {
+    generatedFrom: { modelRevision: 9 }, decodeContext: { replacement: { revision: 2 } },
   } });
   expect(upgraded.deviceTopology.devices).toHaveLength(2);
   expect(upgraded.parallelPlan.communications).toHaveLength(84);
