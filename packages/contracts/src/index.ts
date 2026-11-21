@@ -129,7 +129,9 @@ export const CommunicationDefinition = z.strictObject({operation:z.enum(['all_re
 });
 export const DependencyEdge = z.strictObject({edgeId:Id,fromNodeId:NodeId,toNodeId:NodeId,kind:z.enum(['control','synchronization'])});
 export const NodeSelector = z.discriminatedUnion('kind',[z.strictObject({kind:z.literal('nodes'),nodeIds:z.array(NodeId).min(1)}),z.strictObject({kind:z.literal('subtree'),rootNodeId:NodeId})]);
-export const ParallelPresetOrigin = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,modelId:AssetId,modelRevision:PositiveInt,groupId:Id,meshAxisId:Id});
+const ExpertMeshFactors = z.strictObject({ep:z.number().int().min(2).max(64),tp:z.number().int().min(2).max(64)});
+export const ParallelPresetOrigin = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,modelId:AssetId,modelRevision:PositiveInt,groupId:Id,meshAxisId:Id,
+  expertMesh:ExpertMeshFactors.extend({groupId:Id}).optional()});
 export const NativeCollectiveBindings = z.strictObject({groups:z.array(z.strictObject({logicalGroupId:Id,physicalGroupId:Id,
   meshAxes:z.array(z.strictObject({logicalAxisId:Id,physicalAxisId:Id}))})),devices:z.array(z.strictObject({logicalDeviceId:DeviceId,physicalDeviceId:DeviceId})),
   network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional()});
@@ -226,7 +228,7 @@ export const Scenario = z.strictObject({scenarioId:Id,name:Id,model:AssetRef,bin
     z.strictObject({kind:z.literal('decode'),batchSize:PositiveInt,contextTokensPerRequest:Natural,queryTokensPerRequest:PositiveInt,steps:PositiveInt,approximation:z.literal('fixed_context').optional()}),
   ]),deviceTopology:DeviceTopology,parallelPlan:ParallelPlan,executionPlan:ExecutionPlan,quantizationOverrides:z.array(QuantizationDefinition),numericOverrides:z.array(NumericOverride),memoryPeakOverrides:z.array(MemoryPeakOverride).optional(),modulePeakOverrides:z.array(ModulePeakOverride).optional(),ascendQuantizationImports:z.array(AscendQuantizationReview).optional(),fusionGroups:z.array(FusionGroup)});
 export const ParallelPresetRequest = z.strictObject({scenario:Scenario,assets:z.array(AssetDocument),presetId:Id,groupId:Id,meshAxisId:Id,
-  network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional()});
+  network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional(),expertMesh:ExpertMeshFactors.optional()});
 export const ParallelPresetPreview = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,presetName:Id,sourceModel:AssetRef,sourceInputHash:Id,scenario:Scenario,assets:z.array(AssetDocument),
   deviceIds:z.array(DeviceId),assignmentCount:Natural,communicationCount:Natural,communications:z.array(CommunicationDefinition).optional(),allocations:z.array(z.strictObject({deviceId:DeviceId,totalBytes:Natural,weightBytes:Natural,stateBytes:Natural})),warnings:z.array(Id)});
 export const ParallelPresetAttempt = z.discriminatedUnion('status',[

@@ -132,3 +132,15 @@ it('partitions independent requests and their cache by batch', async () => {
   expect(attempt.preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(2).fill([weight, state]));
   expect(attempt.preview.communicationCount).toBe(0);
 }, 90_000);
+
+it('reuses all four GLM Attention TP ranks for a two by two expert mesh', async () => {
+  const { scenario, assets, presets } = parallelProject(1, 1);
+  const [match] = matchingParallelPresets({ ...serialDegrees, attentionTp: 4, moeEp: 2, moeTp: 2 }, presets, scenario);
+  expect(match).toMatchObject({ preset: { presetId: 'tp-glm-attention-ep' }, slots: 4, expertMesh: { ep: 2, tp: 2 } });
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, 4), assets, presetId: match!.preset.presetId,
+    expertMesh: match!.expertMesh, network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 4000));
+  expect(attempt.preview.scenario.deviceTopology.groups.map(group => group.members)).toEqual(Array(2).fill(attempt.preview.deviceIds));
+  expect(attempt.preview.communications?.filter(row => row.placement?.beforeNodeIds[0]?.endsWith('/shared-add'))).toHaveLength(7);
+  expect(attempt.preview.communications?.filter(row => row.placement?.beforeNodeIds[0]?.endsWith('/attention-residual'))).toHaveLength(10);
+}, 90_000);

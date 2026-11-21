@@ -4,6 +4,7 @@ export * from './storage.js';
 export { evaluateAggregateTiming, evaluateCost, memoryAccessBytes } from './cost.js';
 export * from './parameters.js';
 export * from './parallel-preset.js';
+export * from './expert-mesh-preset.js';
 export * from './instantiate.js';
 export * from './leaf-cost-source.js';
 export * from './graph.js';
