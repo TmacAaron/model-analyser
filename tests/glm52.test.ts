@@ -1,7 +1,11 @@
 import { expect, it } from 'vitest';
-import type { MetricValue } from '@model-analyser/contracts';
-import { analyzeScenario, estimateKvCapacity, instantiateModel } from '@model-analyser/core';
+import { readFileSync } from 'node:fs';
+import { AssetDocument, type MetricValue } from '@model-analyser/contracts';
+import { analyzeScenario, estimateKvCapacity, instantiateModel, previewParallelPreset } from '@model-analyser/core';
+import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { makeGlm52Assets } from '../scripts/glm52-model.js';
+import { makeGlm52ParallelAssets } from '../scripts/glm52-parallel.js';
+import { literal, ref } from '../scripts/model-authoring.js';
 import { makeModelProject } from '../scripts/model-project.js';
 
 const layers = 78, owners = 21, H = 6144, V = 154880, N = 64, QR = 2048, R = 512;
@@ -58,3 +62,73 @@ it('charges the parameter ledger, exact causal pair work, and 95,232 bytes per K
     budget: { status: 'no_room', reason: 'non_kv' }, rowProfile: { includesIndexer: true },
   } });
 }, 150_000);
+
+const attentionWeightShards = 2 * N * (QR * (DN + DR) + R * (DN + DV) + DV * H);
+const expertWeightShards = 6 * E * H * J;
+const network = { bytesPerSecond: 100e9, latencySeconds: 3e-6 };
+
+function parallelProject(batchSize: number, periods?: number) {
+  const assets = makeGlm52ParallelAssets();
+  const root = assets[0];
+  if (root?.definition.kind !== 'model') throw Error('Missing the GLM model');
+  if (periods !== undefined) {
+    const repeat = root.definition.graph.nodes.find(node => node.nodeId === 'decoder')?.repeat;
+    if (!repeat) throw Error('Missing index period');
+    repeat.count = literal(periods);
+  }
+  const mi300x = AssetDocument.parse(JSON.parse(readFileSync('assets/builtin/hardware/builtin%3Ahardware%3Aamd-mi300x-192gb-r1.json', 'utf8')));
+  const p = makeModelProject([...assets, mi300x], { kind: 'prefill', batchSize, queryTokensPerRequest: 1, pastTokensPerRequest: 3 }, 'GLM-5.2');
+  const scenario = p.scenarios[0]!;
+  scenario.deviceTopology.devices = scenario.deviceTopology.devices.map(device => ({ ...device, hardware: ref(mi300x) }));
+  return { scenario, assets: p.assetSnapshots, presets: root.parallelPresets ?? [] };
+}
+
+it('accounts for all GLM layers on one eight-card Attention TP and MoE EP pool', async () => {
+  const { scenario, assets, presets } = parallelProject(1);
+  const degree = 8;
+  expect(matchingParallelPresets({ ...serialDegrees, attentionTp: degree, moeEp: degree }, presets, scenario).map(match => match.slots)).toEqual([degree]);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId: 'tp-glm-attention-ep', network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 4000));
+  const { preview } = attempt;
+  const sharded = layers * attentionWeightShards + 75 * expertWeightShards;
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(degree).fill([totalWeights - sharded + sharded / degree, 4 * perToken]));
+  expect(preview.communications?.filter(row => row.placement?.beforeNodeIds[0]?.endsWith('/attention-residual'))).toHaveLength(78);
+  expect(preview.communications?.filter(row => row.placement?.beforeNodeIds[0]?.endsWith('/shared-add'))).toHaveLength(75);
+  expect(preview.communicationCount).toBe(153);
+}, 150_000);
+
+it.each([['ep-glm-routed', 16], ['tp-glm-attention-moe', 2]] as const)('uses declared routed work under %s', async (presetId, degree) => {
+  const { scenario, assets } = parallelProject(1, 1);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId, network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 4000));
+  const { preview } = attempt;
+  const analyzed = await analyzeScenario(preview.scenario, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 5)));
+  const layout = analyzed.result.distributed?.layout;
+  const local = layout?.localCosts.nodes.find(node => node.nodeId === 'decoder[0]/source/expert-gate-up')?.placement;
+  if (local?.kind !== 'placed') throw Error('Expected local expert work');
+  const perRoute = 4 * H * J;
+  const ranks = local.perDevice.map(row => {
+    if (row.outcome.status !== 'available') throw Error('Expected rank cost');
+    const { cost } = row.outcome;
+    return [known(cost.compute[0]?.usefulOperations), known(cost.compute[0]?.executedOperations), known(cost.logicalReadBytes)];
+  });
+  if (presetId === 'ep-glm-routed') {
+    expect(ranks).toEqual([...Array(8).fill([perRoute, perRoute, perRoute + 2 * H + 4]), ...Array(8).fill([0, perRoute, 2 * H + 4])]);
+    expect(preview.communicationCount).toBe(7);
+  } else {
+    expect(ranks).toEqual(Array(2).fill([8 * perRoute / 2, 8 * perRoute / 2, 8 * (perRoute / 2 + 2 * H + 4)]));
+    expect(preview.communicationCount).toBe(17);
+  }
+}, 140_000);
+
+it('partitions independent requests and their cache by batch', async () => {
+  const { scenario, assets, presets } = parallelProject(2, 1);
+  expect(matchingParallelPresets({ ...serialDegrees, attentionDp: 2 }, presets, scenario).map(match => match.preset.presetId)).toEqual(['dp-batch']);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, 2), assets, presetId: 'dp-batch' });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 4000));
+  const weight = totalWeights - 68 * perLayerAttention - 17 * indexWeights - 68 * routedAndShared;
+  const state = 4 * 2 * (10 * (R + DR) + 4 * ID);
+  expect(attempt.preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(2).fill([weight, state]));
+  expect(attempt.preview.communicationCount).toBe(0);
+}, 90_000);

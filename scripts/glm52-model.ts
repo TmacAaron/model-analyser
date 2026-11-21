@@ -6,7 +6,7 @@ import { addGlm52Attention, selectedRows } from './glm52-attention.js';
 import { glm52Sources, loadGlm52 } from './glm52-profile.js';
 import { addSwiGlu } from './qwen-hybrid-model.js';
 
-function addGlm52Moe(graph: GraphAuthor) {
+function addGlm52Moe(graph: GraphAuthor, parallel: boolean) {
   const routed = (width: string): Axis[] => [...token, ['e', 'expert', 'K'], ['d', 'hidden', width]];
   weight(graph, 'router-weight', ['H', 'E']);
   weight(graph, 'route-bias', ['E'], fp32);
@@ -22,34 +22,47 @@ function addGlm52Moe(graph: GraphAuthor) {
   graph.node('route-normalize', 'Normalize original affinities and apply the 2.5 route scale', ['router-affinities', 'expert-ids'],
     ['expert-weights'], vectorWork('3 * B * Q * K'), { accessBytes: { 'router-affinities': '4 * B * Q * K' } });
   graph.tensor('expert-input', routed('H'));
-  graph.node('dispatch', 'Dispatch to selected routed experts', ['ffn-input', 'expert-ids'], ['expert-input']);
+  const slots = parallel ? 'RouteSlots' : 'K';
+  const scores = parallel ? 'owner-weights' : 'expert-weights';
+  const packedIds = parallel ? ['owner-ids'] : [];
+  if (parallel) {
+    const shape: Axis[] = [...token, ['e', 'expert', 'K']];
+    graph.tensor('owner-ids', shape, { dtype: int32 });
+    graph.tensor(scores, shape, { dtype: fp32 });
+    graph.node('dispatch', 'Pack tokens and normalized scores for expert owners', ['ffn-input', 'expert-ids', 'expert-weights'],
+      ['expert-input', 'owner-ids', scores], undefined, { accessBytes: { 'ffn-input': `2 * B * Q * ${slots} * H` } });
+  } else graph.node('dispatch', 'Dispatch to selected routed experts', ['ffn-input', 'expert-ids'], ['expert-input']);
 
   weight(graph, 'expert-gate-weight', ['E', 'H', 'J']); weight(graph, 'expert-up-weight', ['E', 'H', 'J']);
   weight(graph, 'expert-down-weight', ['E', 'J', 'H']);
-  graph.tensor('expert-gate-up-output', routed('2 * J')); graph.tensor('expert-activation', routed('J'));
-  const expertRead = '2 * min(E, B * Q * K) * H * J';
-  graph.node('expert-gate-up', 'Routed expert gate and up projections', ['expert-input', 'expert-gate-weight', 'expert-up-weight'],
-    ['expert-gate-up-output'], { useful: '4 * B * Q * K * H * J' },
+  const paired: Axis[] = [...routed('J'), ['pair', 'custom', '2']];
+  graph.tensor('expert-gate-up-output', parallel ? paired : routed('2 * J'));
+  graph.tensor('expert-activation', routed('J'));
+  const expertRead = `2 * min(E, B * Q * ${slots}) * H * J`;
+  graph.node('expert-gate-up', 'Routed expert gate and up projections', ['expert-input', 'expert-gate-weight', 'expert-up-weight', ...packedIds],
+    ['expert-gate-up-output'], { useful: `4 * B * Q * ${slots} * H * J` },
     { accessBytes: { 'expert-gate-weight': expertRead, 'expert-up-weight': expertRead } });
   graph.node('expert-silu', 'Routed expert SiLU(gate) × up', ['expert-gate-up-output'], ['expert-activation'],
-    vectorWork('6 * B * Q * K * J'));
+    vectorWork(`6 * B * Q * ${slots} * J`));
   graph.tensor('expert-output', routed('H')); graph.tensor('routed-output', hidden);
-  graph.node('expert-down', 'Routed expert down projections', ['expert-activation', 'expert-down-weight'], ['expert-output'],
-    { useful: '2 * B * Q * K * H * J' }, { accessBytes: { 'expert-down-weight': expertRead } });
-  graph.node('combine', 'Weighted sum of routed expert outputs', ['expert-output', 'expert-weights'], ['routed-output'],
-    vectorWork('B * Q * H * (2 * K - 1)'));
+  graph.node('expert-down', 'Routed expert down projections', ['expert-activation', 'expert-down-weight', ...packedIds], ['expert-output'],
+    { useful: `2 * B * Q * ${slots} * H * J` }, { accessBytes: { 'expert-down-weight': expertRead } });
+  graph.node('combine', 'Weighted sum of routed expert outputs', ['expert-output', scores], ['routed-output'],
+    vectorWork(parallel ? 'B * Q * H * max(0, 2 * RouteSlots - 1)' : 'B * Q * H * (2 * K - 1)'));
   addSwiGlu(graph, 'J', 'shared', 'ffn-input', 'shared-output');
   graph.tensor('ffn-output', hidden);
   graph.node('shared-add', 'Add routed and shared expert outputs', ['routed-output', 'shared-output'], ['ffn-output'],
     vectorWork('B * Q * H'));
 }
 
-export function makeGlm52Assets(): AssetDocument[] {
+export function makeGlm52Assets(revision: 1 | 2 = 1): AssetDocument[] {
   const schedule = loadGlm52();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...schedule.dimensions.map(([name, value]) => parameter(name, value))];
-  const equations = new Equations('builtin:formula:glm-5.2', parameters, glm52Sources);
-  const base = { documentType: 'asset' as const, schemaVersion: 1 as const, revision: 1, sources: glm52Sources,
+  const parallel = revision === 2;
+  const equations = new Equations('builtin:formula:glm-5.2', parallel ? [...parameters, parameter('RouteSlots', 0, 0)] : parameters,
+    glm52Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
+  const base = { documentType: 'asset' as const, schemaVersion: 1 as const, revision, sources: glm52Sources,
     tags: ['glm', 'glm-5.2', 'dsa', 'sparse-mla', 'bf16'] };
   function define(id: string, name: string, body: GraphAuthor) {
     return AssetDocument.parse({ ...base, assetId: 'builtin:module:glm-5.2-' + id, name, parameters,
@@ -68,7 +81,7 @@ export function makeGlm52Assets(): AssetDocument[] {
     graph.tensor('residual-attention', hidden);
     graph.node('attention-residual', 'Attention residual add', ['x', 'attention-output'], ['residual-attention'], vectorWork('B * Q * H'));
     norm(graph, 'post-rmsnorm', 'Feed-forward input RMSNorm', 'residual-attention', 'ffn-input');
-    if (moe) addGlm52Moe(graph);
+    if (moe) addGlm52Moe(graph, parallel);
     else addSwiGlu(graph, 'I', 'ffn', 'ffn-input', 'ffn-output');
     graph.tensor('y', hidden);
     graph.node('ffn-residual', 'Feed-forward residual add', ['residual-attention', 'ffn-output'], ['y'], vectorWork('B * Q * H'));

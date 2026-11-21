@@ -77,6 +77,14 @@ V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共�
 | DeepSeek-V4-Flash | 77,725,277,116 B | 5,662,976 B | 107 |
 | DeepSeek-V4.1-Flash | 170,975,675,656 B | 5,255,680 B | 90 |
 
+## GLM-5.2
+
+GLM-5.2 r2 支持请求 DP、Attention TP、MoE EP、MoE TP，以及 Attention TP 与同规模 MoE 并行共用卡池。请求 DP 分片完整请求与对应 KV，各卡持有完整权重。Attention TP 分片 MLA 查询头和相应投影，在残差前归约 BF16 输出。21 个索引计算和选中行号在各卡复制，78 层仍各自保存 MLA 缓存。 [vLLM GLM 路由](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/models/registry.py) · [MLA 与 DSA 实现](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/models/deepseek_v2.py)
+
+MoE EP 均分 256 个路由专家的权重。每个 token 选择 8 个专家，理论有效槽位按商和余数分配。MoE TP 在每个专家内部切分成对的 gate／up 中间特征及 down 投影的对应输入维。两种方式都在 75 个 MoE 层归约 BF16 路由输出，再加共享专家。
+
+在 BF16 的 TP8 ＋ EP8 配置中，每卡权重为 198,072,000,000 B，每卡每请求每 token 的 MLA 与索引缓存合计 95,232 B，完整解码器有 153 个 AllReduce。该配置按 192 GB／卡估算时无剩余 KV 预算。浏览器正向用例采用显式设置的 256 GB／卡容量，网络耗时按可编辑的环形归约模型估算。
+
 ## 独立 GQA 模型
 
 这是一个完整的**合成 attention/residual 子图**，包括 Q/K/V 投影、cache append、QK、softmax 代理、AV、输出投影和 residual 九个节点。它不包含 norm、RoPE、MLP、embedding 或 logits head，不称为完整生产语言模型。矩阵/存储为 BF16；softmax 使用 FP32 scratch，向量工作为显式代理。cache append 只写当前 BF16 token tile，已有缓存仍被 attention 读取。

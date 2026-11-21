@@ -10,6 +10,8 @@ DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／E
 
 DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 同池预设把两份 Engram 表分片，跨层共享 KV 仍按设备只分配一次。其他正式型号的多卡布局与 Flash 的跨池、上下文并行继续按 F03 实现。
 
+GLM-5.2 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#glm-52)。每卡保留独立 MLA 缓存和 DSA 索引计算，MoE EP 保留全局 Top‑K，MoE TP 切分各专家的中间特征。Kimi-K3 多卡布局和通用跨池、上下文并行仍在 F03 范围内。
+
 Qwen3.5-397B-A17B 和 Qwen3.8-27B r2 提供[全模型 Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen35-与-qwen38-混合注意力全模型)，按配对的头分片 GQA 缓存和 DeltaNet 固定状态。397B 进一步支持 MoE TP 和 r3 MoE EP，可独立分摊专家权重或与相同度数的 Attention TP 共用卡池。EP 下的逐卡路由按均衡估算，总专家分片时保留每 token 的全局 TopK。跨池和上下文并行仍需对应规则。
 
 Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重和 FP8 执行](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。逐卡计算权重缩放网格及稀疏专家读量。FP8 执行另计动态 FP32 激活缩放、E4M3FN 矩阵乘法和块缩放累加。H100 SXM r2 提供匹配的理论算力。其他模型的固定发布格式、W4A4/W4A8 执行覆盖和额外状态格式继续按 F09 验证。

@@ -119,7 +119,7 @@ BF16 基线下，每层每 token 追加 512 维潜向量和 64 维旋转位置�
 
 分析使用吸收 K/V 上投影的稀疏 MLA 理论路径。索引计算用 BF16 点积与 FP32 得分，注意力显式物化矩形分数块并区分因果有效计算与执行计算。设备上真实 FP8 索引封装、融合内核、多卡布局和 MTP 需要各自的配置。默认单张 A100 放不下主解码器，容量显示 `0 token / 请求`，仍可查看 BF16 理论成本。
 
-`npm run reference:glm52` 校对原始配置摘要、发布权重索引中的层归属记录和 64 份内置资产。仓库保存发布的配置和权重索引摘要。固定来源为 [GLM-5.2 配置](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/config.json)、[权重索引](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/model.safetensors.index.json)、[Transformers v5.12.0 模型实现](https://github.com/huggingface/transformers/blob/e0e7504bca2bfd1b85bb0eedb148f7b250226f06/src/transformers/models/glm_moe_dsa/modeling_glm_moe_dsa.py)及 [vLLM v0.28.0 稀疏 MLA](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/v1/attention/backends/mla/flashmla_sparse.py)。
+r2 提供请求 DP、Attention TP、MoE EP／TP 及同池组合的理论估算。`npm run reference:glm52` 校对原始配置摘要、发布权重索引中的层归属记录和 76 份内置资产。仓库保存发布的配置和权重索引摘要。 [并行口径](PARALLEL_PRESETS.md#glm-52) · [GLM-5.2 配置](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/config.json) · [权重索引](https://huggingface.co/zai-org/GLM-5.2/blob/cf457fa734ab149ffef225f80893eb38c6ff5cdc/model.safetensors.index.json) · [Transformers 模型实现](https://github.com/huggingface/transformers/blob/e0e7504bca2bfd1b85bb0eedb148f7b250226f06/src/transformers/models/glm_moe_dsa/modeling_glm_moe_dsa.py) · [vLLM 稀疏 MLA](https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/v1/attention/backends/mla/flashmla_sparse.py)
 
 ## Kimi-K3
 

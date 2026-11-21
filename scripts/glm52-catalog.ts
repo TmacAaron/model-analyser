@@ -3,11 +3,20 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeGlm52Assets } from './glm52-model.js';
+import { makeGlm52ParallelAssets } from './glm52-parallel.js';
 
-const assets = makeGlm52Assets();
+const unique = new Map<string, AssetDocument>();
+for (const asset of [...makeGlm52Assets(), ...makeGlm52ParallelAssets()]) {
+  const key = asset.assetId + '@' + asset.revision;
+  const prior = unique.get(key);
+  if (prior) assert.equal(canonical(prior), canonical(asset), key);
+  else unique.set(key, asset);
+}
+const assets = [...unique.values()];
 assert.deepEqual(validateAssets(assets), []);
 for (const asset of assets) {
-  const filename = 'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') + '.json';
+  const filename = 'assets/builtin/' + asset.definition.kind + '/' + asset.assetId.split(':').slice(2).join('-') +
+    (asset.revision === 1 ? '' : '-r' + asset.revision) + '.json';
   try {
     const stored = AssetDocument.parse(JSON.parse(await readFile(filename, 'utf8')));
     assert.equal(canonical(stored), canonical(asset), filename);
