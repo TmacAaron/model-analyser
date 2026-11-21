@@ -30,7 +30,7 @@ Qwen3-0.6B、Qwen3-1.7B 和 Qwen3.8-27B 可从正式模型画布设置[解码层
 
 Qwen3.5-397B-A17B r5 增加[全解码器流水线](PARALLEL_PRESETS.md#qwen-解码层流水线)，可与请求 DP、阶段内 Attention TP 和阶段内 MoE EP／TP 组合，包括在同一阶段同时切分专家归属和中间特征。按完整 GQA／DeltaNet 周期分配阶段的权重与状态，每层在阶段内合并专家贡献。固定发布权重和 FP8 执行按实际分片计算。
 
-Qwen3-0.6B r5 和 Qwen3-1.7B r4 的[全模型 PCP](PARALLEL_PRESETS.md#qwen3-prefill-查询分片)使用实际的连续查询起点，每层收集当前 K/V，再写入复制的缓存。r8／r7 的 DP × PCP 按请求组独立收集 K/V，并保留各组请求及因果位置。r6／r5 增加[全模型 DCP](PARALLEL_PRESETS.md#qwen3-decode-kv-分片)，均分固定 KV 槽位，并按 token 位置写缓存。r7／r6 的 DP × DCP 支持独立请求组，局部算量、三类归约和容量按组内请求与槽位计算。其他模型的上下文并行及组合布局继续按 F03 核对。
+Qwen3-0.6B r5 和 Qwen3-1.7B r4 的[全模型 PCP](PARALLEL_PRESETS.md#qwen3-prefill-查询分片)使用实际的连续查询起点，每层收集当前 K/V，再写入复制的缓存。r8／r7 的 DP × PCP 按请求组独立收集 K/V，并保留各组请求及因果位置。r6／r5 增加[全模型 DCP](PARALLEL_PRESETS.md#qwen3-decode-kv-分片)，均分固定 KV 槽位，并按 token 位置写缓存。r7／r6 的 DP × DCP 支持独立请求组，局部算量、三类归约和容量按组内请求与槽位计算。DeepSeek-V3／R1 r7 也已支持[全模型 PCP 与 DP × PCP](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)，按组收集 MLA 潜向量和位置键。DeepSeek 的 DCP、其他模型的上下文并行及额外组合布局继续按 F03 核对。
 
 Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重和 FP8 执行](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。逐卡计算权重缩放网格及稀疏专家读量。FP8 执行另计动态 FP32 激活缩放、E4M3FN 矩阵乘法和块缩放累加。H100 SXM r2 提供匹配的理论算力。其他模型的固定发布格式、W4A4/W4A8 执行覆盖和额外状态格式继续按 F09 验证。
 

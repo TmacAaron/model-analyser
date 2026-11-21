@@ -64,7 +64,8 @@ export function makeDeepSeekV3FP8WeightPreset(assets: AssetDocument[], release: 
   const source = (filename: string, commit = pin.revision) => `https://huggingface.co/deepseek-ai/${profile.name}/blob/${commit}/${filename}`;
   const modelId = `builtin:model:deepseek-${release}`;
   const model = assets.find(row => row.assetId === modelId && row.definition.kind === 'model');
-  if (model?.revision !== 5 && model?.revision !== 6) throw Error('Missing compatible DeepSeek decoder for published FP8');
+  if (model?.revision !== 5 && model?.revision !== 6 && model?.revision !== 7) throw Error('Missing compatible DeepSeek decoder for published FP8');
+  const queryPartitioning = model.revision === 7;
   return AssetDocument.parse({ documentType: 'asset', schemaVersion: 1, assetId: `builtin:quantization:deepseek-${release}-fp8-weights`, revision: model.revision - 4,
     name: '官方 FP8 权重', parameters: [], tags: ['deepseek', 'fp8', 'block128', 'published-weights'], sources: [
       ...[source('config.json'), source('model.safetensors.index.json'), ...pin.headers.map(header => source(header.shard, header.revision)),
@@ -73,8 +74,8 @@ export function makeDeepSeekV3FP8WeightPreset(assets: AssetDocument[], release: 
       { kind: 'note', text: 'Main decoder matrix coverage is verified against the checkpoint index and sampled Safetensors headers. The storage profile uses E4M3FN with one FP32 inverse scale per 128 × 128 block. Key and value projections retain complete blocks when separated in the absorbed MLA graph. Experts only read the locally touched fraction of weights and scales. Matrix execution uses the BF16 analytical baseline. KV, routing and other non-FP8 tensors retain their declared formats.' },
     ], definition: { kind: 'quantization', quantization: { selector: { kind: 'subtree', rootNodeId: '$model' }, weight },
       modelWeights: { model: ref(model), moduleRules: [
-        { module: asset('builtin:module:deepseek-v3-absorbed-dense', 3), targets: targets([...attention, ...dense]) },
-        { module: asset('builtin:module:deepseek-v3-absorbed-moe', 5), targets: targets([...attention, ...shared, ...routed]) },
+        { module: asset('builtin:module:deepseek-v3-absorbed-dense', queryPartitioning ? 4 : 3), targets: targets([...attention, ...dense]) },
+        { module: asset('builtin:module:deepseek-v3-absorbed-moe', queryPartitioning ? 6 : 5), targets: targets([...attention, ...shared, ...routed]) },
       ] },
     },
   });

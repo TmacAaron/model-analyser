@@ -1,0 +1,61 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:deepseek-v3-pcp:1452d2a380490863",
+  "revision": 1,
+  "name": "2 * B * NH * (Q * (C + QueryStart) + Q * (Q + 1) / 2) * R [operation]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "note",
+      "text": "Contiguous query partitions keep global causal positions. Each request group gathers BF16 normalized latents and rotary keys before its replicated append. Each rank evaluates its query tile against the full key extent."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "B": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "C": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "NH": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "Q": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        },
+        "QueryStart": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "R": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 1
+        }
+      },
+      "expression": "2 * B * NH * (Q * (C + QueryStart) + Q * (Q + 1) / 2) * R",
+      "output": {
+        "unit": "operation",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

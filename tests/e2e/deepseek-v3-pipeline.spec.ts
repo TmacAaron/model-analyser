@@ -32,7 +32,7 @@ test('upgrades published FP8 and applies a two-stage DeepSeek pipeline from the 
   await page.getByRole('button', { name: '量化', exact: true }).click();
   const fp8 = page.getByRole('button', { name: '官方 FP8 权重', exact: true });
   await expect(fp8).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: '更新模型到 r6', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r7', exact: true }).click();
   await expect(save).toContainText('已保存 · 修订 2');
   await expect(fp8).toHaveAttribute('aria-pressed', 'true');
 
@@ -58,8 +58,8 @@ test('upgrades published FP8 and applies a two-stage DeepSeek pipeline from the 
   await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
 
   const saved = ProjectDocument.parse((await (await page.request.get('/api/v1/project?id=' + project.projectId)).json()).data).scenarios[0]!;
-  expect(saved.model.revision).toBe(6);
-  expect(saved.quantizationOverrides[0]?.preset?.revision).toBe(2);
+  expect(saved.model.revision).toBe(7);
+  expect(saved.quantizationOverrides[0]?.preset?.revision).toBe(3);
   expect(saved.parallelPlan.generatedFrom).toMatchObject({ pipelineStage: { degree: 4 }, expertMesh: { ep: 2, tp: 2 } });
   expect(saved.parallelPlan.communications.find(row => row.operation === 'send_recv')?.timing).toMatchObject({ bytePerSecond: 25e9 });
   await page.reload();

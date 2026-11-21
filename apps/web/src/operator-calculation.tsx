@@ -181,7 +181,7 @@ function kimiK3Algorithm(localId:string):Algorithm|undefined {
 
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
-  const v3 = asset.revision <= 6 && /^builtin:(module:deepseek-v3-absorbed-(dense|moe)|model:deepseek-(v3|r1))$/.test(id);
+  const v3 = asset.revision <= 7 && /^builtin:(module:deepseek-v3-absorbed-(dense|moe)|model:deepseek-(v3|r1))$/.test(id);
   if (v3) {
     const algorithm = deepSeekV3Algorithm(localId);
     const source = asset.sources.find(item => item.kind === 'url' && item.url.endsWith('/inference/model.py'));

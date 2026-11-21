@@ -43,6 +43,21 @@ function presetLayoutKey(preset?:ParallelPresetTemplate){
   }))});
 }
 
+function publishedWeightLayoutKey(asset:AssetDocument, assets:AssetDocument[]){
+  if(asset.definition.kind!=='quantization'||!asset.definition.modelWeights)return undefined;
+  return canonical(asset.definition.modelWeights.moduleRules.map(rule=>{
+    const module=assets.find(row=>row.assetId===rule.module.assetId&&row.revision===rule.module.revision);
+    if(module?.definition.kind!=='module')throw Error('缺少发布权重所引用的模块 '+rule.module.assetId);
+    const storages=module.definition.graph.storages;
+    const targets=rule.targets.map(target=>{
+      const storage=storages.find(row=>row.storageId===target.storageId);
+      if(!storage)throw Error('发布权重缺少存储 '+target.storageId);
+      return {target,storage};
+    });
+    return {...rule,module:rule.module.assetId,targets};
+  }));
+}
+
 function download(name:string,value:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();URL.revokeObjectURL(url);}
 function NumericField({label,value,min,onChange}:{label:string;value:number;min:number;onChange:(value:number)=>void}){
   const [text,setText]=useState(String(value));useEffect(()=>setText(String(value)),[value]);
@@ -134,7 +149,7 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
       const incoming=snapshots.find(asset=>asset.assetId===item.ref.assetId&&asset.revision===item.ref.revision);
       if(item.previous.definition.kind!=='quantization'||incoming?.definition.kind!=='quantization'||
         incoming.definition.modelWeights?.model.assetId!==model.assetId||incoming.definition.modelWeights.model.revision!==model.revision||
-        canonical(incoming.definition.modelWeights?.moduleRules)!==canonical(item.previous.definition.modelWeights?.moduleRules)||
+        publishedWeightLayoutKey(incoming,assets)!==publishedWeightLayoutKey(item.previous,assets)||
         canonical(incoming.definition.quantization)!==canonical(item.previous.definition.quantization)){
         throw Error('发布权重预设的存储或执行规则已变化：'+item.previous.name);
       }
@@ -168,12 +183,12 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
           const stageId=origin.pipelineStage.presetId, phase=next.workload.kind;
           const oldStage=pipelineExpertPreset(previous,previousPresets,stageId,phase);
           const newStage=pipelineExpertPreset(preset,target?.parallelPresets??[],stageId,phase);
-          if(!oldStage||!newStage||canonical(oldStage)!==canonical(newStage))throw Error('新模型修订没有兼容的阶段内专家布局');
+          if(!oldStage||!newStage||presetLayoutKey(oldStage)!==presetLayoutKey(newStage))throw Error('新模型修订没有兼容的阶段内专家布局');
           if(origin.expertMesh){
             const oldMesh=pipelineExpertMeshPresets(previous,previousPresets,phase);
             const newMesh=pipelineExpertMeshPresets(preset,target?.parallelPresets??[],phase);
-            if(!oldMesh||!newMesh||canonical([oldMesh.ep,oldMesh.tp,oldStage===oldMesh.shared?oldMesh.sharedRules:null])!==
-              canonical([newMesh.ep,newMesh.tp,newStage===newMesh.shared?newMesh.sharedRules:null])){
+            if(!oldMesh||!newMesh||canonical([presetLayoutKey(oldMesh.ep),presetLayoutKey(oldMesh.tp),oldStage===oldMesh.shared?presetLayoutKey(oldMesh.sharedRules):null])!==
+              canonical([presetLayoutKey(newMesh.ep),presetLayoutKey(newMesh.tp),newStage===newMesh.shared?presetLayoutKey(newMesh.sharedRules):null])){
               throw Error('新模型修订没有兼容的阶段内专家网格');
             }
           }

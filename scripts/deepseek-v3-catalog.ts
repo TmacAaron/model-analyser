@@ -9,10 +9,14 @@ import { makeDeepSeekV3FP8WeightPreset } from './deepseek-v3-fp8-weights.js';
 
 const catalog = new Map<string, AssetDocument>();
 for (const release of ['v3', 'r1'] as const) {
-  const previous = makeDeepSeekV3ParallelAssets(release, 5), latest = makeDeepSeekV3ParallelAssets(release);
+  const previous = ([5, 6] as const).flatMap(revision => {
+    const assets = makeDeepSeekV3ParallelAssets(release, revision);
+    return [...assets, makeDeepSeekV3FP8WeightPreset(assets, release)];
+  });
+  const latest = makeDeepSeekV3ParallelAssets(release);
   for (const asset of [...makeDeepSeekAssets('absorbed', loadDeepSeekV3Profile(release)),
     ...([2, 3, 4] as const).flatMap(revision => makeDeepSeekV3ParallelAssets(release, revision)),
-    ...previous, makeDeepSeekV3FP8WeightPreset(previous, release), ...latest, makeDeepSeekV3FP8WeightPreset(latest, release)]) {
+    ...previous, ...latest, makeDeepSeekV3FP8WeightPreset(latest, release)]) {
     const key = asset.assetId + '@' + asset.revision;
     const existing = catalog.get(key);
     if (existing) assert.equal(canonical(asset), canonical(existing), key);
