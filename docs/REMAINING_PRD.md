@@ -12,7 +12,7 @@ Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP
 
 DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。正式型号的跨池、上下文并行及发布权重格式继续按 F03／F09 核对。
 
-DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 同池预设把两份 Engram 表分片，跨层共享 KV 仍按设备只分配一次。其他正式型号的多卡布局与 Flash 的跨池、上下文并行继续按 F03 实现。
+DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。r3 增加 MoE TP 和 MoE EP × TP。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 的组合布局在整池切分两张 Engram 表及缩放项，保留两次查表归约，跨层共享 KV 仍按设备只分配一次。Flash 的跨池、上下文并行和发布权重格式继续按 F03／F09 核对。
 
 GLM-5.2 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#glm-52)。每卡保留独立 MLA 缓存和 DSA 索引计算，MoE EP 保留全局 Top‑K，MoE TP 切分各专家的中间特征。
 

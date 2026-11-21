@@ -16,6 +16,10 @@ const expertShards: Shard[] = [
   ...['dispatched', 'owner-experts', 'owner-weights', 'routed-gate', 'routed-up', 'routed-mix', 'routed-output']
     .map((id): Shard => [id, 'e', 'balanced']),
 ];
+const expertFeatureShards = [
+  ...onAxis('w2', ['routed-gate-weight', 'routed-up-weight', 'routed-down-weight']),
+  ...onAxis('d', ['routed-gate', 'routed-up', 'routed-mix']),
+];
 const engramShards: Shard[] = [['engram-rows', 'w0', 'balanced'], ['engram-scales', 'w0', 'balanced']];
 
 const heads = (tensor: string): AxisBinding[] => [['N', tensor, 'n']];
@@ -31,12 +35,20 @@ const axes: Record<string, AxisBinding[]> = {
   'routed-up-proj': expert('dispatched', 'routed-up-weight'), 'routed-swiglu': routes('routed-gate'),
   'routed-down-proj': expert('routed-mix', 'routed-down-weight'), 'route-combine': routes('routed-output'),
 };
+const featureAxes: Record<string, AxisBinding[]> = {
+  ...axes,
+  'routed-gate-proj': [...axes['routed-gate-proj']!, ['I', 'routed-gate', 'd']],
+  'routed-up-proj': [...axes['routed-up-proj']!, ['I', 'routed-up', 'd']],
+  'routed-swiglu': [...axes['routed-swiglu']!, ['I', 'routed-gate', 'd']],
+  'routed-down-proj': [...axes['routed-down-proj']!, ['I', 'routed-mix', 'd']],
+};
 const activeAccesses = {
   'route-dispatch': ['read-ffn-input'], 'routed-gate-proj': ['read-routed-gate-weight'],
   'routed-up-proj': ['read-routed-up-weight'], 'routed-down-proj': ['read-routed-down-weight'],
 };
 const attentionNote = 'Each rank holds whole attention heads and matching output groups. Indexer query heads contribute FP32 partial scores, reduced before candidate selection or masking. Window, compressed latent, index K and compressor state are replicated, with one backing per shared cache on each rank. The row-parallel output partial uses an FP32 AllReduce before resuming the BF16 residual path.';
 const expertNote = 'Each EP rank owns a contiguous, equal count of routed experts. Each token keeps its global Top-K, with per-rank route budgets balanced by quotient and remainder. Allocated slots use ceil(K/EP). Useful work and sparse gathers use valid slots. The shared expert is replicated and added after reducing FP32 routed partials.';
+const featureNote = 'Routed-expert TP shards matched gate and up channels, SwiGLU results and down-projection input channels. TP peers within each owner group duplicate its route metadata. FP32 routed partials are summed across owner and feature ranks before the replicated shared expert is added.';
 const engramNote = 'The combined V4.1 preset also shards the Engram weight and scale tables by rows, reserving ceil(rows/ranks) rows per rank. The lookup charges one read per requested hash on each rank, including the masked dummy row, and reduces the BF16 values before the replicated projection.';
 const projectionNote = 'Local equations bind allocated request, head and expert extents. Lookup and sparse expert reads use explicit traffic equations. Link rates and analytical work proxies describe the configured estimate.';
 const formulaSources: AssetDocument['sources'] = [{ kind: 'note', text: 'Logical payload of an uncompressed reduction, before ring traffic and startup factors.' }];
@@ -45,15 +57,16 @@ function reduction(tensorId: string, producer: string, consumer: string, payload
   return { tensorId: TensorId.parse(tensorId), producerNodeId: NodeId.parse(producer), consumerNodeIds: [NodeId.parse(consumer)], payloadBytes, payloadDtype };
 }
 
-export function makeDeepSeekFlashParallelAssets(v41: boolean): AssetDocument[] {
-  const [root, ...dependencies] = v41 ? makeDeepSeekV41Assets(2) : makeDeepSeekV4Assets(2);
+export function makeDeepSeekFlashParallelAssets(v41: boolean, revision: 2 | 3 = 3): AssetDocument[] {
+  const [root, ...dependencies] = v41 ? makeDeepSeekV41Assets(revision) : makeDeepSeekV4Assets(revision);
   if (root?.definition.kind !== 'model') throw Error('Missing Flash decoder');
   const formulaParams = ['B', 'Q', 'H', 'Rows', 'EH', 'EN', 'ED'].map(key => parameter(key, 1, key === 'Rows' ? 0 : 1));
   const equations = new Equations('builtin:formula:deepseek-flash-parallel', formulaParams, formulaSources);
   const hiddenPayload = equations.value('4 * B * Q * H', 'byte');
   const sources: AssetDocument['sources'] = [...root.sources.map(source => source.kind === 'note' ? {
     ...source, text: source.text.replace(' and distributed layout are outside', ' are outside').replace(' and parallel layouts need', ' need'),
-  } : source), ...[projectionNote, attentionNote, expertNote, ...(v41 ? [engramNote] : [])].map(text => ({ kind: 'note' as const, text }))];
+  } : source), ...[projectionNote, attentionNote, expertNote, ...(v41 ? [engramNote] : []),
+    ...(revision === 3 ? [featureNote] : [])].map(text => ({ kind: 'note' as const, text }))];
 
   const modules = dependencies.flatMap(asset => asset.definition.kind === 'module' ? [{ ...asset, definition: asset.definition }] : []);
   const rules = modules.flatMap(module => {
@@ -79,12 +92,14 @@ export function makeDeepSeekFlashParallelAssets(v41: boolean): AssetDocument[] {
     const ep = [reduction('routed-reduced', 'route-combine', 'shared-add', hiddenPayload)];
     const hasEngram = contains('engram-lookup');
     const engram = hasEngram ? [reduction('engram-values', 'engram-lookup', 'engram-project', equations.value('2 * B * Q * EH * (EN - 1) * ED', 'byte'), bf16)] : [];
-    return [{ tp: attach([...attentionShards, ...indexShards], tp), ep: attach(expertShards, ep),
-      combined: attach([...attentionShards, ...indexShards, ...expertShards, ...(hasEngram ? engramShards : [])], [...tp, ...ep, ...engram]) }];
+    const attention = [...attentionShards, ...indexShards];
+    const shared = (expert: Shard[]) => attach([...attention, ...expert, ...(hasEngram ? engramShards : [])], [...tp, ...ep, ...engram]);
+    return [{ tp: attach(attention, tp), ep: attach(expertShards, ep), moeTp: attach(expertFeatureShards, ep),
+      combined: shared(expertShards), combinedTp: shared(expertFeatureShards) }];
   });
 
   const indexHeads = (id: string): AxisBinding[] => [['IH', id, v41 ? 'h' : 'n']];
-  const flashAxes = { ...axes, 'index-query': indexHeads('index-q-raw'), 'index-query-rope': indexHeads('index-q-raw'),
+  const flashAxes = { ...(revision === 3 ? featureAxes : axes), 'index-query': indexHeads('index-q-raw'), 'index-query-rope': indexHeads('index-q-raw'),
     'index-weight': [['IH', 'index-weights', v41 ? 'h' : 'd']] as AxisBinding[], 'index-score': indexHeads('index-q'),
     'index-reduce': [['IH', 'index-dot', 'n']] as AxisBinding[] };
   const local = (graph: GraphTemplate) => withLocalCost(graph, flashAxes, projectionNote, activeAccesses);
@@ -103,6 +118,14 @@ export function makeDeepSeekFlashParallelAssets(v41: boolean): AssetDocument[] {
       description: v41 ? '共用卡池分片注意力头、专家和 Engram 表。' : '共用卡池分片注意力头与专家。',
       strategy: 'tensor_sharded', sharedPoolDegrees: ['attentionTp', 'moeEp'], networkDefaults, moduleRules: rules.map(rule => rule.combined),
       assumptions: [...common.assumptions, attentionNote, expertNote, ...(v41 ? [engramNote] : [])] },
+    ...(revision === 3 ? [
+      { ...common, presetId: 'tp-flash-routed', name: 'MoE TP', description: '切分路由专家的中间通道。', strategy: 'tensor_sharded',
+        sharedPoolDegrees: ['moeTp'], networkDefaults, moduleRules: rules.map(rule => rule.moeTp), assumptions: [...common.assumptions, featureNote] },
+      { ...common, presetId: 'tp-flash-attention-moe', name: 'Attention TP ＋ MoE TP',
+        description: v41 ? '共用卡池分片注意力头、专家中间通道和 Engram 表。' : '共用卡池分片注意力头与专家中间通道。',
+        strategy: 'tensor_sharded', sharedPoolDegrees: ['attentionTp', 'moeTp'], networkDefaults, moduleRules: rules.map(rule => rule.combinedTp),
+        assumptions: [...common.assumptions, attentionNote, featureNote, ...(v41 ? [engramNote] : [])] },
+    ] : []),
   ].map(preset => ParallelPresetTemplate.parse(preset));
   const model = AssetDocument.parse({ ...root, sources, parallelPresets: presets,
     definition: { ...root.definition, graph: local(root.definition.graph), assumptions: sources.flatMap(source => source.kind === 'note' ? [source.text] : []) } });

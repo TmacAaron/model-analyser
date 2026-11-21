@@ -116,12 +116,12 @@ export function addV4Moe(graph: GraphAuthor, hashRoute: boolean, v41 = false, pa
   graph.node('shared-add', 'Routed and shared expert merge', ['routed-reduced', 'shared-output'], ['ffn-output'], vectorWork('B * Q * H'));
 }
 
-export function makeDeepSeekV4Assets(revision: 1 | 2 = 1): AssetDocument[] {
+export function makeDeepSeekV4Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
   const profile = loadDeepSeekV4();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
   const rootParams = [...parameters, parameter('Periods', profile.periods)];
-  const parallel = revision === 2;
+  const parallel = revision >= 2;
   const equations = new Equations('builtin:formula:deepseek-v4', parallel ? [...rootParams, parameter('RouteSlots', 0, 0)] : rootParams,
     deepSeekV4Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
   const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV4Sources, tags: ['deepseek', 'deepseek-v4', 'text'] };

@@ -8,7 +8,8 @@ import { makeDeepSeekFlashParallelAssets } from './deepseek-v4-parallel.js';
 
 const v41 = process.argv.includes('--v41');
 const unique = new Map<string, AssetDocument>();
-for (const asset of [...(v41 ? makeDeepSeekV41Assets() : makeDeepSeekV4Assets()), ...makeDeepSeekFlashParallelAssets(v41)]) {
+for (const asset of [...(v41 ? makeDeepSeekV41Assets() : makeDeepSeekV4Assets()),
+  ...makeDeepSeekFlashParallelAssets(v41, 2), ...makeDeepSeekFlashParallelAssets(v41)]) {
   const key = asset.assetId + '@' + asset.revision;
   const prior = unique.get(key);
   if (prior) assert.equal(canonical(prior), canonical(asset), key);

@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { AssetDocument, type MetricValue } from '@model-analyser/contracts';
 import { analyzeScenario, estimateKvCapacity, previewParallelPreset } from '@model-analyser/core';
-import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
+import { bindDegreePool, currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { makeDeepSeekFlashParallelAssets } from '../scripts/deepseek-v4-parallel.js';
 import { ref } from '../scripts/model-authoring.js';
 import { makeModelProject } from '../scripts/model-project.js';
@@ -29,12 +29,16 @@ function setup(v41: boolean, batchSize = 1) {
   return { scenario, assets: project.assetSnapshots, presets: model[0]?.parallelPresets ?? [] };
 }
 
-it.each(releases)('accounts for V4.1=$v41 on one TP8/EP8 pool and preserves cache ownership', async spec => {
+it.each(releases)('accounts for V4.1=$v41 on one pool with Attention TP8 and expert EP4 × TP2', async spec => {
   const { scenario, assets, presets } = setup(spec.v41), degree = 8;
-  expect(matchingParallelPresets({ ...serialDegrees, attentionTp: degree, moeEp: degree }, presets, scenario).map(row => row.slots)).toEqual([degree]);
-  const attempted = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId: 'tp-flash-attention-ep', network });
+  const degrees = { ...serialDegrees, attentionTp: degree, moeEp: 4, moeTp: 2 };
+  const [match] = matchingParallelPresets(degrees, presets, scenario);
+  expect(match).toMatchObject({ preset: { presetId: 'tp-flash-attention-ep' }, slots: degree, expertMesh: { ep: 4, tp: 2 } });
+  const attempted = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId: match!.preset.presetId,
+    expertMesh: match!.expertMesh, network });
   if (attempted.status !== 'available') throw Error(attempted.message.slice(0, 5000));
   const { preview } = attempted;
+  expect(currentDegrees(preview.scenario, presets)).toEqual(degrees);
   const { hidden: H, rank: QR, width: I, experts: E, layers, indexHeads: IH, indexLayers, engramRows } = spec;
   const attentionWeights = layers * (2 * (QR * 64 * 512 + 64 * 512 * 1024 + 8 * 1024 * H) + 4 * 64);
   const indexWeights = 2 * indexLayers * (QR * IH * 128 + H * IH);
@@ -85,6 +89,38 @@ it('uses six valid expert slots, tracks empty ranks and reports the compressed K
   expect(capacity.report).toMatchObject({ currentKvBytes: degree * kv, replicatedBytesPerToken: kv / 4,
     budget: { status: 'available' }, rowProfile: { includesIndexer: true, fixedWindows: [128] } });
   expect(capacity.report.devices.map(row => [row.kvBytes, row.otherStateBytes])).toEqual(Array(degree).fill([kv, state]));
+}, 90_000);
+
+it('keeps the six global routes across eight owner groups and shards each expert across two feature ranks', async () => {
+  const { scenario, assets, presets } = setup(false), degree = 16;
+  scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 1 } }];
+  expect(matchingParallelPresets({ ...serialDegrees, moeTp: 2 }, presets, scenario)).toMatchObject([
+    { preset: { presetId: 'tp-flash-routed' }, slots: 2 },
+  ]);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId: 'ep-flash-routed',
+    expertMesh: { ep: 8, tp: 2 }, network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 5000));
+  const analyzed = await analyzeScenario(attempt.preview.scenario, attempt.preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 5)));
+  const layout = analyzed.result.distributed?.layout;
+  const block = 'window-hash[0]', hidden = 4096, localWidth = 1024, localExperts = 32;
+  for (const id of ['gate', 'up', 'down']) {
+    const allocation = layout?.storageAllocations.find(row => row.storageId === `${block}::routed-${id}-weight`)?.allocation;
+    expect(allocation?.distribution).toMatchObject({ kind: 'sharded', axes: [
+      { tensorAxisId: 'w0', meshAxisId: 'expert' }, { tensorAxisId: 'w2', meshAxisId: 'feature' },
+    ] });
+    expect(allocation?.perDevice.map(row => amount(row.totalBytes))).toEqual(Array(degree).fill(2 * localExperts * hidden * localWidth));
+  }
+  for (const [id, work] of [['gate-proj', 2 * hidden * localWidth], ['up-proj', 2 * hidden * localWidth],
+    ['swiglu', 8 * localWidth], ['down-proj', 2 * hidden * localWidth]] as const) {
+    const placement = layout?.localCosts.nodes.find(node => node.nodeId === `${block}/routed-${id}`)?.placement;
+    if (placement?.kind !== 'placed') throw Error('Missing ' + id + ' placement');
+    expect(placement.perDevice.map(rank => rank.outcome.status === 'available' ? [
+      amount(rank.outcome.cost.compute[0]?.usefulOperations), amount(rank.outcome.cost.compute[0]?.executedOperations),
+    ] : null)).toEqual([...Array(12).fill([work, work]), ...Array(4).fill([0, work])]);
+  }
+  expect(layout?.storageAllocations.find(row => row.storageId === block + '::shared-gate-weight')?.allocation.distribution.kind)
+    .toBe('replicated');
 }, 90_000);
 
 it.each(releases)('splits request lanes for V4.1=$v41 while preserving each request’s compressed cache', async spec => {

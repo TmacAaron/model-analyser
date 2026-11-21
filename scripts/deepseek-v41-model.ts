@@ -29,11 +29,11 @@ function sharedPair(graph: GraphAuthor, ratio: Ratio, input = false) {
   }
 }
 
-export function makeDeepSeekV41Assets(revision: 1 | 2 = 1): AssetDocument[] {
+export function makeDeepSeekV41Assets(revision: 1 | 2 | 3 = 1): AssetDocument[] {
   const profile = loadDeepSeekV41();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...Object.entries(profile.dimensions).map(([key, value]) => parameter(key, value))];
-  const parallel = revision === 2;
+  const parallel = revision >= 2;
   const equations = new Equations('builtin:formula:deepseek-v41', parallel ? [...parameters, parameter('RouteSlots', 0, 0)] : parameters,
     deepSeekV41Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
   const base = { documentType: 'asset', schemaVersion: 1, revision, sources: deepSeekV41Sources, tags: ['deepseek', 'deepseek-v41', 'text'] };

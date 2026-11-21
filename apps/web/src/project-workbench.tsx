@@ -6,7 +6,7 @@ import { DisplayUnitsControl } from './display-units.js';
 import { copyConfiguration } from '../../../packages/contracts/src/configuration-edit.js';
 import { removeQuantizationRule } from '../../../packages/contracts/src/ascend-quantization.js';
 import { AscendQuantizationEditor } from './ascend-quantization-view.js';
-import { calculationInput, pipelineExpertMeshPresets, pipelineExpertPreset, supportsRequestReplicas } from '@model-analyser/core';
+import { calculationInput, expertMeshPresets, pipelineExpertMeshPresets, pipelineExpertPreset, supportsRequestReplicas } from '@model-analyser/core';
 import { publishCanvasEdit,type CanvasEditPlan } from './canvas-editing.js';
 import {runCanvasEditTask} from './canvas-edit-task.js';
 import type {CanvasEditIntent,CanvasEditControls} from './canvas-edit-worker.js';
@@ -16,7 +16,7 @@ import { defaultDeclaredLayout,prepareDeclaredLayout } from './declared-layout-t
 import { MemoryPeakEditor } from './memory-peak-view.js';
 import { useEffect,useRef,useState } from 'react';
 import { z } from 'zod';
-import { Id,AssetDocument,ProjectDocument,ProjectDraft,ProjectImportDocument,ProjectRecoveryDocument,SaveProjectResponse,Scenario,WorkspaceCatalog,ProjectDraftIndexEntry,type AssetRef } from '@model-analyser/contracts';
+import { Id,AssetDocument,ProjectDocument,ProjectDraft,ProjectImportDocument,ProjectRecoveryDocument,SaveProjectResponse,Scenario,WorkspaceCatalog,ProjectDraftIndexEntry,type AssetRef,type ParallelPresetTemplate } from '@model-analyser/contracts';
 import { canonical } from '../../../packages/contracts/src/validation.js';
 import { ProjectAutosaver } from './project-autosave.js';
 import { type SaveState } from './serialized-autosave.js';
@@ -33,6 +33,14 @@ import { DependencyUpgradeView } from './dependency-upgrade-view.js';
 import { ParallelPresetEditor } from './parallel-preset-view.js';
 import { mergeMeasurements } from '../../../packages/contracts/src/measurement-file.js';
 // Raw text previews and formal validation run in independently owned workers.
+
+function presetLayoutKey(preset?:ParallelPresetTemplate){
+  // Compare the authored axes and boundaries across revisions, then validate the saved layout on the new graph.
+  if(preset?.strategy!=='tensor_sharded')return canonical(preset);
+  return canonical({...preset,moduleRules:preset.moduleRules?.map(rule=>({...rule,
+    module:{assetId:rule.module.assetId,kind:rule.module.kind},
+  }))});
+}
 
 function download(name:string,value:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=name;link.click();URL.revokeObjectURL(url);}
 function NumericField({label,value,min,onChange}:{label:string;value:number;min:number;onChange:(value:number)=>void}){
@@ -136,7 +144,7 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
     const previous=previousPresets.find(preset=>preset.presetId===origin?.presetId);
     const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
     const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
-    const samePreset=previous&&preset&&canonical(previous)===canonical(preset);
+    const samePreset=previous&&preset&&presetLayoutKey(previous)===presetLayoutKey(preset);
     if(decodeContext||previous?.queryParallel||previous?.pipeline||samePreset){
       if(!origin||!preset||origin.modelId!==active.model.assetId||
          origin.requestDp&&!supportsRequestReplicas(preset)){
@@ -163,11 +171,19 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
           if(origin.expertMesh){
             const oldMesh=pipelineExpertMeshPresets(previous,previousPresets,phase);
             const newMesh=pipelineExpertMeshPresets(preset,target?.parallelPresets??[],phase);
-            if(!oldMesh||!newMesh||canonical([oldMesh.ep,oldMesh.tp,oldStage===oldMesh.shared?oldMesh.attention:null])!==
-              canonical([newMesh.ep,newMesh.tp,newStage===newMesh.shared?newMesh.attention:null])){
+            if(!oldMesh||!newMesh||canonical([oldMesh.ep,oldMesh.tp,oldStage===oldMesh.shared?oldMesh.sharedRules:null])!==
+              canonical([newMesh.ep,newMesh.tp,newStage===newMesh.shared?newMesh.sharedRules:null])){
               throw Error('新模型修订没有兼容的阶段内专家网格');
             }
           }
+        }
+      }else if(origin.expertMesh){
+        const oldMesh=expertMeshPresets(previousPresets,next.workload.kind),newMesh=expertMeshPresets(target?.parallelPresets??[],next.workload.kind);
+        const meshKeys=(mesh:typeof oldMesh,selected:ParallelPresetTemplate|undefined)=>mesh&&[
+          presetLayoutKey(mesh.ep),presetLayoutKey(mesh.tp),selected===mesh.shared?presetLayoutKey(mesh.sharedRules):null,
+        ];
+        if(!oldMesh||!newMesh||canonical(meshKeys(oldMesh,previous))!==canonical(meshKeys(newMesh,preset))){
+          throw Error('新模型修订没有兼容的专家网格');
         }
       }
       if(preset.phases.includes(next.workload.kind)){

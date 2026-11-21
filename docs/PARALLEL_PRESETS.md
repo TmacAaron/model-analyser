@@ -58,7 +58,7 @@ Qwen3-0.6B r7 和 Qwen3-1.7B r6 可以同时填写 Attention DP 和 DCP。DP2、
 
 ## 全模型 MoE EP × TP
 
-Qwen3.5-397B-A17B r3 起、GLM-5.2 r2、Kimi-K3 r2／r3 和 DeepSeek-V3／R1 r4 可同时填写 MoE EP 和 MoE TP。以 EP2、TP2 为例，路由专家分成两组，每组两张卡切分专家的中间维度。四张卡共用一份逻辑请求，每个 token 仍按模型的全局 TopK 选专家。EP 按商和余数分发有效路由，TP 分片共享其专家组的路由，每卡用本地权重和有效槽位计算。专家数及专家中间维度须分别整除 EP 和 TP 度。
+Qwen3.5-397B-A17B r3 起、GLM-5.2 r2、Kimi-K3 r2／r3、DeepSeek-V3／R1 r4 和 DeepSeek-V4 Flash 系列 r3 可同时填写 MoE EP 和 MoE TP。以 EP2、TP2 为例，路由专家分成两组，每组两张卡切分专家的中间维度。四张卡共用一份逻辑请求，每个 token 仍按模型的全局 TopK 选专家。EP 按商和余数分发有效路由，TP 分片共享其专家组的路由，每卡用本地权重和有效槽位计算。专家数及专家中间维度须分别整除 EP 和 TP 度。
 
 「Attention TP」设为 `1` 时 Attention 在原设备上逐卡复制。设为 `EP × TP` 时 Attention 在同一批设备上分片，GPU 数仍为 `EP × TP`。每个 MoE 层在原合并点进行一次全池 AllReduce，对每张卡的局部专家贡献求和。Qwen／GLM 先归约再加共享专家，Kimi‑K3 在潜向量 RMSNorm 前归约。通信采用配置的环形模型，Attention 的归约单独计算。各卡的 KV 与发布权重缩放因子按生效布局计算。快捷入口支持最多 64 个实际设备槽位。
 
@@ -120,11 +120,14 @@ MoE TP 配对切分 gate／up 的输出通道和 down 的输入通道。以 `MoE
 
 ## DeepSeek-V4 Flash 系列
 
-V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。已有工作区可在「并行方式」更新模型，再校验并应用布局。请求 DP 均分完整请求，每卡持有全模型权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)
+V4-Flash 和 V4.1-Flash r2 支持请求 DP、Attention TP、MoE EP，以及共用卡池的 Attention TP ＋ MoE EP。r3 增加 MoE TP 和 MoE EP × TP，并能让 Attention TP 复用专家卡池。已有工作区可在「并行方式」更新模型，再校验并应用布局。请求 DP 均分完整请求，每个请求副本持有一份完整逻辑权重。 [V4 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/60d8d70770c6776ff598c94bb586a859a38244f1/inference/model.py) · [V4.1 官方参考实现](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/314113f8a7dadb388215396ba5fbee2c610a04d6/inference/model.py)
 
 - Attention TP 切分查询头、索引头及匹配的输出组。索引分数在 Top‑K、候选块选择或候选掩码前执行 FP32 AllReduce。注意力输出在转换到 BF16 前执行 FP32 AllReduce。滑窗、压缩 KV、索引 K 和压缩历史在每卡复制。V4.1 的跨层共享缓存每卡只分配一次。
 - MoE EP 均分 256 或 384 个路由专家。每个 token 的全局 Top‑K 都是 6。EP8 的理论负载是 6 个有效槽位分到 6 张卡，每卡预留 1 个槽位。有效槽位决定有用工作和专家权重读量。每层先归约 FP32 路由输出，再加共享专家。
+- MoE TP 配对切分 gate／up、SwiGLU 和 down 投影。EP4 × TP2 时，每组两张卡共享本组路由，并各算一半中间通道。6 条路由按 `2、2、1、1` 均摊，所有部分输出在共享专家合并之前完成一次 FP32 归约。
 - V4.1 同池预设还按行分片两张 Engram 表及缩放项，每卡按向上取整的行数分配。每卡查有效行或掩蔽的占位行，随后归约 BF16 查表结果。投影仍在各卡计算。整层的权重保留当前 BF16／FP32 理论格式，以及 Engram 的原有 FP8 表和 E8M0 缩放项。
+
+Attention TP8 与 MoE EP4 × TP2 共用八张卡时，Engram 表继续跨整池切分。下表的权重、每卡 KV 和通信数也适用于这个布局。
 
 在单请求、Prefill 结束时 4 个 token 的 TP8 ＋ EP8 参考配置下，以下为每卡分配和全模型归约数量。网络使用可编辑的带宽和延迟，路由负载按均衡假设估算。
 

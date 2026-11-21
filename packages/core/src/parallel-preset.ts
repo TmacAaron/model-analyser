@@ -125,7 +125,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
         const recipes=pipelineExpertMeshPresets(preset,model.parallelPresets??[],scenario.workload.kind);
         if(!recipes||stagePreset!==recipes.ep&&stagePreset!==recipes.shared)throw Error('当前流水线未声明可合并的阶段内专家归约');
         stageParts.push({preset:recipes.ep,axis:'expert',size:stageExpertMesh.ep},{preset:recipes.tp,axis:'feature',size:stageExpertMesh.tp});
-        if(stagePreset===recipes.shared&&recipes.attention)stageParts.push({preset:recipes.attention,axis:'tp',size:stageWidth});
+        if(stagePreset===recipes.shared&&recipes.sharedRules)stageParts.push({preset:recipes.sharedRules,axis:'tp',size:stageWidth});
       }else if(stagePreset)stageParts.push({preset:stagePreset,axis:'tp',size:stageWidth});
       const deviceTopology=request.requestDp||stagePreset?{...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh:presetMesh}:g)}:cleanTopology;
       const {topology,plan}=materializePipelinePreset({...request,scenario:{...scenario,deviceTopology}},preset,expanded.resolved,
@@ -156,7 +156,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
         coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[...requestCoordinate(i),Math.floor((i%replicaWidth)/tp),i%tp]}))}});
       expertMesh={ep,tp,groupId};
       parts=[{preset:recipes.ep,groupId,meshAxisId:'expert',size:ep},{preset:recipes.tp,groupId,meshAxisId:'feature',size:tp}];
-      if(preset===recipes.shared&&recipes.attention)parts.push({preset:recipes.attention,groupId:group.groupId,meshAxisId:request.meshAxisId,size:replicaWidth});
+      if(preset===recipes.shared&&recipes.sharedRules)parts.push({preset:recipes.sharedRules,groupId:group.groupId,meshAxisId:request.meshAxisId,size:replicaWidth});
     }
     type Shard=Extract<TensorDistribution,{kind:'sharded'}>;
     const shardIds=new Map<string,Shard>(),reductionRules=new Map<string,ParallelPresetTemplate['reductions'][number]>();
@@ -199,7 +199,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const plan:Scenario['parallelPlan']={assignments:[{selector:{kind:'subtree',rootNodeId:NodeId.parse('$model')},phases:preset.phases,tensorDistributions:graph.tensors.map(t=>({tensorId:t.tensorId,distribution:distribution(t.tensorId,t.shape)})),storageDistributions:graph.storages.filter(s=>!tensorStorages.has(s.storageId)).map(s=>({storageId:s.storageId,distribution:distribution(s.storageId,s.allocation.kind==='tensor'?s.allocation.shape:[])}))}],communications:[],assumptions:[`Generated from fixed model ${model.assetId}@${model.revision}, preset ${preset.presetId}. This records generation history; later manual edits remain explicit.`,preset.description,...preset.assumptions,`Group ${group.groupId}: ${degree} unique physical members. ${groupAssumptions}`,`Only declared localCost equations are evaluated; physical replicas may execute duplicate work. No implicit packing conversion, communication HBM/reduction arithmetic or staging allocation.`]};
     if(decodeContext)plan.decodeContext=decodeContext;
     if(request.requestDp)plan.assumptions.push(`${requestDp} independent request replicas with ${replicaWidth} devices each. Reductions run concurrently within each replica and preserve its batch slice.`);
-    if(expertMesh)plan.assumptions.push(...parts.filter(part=>part.preset!==preset).flatMap(part=>part.preset.assumptions),
+    if(expertMesh)plan.assumptions.push(...parts.filter(part=>part.preset.presetId!==preset.presetId).flatMap(part=>part.preset.assumptions),
       `MoE experts use ${expertMesh.ep} owner partitions and ${expertMesh.tp} intermediate-feature partitions per owner. Each request replica sums the partial tiles before the original merge boundary.`);
     for(const r of reductionRules.values()){
       const tensor=tensorsById.get(r.tensorId);
