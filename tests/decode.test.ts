@@ -1,7 +1,8 @@
 import { describe,it,expect } from 'vitest';
-import { MeasurementRecord,DeviceId,NodeId,LocalCostRule,StateId,QuantizedStorageSpec,type AnalysisAttempt,type MetricValue } from '@model-analyser/contracts';
+import { AnalysisResult,MeasurementRecord,DeviceId,NodeId,LocalCostRule,StateId,QuantizedStorageSpec,type AnalysisAttempt,type MetricValue } from '@model-analyser/contracts';
 import { analyzeScenario,compareMeasurement,searchCapacity,computeInputHash } from '@model-analyser/core';
 import { validateResult } from '../packages/contracts/src/result-validation.js';
+import { analyzeDecodeSequence } from '../packages/core/src/decode.js';
 import { makeDecodeProject } from '../scripts/decode-project.js';
 import { makeFusedProject } from '../scripts/fused-project.js';
 import { makeNativeCollectiveProject } from '../scripts/native-collective-project.js';
@@ -10,6 +11,21 @@ const value=(m:MetricValue|undefined)=>{expect(m?.status).toBe('available');if(m
 function report(a:AnalysisAttempt){expect(a.status,JSON.stringify(a.status==='unavailable'?a.diagnostics:a.result.diagnostics)).toBe('available');if(a.status!=='available')throw Error();expect(validateResult(a.result)).toEqual([]);return a.result;}
 function fixture(window=false){const p=makeDecodeProject(c01Project(),window),s=p.scenarios[0];if(!s)throw Error();return {p,s,assets:p.assetSnapshots};}
 describe('stepwise decode and state versions',()=>{
+  it('preserves validated child evidence when assembling a schema-valid Decode sequence',async()=>{
+    const {s,assets}=fixture(),childEvidence:MetricValue[]=[];
+    const result=report(await analyzeDecodeSequence(s,assets,async(scenario,library,context)=>{
+      const child=await analyzeScenario(scenario,library,context);
+      if(child.status==='available')childEvidence.push(child.result.nodes[0]!.cost.hbmBytes);
+      return child;
+    }));
+    expect(AnalysisResult.safeParse(result).success).toBe(true);
+    expect(result.decode?.steps).toHaveLength(3);
+    for(const [index,step] of result.decode!.steps.entries()){
+      const metric=step.result.nodes[0]!.cost.hbmBytes,original=childEvidence[index];
+      if(metric.status!=='available'||original?.status!=='available')throw Error('Expected available leaf evidence');
+      expect(metric.provenance).toBe(original.provenance);
+    }
+  });
   it('reserves step_end caches once per call and carries prior capacity separately from the next reservation',async()=>{
     const f=fixture(),model=f.assets.find(a=>a.definition.kind==='model'),bytes=f.assets.find(a=>a.assetId==='example:formula:decode-state-bytes');if(model?.definition.kind!=='model'||bytes?.definition.kind!=='formula')throw Error();
     model.definition.graph.states[0]!.allocationBasis='step_end';bytes.definition.formula.expression='2 * B * (C + Q)';

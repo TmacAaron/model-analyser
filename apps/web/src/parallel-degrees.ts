@@ -1,5 +1,5 @@
 import { DeviceId, type ParallelPresetTemplate, type Scenario, type ParallelPresetRequest } from '@model-analyser/contracts';
-import { expertMeshPresets, pipelineAttentionPreset, pipelineTensorMeshAxis, requestReplicaMeshAxis, supportsRequestReplicas } from '@model-analyser/core';
+import { expertMeshPresets, pipelineAttentionPreset, pipelineExpertPreset, pipelineTensorMeshAxis, requestReplicaMeshAxis, supportsRequestReplicas } from '@model-analyser/core';
 
 export const parallelFields = [
   { area: 'Attention', fields: [{ id: 'attentionTp', label: 'TP' }, { id: 'attentionDp', label: 'DP' }] },
@@ -12,7 +12,8 @@ export const serialDegrees: Degrees = { attentionTp: 1, attentionDp: 1, moeEp: 1
 const ids = parallelFields.flatMap(area => area.fields.map(field => field.id));
 const poolId = '$degree-pool';
 const rankPrefix = '$degree-rank:';
-type DegreeMatch = { preset: ParallelPresetTemplate; slots: number; expertMesh?: ParallelPresetRequest['expertMesh']; requestDp?: number; pipelineTp?: number };
+type DegreeMatch = { preset: ParallelPresetTemplate; slots: number; expertMesh?: ParallelPresetRequest['expertMesh']; requestDp?: number; pipelineTp?: number;
+  pipelineStage?: ParallelPresetRequest['pipelineStage'] };
 
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
   if (preset.strategy === 'batch_sharded') return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
@@ -63,6 +64,18 @@ export function matchingParallelPresets(degrees: Degrees, presets: ParallelPrese
     return presets.flatMap(preset=>preset.phases.includes(scenario.workload.kind)&&pipelineAttentionPreset(preset,presets,scenario.workload.kind)
       ?[{preset,slots,pipelineTp:degrees.attentionTp}]:[]);
   }
+  if(degrees.pp>1&&(degrees.moeEp>1||degrees.moeTp>1)){
+    const width=Math.max(degrees.moeEp,degrees.moeTp,degrees.attentionTp),slots=degrees.pp*width;
+    if(slots>64)return [];
+    const wanted={...degrees,pp:1};
+    return presets.filter(preset=>preset.strategy==='pipeline').flatMap(preset=>presets.flatMap(candidate=>{
+      const stage=pipelineExpertPreset(preset,[candidate],candidate.presetId,scenario.workload.kind);
+      if(!stage)return [];
+      const declared=declaredDegrees(scenario.model,stage,width);
+      return declared&&ids.every(id=>declared[id]===wanted[id])
+        ?[{preset,slots,pipelineStage:{presetId:stage.presetId,degree:width}}]:[];
+    }));
+  }
   const { moeEp: ep, moeTp: tp, attentionTp, ...other } = degrees;
   if (ep > 1 && tp > 1 && Object.values(other).every(degree => degree === 1)) {
     const slots = ep * tp;
@@ -85,14 +98,21 @@ export function currentDegrees(scenario: Scenario, presets: ParallelPresetTempla
   if (!preset || !group || origin?.modelId !== scenario.model.assetId || origin.modelRevision !== scenario.model.revision) return undefined;
   const requestDp = origin.requestDp;
   const width = group.members.length / (requestDp ?? 1);
-  const stageCount=width/(origin.pipelineTp??1);
-  if ((requestDp||origin.pipelineTp)&&(!Number.isInteger(stageCount)||group.mesh?.axes.find(axis=>axis.axisId===origin.meshAxisId)?.size!==stageCount))return undefined;
+  const stageWidth=origin.pipelineStage?.degree??origin.pipelineTp??1;
+  const stageCount=width/stageWidth;
+  if ((requestDp||stageWidth>1)&&(!Number.isInteger(stageCount)||group.mesh?.axes.find(axis=>axis.axisId===origin.meshAxisId)?.size!==stageCount))return undefined;
   if (requestDp && (!supportsRequestReplicas(preset) || group.mesh?.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp)) return undefined;
-  if(origin.pipelineTp&&(!pipelineAttentionPreset(preset,presets,scenario.workload.kind)||group.mesh?.axes.find(axis=>axis.axisId===pipelineTensorMeshAxis)?.size!==origin.pipelineTp))return undefined;
+  if(stageWidth>1&&group.mesh?.axes.find(axis=>axis.axisId===pipelineTensorMeshAxis)?.size!==stageWidth)return undefined;
+  if(origin.pipelineTp&&(origin.pipelineStage||!pipelineAttentionPreset(preset,presets,scenario.workload.kind)))return undefined;
   const degrees = declaredDegrees(scenario.model, preset, stageCount);
   if (!degrees) return undefined;
   if (requestDp) degrees.attentionDp = requestDp;
   if(origin.pipelineTp)degrees.attentionTp=origin.pipelineTp;
+  if(origin.pipelineStage){
+    const stage=pipelineExpertPreset(preset,presets,origin.pipelineStage.presetId,scenario.workload.kind);
+    if(!stage||origin.expertMesh)return undefined;
+    for(const axis of stage.sharedPoolDegrees??[])degrees[axis]=stageWidth;
+  }
   if (!origin.expertMesh) return degrees;
   const { ep, tp, groupId } = origin.expertMesh;
   const expert = scenario.deviceTopology.groups.find(item => item.groupId === groupId);

@@ -7,7 +7,7 @@ import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenHybridAssets } from '../scripts/qwen-hybrid-model.js';
 import { makeQwenHybridParallelAssets } from '../scripts/qwen-hybrid-parallel.js';
 import { addQwenPipelineAttentionParallel, addQwenPipelinePreset, addQwenPipelineRequestParallel } from '../scripts/qwen-pipeline.js';
-import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
+import { bindDegreePool, currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 
 const cases = [
   { release: 'qwen35', name: 'Qwen3.5-397B-A17B', periods: 15, hidden: 4096, keyHeads: 2, queryHeads: 32, linearValueHeads: 64, experts: 512, ffn: 1024 },
@@ -100,6 +100,82 @@ it('shards both GQA cache and DeltaNet state within the two Qwen3.8 pipeline sta
     devices:Array(4).fill(expect.objectContaining({kvBytes:kv,otherStateBytes:recurrent})),
   }});
 }, 140_000);
+
+it('shards the owning-stage experts independently of the global TopK in DP × PP × EP', async () => {
+  const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
+  const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
+  const project = makeModelProject([model, ...dependencies], {
+    kind: 'prefill', batchSize: 4, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+  }, model.name);
+  const scenario = project.scenarios[0]!, presets = model.parallelPresets!;
+  scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 3 } }];
+  const dimensions = { ...serialDegrees, attentionDp: 2, pp: 2, moeEp: 4 };
+  const [match] = matchingParallelPresets(dimensions, presets, scenario);
+  expect(match).toMatchObject({ slots: 16, requestDp: 2, pipelineStage: { presetId: 'ep-routed', degree: 4 } });
+  expect(matchingParallelPresets({ ...dimensions, moeTp: 2 }, presets, scenario)).toEqual([]);
+  const input = { ...bindDegreePool(scenario, 16), assets: project.assetSnapshots, presetId: match!.preset.presetId,
+    requestDp: match!.requestDp, pipelineStage: match!.pipelineStage, network: { bytesPerSecond: 20e9, latencySeconds: 5e-6 },
+    pipelineTpNetwork: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } };
+  const attempt = await previewParallelPreset(input);
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  const { preview } = attempt;
+  expect(currentDegrees(preview.scenario, presets)).toEqual(dimensions);
+  expect(preview.communicationCount).toBe(13);
+  expect(preview.communications?.find(row => row.operation === 'send_recv')).toMatchObject({
+    peerPairs: Array(8).fill(expect.any(Object)), timing: { bytePerSecond: 20e9, latencySeconds: 5e-6 },
+  });
+  expect(preview.communications?.filter(row => row.operation === 'all_reduce').every(row =>
+    row.timing.kind === 'bandwidth_latency' && row.timing.bytePerSecond === 100e9)).toBe(true);
+  const fixture = cases[0], period = ledger(fixture, 1), base = ledger(fixture, 0);
+  const expertBytes = 2 * 4 * 3 * fixture.hidden * fixture.ffn * fixture.experts;
+  const localPeriodWeight = period.weightBytes - base.weightBytes - expertBytes * 3 / 4;
+  const embedding = 2 * 248320 * fixture.hidden;
+  const periods = [2, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1];
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual(periods.map(count =>
+    count * localPeriodWeight + embedding + (count === 1 ? 2 * fixture.hidden : 0)));
+  const kvBytes = 2 * 3 * period.kvPerToken, recurrentBytes = 2 * period.recurrentBytes;
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(periods.map(count => count * (kvBytes + recurrentBytes)));
+
+  const result = await analyzeScenario(preview.scenario, preview.assets);
+  if (result.status !== 'available') throw Error(JSON.stringify(result.diagnostics.slice(0, 6)));
+  expect(amount(result.result.total.seconds)).toBeGreaterThan(0);
+  const nodes = result.result.distributed?.layout.localCosts.nodes;
+  const expert = nodes?.find(row => row.nodeId === 'decoder[2]/full/expert-gate-up')?.placement;
+  if (expert?.kind !== 'placed') throw Error('Missing last-stage experts');
+  expect(expert.perDevice.map(row => row.deviceId)).toEqual(preview.allocations.filter((_, index) => periods[index] === 1).map(row => row.deviceId));
+  const operationsPerSlot = 4 * 2 * fixture.hidden * fixture.ffn;
+  expect(expert.perDevice.map(({ outcome }) => outcome.status === 'available' ? [
+    amount(outcome.cost.compute[0]?.usefulOperations), amount(outcome.cost.compute[0]?.executedOperations),
+  ] : null)).toEqual([3, 3, 2, 2, 3, 3, 2, 2].map(routes => [routes * operationsPerSlot, 3 * operationsPerSlot]));
+  expect(await estimateKvCapacity(preview.scenario, preview.assets)).toMatchObject({ status: 'available', report: {
+    averageBytesPerToken: 4 * 3 * period.kvPerToken, budget: { status: 'available' },
+    devices: periods.map(count => ({ kvBytes: count * kvBytes, otherStateBytes: count * recurrentBytes })),
+  } });
+  expect(await previewParallelPreset({ ...input, ...bindDegreePool(scenario, 6), requestDp: undefined,
+    pipelineStage: { presetId: 'ep-routed', degree: 3 } })).toMatchObject({ status: 'unavailable', message: expect.stringContaining('可均分到 3') });
+}, 120_000);
+
+it.each([
+  [1, 'ep-routed', 'moeEp', 9], [2, 'tp-hybrid-attention-ep-routed', 'moeEp', 17],
+  [1, 'tp-routed-expert', 'moeTp', 9], [2, 'tp-hybrid-attention-routed-expert', 'moeTp', 17],
+] as const)('reuses the stage pool with Attention TP %i and %s', async (attentionTp, presetId, axis, communicationCount) => {
+  const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
+  const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
+  const project = makeModelProject([model, ...dependencies], {
+    kind: 'decode', batchSize: 1, contextTokensPerRequest: 2, queryTokensPerRequest: 1, steps: 2,
+  }, model.name);
+  const scenario = project.scenarios[0]!;
+  scenario.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 2 } }];
+  const degrees = { ...serialDegrees, pp: 2, attentionTp, [axis]: 2 };
+  const [match] = matchingParallelPresets(degrees, model.parallelPresets!, scenario);
+  expect(match).toMatchObject({ slots: 4, pipelineStage: { presetId, degree: 2 } });
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, 4), assets: project.assetSnapshots,
+    presetId: 'pp-decoder', pipelineStage: match!.pipelineStage, network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
+  if (attempt.status !== 'available') throw Error(attempt.message);
+  expect(attempt.preview.communicationCount).toBe(communicationCount);
+  expect(currentDegrees(attempt.preview.scenario, model.parallelPresets!)).toEqual(degrees);
+  expect(attempt.preview.communications?.find(row => row.operation === 'send_recv')?.peerPairs).toHaveLength(2);
+}, 120_000);
 
 it('grows only GQA storage across Decode calls while replacing the two fixed DeltaNet states', async () => {
   const project = makeModelProject(makeQwenHybridAssets('qwen38'), {

@@ -355,5 +355,5 @@ it('partitions Qwen attention inside each pipeline stage and keeps two request g
   expect(await previewParallelPreset({...request,scenario:old,assets:[...assets,legacy]}))
     .toMatchObject({status:'unavailable',message:expect.stringContaining('未声明可用的阶段内 Attention TP')});
   expect(await previewParallelPreset({...request,pipelineTp:undefined}))
-    .toMatchObject({status:'unavailable',message:expect.stringContaining('阶段内链路参数需要流水线 Attention TP')});
+    .toMatchObject({status:'unavailable',message:expect.stringContaining('阶段内链路参数需要已声明的流水线阶段内布局')});
 }, 160_000);

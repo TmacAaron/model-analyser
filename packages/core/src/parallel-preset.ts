@@ -10,12 +10,12 @@ import { expertMeshPresets } from './expert-mesh-preset.js';
 import { canonical } from '../../contracts/src/validation.js';
 import { replicaPayloadFormula, requestReplicaMeshAxis as requestAxis, soleBatchAxis } from './request-replica.js';
 import { ringPresetReduction } from './preset-reduction.js';
-import { pipelineAttentionPreset } from '../../contracts/src/parallel-bindings.js';
+import { pipelineAttentionPreset, pipelineExpertPreset } from '../../contracts/src/parallel-bindings.js';
 
 type ExpertMesh = NonNullable<Scenario['parallelPlan']['generatedFrom']>['expertMesh'];
 export { requestReplicaMeshAxis } from './request-replica.js';
 export { pipelineTensorMeshAxis } from './pipeline-preset.js';
-export { pipelineAttentionPreset } from '../../contracts/src/parallel-bindings.js';
+export { pipelineAttentionPreset, pipelineExpertPreset } from '../../contracts/src/parallel-bindings.js';
 
 export function supportsRequestReplicas(preset:ParallelPresetTemplate){
   return preset.strategy==='tensor_sharded'||
@@ -65,11 +65,14 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const decodeContext=preset.decodeContext;
     if(decodeContext&&(degree<2||request.expertMesh))throw Error('DCP 需要至少两张卡及单独的设备轴');
     const requestDp=request.requestDp??1,replicaWidth=degree/requestDp;
-    const stageWidth=request.pipelineTp??1,stageCount=replicaWidth/stageWidth;
-    const attention=request.pipelineTp?pipelineAttentionPreset(preset,model.parallelPresets??[],scenario.workload.kind):undefined;
-    if(request.pipelineTpNetwork&&!request.pipelineTp)throw Error('阶段内链路参数需要流水线 Attention TP 布局');
-    if(request.pipelineTp&&(!attention||request.expertMesh))throw Error('当前流水线未声明可用的阶段内 Attention TP 布局');
-    if(request.pipelineTp&&(!Number.isInteger(stageCount)||stageCount<2||request.meshAxisId===pipelineTensorMeshAxis))throw Error('PP × TP 需要每组至少两个完整阶段和独立的阶段轴');
+    const stageWidth=request.pipelineStage?.degree??request.pipelineTp??1,stageCount=replicaWidth/stageWidth;
+    const stagePreset=request.pipelineStage?pipelineExpertPreset(preset,model.parallelPresets??[],request.pipelineStage.presetId,scenario.workload.kind):
+      request.pipelineTp?pipelineAttentionPreset(preset,model.parallelPresets??[],scenario.workload.kind):undefined;
+    if(request.pipelineStage&&request.pipelineTp)throw Error('每个流水线阶段只能选择一种同池布局');
+    if(stageWidth>1&&(!stagePreset||request.expertMesh))throw Error(request.pipelineTp?
+      '当前流水线未声明可用的阶段内 Attention TP 布局':'当前流水线未声明所选阶段内专家布局');
+    if(request.pipelineTpNetwork&&!stagePreset)throw Error('阶段内链路参数需要已声明的流水线阶段内布局');
+    if(stageWidth>1&&(!Number.isInteger(stageCount)||stageCount<2||request.meshAxisId===pipelineTensorMeshAxis))throw Error('流水线每组需要至少两个完整阶段和独立的阶段轴');
     if(request.requestDp){
       if(!supportsRequestReplicas(preset)||!model.parallelPresets?.some(p=>p.strategy==='batch_sharded'&&p.phases.includes(scenario.workload.kind)))throw Error('当前模型未声明此布局可与请求 DP 组合');
       if(!Number.isInteger(replicaWidth)||replicaWidth<2)throw Error('物理卡数须容纳完整的请求副本，每个副本至少两张并行卡');
@@ -96,9 +99,9 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const requestAxes=request.requestDp?[{axisId:requestAxis,size:requestDp}]:[];
     const requestCoordinate=(i:number)=>request.requestDp?[Math.floor(i/replicaWidth)]:[];
     const presetMesh={axes:[...requestAxes,{axisId:request.meshAxisId,size:stageCount},
-      ...(request.pipelineTp?[{axisId:pipelineTensorMeshAxis,size:stageWidth}]:[])],
+      ...(stagePreset?[{axisId:pipelineTensorMeshAxis,size:stageWidth}]:[])],
       coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[
-        ...requestCoordinate(i),Math.floor((i%replicaWidth)/stageWidth),...(request.pipelineTp?[i%stageWidth]:[]),
+        ...requestCoordinate(i),Math.floor((i%replicaWidth)/stageWidth),...(stagePreset?[i%stageWidth]:[]),
       ]}))};
     if(preset.strategy==='declared_plan'){
       if(request.expertMesh)throw Error('此声明式预设已固定设备网格');
@@ -111,13 +114,13 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       if(chain?.repeat?.wiring!=='chain')throw Error('流水线须声明根模型中的连续重复层链');
       const expanded=instantiateModel(expansionScenario,assets);
       if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.message).join('；'));
-      const deviceTopology=request.requestDp||request.pipelineTp?{...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh:presetMesh}:g)}:cleanTopology;
+      const deviceTopology=request.requestDp||stagePreset?{...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh:presetMesh}:g)}:cleanTopology;
       const {topology,plan}=materializePipelinePreset({...request,scenario:{...scenario,deviceTopology}},preset,expanded.resolved,
-        attention?expandPresetRules(attention,expanded.resolved):undefined);
-      if(attention)plan.assumptions.push(...attention.assumptions);
+        stagePreset?expandPresetRules(stagePreset,expanded.resolved):undefined);
+      if(stagePreset)plan.assumptions.push(...stagePreset.assumptions);
       return await finishPreset(request,model,preset,topology,plan);
     }
-    const previousRequestMesh=(origin?.requestDp||origin?.pipelineTp)&&origin.groupId===group.groupId&&origin.meshAxisId===request.meshAxisId;
+    const previousRequestMesh=(origin?.requestDp||origin?.pipelineTp||origin?.pipelineStage)&&origin.groupId===group.groupId&&origin.meshAxisId===request.meshAxisId;
     if(group.mesh&&!previousRequestMesh&&!group.mesh.axes.some(a=>a.axisId===request.meshAxisId&&a.size===degree))throw new FormulaError('invalid_preset_mesh','此预设需要有序设备池及其完整设备轴');
     const mesh=group.mesh&&!request.requestDp&&!previousRequestMesh?group.mesh:presetMesh;
     const topology={...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh}:g)};
@@ -203,7 +206,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
 }
 
 async function finishPreset(request:ParallelPresetRequest,model:AssetDocument,preset:ParallelPresetTemplate,topology:Scenario['deviceTopology'],plan:Scenario['parallelPlan'],expertMesh?:ExpertMesh):Promise<ParallelPresetAttempt>{
-    const {scenario,assets}=request;plan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,groupId:request.groupId,meshAxisId:request.meshAxisId,...(expertMesh?{expertMesh}:{}),...(request.requestDp?{requestDp:request.requestDp}:{}),...(request.pipelineTp?{pipelineTp:request.pipelineTp}:{})};
+    const {scenario,assets}=request;plan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,groupId:request.groupId,meshAxisId:request.meshAxisId,...(expertMesh?{expertMesh}:{}),...(request.requestDp?{requestDp:request.requestDp}:{}),...(request.pipelineTp?{pipelineTp:request.pipelineTp}:{}),...(request.pipelineStage?{pipelineStage:request.pipelineStage}:{})};
     const formulas=[...(request.requestDp?[replicaPayloadFormula]:[]),...(preset.strategy==='query_sharded'?[queryGatherTileFormula]:[])];
     const missing=formulas.filter(formula=>{
       const existing=assets.find(asset=>asset.assetId===formula.assetId&&asset.revision===formula.revision);
@@ -221,7 +224,9 @@ async function finishPreset(request:ParallelPresetRequest,model:AssetDocument,pr
     const allocations=result.deviceAllocations.map(d=>({deviceId:d.deviceId,totalBytes:value(d.knownBytes),weightBytes:d.categoryBreakdown.find(c=>c.category==='weight')?.bytes,stateBytes:d.categoryBreakdown.find(c=>c.category==='state')?.bytes})).map(d=>({...d,weightBytes:d.weightBytes?value(d.weightBytes):0,stateBytes:d.stateBytes?value(d.stateBytes):0}));
     const warnings=[...new Set(result.diagnostics.filter(d=>d.severity!=='info').map(d=>d.code+' · '+d.message))];
     if(firstDecode)warnings.unshift('预览为第一个 Decode 步骤的布局和分配。正式分析按保存的步数逐步计算。');
-    const widthName=expertMesh ? (preset.sharedPoolDegrees?.includes('attentionTp')?'Attention TP ＋ ':'')+'MoE EP × TP' : request.pipelineTp?'Attention TP × '+preset.name:preset.name;
+    const expertStage=model.parallelPresets?.find(row=>row.presetId===request.pipelineStage?.presetId);
+    const widthName=expertMesh ? (preset.sharedPoolDegrees?.includes('attentionTp')?'Attention TP ＋ ':'')+'MoE EP × TP' :
+      expertStage?expertStage.name+' × '+preset.name:request.pipelineTp?'Attention TP × '+preset.name:preset.name;
     const presetName=request.requestDp?'请求 DP × '+widthName:widthName;
     const preview:ParallelPresetPreview={version:'parallel-preset.1',presetId:preset.presetId,presetName,sourceModel:scenario.model,sourceInputHash:await computeInputHash(scenario,assets),scenario:next,assets:calculationInput(next,layoutAssets).assets,deviceIds:request.scenario.deviceTopology.groups.find(g=>g.groupId===request.groupId)?.members??[],assignmentCount:plan.assignments.length,communicationCount:result.communications.length,communications:result.communications.map(c=>c.evaluation.definition),allocations,warnings};
     return ParallelPresetAttempt.parse({status:'available',preview});

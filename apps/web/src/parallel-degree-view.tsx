@@ -4,7 +4,7 @@ import {
   AssetDocument, ParallelPresetAttempt, ParallelPresetRequest,
   type ParallelPresetPreview, type ProjectDocument, type Scenario,
 } from '@model-analyser/contracts';
-import { pipelineAttentionPreset } from '@model-analyser/core';
+import { pipelineAttentionPreset, pipelineExpertPreset } from '@model-analyser/core';
 import { canonical, collectRefs } from '../../../packages/contracts/src/validation.js';
 import { request } from './api.js';
 import { useDisplayUnits } from './display-units.js';
@@ -39,7 +39,10 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   for (const field of Object.keys(draft) as (keyof Degrees)[]) degrees[field] = Number(draft[field]);
   const valid = Object.values(degrees).every(degree => Number.isSafeInteger(degree) && degree >= 1 && degree <= 64);
   const matches = matchingParallelPresets(degrees, presets, scenario);
-  const match = matches.find(item => item.preset.presetId === (variant || scenario.parallelPlan.generatedFrom?.presetId)) ?? matches[0];
+  const origin = scenario.parallelPlan.generatedFrom;
+  const optionKey = (presetId?: string, stageId?: string) => JSON.stringify([presetId, stageId]);
+  const match = matches.find(item => optionKey(item.preset.presetId, item.pipelineStage?.presetId) ===
+    (variant || optionKey(origin?.presetId, origin?.pipelineStage?.presetId))) ?? matches[0];
   const hardwareRef = scenario.deviceTopology.devices[0]?.hardware;
   const hardware = project.assetSnapshots.find(asset => asset.assetId === hardwareRef?.assetId && asset.revision === hardwareRef.revision);
   const isPipeline = match?.preset.strategy === 'pipeline';
@@ -57,15 +60,17 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
     : savedPipeline ? innerSaved : nativeNetwork ?? savedLink();
   const primaryScope: LinkScope = isPipeline ? 'inter_group' : match?.preset.networkDefaults?.scope ?? 'intra_group';
   const primaryDefaults = primarySaved ?? match?.preset.networkDefaults ?? hardwareLink(primaryScope);
-  const attention = match?.pipelineTp ? pipelineAttentionPreset(match.preset, presets, scenario.workload.kind) : undefined;
-  const innerDefaults = innerSaved ?? attention?.networkDefaults ?? hardwareLink('intra_group') ?? primaryDefaults;
+  const stagePreset = match?.pipelineStage ? pipelineExpertPreset(match.preset, presets, match.pipelineStage.presetId, scenario.workload.kind)
+    : match?.pipelineTp ? pipelineAttentionPreset(match.preset, presets, scenario.workload.kind) : undefined;
+  const stageReduces = !!stagePreset && (stagePreset.reductions.length > 0 || !!stagePreset.moduleRules?.some(rule => rule.reductions.length));
+  const innerDefaults = innerSaved ?? stagePreset?.networkDefaults ?? hardwareLink('intra_group') ?? primaryDefaults;
   const [linkDraft, setLinkDraft] = useState<Partial<Record<LinkScope, Partial<LinkText>>>>({});
   const linkText = (scope: LinkScope, defaults?: Link): LinkText => ({
     bandwidth: linkDraft[scope]?.bandwidth ?? String(defaults?.bytesPerSecond ?? ''),
     latency: linkDraft[scope]?.latency ?? String(defaults?.latencySeconds ?? ''),
   });
   const primaryLink = linkText(primaryScope, primaryDefaults);
-  const innerLink = match?.pipelineTp ? linkText('intra_group', innerDefaults) : undefined;
+  const innerLink = stageReduces ? linkText('intra_group', innerDefaults) : undefined;
   const moduleReductions = match?.preset.moduleRules?.reduce((count, rule) => count + rule.reductions.length, 0) ?? 0;
   const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' || match.preset.strategy === 'pipeline' || match.preset.strategy === 'query_sharded' ||
     match.slots > 1 && (match.preset.reductions.length > 0 || moduleReductions > 0));
@@ -79,7 +84,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   }
   const fields = <>{linkFields(primaryScope, primaryLink, innerLink ? '阶段间传输' : undefined)}
     {innerLink && linkFields('intra_group', innerLink, '阶段内归约')}</>;
-  const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', primaryLink, innerLink ?? null]);
+  const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', stagePreset?.presetId ?? '', primaryLink, innerLink ?? null]);
   const active = useRef<{ worker: Worker | null } | null>(null);
   const currentKey = useRef(fingerprint);
   currentKey.current = fingerprint;
@@ -97,13 +102,13 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
     setState({ key: fingerprint, status: 'running' });
     try {
       const pool = bindDegreePool(scenario, match.slots);
-      const refs = collectRefs(match.preset).filter(ref => !project.assetSnapshots.some(asset => asset.assetId === ref.assetId && asset.revision === ref.revision));
+      const refs = collectRefs([match.preset, stagePreset]).filter(ref => !project.assetSnapshots.some(asset => asset.assetId === ref.assetId && asset.revision === ref.revision));
       const extra = refs.length ? await request('snapshot', z.array(AssetDocument), { refs }) : [];
       if (!live()) return;
       const network = needsNetwork ? networkInput(primaryLink, innerLink ? '阶段间传输' : '通信') : undefined;
       const pipelineTpNetwork = innerLink ? networkInput(innerLink, '阶段内归约') : undefined;
       const input = ParallelPresetRequest.parse({ ...pool, assets: [...project.assetSnapshots, ...extra], presetId: match.preset.presetId,
-        network, pipelineTpNetwork, expertMesh: match.expertMesh, requestDp: match.requestDp, pipelineTp: match.pipelineTp });
+        network, pipelineTpNetwork, expertMesh: match.expertMesh, requestDp: match.requestDp, pipelineTp: match.pipelineTp, pipelineStage: match.pipelineStage });
       const worker = new Worker(new URL('./parallel-preset-worker.ts', import.meta.url), { type: 'module' });
       task.worker = worker;
       worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -157,18 +162,23 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       : '此模型在当前阶段未声明这组并行度的分片和局部计算规则。'}</p>}
     {match && <section className="parallel-degree-preview" aria-label="逻辑分片与通信">
       <h3>逻辑分片与通信</h3>
-      {matches.length > 1 && <label>分片方式<select value={match.preset.presetId} onChange={event => setVariant(event.target.value)}>
-        {matches.map(({ preset }) => <option key={preset.presetId} value={preset.presetId}>{preset.name}</option>)}
+      {matches.length > 1 && <label>分片方式<select value={optionKey(match.preset.presetId, match.pipelineStage?.presetId)} onChange={event => setVariant(event.target.value)}>
+        {matches.map(({ preset, pipelineStage }) => {
+          const key = optionKey(preset.presetId, pipelineStage?.presetId);
+          const stageName = pipelineStage && (presets.find(row => row.presetId === pipelineStage.presetId)?.name ?? pipelineStage.presetId);
+          return <option key={key} value={key}>{stageName && stageName + ' × '}{preset.name}</option>;
+        })}
       </select></label>}
       <p>{match.expertMesh ? `均分专家，每组用 ${match.expertMesh.tp} 张卡切分专家中间维度。` +
-        (degrees.attentionTp > 1 ? (match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') : match.preset.description}</p>
+        (degrees.attentionTp > 1 ? (match.requestDp ? 'Attention TP 复用每个请求组内的设备。' : 'Attention TP 复用全部设备。') : '') :
+        stagePreset && match.pipelineStage ? `每阶段 ${match.pipelineStage.degree} 卡。${stagePreset.description}` : match.preset.description}</p>
       <p>{match.slots} 个逻辑槽位{match.requestDp && ` · ${match.requestDp} 组请求，每组 ${match.slots / match.requestDp} 卡`}
         {match.preset.declaredPlan && ' · ' + match.preset.declaredPlan.groups.map(group => group.groupId + ' ' + group.members.length).join(' · ')}</p>
       {match.preset.tensorShards.length > 0 && match.slots > 1 && <p>张量轴分片 {match.preset.tensorShards.map(item => item.tensorId + '/' + item.axisId).join('、')}</p>}
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
           : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
-          : match.pipelineTp ? '阶段内 AllReduce · 阶段间 SendRecv'
+          : stageReduces ? '阶段内 AllReduce · 阶段间 SendRecv'
           : match.preset.strategy === 'pipeline' ? (match.requestDp ? '各请求组独立执行阶段间 SendRecv' : '阶段间 SendRecv')
           : match.preset.strategy === 'query_sharded' ? (match.requestDp ? '每层在各请求组内收集 K 和 V' : '每个注意力层收集当前 K 和 V')
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>

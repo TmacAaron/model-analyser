@@ -93,6 +93,54 @@ test('Qwen3.5-397B EP8 shards experts separately from the global TopK selection'
   await expect(page.getByRole('region', { name: '逻辑分片与通信' })).toContainText('按均衡路由估算负载');
 });
 
+test('applies stage-local MoE EP and reopens the Qwen3.5 pipeline layout', async ({ page }) => {
+  test.setTimeout(180_000);
+  const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen35', 4);
+  const model = addQwenPipelinePreset(root!, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' });
+  const project = makeModelProject([model, ...dependencies], {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+  }, model.name);
+  project.scenarios[0]!.bindings = [{ parameterKey: 'Periods', value: { kind: 'integer', value: 3 } }];
+  project.projectId = randomUUID();
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({
+    name: 'qwen35-pipeline-ep.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)),
+  });
+  const status = page.locator('.studio-save');
+  await expect(status).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  const pp = page.getByLabel('序列与流水线 PP', { exact: true });
+  const ep = page.getByLabel('MoE EP', { exact: true });
+  await pp.fill('2');
+  await ep.fill('4');
+  const layout = page.getByRole('region', { name: '逻辑分片与通信' });
+  await expect(layout).toContainText('每阶段 4 卡');
+  await expect(layout).toContainText('8 个逻辑槽位');
+  await layout.getByText(/^通信参数/).click();
+  const intraBand = layout.getByLabel('阶段内归约带宽 (B/s)', { exact: true });
+  await intraBand.fill('50000000000');
+  await layout.getByRole('button', { name: '校验布局', exact: true }).click();
+  await expect(layout).toContainText('8 个实际设备 · 13 个通信', { timeout: 75_000 });
+  await layout.getByRole('button', { name: '应用并行度', exact: true }).click();
+  await expect(status).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText('24,576 B / token', { timeout: 75_000 });
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
+  await verifyAnalysis(page);
+  const response = await page.request.get('/api/v1/project?id=' + project.projectId);
+  expect(response.ok()).toBe(true);
+  const saved = ProjectDocument.parse((await response.json()).data).scenarios[0];
+  expect(saved?.parallelPlan.generatedFrom?.pipelineStage).toEqual({ presetId: 'ep-routed', degree: 4 });
+  expect(saved?.parallelPlan.communications.find(row => row.operation === 'send_recv')?.peerPairs).toHaveLength(4);
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(pp).toHaveValue('2');
+  await expect(ep).toHaveValue('4');
+  await layout.getByText(/^通信参数/).click();
+  await expect(intraBand).toHaveValue('50000000000');
+});
+
 test('updates a saved Qwen3.8 r1 workspace to r5 while keeping its workload and device', async ({ page }) => {
   const project = makeModelProject(makeQwenHybridAssets('qwen38'), {
     kind: 'prefill', batchSize: 3, queryTokensPerRequest: 2, pastTokensPerRequest: 31,

@@ -6,7 +6,7 @@ import { DisplayUnitsControl } from './display-units.js';
 import { copyConfiguration } from '../../../packages/contracts/src/configuration-edit.js';
 import { removeQuantizationRule } from '../../../packages/contracts/src/ascend-quantization.js';
 import { AscendQuantizationEditor } from './ascend-quantization-view.js';
-import { calculationInput, supportsRequestReplicas } from '@model-analyser/core';
+import { calculationInput, pipelineExpertPreset, supportsRequestReplicas } from '@model-analyser/core';
 import { publishCanvasEdit,type CanvasEditPlan } from './canvas-editing.js';
 import {runCanvasEditTask} from './canvas-edit-task.js';
 import type {CanvasEditIntent,CanvasEditControls} from './canvas-edit-worker.js';
@@ -132,8 +132,8 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
       return {...override,preset:item.ref};
     })};
     const {decodeContext,generatedFrom:origin}=active.parallelPlan;
-    const previous=project.assetSnapshots.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision)
-      ?.parallelPresets?.find(preset=>preset.presetId===origin?.presetId);
+    const previousPresets=project.assetSnapshots.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision)?.parallelPresets??[];
+    const previous=previousPresets.find(preset=>preset.presetId===origin?.presetId);
     const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
     const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
     const samePreset=previous&&preset&&canonical(previous)===canonical(preset);
@@ -154,6 +154,12 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
         if(!after||before.chainNodeId!==after.chainNodeId||canonical(before.payloadBytes)!==canonical(after.payloadBytes)||
            canonical(before.payloadDtype)!==canonical(after.payloadDtype)||origin.pipelineTp&&before.attentionPresetId!==after.attentionPresetId){
           throw Error('新模型修订没有兼容的流水线布局');
+        }
+        if(origin.pipelineStage){
+          const stageId=origin.pipelineStage.presetId, phase=next.workload.kind;
+          const oldStage=pipelineExpertPreset(previous,previousPresets,stageId,phase);
+          const newStage=pipelineExpertPreset(preset,target?.parallelPresets??[],stageId,phase);
+          if(!oldStage||!newStage||canonical(oldStage)!==canonical(newStage))throw Error('新模型修订没有兼容的阶段内专家布局');
         }
       }
       if(preset.phases.includes(next.workload.kind)){

@@ -39,6 +39,15 @@ export function pipelineAttentionPreset(preset:ParallelPresetTemplate,presets:Pa
     row.sharedPoolDegrees?.length===1&&row.sharedPoolDegrees[0]==='attentionTp'):undefined;
 }
 
+export function pipelineExpertPreset(pipeline:ParallelPresetTemplate,presets:ParallelPresetTemplate[],presetId:string,phase:ParallelPresetTemplate['phases'][number]){
+  if(pipeline.strategy!=='pipeline'||!pipeline.pipeline||!pipeline.phases.includes(phase))return undefined;
+  return presets.find(preset=>{
+    if(preset.presetId!==presetId||preset.strategy!=='tensor_sharded'||!pipeline.phases.every(phase=>preset.phases.includes(phase)))return false;
+    const axes=preset.sharedPoolDegrees;
+    return axes&&(axes.includes('moeEp')!==axes.includes('moeTp'));
+  });
+}
+
 export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   const r=p.declaredPlan,errors:string[]=[],unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)errors.push(label+' 重复');};
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
