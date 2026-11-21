@@ -19,6 +19,19 @@ test('shows the configured KV bytes and budget in the canvas before exposing adv
   project.scenarios.push(quantized);
   const expected=await estimateKvCapacity(base,project.assetSnapshots);
   if(expected.status!=='available'||expected.report.budget.status!=='available')throw Error('Missing independent budget fixture');
+  await page.addInitScript(()=>{
+    const NativeWorker=globalThis.Worker;
+    let heldFirstCapacityResult=false;
+    globalThis.Worker=class extends NativeWorker{
+      constructor(url:string|URL,options?:WorkerOptions){
+        super(url,options);
+        if(!heldFirstCapacityResult&&String(url).includes('kv-capacity-worker-')){
+          heldFirstCapacityResult=true;
+          this.addEventListener('message',event=>event.stopImmediatePropagation());
+        }
+      }
+    };
+  });
   await page.goto('/');
   await page.getByLabel('导入模型工作区',{exact:true}).setInputFiles({
     name:'kv-capacity.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project)),
@@ -26,6 +39,9 @@ test('shows the configured KV bytes and budget in the canvas before exposing adv
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button',{name:'容量',exact:true}).click();
   const panel=page.getByRole('region',{name:'KV 缓存容量',exact:true});
+  await panel.getByRole('button',{name:'取消 KV 计算',exact:true}).click();
+  await expect(panel).toContainText('KV 预算计算已取消');
+  await panel.getByRole('button',{name:'重算 KV 预算',exact:true}).click();
   await expect(panel).toContainText('114,688 B / token');
   await expect(panel).toContainText(new Intl.NumberFormat('zh-CN').format(expected.report.budget.tokensPerRequest)+' token / 请求');
   await expect(panel).toContainText('所有物理设备合计 336 KiB · 每请求 3 token');

@@ -1,6 +1,6 @@
 import { describe,expect,it } from 'vitest';
-import { DeviceTopology,StateSpec,StorageSpec } from '@model-analyser/contracts';
-import { estimateKvCapacity } from '@model-analyser/core';
+import { DeviceTopology,StateSpec,StorageSpec,type MetricValue } from '@model-analyser/contracts';
+import { analyzeScenario,estimateKvCapacity } from '@model-analyser/core';
 import { solveKvSlots } from '../packages/core/src/kv-capacity-slots.js';
 import { makeDecodeProject } from '../scripts/decode-project.js';
 import { makeDeepSeekProject,makeQwenProject } from '../scripts/model-project.js';
@@ -22,6 +22,33 @@ function stateTensor(windowed=false){
 }
 
 describe('KV capacity',()=>{
+  it('matches full pipeline Decode memory and preserves the parent calculation identity',async()=>{
+    const {project}=await makeNamedParallelProject('pp2');
+    const scenario=project.scenarios[0]!;
+    scenario.workload={kind:'decode',batchSize:1,contextTokensPerRequest:2,queryTokensPerRequest:1,steps:3};
+    const capacity=await estimateKvCapacity(scenario,project.assetSnapshots);
+    const analysis=await analyzeScenario(scenario,project.assetSnapshots);
+    if(capacity.status!=='available')throw Error(capacity.message);
+    if(analysis.status!=='available'||!analysis.result.decode)throw Error(JSON.stringify(analysis));
+    const {report}=capacity,{decode,inputHash}=analysis.result;
+    const bytes=(metric:MetricValue|undefined)=>{
+      if(metric?.status!=='available')throw Error('Missing physical byte count');
+      return metric.quantity.value;
+    };
+    expect(report).toMatchObject({inputHash,decodeStep:2,referenceTokensPerRequest:5,budget:{status:'available'}});
+    for(const device of report.devices){
+      const steps=decode.steps.map(step=>{
+        const peak=step.memory.find(row=>row.deviceScope.kind==='per_device'?row.deviceScope.deviceId===device.deviceId:
+          row.deviceScope.deviceIds.some(id=>id===device.deviceId));
+        const kvBytes=step.stateTransitions.flatMap(state=>state.storages).filter(row=>row.deviceId===device.deviceId)
+          .reduce((total,row)=>total+bytes(row.reservedBytes),0);
+        return {kvBytes,reserve:bytes(peak?.peakBytes)-kvBytes};
+      });
+      expect(device.kvBytes).toBe(steps.at(-1)?.kvBytes);
+      expect(device.nonKvBytes).toBe(Math.max(...steps.map(step=>step.reserve)));
+    }
+  });
+
   it('reports the authored DCP slot limit and bytes per physical slot',async()=>{
     const {project}=await makeNamedParallelProject('dcp2');
     const result=await estimateKvCapacity(project.scenarios[0]!,project.assetSnapshots);

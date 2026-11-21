@@ -21,13 +21,17 @@ import {moduleCostInputs} from './aggregate-members.js';
 import {logicalDeclarationObserver,type AnalysisObserver} from './logical-work-observation.js';
 
 export { ENGINE_VERSION } from './version.js';
+export function usesDistributedAnalysis(scenario:Scenario):boolean{
+  return !!(scenario.modulePeakOverrides?.some(rule=>rule.phases.includes(scenario.workload.kind))||scenario.executionPlan.kind==='streams'||
+    scenario.fusionGroups.length||scenario.deviceTopology.devices.length!==1||scenario.parallelPlan.assignments.length||scenario.parallelPlan.communications.length);
+}
 export async function analyzeScenario(input:Scenario,library:AssetDocument[],stepContext?:DecodeStepContext,observer?:AnalysisObserver):Promise<AnalysisAttempt>{
   const diagnostics:Diagnostic[]=[];
   try{
     const pack=calculationInput(input,library),scenario=pack.scenario,assets=pack.assets;
     const invalid=validateScenario(scenario,assets).filter(d=>d.severity==='error');if(invalid.length)return AnalysisAttempt.parse({status:'unavailable',diagnostics:invalid});
     if(scenario.workload.kind==='decode'&&scenario.workload.steps!==1){if(stepContext)throw new FormulaError('invalid_decode_step','序列不能嵌套逐步上下文');return await analyzeDecodeSequence(scenario,assets,analyzeScenario);}
-    if(scenario.modulePeakOverrides?.some(r=>r.phases.includes(scenario.workload.kind))||scenario.executionPlan.kind==='streams'||scenario.fusionGroups.length||scenario.deviceTopology.devices.length!==1||scenario.parallelPlan.assignments.length||scenario.parallelPlan.communications.length)return await analyzeDistributedScenario(scenario,assets,stepContext,observer);
+    if(usesDistributedAnalysis(scenario))return await analyzeDistributedScenario(scenario,assets,stepContext,observer);
     const logical=observer&&'logicalLeaf'in observer?observer.logicalLeaf:undefined;
     const expanded=instantiateModel(scenario,assets,undefined,stepContext,logicalDeclarationObserver(logical));if(expanded.status==='unavailable')return AnalysisAttempt.parse(expanded);
     const resolved=expanded.resolved;if(resolved.graph.nodes.some(n=>n.body.kind==='collective'))return await analyzeDistributedScenario(scenario,assets,stepContext,observer);diagnostics.push(...expanded.diagnostics);

@@ -4,6 +4,8 @@
 
 大模型[成本来源面板](COST_SOURCE_PERFORMANCE.md)已按范围生成指标，收起的证据按需挂载，长列表分页。[画布近景和总览](CANVAS_RENDERING.md)按视窗限制 SVG 挂载，模型结构 Worker 负责范围投影、配置标记和默认布局。展开重复模块的状态检查按 ID 查找张量与存储。分析结果 JSON、成本 CSV 和实际 Decode 步骤证据已支持后台导出及取消。可无损编码的分析结果通过可转移缓冲区交接，界面核对任务和输入身份。测量与 Roofline 范围选择器限制初始挂载数量，可搜索完整可用范围。9,999 算子浏览器样本已复核。密集总览绘制、界面解码与首次渲染及其他序列化路径继续测量。
 
+[画布容量页](TECHNICAL_SPEC.md#16-已落地字段补充)逐步取得显存峰值和 KV 分配。Qwen3.5-397B-A17B 的 PP2 × EP2 × TP2、FP8、两步 Decode 样本在 Node.js 24.22.3 的独立进程中测得 79.1 秒降至 29.9 秒，进程峰值驻留内存从 2.80 GiB 降至 2.13 GiB。对比复用同一套逐步 Decode 规则。两份容量报告具有相同 SHA-256，预算均为每请求 1,348,231 token。
+
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
 DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。其他混合并行组合需要各自的局部布局和通信定义。
