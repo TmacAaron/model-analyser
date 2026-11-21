@@ -67,6 +67,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const requestDp=request.requestDp??1,replicaWidth=degree/requestDp;
     const stageWidth=request.pipelineTp??1,stageCount=replicaWidth/stageWidth;
     const attention=request.pipelineTp?pipelineAttentionPreset(preset,model.parallelPresets??[],scenario.workload.kind):undefined;
+    if(request.pipelineTpNetwork&&!request.pipelineTp)throw Error('阶段内链路参数需要流水线 Attention TP 布局');
     if(request.pipelineTp&&(!attention||request.expertMesh))throw Error('当前流水线未声明可用的阶段内 Attention TP 布局');
     if(request.pipelineTp&&(!Number.isInteger(stageCount)||stageCount<2||request.meshAxisId===pipelineTensorMeshAxis))throw Error('PP × TP 需要每组至少两个完整阶段和独立的阶段轴');
     if(request.requestDp){

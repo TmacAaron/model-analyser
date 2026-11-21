@@ -94,6 +94,7 @@ it('shards both GQA cache and DeltaNet state within the two Qwen3.8 pipeline sta
   expect(preview.allocations.map(row=>row.stateBytes)).toEqual(Array(4).fill(kv+recurrent));
   expect(preview.communications?.filter(row=>row.operation==='all_reduce')).toHaveLength(64);
   expect(preview.communications?.find(row=>row.operation==='send_recv')?.peerPairs).toHaveLength(2);
+  expect(preview.communications?.every(row=>row.timing.kind==='bandwidth_latency'&&row.timing.bytePerSecond===100e9&&row.timing.latencySeconds===3e-6)).toBe(true);
   expect(await estimateKvCapacity(preview.scenario,preview.assets)).toMatchObject({status:'available',report:{
     averageBytesPerToken:full.kvPerToken,budget:{status:'available'},
     devices:Array(4).fill(expect.objectContaining({kvBytes:kv,otherStateBytes:recurrent})),

@@ -297,7 +297,8 @@ it('partitions Qwen attention inside each pipeline stage and keeps two request g
   const [match] = matchingParallelPresets(degrees, presets, scenario);
   expect(match).toMatchObject({ slots: 8, requestDp: 2, pipelineTp: 2, preset: { presetId: 'pp-decoder' } });
   const network = { bytesPerSecond: 1e11, latencySeconds: 3e-6 };
-  const request = { ...input, scenario, assets, presetId: 'pp-decoder', requestDp: 2, pipelineTp: 2, network };
+  const pipelineTpNetwork = { bytesPerSecond: 4e11, latencySeconds: 1e-6 };
+  const request = { ...input, scenario, assets, presetId: 'pp-decoder', requestDp: 2, pipelineTp: 2, network, pipelineTpNetwork };
   const attempt = await previewParallelPreset(request);
   if(attempt.status!=='available')throw Error(attempt.message.slice(0,7000));
   const { preview } = attempt, reopened = Scenario.parse(JSON.parse(JSON.stringify(preview.scenario)));
@@ -321,6 +322,7 @@ it('partitions Qwen attention inside each pipeline stage and keeps two request g
     const stageSend=layout.communications.find(row=>row.evaluation.definition.operation==='send_recv')?.evaluation;
     const message=2*localBatch*hidden;
     expect(stageSend?.definition.peerPairs?.map(pair=>[pair.sourceDeviceId,pair.destinationDeviceId])).toEqual(stagePeers);
+    expect(stageSend?.definition.timing).toMatchObject({kind:'bandwidth_latency',bytePerSecond:network.bytesPerSecond,latencySeconds:network.latencySeconds});
     expect(count(stageSend?.cost.communications[0]?.groupSendBytes)).toBe(stagePeers.length*message);
     expect(count(stageSend?.cost.seconds)).toBeCloseTo(network.latencySeconds+message/network.bytesPerSecond,12);
     const reductions=layout.communications.filter(row=>row.evaluation.definition.operation==='all_reduce');
@@ -330,7 +332,8 @@ it('partitions Qwen attention inside each pipeline stage and keeps two request g
       expect(evaluation.source.placements.map(row=>row.slices.find(slice=>slice.axisId==='b')))
         .toMatchObject([{start:0,end:2},{start:0,end:2},{start:2,end:4},{start:2,end:4}]);
       expect(evaluation.perDevice.map(row=>count(row.sendBytes))).toEqual(Array(4).fill(message));
-      expect(count(evaluation.cost.seconds)).toBeCloseTo(2*network.latencySeconds+message/network.bytesPerSecond,12);
+      expect(evaluation.definition.timing).toMatchObject({kind:'bandwidth_latency',bytePerSecond:pipelineTpNetwork.bytesPerSecond,latencySeconds:pipelineTpNetwork.latencySeconds});
+      expect(count(evaluation.cost.seconds)).toBeCloseTo(2*pipelineTpNetwork.latencySeconds+message/pipelineTpNetwork.bytesPerSecond,12);
     }
     const oProj=layout.localCosts.nodes.find(row=>row.nodeId==='decoder[0]/o-proj')?.placement;
     if(oProj?.kind!=='placed')throw Error('Missing stage-local TP output cost');
@@ -351,4 +354,6 @@ it('partitions Qwen attention inside each pipeline stage and keeps two request g
   const old={...scenario,model:{...scenario.model,revision:legacy.revision}};
   expect(await previewParallelPreset({...request,scenario:old,assets:[...assets,legacy]}))
     .toMatchObject({status:'unavailable',message:expect.stringContaining('未声明可用的阶段内 Attention TP')});
+  expect(await previewParallelPreset({...request,pipelineTp:undefined}))
+    .toMatchObject({status:'unavailable',message:expect.stringContaining('阶段内链路参数需要流水线 Attention TP')});
 }, 160_000);

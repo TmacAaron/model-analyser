@@ -238,7 +238,7 @@ export const Scenario = z.strictObject({scenarioId:Id,name:Id,model:AssetRef,bin
     z.strictObject({kind:z.literal('decode'),batchSize:PositiveInt,contextTokensPerRequest:Natural,queryTokensPerRequest:PositiveInt,steps:PositiveInt,approximation:z.literal('fixed_context').optional()}),
   ]),deviceTopology:DeviceTopology,parallelPlan:ParallelPlan,executionPlan:ExecutionPlan,quantizationOverrides:z.array(QuantizationDefinition),numericOverrides:z.array(NumericOverride),memoryPeakOverrides:z.array(MemoryPeakOverride).optional(),modulePeakOverrides:z.array(ModulePeakOverride).optional(),ascendQuantizationImports:z.array(AscendQuantizationReview).optional(),fusionGroups:z.array(FusionGroup)});
 export const ParallelPresetRequest = z.strictObject({scenario:Scenario,assets:z.array(AssetDocument),presetId:Id,groupId:Id,meshAxisId:Id,
-  network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional(),expertMesh:ExpertMeshFactors.optional(),
+  network:NativeCollectiveBindings.shape.network,pipelineTpNetwork:NativeCollectiveBindings.shape.network,expertMesh:ExpertMeshFactors.optional(),
   requestDp:ParallelPresetOrigin.shape.requestDp,pipelineTp:ParallelPresetOrigin.shape.pipelineTp});
 export const ParallelPresetPreview = z.strictObject({version:z.literal('parallel-preset.1'),presetId:Id,presetName:Id,sourceModel:AssetRef,sourceInputHash:Id,scenario:Scenario,assets:z.array(AssetDocument),
   deviceIds:z.array(DeviceId),assignmentCount:Natural,communicationCount:Natural,communications:z.array(CommunicationDefinition).optional(),allocations:z.array(z.strictObject({deviceId:DeviceId,totalBytes:Natural,weightBytes:Natural,stateBytes:Natural})),warnings:z.array(Id)});

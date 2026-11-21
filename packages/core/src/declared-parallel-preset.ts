@@ -2,7 +2,8 @@ import { type ParallelPresetRequest,type ParallelPresetTemplate,type Scenario } 
 import { bindNativeCommunication,remapDistribution,declaredRecipeIssues } from '../../contracts/src/parallel-bindings.js';
 
 /** The selected group is an ordered physical pool; authored roles may reuse its members. */
-export function materializeDeclaredPreset(request:ParallelPresetRequest,preset:ParallelPresetTemplate):{topology:Scenario['deviceTopology'];plan:Scenario['parallelPlan']}{
+export function materializeDeclaredPreset(request:ParallelPresetRequest,preset:ParallelPresetTemplate,
+  {preserveCommunicationTiming=false}:{preserveCommunicationTiming?:boolean}={}):{topology:Scenario['deviceTopology'];plan:Scenario['parallelPlan']}{
   const issues=declaredRecipeIssues(preset);if(issues.length)throw Error(issues.join('；'));
   const recipe=preset.declaredPlan,selected=request.scenario.deviceTopology.groups.find(g=>g.groupId===request.groupId);
   if(!recipe||!selected)throw Error('声明式预设缺少方案模板或实际设备组');
@@ -21,7 +22,8 @@ export function materializeDeclaredPreset(request:ParallelPresetRequest,preset:P
   // Only replace role groups owned by the previous generated plan. Never overwrite a user group.
   const owned=new Set(previous&&request.scenario.parallelPlan.generatedFrom?previous.groups.map(g=>g.physicalGroupId):[]),existing=request.scenario.deviceTopology.groups.filter(g=>!owned.has(g.groupId)||g.groupId===selected.groupId);
   for(const g of groups)if(existing.some(e=>e.groupId===g.groupId))throw Error('生成组 ID 与已有组冲突，请更改轴前缀：'+g.groupId);
-  const plan:Scenario['parallelPlan']={assignments:recipe.plan.assignments.map(a=>({...a,tensorDistributions:a.tensorDistributions.map(t=>({...t,distribution:remapDistribution(t.distribution,bindings)})),storageDistributions:a.storageDistributions.map(s=>({...s,distribution:remapDistribution(s.distribution,bindings)}))})),communications:recipe.plan.communications.map(c=>bindNativeCommunication(c,bindings)),nativeBindings:bindings,assumptions:[...recipe.plan.assumptions,preset.description,...preset.assumptions,
+  const communicationBindings=preserveCommunicationTiming?{groups:bindings.groups,devices:bindings.devices}:bindings;
+  const plan:Scenario['parallelPlan']={assignments:recipe.plan.assignments.map(a=>({...a,tensorDistributions:a.tensorDistributions.map(t=>({...t,distribution:remapDistribution(t.distribution,bindings)})),storageDistributions:a.storageDistributions.map(s=>({...s,distribution:remapDistribution(s.distribution,bindings)}))})),communications:recipe.plan.communications.map(c=>bindNativeCommunication(c,communicationBindings)),nativeBindings:bindings,assumptions:[...recipe.plan.assumptions,preset.description,...preset.assumptions,
     'Authored device slots map in selected group member order; role groups reuse actual devices. Native graph assets remain immutable. Network bandwidth/latency are explicit scenario bindings; payload/local equations remain dynamic.',
     ...devices.map(d=>'Slot '+d.logicalDeviceId+' → physical '+d.physicalDeviceId),...bindings.groups.map(g=>'Role '+g.logicalGroupId+' → '+g.physicalGroupId)]};
   return {topology:{...request.scenario.deviceTopology,groups:[...existing,...groups]},plan};

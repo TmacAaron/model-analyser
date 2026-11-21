@@ -4,6 +4,7 @@ import {
   AssetDocument, ParallelPresetAttempt, ParallelPresetRequest,
   type ParallelPresetPreview, type ProjectDocument, type Scenario,
 } from '@model-analyser/contracts';
+import { pipelineAttentionPreset } from '@model-analyser/core';
 import { canonical, collectRefs } from '../../../packages/contracts/src/validation.js';
 import { request } from './api.js';
 import { useDisplayUnits } from './display-units.js';
@@ -14,6 +15,18 @@ type Props = {
   scenario: Scenario;
   onApply: (scenario: Scenario, assets: AssetDocument[]) => void;
 };
+type LinkScope = 'intra_group' | 'inter_group';
+type LinkText = { bandwidth: string; latency: string };
+type Link = NonNullable<ParallelPresetRequest['network']>;
+
+function networkInput(text: LinkText, label: string): Link {
+  const bytesPerSecond = Number(text.bandwidth), latencySeconds = Number(text.latency);
+  if (!text.bandwidth.trim() || !text.latency.trim() || !Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0 ||
+      !Number.isFinite(latencySeconds) || latencySeconds < 0) {
+    throw Error(label + '带宽须大于零，单轮延迟须为非负数。');
+  }
+  return { bytesPerSecond, latencySeconds };
+}
 
 export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const display = useDisplayUnits();
@@ -29,23 +42,44 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const match = matches.find(item => item.preset.presetId === (variant || scenario.parallelPlan.generatedFrom?.presetId)) ?? matches[0];
   const hardwareRef = scenario.deviceTopology.devices[0]?.hardware;
   const hardware = project.assetSnapshots.find(asset => asset.assetId === hardwareRef?.assetId && asset.revision === hardwareRef.revision);
-  const savedNetwork = scenario.parallelPlan.nativeBindings?.network;
-  const savedTiming = scenario.parallelPlan.communications.find(item => item.timing.kind === 'bandwidth_latency')?.timing;
-  const networkDefaults = savedNetwork ?? (savedTiming?.kind === 'bandwidth_latency'
-    ? { bytesPerSecond: savedTiming.bytePerSecond, latencySeconds: savedTiming.latencySeconds } : match?.preset.networkDefaults
-      ?? (hardware?.definition.kind === 'hardware' ? hardware.definition.hardware.communicationDefaults.find(item => item.scope === 'intra_group') : undefined));
-  const [bandwidth, setBandwidth] = useState<string>();
-  const [latency, setLatency] = useState<string>();
-  const linkBandwidth = bandwidth ?? String(networkDefaults?.bytesPerSecond ?? '');
-  const linkLatency = latency ?? String(networkDefaults?.latencySeconds ?? '');
+  const isPipeline = match?.preset.strategy === 'pipeline';
+  const savedPipeline = presets.some(preset => preset.presetId === scenario.parallelPlan.generatedFrom?.presetId && preset.strategy === 'pipeline');
+  const hardwareLink = (scope: LinkScope) => hardware?.definition.kind === 'hardware'
+    ? hardware.definition.hardware.communicationDefaults.find(item => item.scope === scope) : undefined;
+  const savedLink = (operation?: 'send_recv'|'all_reduce'): Link | undefined => {
+    const timing = scenario.parallelPlan.communications.find(item =>
+      (!operation || item.operation === operation) && item.timing.kind === 'bandwidth_latency')?.timing;
+    return timing?.kind === 'bandwidth_latency' ? { bytesPerSecond: timing.bytePerSecond, latencySeconds: timing.latencySeconds } : undefined;
+  };
+  const nativeNetwork = scenario.parallelPlan.nativeBindings?.network;
+  const innerSaved = savedLink('all_reduce');
+  const primarySaved = isPipeline ? savedLink('send_recv') ?? (savedPipeline ? nativeNetwork : undefined)
+    : savedPipeline ? innerSaved : nativeNetwork ?? savedLink();
+  const primaryScope: LinkScope = isPipeline ? 'inter_group' : match?.preset.networkDefaults?.scope ?? 'intra_group';
+  const primaryDefaults = primarySaved ?? match?.preset.networkDefaults ?? hardwareLink(primaryScope);
+  const attention = match?.pipelineTp ? pipelineAttentionPreset(match.preset, presets, scenario.workload.kind) : undefined;
+  const innerDefaults = innerSaved ?? attention?.networkDefaults ?? hardwareLink('intra_group') ?? primaryDefaults;
+  const [linkDraft, setLinkDraft] = useState<Partial<Record<LinkScope, Partial<LinkText>>>>({});
+  const linkText = (scope: LinkScope, defaults?: Link): LinkText => ({
+    bandwidth: linkDraft[scope]?.bandwidth ?? String(defaults?.bytesPerSecond ?? ''),
+    latency: linkDraft[scope]?.latency ?? String(defaults?.latencySeconds ?? ''),
+  });
+  const primaryLink = linkText(primaryScope, primaryDefaults);
+  const innerLink = match?.pipelineTp ? linkText('intra_group', innerDefaults) : undefined;
   const moduleReductions = match?.preset.moduleRules?.reduce((count, rule) => count + rule.reductions.length, 0) ?? 0;
   const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' || match.preset.strategy === 'pipeline' || match.preset.strategy === 'query_sharded' ||
     match.slots > 1 && (match.preset.reductions.length > 0 || moduleReductions > 0));
-  const linkFields = <div className="parallel-degree-link">
-    <label>通信带宽 (B/s)<input type="number" min={0} step="any" value={linkBandwidth} onChange={event => setBandwidth(event.target.value)}/></label>
-    <label>单轮延迟 (s)<input type="number" min={0} step="any" value={linkLatency} onChange={event => setLatency(event.target.value)}/></label>
-  </div>;
-  const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', linkBandwidth, linkLatency]);
+  function linkFields(scope: LinkScope, values: LinkText, label?: string) {
+    const setValue = (field: keyof LinkText, value: string) =>
+      setLinkDraft(previous => ({ ...previous, [scope]: { ...previous[scope], [field]: value } }));
+    return <div className="parallel-degree-link">
+      <label>{label ?? '通信'}带宽 (B/s)<input type="number" min={0} step="any" value={values.bandwidth} onChange={event => setValue('bandwidth', event.target.value)}/></label>
+      <label>{label}单轮延迟 (s)<input type="number" min={0} step="any" value={values.latency} onChange={event => setValue('latency', event.target.value)}/></label>
+    </div>;
+  }
+  const fields = <>{linkFields(primaryScope, primaryLink, innerLink ? '阶段间传输' : undefined)}
+    {innerLink && linkFields('intra_group', innerLink, '阶段内归约')}</>;
+  const fingerprint = canonical([scenario, project.assetSnapshots, degrees, match?.preset.presetId ?? '', primaryLink, innerLink ?? null]);
   const active = useRef<{ worker: Worker | null } | null>(null);
   const currentKey = useRef(fingerprint);
   currentKey.current = fingerprint;
@@ -66,14 +100,10 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       const refs = collectRefs(match.preset).filter(ref => !project.assetSnapshots.some(asset => asset.assetId === ref.assetId && asset.revision === ref.revision));
       const extra = refs.length ? await request('snapshot', z.array(AssetDocument), { refs }) : [];
       if (!live()) return;
-      const network = needsNetwork
-        ? { bytesPerSecond: Number(linkBandwidth), latencySeconds: Number(linkLatency) } : undefined;
-      if (network && (!linkBandwidth.trim() || !linkLatency.trim() || !Number.isFinite(network.bytesPerSecond) ||
-        !Number.isFinite(network.latencySeconds) || network.bytesPerSecond <= 0 || network.latencySeconds < 0)) {
-        throw Error('请输入大于零的通信带宽和非负的单轮延迟。');
-      }
+      const network = needsNetwork ? networkInput(primaryLink, innerLink ? '阶段间传输' : '通信') : undefined;
+      const pipelineTpNetwork = innerLink ? networkInput(innerLink, '阶段内归约') : undefined;
       const input = ParallelPresetRequest.parse({ ...pool, assets: [...project.assetSnapshots, ...extra], presetId: match.preset.presetId,
-        network, expertMesh: match.expertMesh, requestDp: match.requestDp, pipelineTp: match.pipelineTp });
+        network, pipelineTpNetwork, expertMesh: match.expertMesh, requestDp: match.requestDp, pipelineTp: match.pipelineTp });
       const worker = new Worker(new URL('./parallel-preset-worker.ts', import.meta.url), { type: 'module' });
       task.worker = worker;
       worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -144,7 +174,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">
         {needsNetwork && ((match.preset.sharedPoolDegrees || match.preset.strategy === 'pipeline' || match.preset.strategy === 'query_sharded' || match.preset.strategy === 'decode_context_sharded') && match.preset.networkDefaults ?
-          <details><summary>通信参数{savedTiming||bandwidth!==undefined||latency!==undefined?'':' · 参考值'}</summary>{linkFields}</details> : linkFields)}
+          <details><summary>通信参数{primarySaved || innerLink && innerSaved || Object.keys(linkDraft).length ? '' : ' · 参考值'}</summary>{fields}</details> : fields)}
         <button type="button" onClick={() => void preview()} disabled={outcome?.status === 'running'}>校验布局</button>
         {inputsChangedDuringPreview&&<small role="status">配置已更新，请重新校验。</small>}
         {outcome?.status === 'running' && <button type="button" onClick={() => {
@@ -160,6 +190,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
             try {
               onApply(result.scenario, result.assets);
               setDraft({});
+              setLinkDraft({});
               setState(undefined);
             } catch (error) {
               setState({ key: fingerprint, status: 'error', message: error instanceof Error ? error.message : String(error) });

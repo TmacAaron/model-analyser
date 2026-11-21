@@ -22,6 +22,7 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
   const stageCount = poolSize / (replicas*lanes);
   if (!declaration || !Number.isInteger(stageCount) || stageCount < 2) throw Error('流水线布局需要每个请求组至少两个实际设备');
   if (!network) throw Error('请为阶段间传输指定通信带宽和延迟');
+  const stageNetwork=request.pipelineTpNetwork??network;
   if (resolved.graph.nodes.some(node => node.body.kind === 'collective')) throw Error('流水线层链需要单独声明已有图内通信的阶段放置');
   const chain = resolved.containers.filter(container => {
     const id = container.nodeId;
@@ -205,7 +206,7 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
     const readers=reductionReaders.get(rule.tensorId);
     if(stage===undefined||!tensor||!readers?.length)throw Error('阶段内归约缺少布局 '+rule.tensorId);
     const target=distribution(groupFor([stage]),tensor.shape);
-    const communication=ringPresetReduction(rule,target,preset.phases,lanes,network,request.requestDp?{degree:replicas,axisId:requestAxis}:undefined);
+    const communication=ringPresetReduction(rule,target,preset.phases,lanes,stageNetwork,request.requestDp?{degree:replicas,axisId:requestAxis}:undefined);
     communications.push(communication);
     assignments.push(
       {selector:{kind:'nodes',nodeIds:[rule.producerNodeId]},phases:preset.phases,
@@ -220,5 +221,5 @@ export function materializePipelinePreset(request: ParallelPresetRequest, preset
       'Consecutive chain blocks by stage: '+layerCounts.join(', ')+'. Explicit tensor backing includes physical copies on the stages that use it.',
       ...(request.requestDp ? [`${replicas} independent request groups each use their own devices. Paired stage transfers preserve each batch slice and run concurrently at that boundary.`] : []),
       ...(request.pipelineTp ? [`Each stage uses ${lanes} Attention TP ranks. Stage-local collectives merge partial attention outputs. Replicated hidden activations travel on matching TP lanes between stages.`] : []),
-    ] } } });
+    ] } } }, {preserveCommunicationTiming:true});
 }

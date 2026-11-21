@@ -142,6 +142,19 @@ test('upgrades Qwen3.8 PP and applies Attention TP within each stage', async ({ 
   await tp.fill('2');
   await expect(preview).toContainText('4 个逻辑槽位');
   await expect(preview).toContainText('阶段内 AllReduce · 阶段间 SendRecv');
+  await preview.getByText(/^通信参数/).click();
+  const transferBandwidth=preview.getByLabel('阶段间传输带宽 (B/s)',{exact:true});
+  const transferLatency=preview.getByLabel('阶段间传输单轮延迟 (s)',{exact:true});
+  const reduceBandwidth=preview.getByLabel('阶段内归约带宽 (B/s)',{exact:true});
+  const reduceLatency=preview.getByLabel('阶段内归约单轮延迟 (s)',{exact:true});
+  await transferBandwidth.fill('20000000000');
+  await transferLatency.fill('0.000007');
+  await reduceBandwidth.fill('400000000000');
+  await reduceLatency.fill('0.000002');
+  await preview.getByRole('button', { name: '校验布局' }).click();
+  await expect(preview).toContainText('4 个实际设备 · 65 个通信', { timeout: 75_000 });
+  await reduceLatency.fill('0.0000015');
+  await expect(preview.getByRole('button', { name: '应用并行度' })).toHaveCount(0);
   await preview.getByRole('button', { name: '校验布局' }).click();
   await expect(preview).toContainText('4 个实际设备 · 65 个通信', { timeout: 75_000 });
   await preview.getByRole('button', { name: '应用并行度' }).click();
@@ -153,8 +166,11 @@ test('upgrades Qwen3.8 PP and applies Attention TP within each stage', async ({ 
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const scenario = ProjectDocument.parse((await response.json()).data).scenarios[0];
-  expect(scenario?.parallelPlan.communications.filter(row=>row.operation==='all_reduce')).toHaveLength(64);
-  expect(scenario?.parallelPlan.communications.find(row=>row.operation==='send_recv')).toMatchObject({ peerPairs: [
+  const reductions=scenario?.parallelPlan.communications.filter(row=>row.operation==='all_reduce');
+  expect(reductions).toHaveLength(64);
+  expect(reductions?.every(row=>row.timing.kind==='bandwidth_latency'&&row.timing.bytePerSecond===400e9&&row.timing.latencySeconds===1.5e-6)).toBe(true);
+  expect(scenario?.parallelPlan.communications.find(row=>row.operation==='send_recv')).toMatchObject({
+    timing:{kind:'bandwidth_latency',bytePerSecond:20e9,latencySeconds:7e-6},peerPairs: [
     { sourceDeviceId: 'gpu0', destinationDeviceId: '$degree-rank:2' },
     { sourceDeviceId: '$degree-rank:1', destinationDeviceId: '$degree-rank:3' },
   ] });
@@ -168,10 +184,19 @@ test('upgrades Qwen3.8 PP and applies Attention TP within each stage', async ({ 
   await communication.getByRole('button', { name: '复核此通信的实际运算', exact: true }).click();
   await expect(communication.getByRole('heading', { name: 'gpu0 · 发送端 · 对端 $degree-rank:2', exact: true })).toBeVisible({ timeout: 75_000 });
   await expect(communication.getByRole('heading', { name: '$degree-rank:3 · 接收端 · 对端 $degree-rank:1', exact: true })).toBeVisible();
+  await expect(communication).toContainText('40960 ÷ 20000000000');
+  await inspector.getByLabel('查找成本来源范围', { exact: true }).fill('communication:1');
+  await inspector.getByLabel('成本来源范围', { exact: true }).selectOption('communication:1');
+  await expect(communication).toContainText('40960 ÷ 400000000000', { timeout: 75_000 });
   await page.reload();
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(pp).toHaveValue('2');
   await expect(tp).toHaveValue('2');
+  await preview.getByText(/^通信参数/).click();
+  await expect(transferBandwidth).toHaveValue('20000000000');
+  await expect(transferLatency).toHaveValue('0.000007');
+  await expect(reduceBandwidth).toHaveValue('400000000000');
+  await expect(reduceLatency).toHaveValue('0.0000015');
   await pp.fill('1');
   await tp.fill('1');
   await preview.getByRole('button', { name: '校验布局' }).click();
