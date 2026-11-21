@@ -1,5 +1,5 @@
 import { GraphAuthor, fp32 } from './model-authoring.js';
-import { extent, heads, int32, sequence, state, vectorWork, weight } from './deepseek-v4-attention.js';
+import { extent, heads, int32, sequence, state, vectorWork, weight, type Axis } from './deepseek-v4-attention.js';
 
 const length = 'C + Q';
 export const selectedRows = sequence('min(IK, C + Q)');
@@ -46,7 +46,7 @@ function addIndexer(graph: GraphAuthor) {
     vectorWork('B * (3 * ' + causalPairs + ' + ' + fullPairs + ')', '4 * B * ' + fullPairs));
 }
 
-export function addGlm52Attention(graph: GraphAuthor, ownsIndex: boolean) {
+export function addGlm52Attention(graph: GraphAuthor, ownsIndex: boolean, packedKvWeight: boolean) {
   weight(graph, 'qa-weight', ['H', 'QR']); weight(graph, 'qr-norm-weight', ['QR']);
   graph.tensor('qa', sequence('QR')); graph.tensor('q-rank', sequence('QR'));
   graph.node('q-a', 'Query low-rank projection', ['attn-input', 'qa-weight'], ['qa'], { useful: '2 * B * Q * H * QR' });
@@ -73,10 +73,19 @@ export function addGlm52Attention(graph: GraphAuthor, ownsIndex: boolean) {
     ['latent-cache', 'rotary-cache'], [['qk', 'latent-cache'], ['qk', 'rotary-cache'], ['av', 'latent-cache']]);
   if (ownsIndex) addIndexer(graph);
 
-  weight(graph, 'k-absorb-weight', ['N', 'DN', 'R']);
+  const keyWeight = 'k-absorb-weight', valueWeight = 'v-up-weight';
+  // Key and value rows can share a scale block. Preserve the checkpoint grid
+  // and attribute a single packed-weight read between the two projections.
+  if (packedKvWeight) {
+    const shape: Axis[] = [['w0', 'custom', 'N * (DN + DV)'], ['w1', 'custom', 'R']];
+    for (const id of [keyWeight, valueWeight]) graph.tensor(id, shape, { category: 'weight', storageId: keyWeight });
+    const storage = graph.graph.storages.find(row => row.storageId === keyWeight);
+    if (!storage) throw Error('Missing packed GLM-5.2 KV projection');
+    storage.name = 'Packed key and value up-projection weight';
+  } else weight(graph, keyWeight, ['N', 'DN', 'R']);
   graph.tensor('q-absorbed', heads('N', 'R'));
-  graph.node('q-absorb', 'Absorb key up-projection into the query', ['q-content', 'k-absorb-weight'], ['q-absorbed'],
-    { useful: '2 * B * Q * N * DN * R' });
+  graph.node('q-absorb', 'Absorb key up-projection into the query', ['q-content', keyWeight], ['q-absorbed'],
+    { useful: '2 * B * Q * N * DN * R' }, packedKvWeight ? { allocationPasses: { [keyWeight]: 'DN / (DN + DV)' } } : {});
   const scoreTile = heads('N', 'min(IK, C + Q)');
   graph.tensor('scores', scoreTile, { dtype: fp32 });
   graph.tensor('probabilities', scoreTile);
@@ -91,9 +100,10 @@ export function addGlm52Attention(graph: GraphAuthor, ownsIndex: boolean) {
   graph.node('av', 'Accumulate selected values in latent space', ['probabilities', 'selected-rows', 'latent-cache'], ['attended-latent'], {
     useful: '2 * B * N * R * ' + sparsePairs, executed: '2 * B * N * R * ' + sparseTile,
   }, { accessBytes: { 'latent-cache': read + 'R' } });
-  weight(graph, 'v-up-weight', ['N', 'R', 'DV']); graph.tensor('attended-value', heads('N', 'DV'));
-  graph.node('v-up', 'Apply value up-projection after summation', ['attended-latent', 'v-up-weight'], ['attended-value'],
-    { useful: '2 * B * Q * N * R * DV' });
+  if (!packedKvWeight) weight(graph, valueWeight, ['N', 'R', 'DV']);
+  graph.tensor('attended-value', heads('N', 'DV'));
+  graph.node('v-up', 'Apply value up-projection after summation', ['attended-latent', valueWeight], ['attended-value'],
+    { useful: '2 * B * Q * N * R * DV' }, packedKvWeight ? { allocationPasses: { [valueWeight]: 'DV / (DN + DV)' } } : {});
   weight(graph, 'o-weight', ['N', 'DV', 'H']); graph.tensor('attention-output', sequence('H'));
   graph.node('o-proj', 'Attention output projection', ['attended-value', 'o-weight'], ['attention-output'],
     { useful: '2 * B * Q * N * DV * H' });

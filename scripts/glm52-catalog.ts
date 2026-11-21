@@ -4,9 +4,11 @@ import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeGlm52Assets } from './glm52-model.js';
 import { makeGlm52ParallelAssets } from './glm52-parallel.js';
+import { makeGlm52FP8WeightPreset } from './glm52-fp8-weights.js';
 
 const unique = new Map<string, AssetDocument>();
-for (const asset of [...makeGlm52Assets(), ...makeGlm52ParallelAssets()]) {
+const latest = makeGlm52ParallelAssets();
+for (const asset of [...makeGlm52Assets(), ...makeGlm52ParallelAssets(2), ...latest, makeGlm52FP8WeightPreset(latest)]) {
   const key = asset.assetId + '@' + asset.revision;
   const prior = unique.get(key);
   if (prior) assert.equal(canonical(prior), canonical(asset), key);

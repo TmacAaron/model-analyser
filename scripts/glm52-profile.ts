@@ -34,8 +34,9 @@ export function loadGlm52() {
   const dense = 3, initialReuse = 3, periods = 18;
   const owners = [0, 1, 2, ...Array.from({ length: periods }, (_, i) => dense + initialReuse + 4 * i)];
   const layers = dense + initialReuse + 4 * periods;
+  const contextTokens = config['max_position_embeddings'];
   const mlp = config['mlp_layer_types'], indexer = config['indexer_types'];
-  if (config['model_type'] !== 'glm_moe_dsa' || config['dtype'] !== 'bfloat16' || config['num_hidden_layers'] !== layers ||
+  if (config['model_type'] !== 'glm_moe_dsa' || config['dtype'] !== 'bfloat16' || config['num_hidden_layers'] !== layers || contextTokens !== 1_048_576 ||
     config['n_group'] !== 1 || config['topk_group'] !== 1 || config['n_shared_experts'] !== 1 ||
     config['norm_topk_prob'] !== true || config['routed_scaling_factor'] !== 2.5 || config['scoring_func'] !== 'sigmoid' ||
     config['attention_bias'] !== false || config['indexer_rope_interleave'] !== true || config['rope_interleave'] !== true ||
@@ -43,5 +44,5 @@ export function loadGlm52() {
     mlp.some((kind, i) => kind !== (i < dense ? 'dense' : 'sparse')) || !Array.isArray(indexer) || indexer.length !== layers ||
     indexer.some((kind, i) => kind !== (owners.includes(i) ? 'full' : 'shared')) ||
     JSON.stringify(indexerWeights.backboneLayers) !== JSON.stringify(owners)) throw Error('GLM-5.2 layer schedule or weight ownership changed');
-  return { dimensions, dense, initialReuse, periods };
+  return { dimensions, dense, initialReuse, periods, layers, owners, contextTokens, aliases };
 }

@@ -147,7 +147,7 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }
-  if(asset.revision<=2&&(id==='builtin:model:glm-5.2'||id.startsWith('builtin:module:glm-5.2-block-'))){
+  if(asset.revision<=3&&(id==='builtin:model:glm-5.2'||id.startsWith('builtin:module:glm-5.2-block-'))){
     const algorithm=glm52Algorithm(localId);
     const filename=localId.endsWith('-rope')?'deepseek_v2.py':algorithm?.name==='吸收投影的稀疏 MLA'?'flashmla_sparse.py':'modeling_glm_moe_dsa.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));

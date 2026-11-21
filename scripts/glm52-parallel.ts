@@ -47,8 +47,8 @@ function reduction(tensorId: string, producer: string, consumer: string, payload
   return { tensorId: TensorId.parse(tensorId), producerNodeId: NodeId.parse(producer), consumerNodeIds: [NodeId.parse(consumer)], payloadBytes, payloadDtype: bf16 };
 }
 
-export function makeGlm52ParallelAssets(): AssetDocument[] {
-  const [root, ...dependencies] = makeGlm52Assets(2);
+export function makeGlm52ParallelAssets(revision: 2 | 3 = 3): AssetDocument[] {
+  const [root, ...dependencies] = makeGlm52Assets(revision);
   if (root?.definition.kind !== 'model') throw Error('Missing GLM-5.2 decoder');
   const notes = [equationNote, attention, expert, expertFeature];
   const sources: AssetDocument['sources'] = [

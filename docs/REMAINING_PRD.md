@@ -16,7 +16,7 @@ DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／E
 
 DeepSeek-V4-Flash 与 V4.1-Flash r2 支持[请求 DP、Attention TP、MoE EP 和共享卡池](PARALLEL_PRESETS.md#deepseek-v4-flash-系列)。r3 增加 MoE TP 和 MoE EP × TP。保留全局 Top‑K，按均衡路由估算逐卡量。索引分数及注意力输出显式归约。V4.1 的组合布局在整池切分两张 Engram 表及缩放项，保留两次查表归约，跨层共享 KV 仍按设备只分配一次。r4 增加官方 FP4／FP8 权重和逐卡缩放因子，覆盖稀疏专家读取与两代 FP8 网格的差异。跨池、上下文并行和原生低精度执行继续按 F03／F09 核对。
 
-GLM-5.2 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#glm-52)。每卡保留独立 MLA 缓存和 DSA 索引计算，MoE EP 保留全局 Top‑K，MoE TP 切分各专家的中间特征。
+GLM-5.2 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#glm-52)。每卡保留独立 MLA 缓存和 DSA 索引计算，MoE EP 保留全局 Top‑K，MoE TP 切分各专家的中间特征。r3 提供[官方 FP8 权重](MODEL_REFERENCES.md#glm-52)，含 K／V 上投影共享存储的逐卡缩放块与稀疏专家读取。八卡组合已核对权重和 KV 预算。动态激活量化和原生 FP8 执行继续按 F09 验证。
 
 Kimi-K3 r2 提供[请求 DP、Attention TP、MoE EP／TP 及同池组合](PARALLEL_PRESETS.md#kimi-k3)。KDA 固定状态随头数分片，MLA 可增长缓存逐卡复制。Latent MoE 在 RMSNorm 前归约，Attention 在深度混合与残差前归约。r3 提供[官方 MXFP4 路由专家权重](MODEL_REFERENCES.md#kimi-k3)的显存与稀疏读取计算，含逐卡缩放因子。通用跨池和正式型号的上下文并行仍属于 F03，原生 MXFP4 执行和激活格式继续按 F09 核对。
 
