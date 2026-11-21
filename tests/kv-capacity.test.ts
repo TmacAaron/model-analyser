@@ -1,6 +1,8 @@
 import { describe,expect,it } from 'vitest';
-import { DeviceTopology,StateSpec,StorageSpec,type MetricValue } from '@model-analyser/contracts';
-import { analyzeScenario,estimateKvCapacity } from '@model-analyser/core';
+import { readFileSync } from 'node:fs';
+import { AssetDocument,DeviceTopology,NodeId,StateSpec,StorageSpec,type MetricValue } from '@model-analyser/contracts';
+import { analyzeScenario,estimateKvCapacity,modelContextLimitDeclaration } from '@model-analyser/core';
+import { resolveModelContextLimit } from '../packages/core/src/model-context-limit.js';
 import { solveKvSlots } from '../packages/core/src/kv-capacity-slots.js';
 import { makeDecodeProject } from '../scripts/decode-project.js';
 import { makeDeepSeekProject,makeQwenProject } from '../scripts/model-project.js';
@@ -54,6 +56,11 @@ describe('KV capacity',()=>{
     const result=await estimateKvCapacity(project.scenarios[0]!,project.assetSnapshots);
     expect(result).toMatchObject({status:'available',report:{budget:{status:'fixed'},
       fixedSlotsPerRequest:8,referenceTokensPerRequest:6,currentKvBytes:128,averageBytesPerToken:16}});
+    const model=project.assetSnapshots.find(asset=>asset.definition.kind==='model')!;
+    model.extensions={...model.extensions,contextLimit:{kind:'fixed',tokens:7}};
+    expect(await estimateKvCapacity(project.scenarios[0]!,project.assetSnapshots)).toMatchObject({status:'available',report:{
+      modelContextLimit:{tokensPerRequest:7,source:'declared'},usableTokensPerRequest:7,fixedSlotsPerRequest:8,budget:{status:'fixed'},
+    }});
   });
 
   it('sizes the completed groups in the original dynamic compression preset',async()=>{
@@ -94,6 +101,12 @@ describe('KV capacity',()=>{
       status:'available',tokensPerRequest:Math.floor((row.capacityBytes-row.nonKvBytes)/bytesPerToken),
       more:[{deviceId:row.deviceId,bytes:bytesPerToken}],
     });
+    expect(report.modelContextLimit).toMatchObject({tokensPerRequest:40960,source:'config_mapping',parameterKey:'M'});
+    expect(report.usableTokensPerRequest).toBe(40960);
+    p.scenarios[0]!.bindings.push({parameterKey:'M',value:{kind:'integer',value:8192}});
+    expect(await estimateKvCapacity(p.scenarios[0]!,p.assetSnapshots)).toMatchObject({status:'available',report:{
+      modelContextLimit:{tokensPerRequest:8192,parameterKey:'M'},usableTokensPerRequest:8192,
+    }});
   });
 
   it('uses the declared MLA latent and RoPE cache widths instead of a GQA formula',async()=>{
@@ -126,12 +139,19 @@ describe('KV capacity',()=>{
     cache.allocation.quantization={payloadBits:4,packingUnitElements:4,alignmentBytes:4,auxiliaries:[
       {name:'scale',dtype:{category:'float',bits:16,format:'bf16'},count:{kind:'group',groupSize:4}},
     ]};
+    const model=assets.find(asset=>asset.definition.kind==='model')!;
+    model.extensions={contextLimit:{kind:'fixed',tokens:7}};
     const result=await estimateKvCapacity(scenario,assets);
     if(result.status!=='available')throw Error(result.message);
     expect(result.report).toMatchObject({decodeStep:2,referenceTokensPerRequest:5,currentKvBytes:8,averageBytesPerToken:1.6});
     expect(result.report.devices[0]).toMatchObject({capacityBytes:18,nonKvBytes:8,kvBytes:8});
     // 5–8 slots use 4 payload bytes and two FP16 scales. Nine slots allocate 8 + 6 bytes.
     expect(result.report.budget).toMatchObject({status:'available',tokensPerRequest:8,stride:1,more:[{bytes:0}]});
+    expect(result.report).toMatchObject({modelContextLimit:{tokensPerRequest:7},usableTokensPerRequest:7});
+    model.extensions['contextLimit']={kind:'fixed',tokens:20};
+    expect(await estimateKvCapacity(scenario,assets)).toMatchObject({status:'available',report:{
+      inputHash:result.report.inputHash,modelContextLimit:{tokensPerRequest:20},usableTokensPerRequest:8,
+    }});
   });
 
   it('reports a windowed cache footprint without pretending it grows as an append-only cache',async()=>{
@@ -201,4 +221,24 @@ describe('KV capacity',()=>{
     expect(solveKvSlots(rows,topology,[{...device,capacityBytes:17}],3)).toMatchObject({status:'no_room',reason:'fixed_cache'});
     expect(solveKvSlots([ring],topology,[device],3)).toMatchObject({status:'fixed',more:[{bytes:0}]});
   });
+});
+
+it('resolves each published context limit from its fixed config, without guessing from parameter names',()=>{
+  for(const [filename,configPath,usesTextConfig] of [
+    ['deepseek-v3-r5','deepseek-v3/v3-config.json',false],['deepseek-r1-r5','deepseek-v3/r1-config.json',false],
+    ['deepseek-v4-flash-r4','deepseek-v4/config.json',false],['deepseek-v4.1-flash-r4','deepseek-v41/config.json',true],
+    ['glm-5.2-r2','glm-5.2/config.json',false],['kimi-k3-r3','kimi-k3/config.json',true],
+    ['qwen3.5-397b-a17b-r5','qwen-hybrid/qwen35-config.json',true],['qwen3.8-27b-r5','qwen-hybrid/qwen38-config.json',true],
+  ] as const){
+    const model=AssetDocument.parse(JSON.parse(readFileSync(`assets/builtin/model/${filename}.json`,'utf8')));
+    const config=JSON.parse(readFileSync(`references/models/${configPath}`,'utf8'));
+    const publishedTokens=(usesTextConfig?config.text_config:config).max_position_embeddings;
+    const rootParameters=model.parameters.flatMap(parameter=>parameter.type==='integer'&&parameter.default?[{
+      nodeId:NodeId.parse('$model'),parameterKey:parameter.key,unit:parameter.unit,value:parameter.default,
+      source:{kind:'asset_default' as const,asset:{assetId:model.assetId,revision:model.revision,kind:'model' as const}},
+    }]:[]);
+    const result=resolveModelContextLimit(modelContextLimitDeclaration(model),rootParameters);
+    expect(result,filename).toMatchObject({tokensPerRequest:publishedTokens,source:'published'});
+    expect(modelContextLimitDeclaration({...model,sources:[]})).toBeUndefined();
+  }
 });

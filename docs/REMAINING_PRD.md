@@ -8,6 +8,8 @@ Chrome 157 单次对照运行使用 Qwen3.5-397B-A17B、PP2 × EP2 × TP2、官�
 
 [画布容量页](TECHNICAL_SPEC.md#16-已落地字段补充)逐步取得显存峰值和 KV 分配。Qwen3.5-397B-A17B 的 PP2 × EP2 × TP2、FP8、两步 Decode 样本在 Node.js 24.22.3 的独立进程中测得 79.1 秒降至 29.9 秒，进程峰值驻留内存从 2.80 GiB 降至 2.13 GiB。对比复用同一套逐步 Decode 规则。两份容量报告具有相同 SHA-256，预算均为每请求 1,348,231 token。
 
+容量页现在把声明的上下文上限纳入主卡片，分别保留显存预算和每 token 缓存占用。V4.1-Flash 的八卡发布权重样本中，显存预算为 4,015,415 token／请求，主卡片按模型上限显示 1,048,576 token／请求。已核对内置目标型号的固定配置及 Qwen3 的当前参数绑定。
+
 Qwen3-0.6B 与 Qwen3-1.7B 新修订已补齐全模型 [Attention TP 和请求 DP](PARALLEL_PRESETS.md#qwen3-全模型)。模块级规则在校验时展开到每次 decoder 调用，当前方案可保留旧硬件映射后更新到新模型修订。其他正式型号的局部方程和混合布局继续按 F03 核对。
 
 DeepSeek-V3／R1 r3 提供[全模型请求 DP、Attention TP、MoE EP 和 TP／EP 共用卡池](PARALLEL_PRESETS.md#deepseek-v3-与-deepseek-r1-全模型)。r4 增加 MoE TP，可与 EP 组合并复用 Attention 的卡池。MLA 缓存逐卡复制，路由专家按交错归属分片，在各自的合并点明确插入归约。理论路由保留每个 token 的全局 TopK，逐卡负载按商和余数分配。r5 接入官方 FP8 权重，逐卡核对缩放网格和稀疏读取，并按所选权重配置计算 KV 预算。跨池、上下文并行与原生 FP8 执行继续按 F03／F09 核对。

@@ -43,7 +43,9 @@ test('shows the configured KV bytes and budget in the canvas before exposing adv
   await expect(panel).toContainText('KV 预算计算已取消');
   await panel.getByRole('button',{name:'重算 KV 预算',exact:true}).click();
   await expect(panel).toContainText('114,688 B / token');
-  await expect(panel).toContainText(new Intl.NumberFormat('zh-CN').format(expected.report.budget.tokensPerRequest)+' token / 请求');
+  const effective=panel.getByRole('group',{name:'当前配置 KV 上限',exact:true});
+  await expect(effective.locator('strong')).toHaveText('40,960 token / 请求');
+  await expect(effective).toContainText('显存预算 '+new Intl.NumberFormat('zh-CN').format(expected.report.budget.tokensPerRequest)+' token / 请求');
   await expect(panel).toContainText('所有物理设备合计 336 KiB · 每请求 3 token');
   await expect(panel.getByLabel('容量求解变量',{exact:true})).toHaveCount(0);
   await panel.getByText('逐卡显存与缓存分配',{exact:true}).click();
@@ -51,6 +53,7 @@ test('shows the configured KV bytes and budget in the canvas before exposing adv
 
   await page.getByRole('tab',{name:/^FP8 KV/}).click();
   await expect(panel).toContainText('57,344 B / token');
+  await expect(effective.locator('strong')).toHaveText('40,960 token / 请求');
   await expect(panel).toContainText('所有物理设备合计 168 KiB · 每请求 3 token');
   await panel.getByText('高级参数扫描',{exact:true}).click();
   await expect(panel.getByLabel('容量求解变量',{exact:true})).toBeVisible();
@@ -76,6 +79,7 @@ test('shows the tighter per-request budget when the two-card configuration repli
   await page.getByRole('button',{name:'容量',exact:true}).click();
   const panel=page.getByRole('region',{name:'KV 缓存容量',exact:true});
   await expect(panel).toContainText('96 token / 请求');
+  await expect(panel.getByRole('group',{name:'KV 显存预算',exact:true}).locator('strong')).toHaveText('96 token / 请求');
   await expect(panel).toContainText('16 B / token');
   await panel.getByText('逐卡显存与缓存分配',{exact:true}).click();
   await expect(panel.getByRole('row',{name:/^gpu0/})).toContainText('24 B');

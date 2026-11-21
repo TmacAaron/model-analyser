@@ -6,7 +6,10 @@ import { instantiateModel } from './instantiate.js';
 import { resolveParallelPlan } from './parallel-plan.js';
 import { applyStorageAllocationOverrides } from './storage-allocation-overrides.js';
 import { slotRows,solveKvSlots,type DeviceBudget,type SlotRows,type SlotStorage } from './kv-capacity-slots.js';
+import { modelContextLimitDeclaration,resolveModelContextLimit } from './model-context-limit.js';
 import { validateScenario } from '../../contracts/src/scenario-validation.js';
+
+export { modelContextLimitDeclaration } from './model-context-limit.js';
 
 type DeviceLimit={deviceId:string;capacityBytes:number};
 type DeviceRow=DeviceLimit&{
@@ -33,6 +36,8 @@ export type KvCapacityReport={
   shardedBytesPerToken?:number;
   requestPartitionedBytesPerToken?:number;
   fixedSlotsPerRequest?:number;
+  modelContextLimit?:NonNullable<ReturnType<typeof resolveModelContextLimit>>;
+  usableTokensPerRequest?:number;
   rowProfile?:{groupSizes:number[];fixedWindows:number[];includesIndexer:boolean};
   devices:DeviceRow[];
   budget:Budget;
@@ -306,9 +311,16 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
     }catch(error){
       budget={status:'unavailable',reason:error instanceof Error?error.message:'无法计算 KV 预算。'};
     }
+    const modelContextLimit=resolveModelContextLimit(modelContextLimitDeclaration(model),parameters);
+    let usableTokensPerRequest:number|undefined;
+    if(modelContextLimit&&budget.status!=='unavailable'){
+      const slots=budget.status==='available'?budget.tokensPerRequest:budget.status==='no_room'?0:fixedSlots??Infinity;
+      usableTokensPerRequest=Math.floor(Math.min(slots,modelContextLimit.tokensPerRequest)/budget.stride)*budget.stride;
+    }
     return {status:'available',report:{inputHash,scenarioId:active.scenarioId,phase:active.workload.kind,batchSize,
       stateCount:states.length,storageCount:ids.size,referenceTokensPerRequest:reference,decodeStep:step?.index,
       currentKvBytes,averageBytesPerToken,devices:rows,budget,...perDeviceRate,
+      ...(modelContextLimit?{modelContextLimit}:{}),...(usableTokensPerRequest!==undefined?{usableTokensPerRequest}:{}),
       ...(budget.status==='fixed'&&fixedSlots!==undefined?{fixedSlotsPerRequest:fixedSlots}:{}),...(rowProfile?{rowProfile}:{})}};
   }catch(error){
     return {status:'unavailable',message:error instanceof Error?error.message:'无法计算当前配置的 KV 容量。'};

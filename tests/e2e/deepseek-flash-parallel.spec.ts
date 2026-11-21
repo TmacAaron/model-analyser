@@ -49,7 +49,9 @@ test('upgrades V4.1, keeps Engram sharded and enables the published FP4／FP8 we
   await expect(published).toHaveAttribute('aria-pressed', 'true');
   await expect(save).toContainText('已保存 · 修订 6');
   await page.getByRole('button', { name: '容量', exact: true }).click();
-  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 120_000 });
+  const effective = capacity.getByRole('group', { name: '当前配置 KV 上限', exact: true });
+  await expect(effective.locator('strong')).toHaveText('1,048,576 token / 请求', { timeout: 120_000 });
+  await expect(effective).toContainText('显存预算 4,015,415 token / 请求');
   await expect(capacity).toContainText('每卡复制 1,313,920 B / token');
   await expect(capacity).toContainText('每 2 个 token 生成一行压缩缓存');
   await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();

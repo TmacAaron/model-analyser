@@ -1,6 +1,6 @@
 import { useEffect,useMemo,useRef,useState } from 'react';
 import type { AssetDocument,Scenario } from '@model-analyser/contracts';
-import { calculationInput,hashCanonicalInput,stableStringify,type KvCapacityAttempt,type KvCapacityReport } from '@model-analyser/core';
+import { calculationInput,hashCanonicalInput,modelContextLimitDeclaration,stableStringify,type KvCapacityAttempt,type KvCapacityReport } from '@model-analyser/core';
 import { CapacityView } from './capacity-view.js';
 import { useDisplayUnits } from './display-units.js';
 import { StudyEvidenceDetails,StudyEvidencePager } from './study-evidence.js';
@@ -28,13 +28,19 @@ function KvPhysicalDevices({report}:{report:KvCapacityReport}){
 }
 
 function KvSummary({report}:{report:KvCapacityReport}){
-  const display=useDisplayUnits(),{budget,rowProfile}=report;
+  const display=useDisplayUnits(),{budget,rowProfile,modelContextLimit,usableTokensPerRequest}=report;
   const limiting=budget.status==='no_room'?report.devices.find(device=>budget.limitingDeviceIds.includes(device.deviceId)):undefined;
-  const tokens=budget.status==='available'?budget.tokensPerRequest:budget.status==='no_room'?0:report.fixedSlotsPerRequest;
+  const memoryTokens=budget.status==='available'?budget.tokensPerRequest:budget.status==='no_room'?0:report.fixedSlotsPerRequest;
+  const tokens=usableTokensPerRequest??memoryTokens;
+  const title=usableTokensPerRequest===undefined?'KV 显存预算':'当前配置 KV 上限';
   return <>
     <div className="kv-budget-cards">
-      <div className="metric-card"><span>KV 显存预算</span>
+      <div className="metric-card" role="group" aria-label={title}><span>{title}</span>
         <strong>{tokens!==undefined?integer.format(tokens)+' token / 请求':budget.status==='fixed'?'固定窗口':'无法计算'}</strong>
+        {modelContextLimit&&<small>模型上下文上限 {integer.format(modelContextLimit.tokensPerRequest)} token / 请求</small>}
+        {modelContextLimit&&usableTokensPerRequest!==undefined&&memoryTokens!==undefined&&<small>
+          {budget.status==='fixed'?'固定 KV 槽位':'显存预算'} {integer.format(memoryTokens)} token / 请求
+        </small>}
         {budget.status==='available'&&<small>当前 batch {report.batchSize} · 约束设备 {budget.limitingDeviceIds.join('、')}</small>}
         {report.fixedSlotsPerRequest!==undefined&&<small>固定槽位，已用 {integer.format(report.referenceTokensPerRequest??0)}</small>}
       </div>
@@ -67,7 +73,7 @@ function KvSummary({report}:{report:KvCapacityReport}){
         <KvPhysicalDevices report={report}/>
       </details>
     </>}
-    {budget.status==='available'&&<p className="scope-note">按当前非 KV 峰值、分片和量化规则计算缓存槽位。模型上下文限制及更长上下文下的临时开销需另行核对。</p>}
+    {budget.status==='available'&&<p className="scope-note">按当前非 KV 峰值估算。{!modelContextLimit&&'模型上下文上限未声明。'}</p>}
   </>;
 }
 
@@ -76,22 +82,25 @@ export function KvCapacityView({scenario,assets}:{scenario:Scenario;assets:Asset
     try{return calculationInput(scenario,assets).canonicalInput;}
     catch{return stableStringify({scenario,assets});}
   },[scenario,assets]);
-  const worker=useRef<Worker|null>(null),latest=useRef(input);
-  latest.current=input;
-  const [cached,setCached]=useState<{key:string;result:Result}>();
-  const result=cached?.key===input?cached.result:undefined;
+  const model=assets.find(asset=>asset.assetId===scenario.model.assetId&&asset.revision===scenario.model.revision);
+  const contextKey=stableStringify(modelContextLimitDeclaration(model)??null);
+  const key=useMemo(()=>({input,contextKey}),[input,contextKey]);
+  const worker=useRef<Worker|null>(null),latest=useRef(key);
+  latest.current=key;
+  const [cached,setCached]=useState<{key:typeof key;result:Result}>();
+  const result=cached?.key===key?cached.result:undefined;
   function stop(){worker.current?.terminate();worker.current=null;}
   function calculate(){
     stop();
-    setCached({key:input,result:{kind:'running'}});
+    setCached({key,result:{kind:'running'}});
     try{
       const instance=new Worker(new URL('./kv-capacity-worker.ts',import.meta.url),{type:'module'});
       worker.current=instance;
-      const matches=()=>worker.current===instance&&latest.current===input;
+      const matches=()=>worker.current===instance&&latest.current===key;
       const expectedHash=hashCanonicalInput(input).catch(()=>undefined);
       function finish(result:Result){
         if(!matches())return;
-        stop();setCached({key:input,result});
+        stop();setCached({key,result});
       }
       instance.onmessage=async({data}:MessageEvent<KvCapacityAttempt>)=>{
         if(!matches())return;
@@ -107,16 +116,16 @@ export function KvCapacityView({scenario,assets}:{scenario:Scenario;assets:Asset
       instance.onmessageerror=()=>finish({kind:'error',message:'无法读取 KV 结果，可重试。'});
       instance.postMessage({scenario,assets} satisfies KvCapacityRequest);
     }catch(error){
-      stop();setCached({key:input,result:{kind:'error',message:error instanceof Error?error.message:'无法启动 KV 预算计算。'}});
+      stop();setCached({key,result:{kind:'error',message:error instanceof Error?error.message:'无法启动 KV 预算计算。'}});
     }
   }
-  useEffect(()=>{calculate();return stop;},[input]);
+  useEffect(()=>{calculate();return stop;},[key]);
   return <section className="kv-capacity-panel" aria-label="KV 缓存容量">
     <h2>KV 缓存容量</h2>
-    {(!result||result.kind==='running')&&<p role="status">正在计算当前配置的 KV 预算… <button type="button" onClick={()=>{stop();setCached({key:input,result:{kind:'cancelled'}});}}>取消 KV 计算</button></p>}
+    {(!result||result.kind==='running')&&<p role="status">正在计算当前配置的 KV 预算… <button type="button" onClick={()=>{stop();setCached({key,result:{kind:'cancelled'}});}}>取消 KV 计算</button></p>}
     {result?.kind==='cancelled'&&<p>KV 预算计算已取消。 <button type="button" onClick={calculate}>重算 KV 预算</button></p>}
     {result?.kind==='error'&&<><p role="alert">{result.message}</p><button type="button" onClick={calculate}>重算 KV 预算</button></>}
-    {result?.kind==='ready'&&<KvSummary key={result.report.inputHash} report={result.report}/>}
+    {result?.kind==='ready'&&<KvSummary key={contextKey+result.report.inputHash} report={result.report}/>}
     <StudyEvidenceDetails summary="高级参数扫描" render={()=> <CapacityView scenario={scenario} assets={assets}/>}/>
   </section>;
 }
