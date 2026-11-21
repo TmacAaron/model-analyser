@@ -169,7 +169,7 @@
                 ]
               },
               "bits": {
-                "$ref": "#/$defs/__schema7"
+                "$ref": "#/$defs/__schema8"
               },
               "format": {
                 "$ref": "#/$defs/__schema0"
@@ -195,7 +195,7 @@
                 "$ref": "#/$defs/__schema0"
               },
               "trafficFactor": {
-                "$ref": "#/$defs/__schema8"
+                "$ref": "#/$defs/__schema9"
               },
               "startupRounds": {
                 "$ref": "#/$defs/__schema5"
@@ -212,7 +212,7 @@
             "minItems": 1,
             "type": "array",
             "items": {
-              "$ref": "#/$defs/__schema9"
+              "$ref": "#/$defs/__schema10"
             }
           },
           "timing": {
@@ -246,7 +246,7 @@
                     "const": "fixed"
                   },
                   "seconds": {
-                    "$ref": "#/$defs/__schema8"
+                    "$ref": "#/$defs/__schema9"
                   },
                   "description": {
                     "$ref": "#/$defs/__schema0"
@@ -271,7 +271,7 @@
                     "exclusiveMinimum": 0
                   },
                   "latencySeconds": {
-                    "$ref": "#/$defs/__schema8"
+                    "$ref": "#/$defs/__schema9"
                   }
                 },
                 "required": [
@@ -354,7 +354,7 @@
           "$ref": "#/$defs/__schema0"
         },
         "modelRevision": {
-          "$ref": "#/$defs/__schema7"
+          "$ref": "#/$defs/__schema8"
         },
         "groupId": {
           "$ref": "#/$defs/__schema0"
@@ -471,7 +471,7 @@
               "exclusiveMinimum": 0
             },
             "latencySeconds": {
-              "$ref": "#/$defs/__schema8"
+              "$ref": "#/$defs/__schema9"
             }
           },
           "required": [
@@ -484,6 +484,22 @@
       "required": [
         "groups",
         "devices"
+      ],
+      "additionalProperties": false
+    },
+    "decodeContext": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "replacement": {
+          "$ref": "#/$defs/__schema7"
+        }
+      },
+      "required": [
+        "module",
+        "replacement"
       ],
       "additionalProperties": false
     }
@@ -722,7 +738,7 @@
                     }
                   },
                   "copies": {
-                    "$ref": "#/$defs/__schema7"
+                    "$ref": "#/$defs/__schema8"
                   }
                 },
                 "required": [
@@ -838,33 +854,7 @@
               "type": "object",
               "properties": {
                 "formula": {
-                  "type": "object",
-                  "properties": {
-                    "assetId": {
-                      "$ref": "#/$defs/__schema0"
-                    },
-                    "revision": {
-                      "$ref": "#/$defs/__schema7"
-                    },
-                    "kind": {
-                      "type": "string",
-                      "enum": [
-                        "model",
-                        "module",
-                        "operator",
-                        "formula",
-                        "parallel",
-                        "quantization",
-                        "hardware"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "assetId",
-                    "revision",
-                    "kind"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/$defs/__schema7"
                 },
                 "bindings": {
                   "type": "object",
@@ -892,14 +882,43 @@
       ]
     },
     "__schema7": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "revision": {
+          "$ref": "#/$defs/__schema8"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "model",
+            "module",
+            "operator",
+            "formula",
+            "parallel",
+            "quantization",
+            "hardware"
+          ]
+        }
+      },
+      "required": [
+        "assetId",
+        "revision",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "__schema8": {
       "minimum": 1,
       "$ref": "#/$defs/__schema5"
     },
-    "__schema8": {
+    "__schema9": {
       "type": "number",
       "minimum": 0
     },
-    "__schema9": {
+    "__schema10": {
       "type": "object",
       "properties": {
         "deviceId": {
@@ -912,7 +931,7 @@
           "$ref": "#/$defs/__schema6"
         },
         "trafficFactor": {
-          "$ref": "#/$defs/__schema8"
+          "$ref": "#/$defs/__schema9"
         }
       },
       "required": [

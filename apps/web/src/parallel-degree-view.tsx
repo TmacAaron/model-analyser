@@ -142,7 +142,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
           : match.preset.strategy === 'query_sharded' ? '每个注意力层收集当前 K 和 V'
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">
-        {needsNetwork && ((match.preset.sharedPoolDegrees || match.preset.strategy === 'pipeline' || match.preset.strategy === 'query_sharded') && match.preset.networkDefaults ?
+        {needsNetwork && ((match.preset.sharedPoolDegrees || match.preset.strategy === 'pipeline' || match.preset.strategy === 'query_sharded' || match.preset.strategy === 'decode_context_sharded') && match.preset.networkDefaults ?
           <details><summary>通信参数{savedTiming||bandwidth!==undefined||latency!==undefined?'':' · 参考值'}</summary>{linkFields}</details> : linkFields)}
         <button type="button" onClick={() => void preview()} disabled={outcome?.status === 'running'}>校验布局</button>
         {inputsChangedDuringPreview&&<small role="status">配置已更新，请重新校验。</small>}

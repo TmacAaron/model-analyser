@@ -19,6 +19,7 @@ function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplat
   if (preset.strategy === 'replicated') return size === 1 ? serialDegrees : undefined;
   if (preset.strategy === 'pipeline') return size > 1 ? { ...serialDegrees, pp: size } : undefined;
   if (preset.strategy === 'query_sharded') return size > 1 ? { ...serialDegrees, pcp: size } : undefined;
+  if (preset.strategy === 'decode_context_sharded') return size > 1 ? { ...serialDegrees, dcp: size } : undefined;
   if (preset.strategy === 'tensor_sharded' && preset.sharedPoolDegrees?.length) {
     if (size <= 1) return;
     const degrees = { ...serialDegrees };

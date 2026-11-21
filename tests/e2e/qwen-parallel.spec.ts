@@ -5,6 +5,7 @@ import { makeQwen17Project } from '../../scripts/model-expansion.js';
 import { makeModelProject } from '../../scripts/model-project.js';
 import { makeQwenParallelAssets } from '../../scripts/qwen-parallel-assets.js';
 import { addQwenContextPreset } from '../../scripts/qwen-context-parallel.js';
+import { addQwenDecodeContextPreset } from '../../scripts/qwen-decode-context.js';
 import { addQwenPipelinePreset } from '../../scripts/qwen-pipeline.js';
 
 test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention TP', async ({ page }) => {
@@ -24,7 +25,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.locator('.studio-layout-notice')).toContainText('2 张卡');
-  await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r5', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByLabel('Attention TP', { exact: true }).fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -38,7 +39,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const current = ProjectDocument.parse((await response.json()).data).scenarios[0]!;
-  expect(current.model.revision).toBe(4);
+  expect(current.model.revision).toBe(5);
   expect(current.deviceTopology.devices).toEqual([first, second]);
   expect(current.workload).toEqual(scenario.workload);
   expect(current.parallelPlan.communications).toHaveLength(28);
@@ -93,6 +94,48 @@ test('applies full Qwen3 PCP with replicated KV, restores the degree and returns
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(pcp).toHaveValue('2');
   await pcp.fill('1');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('1 个实际设备 · 0 个通信', { timeout: 45_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+});
+
+test('applies full Qwen3 DCP and displays the reserved cache capacity', async ({ page }) => {
+  test.setTimeout(150_000);
+  const base = makeQwenParallelAssets();
+  const root = base.find(row => row.assetId === 'builtin:model:qwen3-1.7b')!;
+  const decoder = base.find(row => row.definition.kind === 'module')!;
+  const [pcpRoot, pcpDecoder, ...formulas] = addQwenContextPreset(decoder, [addQwenPipelinePreset(root)]);
+  const assets = [...addQwenDecodeContextPreset(pcpDecoder!, [pcpRoot!]), pcpDecoder!, ...formulas,
+    ...base.filter(row => row.definition.kind === 'formula')];
+  const project = makeModelProject(assets, { kind: 'decode', batchSize: 1, contextTokensPerRequest: 3, queryTokensPerRequest: 1, steps: 2 }, 'Qwen3-1.7B DCP');
+  project.projectId = randomUUID();
+  project.scenarios[0]!.bindings = [{ parameterKey: 'M', value: { kind: 'integer', value: 8 } }];
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({
+    name: 'qwen17-dcp.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  const dcp = page.getByLabel('序列与流水线 DCP', { exact: true });
+  await dcp.fill('2');
+  const logical = page.getByRole('region', { name: '逻辑分片与通信' });
+  await expect(logical).toContainText('每次模块调用 AllReduce × 3');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('2 个实际设备 · 84 个通信', { timeout: 45_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量', exact: true });
+  await expect(capacity).toContainText('8 token / 请求', { timeout: 45_000 });
+  await expect(capacity).toContainText('固定槽位，已用 5');
+  await expect(capacity).toContainText('114,688 B / token');
+  await capacity.getByText('逐卡显存与缓存分配', { exact: true }).click();
+  await expect(capacity.getByRole('row', { name: /^gpu0/ })).toContainText('448 KiB');
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(dcp).toHaveValue('2');
+  await dcp.fill('1');
   await logical.getByRole('button', { name: '校验布局' }).click();
   await expect(logical).toContainText('1 个实际设备 · 0 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();

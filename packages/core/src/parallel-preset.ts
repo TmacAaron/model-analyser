@@ -60,6 +60,8 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     if(!preset.phases.includes(scenario.workload.kind))throw new FormulaError('unsupported_phase','此预设不适用于当前阶段');
     const group=scenario.deviceTopology.groups.find(g=>g.groupId===request.groupId);if(!group)throw new FormulaError('missing_reference','请选择实际物理设备组');
     const degree=group.members.length;if(degree<1||degree>64)throw new FormulaError('preset_limit','快捷预设支持 1–64 个明确物理设备');
+    const decodeContext=preset.decodeContext;
+    if(decodeContext&&(degree<2||request.expertMesh))throw Error('DCP 需要至少两张卡及单独的设备轴');
     const requestDp=request.requestDp??1,replicaWidth=degree/requestDp;
     if(request.requestDp){
       if(preset.strategy!=='tensor_sharded'||!model.parallelPresets?.some(p=>p.strategy==='batch_sharded'&&p.phases.includes(scenario.workload.kind)))throw Error('当前模型未声明可与张量分片组合的请求 DP');
@@ -73,8 +75,17 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     if(origin?.expertMesh)retired.add(origin.expertMesh.groupId);
     const cleanTopology={...scenario.deviceTopology,groups:scenario.deviceTopology.groups.filter(g=>!retired.has(g.groupId)||g.groupId===group.groupId)};
     // Stage roles from a previous pipeline are only used by its generated plan.
-    const {nativeBindings,...planWithoutStageRoles}=scenario.parallelPlan;
-    const expansionScenario=previousPipeline&&nativeBindings?{...scenario,deviceTopology:cleanTopology,parallelPlan:planWithoutStageRoles}:scenario;
+    const previousDecodeContext=scenario.parallelPlan.decodeContext;
+    const expansionPlan={...scenario.parallelPlan};
+    delete expansionPlan.decodeContext;
+    if(previousPipeline)delete expansionPlan.nativeBindings;
+    if(decodeContext){
+      expansionPlan.decodeContext=decodeContext;
+      expansionPlan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,
+        groupId:request.groupId,meshAxisId:request.meshAxisId};
+    }
+    const expansionScenario=previousPipeline||previousDecodeContext||decodeContext
+      ?{...scenario,deviceTopology:cleanTopology,parallelPlan:expansionPlan}:scenario;
     if(preset.strategy==='declared_plan'){
       if(request.expertMesh)throw Error('此声明式预设已固定设备网格');
       const {topology,plan}=materializeDeclaredPreset({...request,scenario:{...scenario,deviceTopology:cleanTopology}},preset);
@@ -102,7 +113,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       const plan=materializeQueryParallelPreset(request,preset,expanded.resolved,degree);
       return await finishPreset(request,model,preset,topology,plan);
     }
-    if(preset.strategy!=='tensor_sharded'&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
+    if(preset.strategy!=='tensor_sharded'&&!decodeContext&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
     let parts=[{preset,groupId:group.groupId,meshAxisId:request.meshAxisId,size:replicaWidth}];
     let expertMesh:ExpertMesh;
     if(request.expertMesh){
@@ -161,6 +172,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       ? 'Balanced axes spread the remainder over the first ranks and reserve ceil(extent / degree) slots per rank. Even axes require exact division.'
       : 'Even partitioning; incompatible extents are rejected.';
     const plan:Scenario['parallelPlan']={assignments:[{selector:{kind:'subtree',rootNodeId:NodeId.parse('$model')},phases:preset.phases,tensorDistributions:graph.tensors.map(t=>({tensorId:t.tensorId,distribution:distribution(t.tensorId,t.shape)})),storageDistributions:graph.storages.filter(s=>!tensorStorages.has(s.storageId)).map(s=>({storageId:s.storageId,distribution:distribution(s.storageId,s.allocation.kind==='tensor'?s.allocation.shape:[])}))}],communications:[],assumptions:[`Generated from fixed model ${model.assetId}@${model.revision}, preset ${preset.presetId}. This records generation history; later manual edits remain explicit.`,preset.description,...preset.assumptions,`Group ${group.groupId}: ${degree} unique physical members. ${groupAssumptions}`,`Only declared localCost equations are evaluated; physical replicas may execute duplicate work. No implicit packing conversion, communication HBM/reduction arithmetic or staging allocation.`]};
+    if(decodeContext)plan.decodeContext=decodeContext;
     if(request.requestDp)plan.assumptions.push(`${requestDp} independent request replicas with ${replicaWidth} devices each. Reductions run concurrently within each replica and preserve its batch slice.`);
     if(expertMesh)plan.assumptions.push(...parts.filter(part=>part.preset!==preset).flatMap(part=>part.preset.assumptions),
       `MoE experts use ${expertMesh.ep} owner partitions and ${expertMesh.tp} intermediate-feature partitions per owner. Each request replica sums the partial tiles before the original merge boundary.`);
@@ -171,7 +183,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       const target=distribution(r.tensorId,tensor.shape);
       const partition=request.requestDp&&target.kind==='sharded'&&target.axes.length===1&&target.axes[0]?.meshAxisId===requestAxis?target.axes[0]:undefined;
       if(request.requestDp&&!partition)throw Error('归约输出须保留同一请求切片：'+r.tensorId);
-      const partial:TensorDistribution={kind:'partial',groupId:group.groupId,reduceOperation:'sum',...(partition?{partition}:{})};
+      const partial:TensorDistribution={kind:'partial',groupId:group.groupId,reduceOperation:r.operation??'sum',...(partition?{partition}:{})};
       plan.assignments.push({selector:{kind:'nodes',nodeIds:[r.producerNodeId]},phases:preset.phases,tensorDistributions:[{tensorId:r.tensorId,distribution:degree===1?replicated:partial}],storageDistributions:[]});
       if(degree===1)continue;if(!request.network)throw Error('请显式填写此组的通信带宽和单轮延迟');
       const payload=request.requestDp?payloadPerReplica(r.payloadBytes,requestDp):r.payloadBytes;

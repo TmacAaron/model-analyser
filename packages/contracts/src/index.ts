@@ -81,7 +81,7 @@ export const StateSpec = z.strictObject({stateId:StateId,name:Id,stateKind:z.enu
   allocationBasis:z.enum(['context_boundary','step_end']).optional(),
   storageIds:z.array(StorageId).min(1),creator:z.union([NodePort,z.strictObject({kind:z.literal('initialized')})]),readers:z.array(NodePort),writers:z.array(NodePort),
   updatePolicy:z.discriminatedUnion('kind',[
-    z.strictObject({kind:z.literal('append'),tokensPerRow:PositiveInt.optional()}),
+    z.strictObject({kind:z.literal('append'),tokensPerRow:PositiveInt.optional(),fixedCapacity:ValueExpr.optional()}),
     z.strictObject({kind:z.literal('windowed'),window:ValueExpr,reserveFullWindow:z.literal(true).optional()}),
     z.strictObject({kind:z.literal('replace')}),z.strictObject({kind:z.literal('static')}),
   ]),
@@ -136,9 +136,11 @@ export const ParallelPresetOrigin = z.strictObject({version:z.literal('parallel-
 export const NativeCollectiveBindings = z.strictObject({groups:z.array(z.strictObject({logicalGroupId:Id,physicalGroupId:Id,
   meshAxes:z.array(z.strictObject({logicalAxisId:Id,physicalAxisId:Id}))})),devices:z.array(z.strictObject({logicalDeviceId:DeviceId,physicalDeviceId:DeviceId})),
   network:z.strictObject({bytesPerSecond:z.number().positive(),latencySeconds:NonNegative}).optional()});
+const DecodeContextModule = z.strictObject({module:AssetRef,replacement:AssetRef});
 export const ParallelPlan = z.strictObject({assignments:z.array(z.strictObject({selector:NodeSelector,phases:Phases,
   tensorDistributions:z.array(z.strictObject({tensorId:TensorId,distribution:TensorDistribution})),storageDistributions:z.array(z.strictObject({storageId:StorageId,distribution:TensorDistribution}))})),
-  communications:z.array(CommunicationDefinition),assumptions:z.array(z.string()),generatedFrom:ParallelPresetOrigin.optional(),nativeBindings:NativeCollectiveBindings.optional()});
+  communications:z.array(CommunicationDefinition),assumptions:z.array(z.string()),generatedFrom:ParallelPresetOrigin.optional(),nativeBindings:NativeCollectiveBindings.optional(),
+  decodeContext:DecodeContextModule.optional()});
 export const GraphTemplate = z.strictObject({inputs:z.array(PortSpec),outputs:z.array(PortSpec),
   nodes:z.array(z.strictObject({nodeId:NodeId,name:Id,phases:Phases,portBindings:z.array(PortSpec),stateBindings:z.array(z.strictObject({localStateId:StateId,parentStateId:StateId})),
     repeat:z.strictObject({axis:Id,count:ValueExpr,wiring:z.enum(['chain','independent']),carry:z.array(z.strictObject({outputPortId:Id,inputPortId:Id}))}).optional(),
@@ -179,8 +181,9 @@ export const ParallelPresetRecipe = z.strictObject({deviceSlots:z.array(DeviceId
   mesh:z.strictObject({axes:z.array(z.strictObject({axisId:Id,size:PositiveInt})),coordinates:z.array(z.strictObject({deviceId:DeviceId,coordinates:z.array(Natural)}))}).optional()})).min(1),
   plan:ParallelPlan.pick({assignments:true,communications:true,assumptions:true})});
 const PresetTensorShard = z.strictObject({tensorId:TensorId,axisId:Id,policy:z.literal('balanced').optional()});
-const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec});
-export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan','pipeline','query_sharded']),phases:Phases,
+const PresetReduction = z.strictObject({tensorId:TensorId,producerNodeId:NodeId,consumerNodeIds:z.array(NodeId).min(1),payloadBytes:ValueExpr,payloadDtype:DTypeSpec,
+  operation:z.enum(['sum','max','min']).optional()});
+export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,description:Id,strategy:z.enum(['replicated','batch_sharded','tensor_sharded','declared_plan','pipeline','query_sharded','decode_context_sharded']),phases:Phases,
   tensorShards:z.array(PresetTensorShard),
   sharedPoolDegrees:z.array(z.enum(['attentionTp','moeEp','moeTp'])).min(1).optional(),
   networkDefaults:z.strictObject({scope:z.enum(['intra_group','inter_group']),bytesPerSecond:z.number().positive(),latencySeconds:NonNegative,description:Id}).optional(),
@@ -188,7 +191,8 @@ export const ParallelPresetTemplate = z.strictObject({presetId:Id,name:Id,descri
   moduleRules:z.array(z.strictObject({module:AssetRef,tensorShards:z.array(PresetTensorShard),reductions:z.array(PresetReduction)})).min(1).optional(),
   assumptions:z.array(Id).min(1),declaredPlan:ParallelPresetRecipe.optional(),
   pipeline:z.strictObject({chainNodeId:NodeId,payloadBytes:ValueExpr,payloadDtype:DTypeSpec}).optional(),
-  queryParallel:z.strictObject({axisId:Id,moduleGathers:z.array(z.strictObject({module:AssetRef,gathers:z.array(PresetReduction).min(1)})).min(1)}).optional()});
+  queryParallel:z.strictObject({axisId:Id,moduleGathers:z.array(z.strictObject({module:AssetRef,gathers:z.array(PresetReduction.omit({operation:true})).min(1)})).min(1)}).optional(),
+  decodeContext:DecodeContextModule.optional()});
 export const FusionGroup = z.strictObject({groupId:Id,memberNodeIds:z.array(NodeId).min(1),eliminatedTensorIds:z.array(TensorId),
   origin:z.strictObject({asset:AssetRef,presetId:Id,scopeNodeId:NodeId}).optional(),extraCost:CostDefinition,extraLocalCost:z.strictObject({contextNodeId:NodeId,rule:LocalCostRule}).optional(),timeStrategy:z.discriminatedUnion('kind',[
     z.strictObject({kind:z.literal('sum_members')}),

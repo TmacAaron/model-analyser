@@ -12,7 +12,7 @@ export type CanvasOperatorGroup={
 const marker='/$view:';
 type AuthoredGroup={key:string;name:string;members:readonly string[]};
 const qwenGroups:AuthoredGroup[]=[
-  {key:'attention',name:'GQA Attention',members:['qk-norm-rope','cache-update','qk','softmax','av','o-proj']},
+  {key:'attention',name:'GQA Attention',members:['qk-norm-rope','cache-update','qk','softmax','av','local-max','shift-exp','sum-exp','cast-weights','weighted-values','normalize','o-proj']},
   {key:'ffn',name:'SwiGLU',members:['gate-up-proj','silu-multiply','down-proj']},
 ];
 const mlaGroups:AuthoredGroup[]=[
@@ -81,7 +81,7 @@ export function authoredCanvasGroups(resolved:ResolvedGraph,scope:string):Canvas
   const hybrid=/^builtin:module:qwen-hybrid-(moe|dense)-(delta|gqa)$/.exec(id);
   const deepSeekV4=/^builtin:module:deepseek-v4-decoder-(0|4|128)(-hash)?$/.exec(id);
   const deepSeekV41=/^builtin:module:deepseek-v41-block-(r[12]|window)(?:-|$)/.exec(id);
-  const specs=id==='builtin:module:qwen3-decoder'?qwenGroups:
+  const specs=id==='builtin:module:qwen3-decoder'||id==='builtin:module:qwen3-dcp-decoder'?qwenGroups:
     id==='builtin:module:glm4-decoder'?glmGroups:
     id.startsWith('builtin:module:glm-5.2-block-')?glm52Groups:
     id==='builtin:model:kimi-k3'?[kimiDepth('final')]:

@@ -109,8 +109,10 @@ function tokensAtState(state:StateSpec,scenario:Scenario,step:NonNullable<Analys
 
 function rowsForState(state:StateSpec):SlotRows|undefined{
   const policy=state.updatePolicy;
-  if(policy.kind==='append')return policy.tokensPerRow!==undefined&&policy.tokensPerRow>1
-    ?{kind:'grouped',tokensPerRow:policy.tokensPerRow}:undefined;
+  if(policy.kind==='append'){
+    if(policy.fixedCapacity?.kind==='literal')return {kind:'fixed',rows:policy.fixedCapacity.quantity.value};
+    return policy.tokensPerRow!==undefined&&policy.tokensPerRow>1?{kind:'grouped',tokensPerRow:policy.tokensPerRow}:undefined;
+  }
   if(policy.kind==='windowed'&&policy.reserveFullWindow&&policy.window.kind==='literal'){
     return {kind:'fixed',rows:policy.window.quantity.value};
   }
@@ -137,13 +139,17 @@ export async function estimateKvCapacity(scenario:Scenario,assets:AssetDocument[
       (compression['ratio']===2||compression['ratio']===4)?compression['ratio']:undefined;
     const fixedParam=active.model.revision===1&&['builtin:model:parallel-dcp2','example:dcp:2:model','example:dcp:1:model'].includes(active.model.assetId)?
       expanded.resolved.parameters.find(parameter=>parameter.nodeId==='$model'&&parameter.parameterKey==='M')?.value:undefined;
-    const fixedSlots=fixedParam?.kind==='integer'?fixedParam.value:undefined;
     applyStorageAllocationOverrides(graph.storages,active.numericOverrides);
     const storages=new Map(graph.storages.map(row=>[row.storageId,row]));
     const isKv=(state:StateSpec)=>state.stateKind==='kv'||state.stateKind==='latent'||
       state.stateKind==='window'&&state.updatePolicy.kind==='windowed'&&state.updatePolicy.reserveFullWindow||
       state.stateKind==='indexer'&&state.updatePolicy.kind==='append'&&state.updatePolicy.tokensPerRow!==undefined;
     const states=graph.states.filter(isKv),ids=new Set(states.flatMap(state=>state.storageIds.map(id=>backing(id,storages))));
+    const fixedPolicy=states[0]?.updatePolicy;
+    const declaredSlots=fixedPolicy?.kind==='append'&&fixedPolicy.fixedCapacity?.kind==='literal'?fixedPolicy.fixedCapacity.quantity.value:undefined;
+    const fixedSlots=fixedParam?.kind==='integer'?fixedParam.value:declaredSlots!==undefined&&states.every(state=>
+      state.updatePolicy.kind==='append'&&state.updatePolicy.fixedCapacity?.kind==='literal'&&
+      state.updatePolicy.fixedCapacity.quantity.value===declaredSlots)?declaredSlots:undefined;
     const devices=active.deviceTopology.devices.map(device=>{
       const asset=pack.assets.find(asset=>asset.assetId===device.hardware.assetId&&asset.revision===device.hardware.revision);
       if(asset?.definition.kind!=='hardware')throw Error('设备 '+device.deviceId+' 缺少固定硬件快照。');

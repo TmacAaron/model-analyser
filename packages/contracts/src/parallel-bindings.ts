@@ -37,6 +37,10 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if((p.strategy==='pipeline')!==(p.pipeline!==undefined))errors.push('流水线预设必须独立声明层链与传输消息');
   if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
   if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
+  if((p.strategy==='decode_context_sharded')!==(p.decodeContext!==undefined))errors.push('Decode 上下文预设须声明固定模块与替代模块');
+  if(p.decodeContext&&(p.decodeContext.module.kind!=='module'||p.decodeContext.replacement.kind!=='module'||
+    p.phases.some(phase=>phase!=='decode')||!p.moduleRules?.some(rule=>rule.module.assetId===p.decodeContext?.replacement.assetId&&rule.module.revision===p.decodeContext.replacement.revision)))
+    errors.push('Decode 上下文预设仅用于 Decode，需声明替代模块的实际分片和归约');
   if(p.queryParallel){
     if(p.tensorShards.length||p.reductions.length||p.moduleRules||p.phases.some(phase=>phase!=='prefill'))errors.push('查询分片布局适用于 Prefill，按声明查询轴和收集边界生成');
     unique(p.queryParallel.moduleGathers.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块收集规则');
@@ -50,7 +54,7 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
     unique(p.sharedPoolDegrees,'同池并行度');
   }
   if(p.moduleRules){
-    if(p.strategy!=='tensor_sharded')errors.push('模块分片规则仅适用于轴分片预设');
+    if(p.strategy!=='tensor_sharded'&&p.strategy!=='decode_context_sharded')errors.push('模块分片规则仅适用于轴分片预设');
     unique(p.moduleRules.map(rule=>rule.module.assetId+'@'+rule.module.revision),'模块分片规则');
     for(const rule of p.moduleRules){
       if(rule.module.kind!=='module')errors.push('模块分片规则必须引用固定模块修订');

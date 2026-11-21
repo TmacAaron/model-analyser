@@ -51,6 +51,13 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     track(scenario.quantizationOverrides);
     track(scenario.fusionGroups);
     const root=lookup(scenario.model);if(root.definition.kind!=='model')throw new FormulaError('reference_kind_mismatch','根资产必须为 model');track(root.definition,[root.assetId+'@'+root.revision]);
+    const decodeContext=phase==='decode'?scenario.parallelPlan.decodeContext:undefined;
+    if(decodeContext){
+      const origin=scenario.parallelPlan.generatedFrom,declared=root.parallelPresets?.find(preset=>preset.presetId===origin?.presetId&&preset.strategy==='decode_context_sharded')?.decodeContext;
+      if(origin?.modelId!==root.assetId||origin.modelRevision!==root.revision||!declared||canonical(declared)!==canonical(decodeContext))throw new FormulaError('invalid_decode_context','Decode 上下文图须与当前固定模型预设匹配');
+      if(scenario.workload.queryTokensPerRequest!==1)throw new FormulaError('invalid_decode_context','DCP 每步需要一个查询 token');
+      track(decodeContext.replacement);
+    }
     const executionProfiles:AssetDocument[]=[],executionByModule=new Map<string,Map<NodeId,{ruleIndex:number;recipe:ModelWeightExecution}>>();
     for(const [ruleIndex,rule] of scenario.quantizationOverrides.entries()){
       if(!rule.preset)continue;
@@ -68,7 +75,7 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
         if(recipes.size)executionByModule.set(key,recipes);
       }
     }
-    const templateIssues=validateAssets([root,...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
+    const templateIssues=validateAssets([root,...(decodeContext?[lookup(decodeContext.replacement)]:[]),...executionProfiles],assets);if(templateIssues.some(d=>d.severity==='error'))return InstantiationResult.parse({status:'unavailable',diagnostics:templateIssues});
     const executionInputs:{nodeId:string;ruleIndex:number;weights:StorageId[];activation:StorageId}[]=[];
     const graph:GraphTemplate={inputs:[],outputs:[],nodes:[],edges:[],dependencies:[],tensors:[],storages:[],states:[]};
     const containers:ResolvedGraph['containers']=[],parameters:ResolvedParameter[]=[],objectBindings:ResolvedGraph['objectBindings']=[];
@@ -122,13 +129,18 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
       const storage=(id:string)=>{const mapped=storageMap.get(id);if(!mapped)throw new FormulaError('missing_reference',`成本引用缺少存储 ${id}`);return mapped;};
       return {...source,compute:source.compute.map(c=>({...c,usefulOperations:value(c.usefulOperations,symbols,'operation'),executedOperations:value(c.executedOperations,symbols,'operation')})),memoryAccess:source.memoryAccess.map(a=>({...a,storageId:storage(a.storageId),logicalBytes:a.logicalBytes.kind==='storage_allocation'?{kind:'storage_allocation' as const,passes:bindAllocationAccess(a.logicalBytes.passes,{symbols,assets})}:value(a.logicalBytes,symbols,'byte'),...(a.hbmEstimate?.kind==='bytes'?{hbmEstimate:{kind:'bytes' as const,value:value(a.hbmEstimate.value,symbols,'byte')}}:{})})),temporaryStorageIds:source.temporaryStorageIds.map(storage),timing:source.timing.kind==='custom_formula'?{...source.timing,seconds:value(source.timing.seconds,symbols,'second')}:source.timing};
     }
+    function boundStatePolicy(policy:GraphTemplate['states'][number]['updatePolicy'],symbols:Record<string,Quantity>){
+      if(policy.kind==='windowed')return {...policy,window:value(policy.window,symbols,'count',true,1)};
+      if(policy.kind==='append'&&policy.fixedCapacity)return {...policy,fixedCapacity:value(policy.fixedCapacity,symbols,'count',true,1)};
+      return policy;
+    }
     function materialize(source:Frame,path:string,symbols:Record<string,Quantity>,external:Map<string,TensorId>,stateBindings:Map<string,StateId>,owner:AssetDocument){
       const tensorMap=new Map<string,TensorId>(),storageMap=new Map<string,StorageId>(),stateMap=new Map<string,StateId>();
       function observeObject(object:LayoutDeclaration['object']){
         layoutTrace?.record?.(structuredClone({object,nodeId:NodeId.parse(path||'$model'),asset:{assetId:owner.assetId,revision:owner.revision,kind:owner.definition.kind},symbols:communicationSymbols(symbols)}));
       }
       const bindStorage=(local:string,target:StorageId)=>{const canonical=canonicalStorage(target),prior=storageMap.get(local);if(prior&&canonicalStorage(prior)!==canonical)throw new FormulaError('invalid_state_binding',`同一本地存储绑定不同对象 ${local}`);storageMap.set(local,canonical);};
-      for(const local of source.states){const parentId=stateBindings.get(local.stateId);if(parentId){const parent=stateById.get(parentId);if(!parent||parent.stateKind!==local.stateKind||parent.storageIds.length!==local.storageIds.length)throw new FormulaError('invalid_state_binding','状态类型或存储数量不兼容');const policy=local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy;if(canonical(policy)!==canonical(parent.updatePolicy)||(local.allocationBasis??'context_boundary')!==(parent.allocationBasis??'context_boundary'))throw new FormulaError('invalid_state_binding','状态更新/分配时点约束不兼容');stateMap.set(local.stateId,parentId);local.storageIds.forEach((id,i)=>{const target=parent.storageIds[i];if(!target)throw new FormulaError('invalid_state_binding','状态存储缺失');bindStorage(id,target);});}else stateMap.set(local.stateId,StateId.parse(objectId(path,local.stateId)));}
+      for(const local of source.states){const parentId=stateBindings.get(local.stateId);if(parentId){const parent=stateById.get(parentId);if(!parent||parent.stateKind!==local.stateKind||parent.storageIds.length!==local.storageIds.length)throw new FormulaError('invalid_state_binding','状态类型或存储数量不兼容');const policy=boundStatePolicy(local.updatePolicy,symbols);if(canonical(policy)!==canonical(parent.updatePolicy)||(local.allocationBasis??'context_boundary')!==(parent.allocationBasis??'context_boundary'))throw new FormulaError('invalid_state_binding','状态更新/分配时点约束不兼容');stateMap.set(local.stateId,parentId);local.storageIds.forEach((id,i)=>{const target=parent.storageIds[i];if(!target)throw new FormulaError('invalid_state_binding','状态存储缺失');bindStorage(id,target);});}else stateMap.set(local.stateId,StateId.parse(objectId(path,local.stateId)));}
       for(const id of stateBindings.keys())if(!source.states.some(s=>s.stateId===id))throw new FormulaError('missing_reference',`子定义未声明状态 ${id}`);
       const interfaces=[...source.inputs,...source.outputs];
       for(const [portId,targetId] of external){const port=interfaces.find(p=>p.portId===portId);if(!port)throw new FormulaError('invalid_port',`子接口缺少端口 ${portId}`);const local=source.tensors.find(t=>t.tensorId===port.tensorId),target=tensorById.get(targetId);if(!local||!target)throw new FormulaError('missing_reference','边界张量缺失');const evaluated={...local,shape:shape(local.shape,symbols)};if(!compatible(evaluated,target))throw new FormulaError('invalid_shape',`边界 shape/dtype 不兼容 ${path}:${portId}`);const prior=tensorMap.get(local.tensorId);if(prior&&prior!==targetId)throw new FormulaError('invalid_port','共享本地张量被映射到不同张量');tensorMap.set(local.tensorId,targetId);bindStorage(local.storageId,target.storageId);}
@@ -151,7 +163,7 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
         if(layoutTrace?.target.kind==='tensor'&&layoutTrace.target.tensorId===id)observeObject({kind:'tensor',tensor:t});
       }
       for(const local of source.states){const stateId=stateMap.get(local.stateId);if(!stateId)throw new FormulaError('missing_reference','状态映射缺失');const bound=stateBindings.has(local.stateId);let state=stateById.get(stateId);
-        if(!state){const storageIds=local.storageIds.map(id=>{const mapped=storageMap.get(id);if(!mapped)throw new FormulaError('missing_reference','状态存储缺失');return mapped;});state={...local,stateId,storageIds,creator:{kind:'initialized'},readers:[],writers:[],updatePolicy:local.updatePolicy.kind==='windowed'?{...local.updatePolicy,window:value(local.updatePolicy.window,symbols,'count',true,1)}:local.updatePolicy};stateById.set(stateId,state);graph.states.push(state);}
+        if(!state){const storageIds=local.storageIds.map(id=>{const mapped=storageMap.get(id);if(!mapped)throw new FormulaError('missing_reference','状态存储缺失');return mapped;});state={...local,stateId,storageIds,creator:{kind:'initialized'},readers:[],writers:[],updatePolicy:boundStatePolicy(local.updatePolicy,symbols)};stateById.set(stateId,state);graph.states.push(state);}
         deferredStates.push({state,local,path,bound});
       }
       objectBindings.push({nodeId:NodeId.parse(path||'$model'),tensors:source.tensors.map(t=>{const id=tensorMap.get(t.tensorId);if(!id)throw new FormulaError('missing_reference','张量绑定缺失');const global=tensorById.get(id);return {localTensorId:t.tensorId,tensorId:id,axes:t.shape.map((a,i)=>({localAxisId:a.axisId,axisId:global?.shape[i]?.axisId??a.axisId}))};}),storages:source.storages.map(s=>{const id=storageMap.get(s.storageId);if(!id)throw new FormulaError('missing_reference','存储绑定缺失');return {localStorageId:s.storageId,storageId:id};}),states:source.states.map(s=>{const id=stateMap.get(s.stateId);if(!id)throw new FormulaError('missing_reference','状态绑定缺失');return {localStateId:s.stateId,stateId:id};})});
@@ -180,7 +192,10 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     function expandNode(node:Node,owner:AssetDocument,parentPath:string,parentSymbols:Record<string,Quantity>,parentTensors:Map<string,TensorId>,parentStorages:Map<string,StorageId>,parentStates:Map<string,StateId>,stack:string[]):Expansion{
       const path=nodePath(parentPath,node.nodeId);cursor=path;
-      const body=node.body,intrinsic=body.kind==='opaque'||body.kind==='collective',target=intrinsic?owner:lookup(body.asset);
+      const body=node.body,intrinsic=body.kind==='opaque'||body.kind==='collective';
+      const useDecodeContext=decodeContext&&body.kind==='module'&&owner.assetId===root.assetId&&owner.revision===root.revision&&
+        body.asset.assetId===decodeContext.module.assetId&&body.asset.revision===decodeContext.module.revision;
+      const target=intrinsic?owner:lookup(useDecodeContext?decodeContext.replacement:body.asset);
       if(body.kind==='collective'){const iface=collectivePorts(body.communication);if(node.portBindings.length!==2||[...iface.inputs,...iface.outputs].some(p=>!node.portBindings.some(b=>b.portId===p.portId&&b.tensorId===p.tensorId)))throw new FormulaError('invalid_port','collective 必须绑定 source/destination 固定端口到对应张量');}
       if(!intrinsic&&target.definition.kind!==body.kind)throw new FormulaError('reference_kind_mismatch','节点引用类型不符');
       const source=intrinsic?{...(body.kind==='opaque'?{inputs:body.inputs,outputs:body.outputs}:collectivePorts(body.communication)),tensors:[],storages:[],states:[]}:target.definition.kind==='operator'?target.definition.operator:target.definition.kind==='module'?target.definition.graph:undefined;
@@ -320,6 +335,17 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     }
     if(stepContext){for(const id of stepContext.carriedStateIds)if(!graph.states.some(s=>s.stateId===id))throw new FormulaError('missing_reference','carry 状态缺失 '+id);for(const state of graph.states)if(stepContext.carriedStateIds.includes(state.stateId)){if(state.creator.kind==='node'&&!state.writers.some(p=>canonical(p)===canonical(state.creator)))state.writers.push(state.creator);state.creator={kind:'initialized'};}}
     for(const state of graph.states){
+      if(state.updatePolicy.kind==='append'&&state.updatePolicy.fixedCapacity){
+        const capacity=numericValue(state.updatePolicy.fixedCapacity,'count',context({}),true);
+        const past=scenario.workload.kind==='decode'?scenario.workload.contextTokensPerRequest:scenario.workload.pastTokensPerRequest;
+        const calls=scenario.workload.kind==='decode'&&scenario.workload.approximation!=='fixed_context'?scenario.workload.steps:1;
+        if(past+calls*scenario.workload.queryTokensPerRequest>capacity)throw new FormulaError('fixed_cache_capacity','上下文和查询超过固定 KV 槽位 '+capacity);
+        for(const id of state.storageIds){
+          const allocation=storageById.get(canonicalStorage(id))?.allocation;
+          const token=allocation?.kind==='tensor'?allocation.shape.filter(axis=>axis.semantic==='token'):[];
+          if(token.length!==1||token[0]?.size.kind!=='literal'||token[0].size.quantity.value!==capacity)throw new FormulaError('invalid_state_binding','固定 KV 槽位与物理存储长度不一致 '+id);
+        }
+      }
       const allowed=new Set(state.storageIds.map(canonicalStorage));
       for(const [mode,accesses] of [['read',state.readers],['write',[...state.writers,...(state.creator.kind==='node'?[state.creator]:[])]]] as const)for(const access of accesses){
         const port=ports.get(key(access.nodeId,mode==='read'?'in':'out',access.portId)),tensor=port?tensorById.get(port.tensorId):undefined;

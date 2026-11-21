@@ -19,7 +19,8 @@
         "tensor_sharded",
         "declared_plan",
         "pipeline",
-        "query_sharded"
+        "query_sharded",
+        "decode_context_sharded"
       ]
     },
     "phases": {
@@ -77,7 +78,7 @@
       "minItems": 1,
       "type": "array",
       "items": {
-        "$ref": "#/$defs/__schema12"
+        "$ref": "#/$defs/__schema13"
       }
     },
     "assumptions": {
@@ -102,7 +103,7 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema13"
+            "$ref": "#/$defs/__schema14"
           }
         },
         "plan": {
@@ -167,7 +168,7 @@
                           "$ref": "#/$defs/__schema0"
                         },
                         "distribution": {
-                          "$ref": "#/$defs/__schema14"
+                          "$ref": "#/$defs/__schema15"
                         }
                       },
                       "required": [
@@ -186,7 +187,7 @@
                           "$ref": "#/$defs/__schema0"
                         },
                         "distribution": {
-                          "$ref": "#/$defs/__schema14"
+                          "$ref": "#/$defs/__schema15"
                         }
                       },
                       "required": [
@@ -231,7 +232,7 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "distribution": {
-                        "$ref": "#/$defs/__schema14"
+                        "$ref": "#/$defs/__schema15"
                       }
                     },
                     "required": [
@@ -247,7 +248,7 @@
                         "$ref": "#/$defs/__schema0"
                       },
                       "distribution": {
-                        "$ref": "#/$defs/__schema14"
+                        "$ref": "#/$defs/__schema15"
                       }
                     },
                     "required": [
@@ -263,13 +264,13 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "payloadDtype": {
-                    "$ref": "#/$defs/__schema11"
+                    "$ref": "#/$defs/__schema12"
                   },
                   "sendBytesPerMember": {
-                    "$ref": "#/$defs/__schema7"
+                    "$ref": "#/$defs/__schema8"
                   },
                   "receiveBytesPerMember": {
-                    "$ref": "#/$defs/__schema7"
+                    "$ref": "#/$defs/__schema8"
                   },
                   "algorithm": {
                     "type": "object",
@@ -281,7 +282,7 @@
                         "$ref": "#/$defs/__schema5"
                       },
                       "startupRounds": {
-                        "$ref": "#/$defs/__schema10"
+                        "$ref": "#/$defs/__schema11"
                       }
                     },
                     "required": [
@@ -295,7 +296,7 @@
                     "minItems": 1,
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/__schema16"
+                      "$ref": "#/$defs/__schema17"
                     }
                   },
                   "timing": {
@@ -308,7 +309,7 @@
                             "const": "custom_formula"
                           },
                           "seconds": {
-                            "$ref": "#/$defs/__schema7"
+                            "$ref": "#/$defs/__schema8"
                           },
                           "description": {
                             "$ref": "#/$defs/__schema0"
@@ -446,10 +447,10 @@
           "$ref": "#/$defs/__schema0"
         },
         "payloadBytes": {
-          "$ref": "#/$defs/__schema7"
+          "$ref": "#/$defs/__schema8"
         },
         "payloadDtype": {
-          "$ref": "#/$defs/__schema11"
+          "$ref": "#/$defs/__schema12"
         }
       },
       "required": [
@@ -469,13 +470,29 @@
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema17"
+            "$ref": "#/$defs/__schema18"
           }
         }
       },
       "required": [
         "axisId",
         "moduleGathers"
+      ],
+      "additionalProperties": false
+    },
+    "decodeContext": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/$defs/__schema9"
+        },
+        "replacement": {
+          "$ref": "#/$defs/__schema9"
+        }
+      },
+      "required": [
+        "module",
+        "replacement"
       ],
       "additionalProperties": false
     }
@@ -552,17 +569,21 @@
           "$ref": "#/$defs/__schema0"
         },
         "consumerNodeIds": {
-          "minItems": 1,
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/__schema0"
-          }
-        },
-        "payloadBytes": {
           "$ref": "#/$defs/__schema7"
         },
+        "payloadBytes": {
+          "$ref": "#/$defs/__schema8"
+        },
         "payloadDtype": {
-          "$ref": "#/$defs/__schema11"
+          "$ref": "#/$defs/__schema12"
+        },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "sum",
+            "max",
+            "min"
+          ]
         }
       },
       "required": [
@@ -575,6 +596,13 @@
       "additionalProperties": false
     },
     "__schema7": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "__schema8": {
       "oneOf": [
         {
           "type": "object",
@@ -644,7 +672,7 @@
               "type": "object",
               "properties": {
                 "formula": {
-                  "$ref": "#/$defs/__schema8"
+                  "$ref": "#/$defs/__schema9"
                 },
                 "bindings": {
                   "type": "object",
@@ -652,7 +680,7 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "additionalProperties": {
-                    "$ref": "#/$defs/__schema7"
+                    "$ref": "#/$defs/__schema8"
                   }
                 }
               },
@@ -671,14 +699,14 @@
         }
       ]
     },
-    "__schema8": {
+    "__schema9": {
       "type": "object",
       "properties": {
         "assetId": {
           "$ref": "#/$defs/__schema0"
         },
         "revision": {
-          "$ref": "#/$defs/__schema9"
+          "$ref": "#/$defs/__schema10"
         },
         "kind": {
           "type": "string",
@@ -700,16 +728,16 @@
       ],
       "additionalProperties": false
     },
-    "__schema9": {
-      "minimum": 1,
-      "$ref": "#/$defs/__schema10"
-    },
     "__schema10": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema11"
+    },
+    "__schema11": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema11": {
+    "__schema12": {
       "type": "object",
       "properties": {
         "category": {
@@ -722,7 +750,7 @@
           ]
         },
         "bits": {
-          "$ref": "#/$defs/__schema9"
+          "$ref": "#/$defs/__schema10"
         },
         "format": {
           "$ref": "#/$defs/__schema0"
@@ -735,11 +763,11 @@
       ],
       "additionalProperties": false
     },
-    "__schema12": {
+    "__schema13": {
       "type": "object",
       "properties": {
         "module": {
-          "$ref": "#/$defs/__schema8"
+          "$ref": "#/$defs/__schema9"
         },
         "tensorShards": {
           "type": "array",
@@ -761,7 +789,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema13": {
+    "__schema14": {
       "type": "object",
       "properties": {
         "groupId": {
@@ -786,7 +814,7 @@
                     "$ref": "#/$defs/__schema0"
                   },
                   "size": {
-                    "$ref": "#/$defs/__schema9"
+                    "$ref": "#/$defs/__schema10"
                   }
                 },
                 "required": [
@@ -807,7 +835,7 @@
                   "coordinates": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/__schema10"
+                      "$ref": "#/$defs/__schema11"
                     }
                   }
                 },
@@ -832,7 +860,7 @@
       ],
       "additionalProperties": false
     },
-    "__schema14": {
+    "__schema15": {
       "oneOf": [
         {
           "type": "object",
@@ -870,7 +898,7 @@
               ]
             },
             "partition": {
-              "$ref": "#/$defs/__schema15"
+              "$ref": "#/$defs/__schema16"
             }
           },
           "required": [
@@ -894,7 +922,7 @@
               "minItems": 1,
               "type": "array",
               "items": {
-                "$ref": "#/$defs/__schema15"
+                "$ref": "#/$defs/__schema16"
               }
             },
             "policy": {
@@ -957,10 +985,10 @@
                             "$ref": "#/$defs/__schema0"
                           },
                           "start": {
-                            "$ref": "#/$defs/__schema10"
+                            "$ref": "#/$defs/__schema11"
                           },
                           "end": {
-                            "$ref": "#/$defs/__schema10"
+                            "$ref": "#/$defs/__schema11"
                           }
                         },
                         "required": [
@@ -1029,7 +1057,7 @@
                           ]
                         },
                         "size": {
-                          "$ref": "#/$defs/__schema7"
+                          "$ref": "#/$defs/__schema8"
                         }
                       },
                       "required": [
@@ -1041,7 +1069,7 @@
                     }
                   },
                   "copies": {
-                    "$ref": "#/$defs/__schema9"
+                    "$ref": "#/$defs/__schema10"
                   }
                 },
                 "required": [
@@ -1066,7 +1094,7 @@
         }
       ]
     },
-    "__schema15": {
+    "__schema16": {
       "type": "object",
       "properties": {
         "tensorAxisId": {
@@ -1082,17 +1110,17 @@
       ],
       "additionalProperties": false
     },
-    "__schema16": {
+    "__schema17": {
       "type": "object",
       "properties": {
         "deviceId": {
           "$ref": "#/$defs/__schema0"
         },
         "sendBytes": {
-          "$ref": "#/$defs/__schema7"
+          "$ref": "#/$defs/__schema8"
         },
         "receiveBytes": {
-          "$ref": "#/$defs/__schema7"
+          "$ref": "#/$defs/__schema8"
         },
         "trafficFactor": {
           "$ref": "#/$defs/__schema5"
@@ -1106,23 +1134,51 @@
       ],
       "additionalProperties": false
     },
-    "__schema17": {
+    "__schema18": {
       "type": "object",
       "properties": {
         "module": {
-          "$ref": "#/$defs/__schema8"
+          "$ref": "#/$defs/__schema9"
         },
         "gathers": {
           "minItems": 1,
           "type": "array",
           "items": {
-            "$ref": "#/$defs/__schema6"
+            "$ref": "#/$defs/__schema19"
           }
         }
       },
       "required": [
         "module",
         "gathers"
+      ],
+      "additionalProperties": false
+    },
+    "__schema19": {
+      "type": "object",
+      "properties": {
+        "tensorId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "producerNodeId": {
+          "$ref": "#/$defs/__schema0"
+        },
+        "consumerNodeIds": {
+          "$ref": "#/$defs/__schema7"
+        },
+        "payloadBytes": {
+          "$ref": "#/$defs/__schema8"
+        },
+        "payloadDtype": {
+          "$ref": "#/$defs/__schema12"
+        }
+      },
+      "required": [
+        "tensorId",
+        "producerNodeId",
+        "consumerNodeIds",
+        "payloadBytes",
+        "payloadDtype"
       ],
       "additionalProperties": false
     }
