@@ -1,0 +1,95 @@
+{
+  "documentType": "asset",
+  "schemaVersion": 1,
+  "assetId": "builtin:formula:glm-5.2-fp8-execution:c5fab20b1fab83a7",
+  "revision": 1,
+  "name": "A0 * A1 * A2 [count]",
+  "tags": [
+    "transformer-equation"
+  ],
+  "parameters": [],
+  "sources": [
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/config.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/model.safetensors.index.json",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/model-00001-of-00141.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/model-00038-of-00141.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/model-00040-of-00141.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://huggingface.co/zai-org/GLM-5.2-FP8/blob/f33c6dc501ee5a2c7e35155653b1b1abbc320951/model-00141-of-00141.safetensors",
+      "checkedOn": "2026-11-21"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/layers/quantization/fp8.py",
+      "checkedOn": "2026-11-22"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/models/deepseek_v2.py",
+      "checkedOn": "2026-11-22"
+    },
+    {
+      "kind": "url",
+      "url": "https://github.com/vllm-project/vllm/blob/2cf0a6915ce544dc493a0990f2ea38d81601128a/vllm/model_executor/layers/attention/mla_attention.py",
+      "checkedOn": "2026-11-22"
+    },
+    {
+      "kind": "note",
+      "text": "The analytical FP8 linear path uses E4M3FN operands, dynamic FP32 scaling per token and 128 contraction features, and FP32 block-scaled accumulation followed by a BF16 output cast. The activation proxy counts six operations per input element and one per group. Gate/up pairs reuse one activation conversion. The graph models Q-A and KV-A as separate projections. Activation and scale tiles are assumed to stay on chip."
+    },
+    {
+      "kind": "note",
+      "text": "Steady-state absorbed MLA uses one BF16 working copy of the K/V up-projection rows. The DSA index key projection also uses BF16 resident weights, consistent with load-time upcasting in the fixed vLLM code. The estimate omits loading cost and any concurrent original checkpoint copies. Index scores, sparse attention, cache and collective formats follow the declared GLM-5.2 graph."
+    }
+  ],
+  "definition": {
+    "kind": "formula",
+    "formula": {
+      "inputs": {
+        "A0": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "A1": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        },
+        "A2": {
+          "unit": "count",
+          "integerRequired": true,
+          "min": 0
+        }
+      },
+      "expression": "A0 * A1 * A2",
+      "output": {
+        "unit": "count",
+        "integerRequired": true,
+        "nonNegative": true
+      },
+      "description": "Explicit analytical equation. Multiply-add counts as two operations; no executable model code."
+    }
+  }
+}

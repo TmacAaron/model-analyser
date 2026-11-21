@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { AssetDocument, ProjectDocument } from '@model-analyser/contracts';
 import { makeGlm52ParallelAssets } from '../../scripts/glm52-parallel.js';
 import { ref } from '../../scripts/model-authoring.js';
-import { makeModelProject, referenceHardware } from '../../scripts/model-project.js';
+import { makeModelProject } from '../../scripts/model-project.js';
 
-test('keeps the GLM layout when upgrading and opens a KV budget with published FP8 weights', async ({ page }) => {
+test('keeps the GLM layout across FP8 weight and execution configurations', async ({ page }) => {
   test.setTimeout(420_000);
-  const reference = referenceHardware();
+  const reference = AssetDocument.parse(JSON.parse(readFileSync('assets/builtin/hardware/nvidia-h100-sxm-80gb-r2.json', 'utf8')));
   if (reference.definition.kind !== 'hardware') throw Error('Missing test device');
   const hardware = AssetDocument.parse({ ...reference, assetId: 'example:hardware:glm-5.2-fp8-capacity',
     name: '120 GB theoretical test device',
@@ -62,4 +63,29 @@ test('keeps the GLM layout when upgrading and opens a KV budget with published F
   await page.getByRole('tab').nth(1).click();
   await page.getByRole('button', { name: '量化', exact: true }).click();
   await expect(fp8).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: '＋ 复制配置', exact: true }).click();
+  await expect(page.getByRole('tab')).toHaveCount(3);
+  const execution = page.getByRole('button', { name: 'FP8 执行', exact: true });
+  await execution.click();
+  await expect(execution).toHaveAttribute('aria-pressed', 'true');
+  await expect(save).toContainText('已保存');
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 120_000 });
+  await expect(capacity).toContainText('每卡复制 95,232 B / token');
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  const results = page.locator('.analysis-cards');
+  await expect(results).toContainText('fp8_e4m3fn → fp32', { timeout: 150_000 });
+  await expect(results).toContainText('bf16 → fp32');
+  await expect(results.getByRole('button', { name: '查看理论耗时 · 串行来源' })).not.toContainText('不可用');
+
+  const configurations = ProjectDocument.parse((await (await page.request.get('/api/v1/project?id=' + project.projectId)).json()).data).scenarios;
+  expect(configurations.map(row => row.quantizationOverrides[0]?.preset?.assetId)).toEqual([
+    undefined, 'builtin:quantization:glm-5.2-fp8-weights', 'builtin:quantization:glm-5.2-fp8-execution',
+  ]);
+  expect(configurations[2]?.parallelPlan).toEqual(configurations[1]?.parallelPlan);
+  await page.reload();
+  await page.getByRole('tab').nth(2).click();
+  await page.getByRole('button', { name: '量化', exact: true }).click();
+  await expect(execution).toHaveAttribute('aria-pressed', 'true');
 });
