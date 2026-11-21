@@ -11,6 +11,8 @@ test('opens both published Qwen hybrid models and displays KV separately from fi
   const models = page.getByLabel('当前模型', { exact: true });
   await models.selectOption('builtin:model:qwen3.5-397b-a17b');
   await expect(page.locator('.canvas-breadcrumb')).toContainText('Qwen3.5-397B-A17B');
+  await page.locator(selector('final-norm')).press('Space');
+  await expect(page.getByRole('region', { name: 'RMSNorm 计算步骤' })).toContainText('1 + γ');
   const decoder = page.locator(selector('decoder'));
   await expect(decoder).toContainText('15 ×');
   await decoder.press('Enter');

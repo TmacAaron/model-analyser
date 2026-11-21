@@ -38,6 +38,47 @@ const recurrence:Algorithm={
   ],
 };
 
+const absorbedMla: Algorithm = {
+  name: '吸收投影的 MLA',
+  steps: [
+    { label: '将非旋转键的上投影移到每个查询头', equation: 'q̃ₕ = Wₖ,ₕᵀ qₕ' },
+    { label: '对因果可见位置，用配置的注意力缩放系数合并两项内积',
+      equation: 'scoreₕ,ₜ = α · (⟨q̃ₕ, cₜ⟩ + ⟨qʳₕ, kʳₜ⟩)' },
+    { label: '沿可见位置在 FP32 中做 softmax，按权重汇总缓存中的潜向量',
+      equation: 'aₕ = Σₜ softmax(scoreₕ)ₜ · cₜ' },
+    { label: '把汇总结果上投影，再拼接各头并做输出投影', equation: 'y = Wₒ concatₕ(Wᵥ,ₕ aₕ)' },
+  ],
+};
+
+const groupedExpertRouting: Algorithm = {
+  name: '分组 MoE 路由',
+  steps: [
+    { label: '计算各专家的 sigmoid 分数，将偏置用于排序', equation: 's = sigmoid(Wᵣx),  r = s + b' },
+    { label: '每组取两个最高修正分数求和，选出得分最高的专家组',
+      equation: 'group_score(g) = sum(TopK(r[g], 2)),  groups = TopK(group_score, T_G)' },
+    { label: '在选中的组内为每个 token 选全局 Top‑K 个专家，取回原始分数',
+      equation: 'ids = TopK(r[groups], K),  wᵢ = 2.5 · sᵢ / Σⱼ∈ids sⱼ' },
+    { label: '汇总加权路由专家输出，再加共享专家分支', equation: 'y = Σᵢ∈ids wᵢ · expertᵢ(x) + shared(x)' },
+  ],
+};
+
+const swiglu: Algorithm = {
+  name: 'SwiGLU',
+  steps: [
+    { label: '分别计算门控和上投影', equation: 'g = W_gate x,  u = W_up x' },
+    { label: '对门控应用 SiLU，与上投影逐元素相乘，再映射回输出维度',
+      equation: 'y = W_down · ((g ⊙ sigmoid(g)) ⊙ u)' },
+  ],
+};
+
+function deepSeekV3Algorithm(localId: string) {
+  if (['q-absorb', 'qk', 'softmax', 'av', 'v-up', 'o-proj'].includes(localId)) return absorbedMla;
+  if (['router', 'router-sigmoid', 'router-bias', 'group-top2', 'group-scores', 'group-select', 'topk',
+    'route-weights', 'combine', 'shared-add'].includes(localId)) return groupedExpertRouting;
+  if (['gate-up-proj', 'silu', 'down-proj', 'expert-gate-up', 'expert-silu', 'expert-down',
+    'shared-gate-up', 'shared-silu', 'shared-down'].includes(localId)) return swiglu;
+}
+
 function deepSeekV4Algorithm(localId:string,v41=false,ratio='4'):Algorithm|undefined {
   if(localId.endsWith('-rmsnorm')||/^(main|index|index-key)-norm$/.test(localId)){
     if(localId==='q-head-rmsnorm')return {name:'逐头 RMS 归一化',steps:[
@@ -140,8 +181,14 @@ function kimiK3Algorithm(localId:string):Algorithm|undefined {
 
 function sourceAlgorithm(asset: AssetDocument, localId: string) {
   const id = asset.assetId;
+  const v3 = asset.revision <= 6 && /^builtin:(module:deepseek-v3-absorbed-(dense|moe)|model:deepseek-(v3|r1))$/.test(id);
+  if (v3) {
+    const algorithm = deepSeekV3Algorithm(localId);
+    const source = asset.sources.find(item => item.kind === 'url' && item.url.endsWith('/inference/model.py'));
+    if (algorithm && source?.kind === 'url') return { algorithms: [algorithm], url: source.url };
+  }
   const v41=id==='builtin:model:deepseek-v4.1-flash'||id.startsWith('builtin:module:deepseek-v41-block-');
-  if(asset.revision<=2&&(v41||id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
+  if(asset.revision<=4&&(v41||id==='builtin:model:deepseek-v4-flash'||id.startsWith('builtin:module:deepseek-v4-decoder-'))){
     const algorithm=deepSeekV4Algorithm(localId,v41,v41?(id.includes('-r2-')?'2':'1'):'4');
     const filename=localId.endsWith('-hc-sinkhorn')?'kernel.py':localId==='engram-hash'?'engram.py':'model.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/inference/'+filename));
@@ -159,10 +206,11 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }
-  const hybrid=asset.revision<=4&&/^builtin:(module:qwen-hybrid-(moe|dense)-(delta|gqa)|model:qwen3\.(5-397b-a17b|8-27b))$/.test(id);
+  const hybrid=asset.revision<=5&&/^builtin:(module:qwen-hybrid-(moe|dense)-(delta|gqa)|model:qwen3\.(5-397b-a17b|8-27b))$/.test(id);
+  const deepSeekV2=asset.revision<=3&&/^builtin:(module:deepseek-v2-(expanded|absorbed)-(dense|moe)|model:deepseek-v2-lite-(expanded|absorbed))$/.test(id);
   const family = hybrid?'qwen-hybrid':asset.revision <= 10 && /^builtin:(module:qwen3-(dcp-)?decoder|model:qwen3-(0\.6b|1\.7b))$/.test(id) ? 'qwen'
     : asset.revision === 1 && /^builtin:(module:glm4-decoder|model:glm-4-9b)$/.test(id) ? 'glm'
-    : asset.revision <= 3 && /^builtin:(module:deepseek-(v2-(expanded|absorbed)|v3-absorbed)-(dense|moe)|model:deepseek-(v2-lite-(expanded|absorbed)|v3|r1))$/.test(id) ? 'deepseek'
+    : v3 || deepSeekV2 ? 'deepseek'
     : undefined;
   if (!family) return;
   const epsilon = family === 'glm' ? '1.5625 × 10⁻⁷' : '10⁻⁶';
