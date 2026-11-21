@@ -3,6 +3,7 @@ import { instantiateModel } from './instantiate.js';
 import { calculationInput,computeInputHash } from './input-hash.js';
 import { resolveParallelPlan } from './parallel-plan.js';
 import { materializeDeclaredPreset } from './declared-parallel-preset.js';
+import { materializePipelinePreset } from './pipeline-preset.js';
 import { FormulaError } from './formula.js';
 import { expertMeshPresets } from './expert-mesh-preset.js';
 import { canonical } from '../../contracts/src/validation.js';
@@ -65,14 +66,28 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
       if(request.meshAxisId===requestAxis)throw Error('设备分片轴与请求轴重名');
       if(scenario.workload.batchSize%requestDp!==0)throw Error('Batch 必须能被请求 DP '+requestDp+' 整除');
     }
-    const oldExpertGroup=scenario.parallelPlan.generatedFrom?.expertMesh?.groupId;
-    const cleanTopology={...scenario.deviceTopology,groups:scenario.deviceTopology.groups.filter(g=>g.groupId!==oldExpertGroup||g.groupId===group.groupId)};
+    const origin=scenario.parallelPlan.generatedFrom;
+    const previousPipeline=origin?.modelId===model.assetId&&model.parallelPresets?.some(p=>p.presetId===origin.presetId&&p.strategy==='pipeline');
+    const retired=new Set(previousPipeline?scenario.parallelPlan.nativeBindings?.groups.map(binding=>binding.physicalGroupId):[]);
+    if(origin?.expertMesh)retired.add(origin.expertMesh.groupId);
+    const cleanTopology={...scenario.deviceTopology,groups:scenario.deviceTopology.groups.filter(g=>!retired.has(g.groupId)||g.groupId===group.groupId)};
+    // Stage roles from a previous pipeline are only used by its generated plan.
+    const {nativeBindings,...planWithoutStageRoles}=scenario.parallelPlan;
+    const expansionScenario=previousPipeline&&nativeBindings?{...scenario,deviceTopology:cleanTopology,parallelPlan:planWithoutStageRoles}:scenario;
     if(preset.strategy==='declared_plan'){
       if(request.expertMesh)throw Error('此声明式预设已固定设备网格');
       const {topology,plan}=materializeDeclaredPreset({...request,scenario:{...scenario,deviceTopology:cleanTopology}},preset);
       return await finishPreset(request,model,preset,topology,plan);
     }
-    const origin=scenario.parallelPlan.generatedFrom;
+    if(preset.strategy==='pipeline'){
+      if(request.expertMesh)throw Error('流水线预设使用每阶段一张卡');
+      const chain=model.definition.graph.nodes.find(node=>node.nodeId===preset.pipeline?.chainNodeId);
+      if(chain?.repeat?.wiring!=='chain')throw Error('流水线须声明根模型中的连续重复层链');
+      const expanded=instantiateModel(expansionScenario,assets);
+      if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.message).join('；'));
+      const {topology,plan}=materializePipelinePreset({...request,scenario:{...scenario,deviceTopology:cleanTopology}},preset,expanded.resolved);
+      return await finishPreset(request,model,preset,topology,plan);
+    }
     const previousRequestMesh=origin?.requestDp&&origin.groupId===group.groupId&&origin.meshAxisId===request.meshAxisId;
     if(group.mesh&&!previousRequestMesh&&!group.mesh.axes.some(a=>a.axisId===request.meshAxisId&&a.size===degree))throw new FormulaError('invalid_preset_mesh','此预设需要有序设备池及其完整设备轴');
     const requestAxes=request.requestDp?[{axisId:requestAxis,size:requestDp}]:[];
@@ -80,7 +95,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const mesh=group.mesh&&!request.requestDp&&!previousRequestMesh?group.mesh:{axes:[...requestAxes,{axisId:request.meshAxisId,size:replicaWidth}],
       coordinates:group.members.map((deviceId,i)=>({deviceId,coordinates:[...requestCoordinate(i),i%replicaWidth]}))};
     const topology={...cleanTopology,groups:cleanTopology.groups.map(g=>g.groupId===group.groupId?{...g,mesh}:g)};
-    const expanded=instantiateModel(scenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
+    const expanded=instantiateModel(expansionScenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
     if(preset.strategy!=='tensor_sharded'&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
     let parts=[{preset,groupId:group.groupId,meshAxisId:request.meshAxisId,size:replicaWidth}];
     let expertMesh:ExpertMesh;

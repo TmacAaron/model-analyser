@@ -20,6 +20,7 @@ import { evaluateFusions } from './fusion-cost.js';
 import { fusionRuntime,fusionMemoryOrder } from './fusion-runtime.js';
 import { buildStreamsExecution } from './streams.js';
 import { temporalMemory } from './temporal-memory.js';
+import { parallelObjectUses } from './parallel-object-uses.js';
 import {communicationSymbols,type BoundCollectiveObservation,type CommunicationPlanObserver,type CommunicationTimingArithmetic,type CommunicationTimingOverride} from './communication-observation.js';
 import type {LocalPlanObserver} from './local-cost-observation.js';
 import type {FusionPlanObserver} from './fusion-observation.js';
@@ -70,8 +71,6 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const scheduledIds=new Set(scenario.parallelPlan.communications.flatMap(c=>c.placement?.phases.includes(resolved.phase)?[c.placement.nodeId]:[]));
     for(const [index,c] of scenario.parallelPlan.communications.entries())if(c.placement?.phases.includes(resolved.phase)&&scopes.has(c.placement.nodeId)&&!(index>=planCommunicationCount&&graph.nodes.find(n=>n.nodeId===c.placement?.nodeId)?.body.kind==='collective'))throw new FormulaError('duplicate_id','通信节点 ID 与模型展开范围冲突 '+c.placement.nodeId);
     for(const [index,o] of scenario.numericOverrides.entries())if(o.target.kind==='node'&&o.field!=='parameter'){location={kind:'scenario',scenarioId:scenario.scenarioId,fieldPath:'numericOverrides.'+index};if(!leaves.has(o.target.nodeId)&&!scheduledIds.has(o.target.nodeId))throw new FormulaError('missing_reference','成本覆盖必须指向展开叶节点或已命名通信节点 '+o.target.nodeId);if(leaves.has(o.target.nodeId)&&!nativeCommunications.map(c=>c.nodeId).includes(o.target.nodeId)&&(o.field==='communication_bandwidth'||o.field==='communication_latency'))throw new FormulaError('invalid_override','通信带宽/延迟覆盖不能应用于计算叶节点');}
-    const ruleTensors=(n:typeof graph.nodes[number])=>n.body.kind==='opaque'&&n.body.localCost?[...('tensorId' in n.body.localCost.participation?[n.body.localCost.participation.tensorId]:[]),...n.body.localCost.bindings.flatMap(b=>'tensorId' in b.source?[b.source.tensorId]:[])]:[];
-    const ruleStorages=(n:typeof graph.nodes[number])=>n.body.kind==='opaque'&&n.body.localCost?[...('storageId' in n.body.localCost.participation?[n.body.localCost.participation.storageId]:[]),...n.body.localCost.bindings.flatMap(b=>'storageId' in b.source?[b.source.storageId]:[]),...n.body.localCost.cost.memoryAccess.map(a=>a.storageId),...n.body.localCost.cost.temporaryStorageIds]:[];
     const tensorsById=new Map<string,typeof graph.tensors[number]>(graph.tensors.map(tensor=>[tensor.tensorId,tensor]));
     const storagesById=new Map<string,typeof graph.storages[number]>(graph.storages.map(storage=>[storage.storageId,storage]));
     const canonicalById=new Map<string,StorageId>();
@@ -111,20 +110,18 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     const context={symbols,assets},tensorCandidates:Candidate<TensorPartitionResult>[]=[],storageCandidates:Candidate<StoragePartitionResult>[]=[],tensorCache=new Map<string,TensorPartitionResult>(),storageCache=new Map<string,StoragePartitionResult>();
     let uses=0;const spend=()=>{if(++uses>MAX_PARALLEL_USES)throw new FormulaError('parallel_resolution_limit',`布局作用域解析最多 ${MAX_PARALLEL_USES} 项`);};
     const framesById=new Map(resolved.objectBindings.map(frame=>[frame.nodeId,frame]));
+    const objectUses=new Map(graph.nodes.map(node=>[node.nodeId,parallelObjectUses(node,framesById.get(node.nodeId))]));
     const tensorReferences=new Map<string,Set<NodeId>>(),storageReferences=new Map<string,Set<NodeId>>();
     function indexUse(index:Map<string,Set<NodeId>>,id:string,nodeId:NodeId){
       const nodes=index.get(id);
       if(nodes)nodes.add(nodeId);else index.set(id,new Set([nodeId]));
     }
     for(const node of graph.nodes){
-      const frame=framesById.get(node.nodeId),ports=node.portBindings.map(port=>port.tensorId);
-      for(const id of [...ports,...ruleTensors(node),...(frame?.tensors.map(tensor=>tensor.tensorId)??[])])indexUse(tensorReferences,id,node.nodeId);
-      const storages=ports.flatMap(id=>{const tensor=tensorsById.get(id);return tensor?[tensor.storageId]:[];});
-      const body=node.body;
-      if(body.kind==='opaque')storages.push(...body.cost.memoryAccess.map(access=>access.storageId),...body.cost.temporaryStorageIds);
-      if(body.kind==='collective')storages.push(...body.communication.temporaryStorageIds??[]);
-      storages.push(...ruleStorages(node),...(frame?.storages.map(storage=>storage.storageId)??[]));
-      for(const id of storages)indexUse(storageReferences,canonicalStorage(id),node.nodeId);
+      const uses=objectUses.get(node.nodeId);
+      for(const id of uses?.tensors??[])indexUse(tensorReferences,id,node.nodeId);
+      for(const id of [...uses?.storages??[],...node.portBindings.flatMap(({tensorId})=>{const tensor=tensorsById.get(tensorId);return tensor?[tensor.storageId]:[];})]){
+        indexUse(storageReferences,canonicalStorage(id),node.nodeId);
+      }
     }
     const references=(kind:'tensor'|'storage',id:string)=>(kind==='tensor'?tensorReferences:storageReferences).get(id);
     function select(a:Assignment){const roots=a.selector.kind==='nodes'?a.selector.nodeIds:[a.selector.rootNodeId];for(const id of roots)if(!scopes.has(id))throw new FormulaError('empty_selector',`布局选择器未匹配当前阶段的节点 ${id}`);
@@ -316,7 +313,7 @@ export async function resolveParallelPlan(input:Scenario,library:AssetDocument[]
     }
     const assignedTensorUses=new Map<string,Set<NodeId>>();
     for(const item of tensorLayouts)indexUse(assignedTensorUses,item.tensorId,item.nodeId);
-    const unassignedTensorUses=graph.nodes.filter(n=>n.body.kind!=='collective').flatMap(n=>[...new Set([...n.portBindings.map(p=>p.tensorId),...ruleTensors(n),...(framesById.get(n.nodeId)?.tensors.map(t=>t.tensorId)??[])])].filter(id=>!assignedTensorUses.get(id)?.has(n.nodeId)).map(tensorId=>({nodeId:n.nodeId,tensorId})));
+    const unassignedTensorUses=graph.nodes.filter(n=>n.body.kind!=='collective').flatMap(n=>(objectUses.get(n.nodeId)?.tensors??[]).filter(id=>!assignedTensorUses.get(id)?.has(n.nodeId)).map(tensorId=>({nodeId:n.nodeId,tensorId})));
     const localCosts=evaluateDistributedCosts(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},diagnostics,singleDeviceBaseline,local?.localCost),fusions=evaluateFusions(resolved,scenario,assets,{tensorLayouts,storageLayouts,storageAllocations},localCosts,diagnostics,singleDeviceBaseline,fusion);
     const unassignedStorageIds=[...new Set(graph.storages.map(s=>canonicalStorage(s.storageId)))].filter(id=>!storageGroups.has(id));let execution:ParallelResolution['execution'],baseline:ParallelResolution['execution']|undefined;try{const runtime=fusionRuntime(resolved,scenario,tensorLayouts,localCosts,fusions,singleDeviceBaseline);const runtimeCommunications=communications.map(c=>({...c,evaluation:{...c.evaluation,definition:{...c.evaluation.definition,...(runtime.scenario.parallelPlan.communications[c.index]?.placement?{placement:runtime.scenario.parallelPlan.communications[c.index]?.placement}:{})}}}));if(scenario.executionPlan.kind==='streams'){const scheduled=buildStreamsExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},{resolved,tensorLayouts,localCosts,fusions,singleDeviceBaseline},assets,diagnostics);execution=scheduled.execution;baseline=scheduled.baseline;}else execution=buildSerialExecution(runtime.resolved,runtime.scenario,{tensorLayouts:runtime.tensorLayouts,communications:runtimeCommunications,localCosts:runtime.localCosts},diagnostics);fusionMemoryOrder(execution,fusions);}catch(e){const diagnosticId='fusion-execution-'+diagnostics.length;diagnostics.push({diagnosticId,severity:'error',code:e instanceof FormulaError?e.code:'invalid_fusion_execution',message:e instanceof Error?e.message:'融合执行边界不可用',location});execution={status:'unavailable',diagnosticIds:[diagnosticId]};}
     const capturedMemory:MemoryEvidence[]=[];

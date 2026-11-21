@@ -22,7 +22,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.locator('.studio-layout-notice')).toContainText('2 张卡');
-  await page.getByRole('button', { name: '更新模型到 r2', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r3', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByLabel('Attention TP', { exact: true }).fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -36,7 +36,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const current = ProjectDocument.parse((await response.json()).data).scenarios[0]!;
-  expect(current.model.revision).toBe(2);
+  expect(current.model.revision).toBe(3);
   expect(current.deviceTopology.devices).toEqual([first, second]);
   expect(current.workload).toEqual(scenario.workload);
   expect(current.parallelPlan.communications).toHaveLength(28);

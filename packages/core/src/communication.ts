@@ -23,9 +23,12 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
     const source=tensors.find(t=>t.tensorId===c.source.tensorId),destination=tensors.find(t=>t.tensorId===c.destination.tensorId);
     if(!source||!destination)throw new FormulaError('missing_reference','通信的源/目标张量不存在');
     if(tensors.filter(t=>t.tensorId===source.tensorId).length!==1||tensors.filter(t=>t.tensorId===destination.tensorId).length!==1)throw new FormulaError('duplicate_id','通信张量 ID 不唯一');
-    for(const endpoint of [c.source,c.destination]){
+    for(const [index,endpoint] of [c.source,c.destination].entries()){
       const layoutGroup=topology.groups.find(g=>g.groupId===endpoint.distribution.groupId);
-      if(!layoutGroup||canonical([...layoutGroup.members].sort())!==canonical([...group.members].sort()))throw new FormulaError('invalid_distribution','通信端点布局必须覆盖同一组实际设备；不同组名称可以复用同一设备');
+      const endpointDevice=index===0?sender:receiver;
+      const valid=layoutGroup&&(sendRecv?endpointDevice&&layoutGroup.members.includes(endpointDevice)&&layoutGroup.members.every(id=>group.members.includes(id)):
+        canonical([...layoutGroup.members].sort())===canonical([...group.members].sort()));
+      if(!valid)throw new FormulaError('invalid_distribution','通信端点必须覆盖对应发送/接收设备，集体通信须覆盖同组成员');
     }
     const pageDevices=observeEndpoints?(c.perDevicePayloads?.map(payload=>payload.deviceId)??members).slice(observeEndpoints.start,observeEndpoints.start+observeEndpoints.limit):undefined;
     function partitionObserver(side:CommunicationEndpointSide):PartitionPageObserver|undefined{

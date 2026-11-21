@@ -39,7 +39,7 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
   const linkBandwidth = bandwidth ?? String(networkDefaults?.bytesPerSecond ?? '');
   const linkLatency = latency ?? String(networkDefaults?.latencySeconds ?? '');
   const moduleReductions = match?.preset.moduleRules?.reduce((count, rule) => count + rule.reductions.length, 0) ?? 0;
-  const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' ||
+  const needsNetwork = !!match && (match.preset.strategy === 'declared_plan' || match.preset.strategy === 'pipeline' ||
     match.slots > 1 && (match.preset.reductions.length > 0 || moduleReductions > 0));
   const linkFields = <div className="parallel-degree-link">
     <label>通信带宽 (B/s)<input type="number" min={0} step="any" value={linkBandwidth} onChange={event => setBandwidth(event.target.value)}/></label>
@@ -138,9 +138,10 @@ export function ParallelDegreeEditor({ project, scenario, onApply }: Props) {
       <p>通信 {match.preset.declaredPlan?.plan.communications.map(item => item.operation).join('、') ||
         (match.slots > 1 && match.preset.reductions.length ? 'AllReduce × ' + match.preset.reductions.length
           : moduleReductions && match.slots > 1 ? '每次模块调用 AllReduce × ' + moduleReductions
+          : match.preset.strategy === 'pipeline' ? '阶段间 SendRecv'
           : match.preset.strategy === 'declared_plan' ? '由模型图在布局校验时展开' : '无新增通信')}</p>
       <div className="parallel-degree-validation">
-        {needsNetwork && (match.preset.sharedPoolDegrees && match.preset.networkDefaults ?
+        {needsNetwork && ((match.preset.sharedPoolDegrees || match.preset.strategy === 'pipeline') && match.preset.networkDefaults ?
           <details><summary>通信参数{savedTiming||bandwidth!==undefined||latency!==undefined?'':' · 参考值'}</summary>{linkFields}</details> : linkFields)}
         <button type="button" onClick={() => void preview()} disabled={outcome?.status === 'running'}>校验布局</button>
         {inputsChangedDuringPreview&&<small role="status">配置已更新，请重新校验。</small>}

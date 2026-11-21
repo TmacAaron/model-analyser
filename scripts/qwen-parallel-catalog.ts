@@ -3,8 +3,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { AssetDocument } from '@model-analyser/contracts';
 import { canonical, validateAssets } from '../packages/contracts/src/validation.js';
 import { makeQwenParallelAssets } from './qwen-parallel-assets.js';
+import { addQwenPipelinePreset } from './qwen-pipeline.js';
 
 const assets = makeQwenParallelAssets();
+assets.push(...assets.filter(asset => asset.definition.kind === 'model').map(addQwenPipelinePreset));
 assert.deepEqual(validateAssets(assets), []);
 for (const asset of assets) {
   const kind = asset.definition.kind;

@@ -1031,7 +1031,8 @@
                   "replicated",
                   "batch_sharded",
                   "tensor_sharded",
-                  "declared_plan"
+                  "declared_plan",
+                  "pipeline"
                 ]
               },
               "phases": {
@@ -1142,6 +1143,26 @@
                   "deviceSlots",
                   "groups",
                   "plan"
+                ],
+                "additionalProperties": false
+              },
+              "pipeline": {
+                "type": "object",
+                "properties": {
+                  "chainNodeId": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "payloadBytes": {
+                    "$ref": "#/$defs/__schema14"
+                  },
+                  "payloadDtype": {
+                    "$ref": "#/$defs/__schema19"
+                  }
+                },
+                "required": [
+                  "chainNodeId",
+                  "payloadBytes",
+                  "payloadDtype"
                 ],
                 "additionalProperties": false
               }

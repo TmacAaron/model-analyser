@@ -17,6 +17,7 @@ type DegreeMatch = { preset: ParallelPresetTemplate; slots: number; expertMesh?:
 function declaredDegrees(model: Scenario['model'], preset: ParallelPresetTemplate, size: number): Degrees | undefined {
   if (preset.strategy === 'batch_sharded') return size > 1 ? { ...serialDegrees, attentionDp: size } : undefined;
   if (preset.strategy === 'replicated') return size === 1 ? serialDegrees : undefined;
+  if (preset.strategy === 'pipeline') return size > 1 ? { ...serialDegrees, pp: size } : undefined;
   if (preset.strategy === 'tensor_sharded' && preset.sharedPoolDegrees?.length) {
     if (size <= 1) return;
     const degrees = { ...serialDegrees };

@@ -6,6 +6,7 @@ import { validateProject } from '../packages/contracts/src/validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenHybridAssets } from '../scripts/qwen-hybrid-model.js';
 import { makeQwenHybridParallelAssets } from '../scripts/qwen-hybrid-parallel.js';
+import { addQwenPipelinePreset } from '../scripts/qwen-pipeline.js';
 import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 
 const cases = [
@@ -51,6 +52,30 @@ it.each(cases)('reproduces the full text decoder weights and separates persisten
     averageBytesPerToken: expected.kvPerToken, devices: [{ otherStateBytes: expected.recurrentBytes }],
     budget: { status: fixture.experts ? 'no_room' : 'available' },
   });
+}, 120_000);
+
+it('keeps whole GQA and DeltaNet periods in their Qwen3.8 pipeline stage', async () => {
+  const [root, ...dependencies] = makeQwenHybridParallelAssets('qwen38');
+  const model = addQwenPipelinePreset(root!);
+  const project = makeModelProject([model, ...dependencies], {
+    kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 2,
+  }, model.name);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(project.scenarios[0]!, 2), assets: project.assetSnapshots,
+    presetId: 'pp-decoder', network: { bytesPerSecond: 100e9, latencySeconds: 3e-6 } });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 5000));
+  const { preview } = attempt;
+  const full = ledger(cases[1]), base = ledger(cases[1], 0), embedding = 2 * 248320 * 5120;
+  const stageWeight = embedding + (full.weightBytes - base.weightBytes) / 2;
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual([stageWeight, stageWeight + 2 * 5120]);
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(Array(2).fill((full.recurrentBytes + 3 * full.kvPerToken) / 2));
+  expect(preview.communications).toHaveLength(1);
+  expect(await estimateKvCapacity(preview.scenario, preview.assets)).toMatchObject({ status: 'available', report: {
+    averageBytesPerToken: full.kvPerToken, budget: { status: 'available' },
+  } });
+  const single = await previewParallelPreset({ ...bindDegreePool(preview.scenario, 1), assets: preview.assets, presetId: 'replicated' });
+  if (single.status !== 'available') throw Error(single.message);
+  expect(single.preview.scenario.deviceTopology.groups).toHaveLength(1);
+  expect(single.preview.allocations.map(row => row.weightBytes)).toEqual([full.weightBytes]);
 }, 120_000);
 
 it('grows only GQA storage across Decode calls while replacing the two fixed DeltaNet states', async () => {

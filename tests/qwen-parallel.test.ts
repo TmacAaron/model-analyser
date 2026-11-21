@@ -5,6 +5,7 @@ import { currentDegrees, matchingParallelPresets, serialDegrees } from '../apps/
 import { validateResult } from '../packages/contracts/src/result-validation.js';
 import { makeModelProject } from '../scripts/model-project.js';
 import { makeQwenParallelAssets } from '../scripts/qwen-parallel-assets.js';
+import { addQwenPipelinePreset } from '../scripts/qwen-pipeline.js';
 
 const hidden = 2048, width = 128, queries = 16, kvHeads = 8, layers = 28, intermediate = 6144, vocab = 151936;
 const attentionMatrices = hidden * width * (2 * queries + 2 * kvHeads);
@@ -157,3 +158,50 @@ it('reduces TP outputs independently for each DP request group and sizes growing
     expect.objectContaining({ code: 'invalid_distribution', message: expect.stringContaining('同一请求切片') }),
   ] });
 }, 90_000);
+
+it('places three stages of the full decoder, counts tied weights at both ends and grows per-stage KV', async () => {
+  const input = prepare({ kind: 'decode', batchSize: 2, queryTokensPerRequest: 1, contextTokensPerRequest: 2, steps: 2 }, layers, 3);
+  const root = input.assets.find(asset => asset.definition.kind === 'model')!;
+  const model = addQwenPipelinePreset(root), assets = input.assets.map(asset => asset === root ? model : asset);
+  const scenario = { ...input.scenario, model: { ...input.scenario.model, revision: model.revision } };
+  const degrees = { ...serialDegrees, pp: 3 }, presets = model.parallelPresets!;
+  const [match] = matchingParallelPresets(degrees, presets, scenario);
+  expect(match).toMatchObject({ slots: 3, preset: { presetId: 'pp-decoder' } });
+  const network = { bytesPerSecond: 100e9, latencySeconds: 3e-6 };
+  const attempt = await previewParallelPreset({ ...input, scenario, assets, presetId: match!.preset.presetId,
+    network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 5000));
+  const { preview } = attempt, reopened = Scenario.parse(JSON.parse(JSON.stringify(preview.scenario)));
+  expect(currentDegrees(reopened, presets)).toEqual(degrees);
+  const layerBytes = 2 * (attentionMatrices + replicaParameters), tied = 2 * hidden * vocab, perLayerToken = 4 * width * kvHeads;
+  const counts = [10, 9, 9];
+  expect(preview.allocations.map(row => row.weightBytes)).toEqual([10 * layerBytes + tied, 9 * layerBytes, 9 * layerBytes + tied + 2 * hidden]);
+  expect(preview.allocations.map(row => row.stateBytes)).toEqual(counts.map(count => count * 2 * 3 * perLayerToken));
+  expect(preview.communications?.map(row => [row.operation, row.sourceDeviceId, row.destinationDeviceId])).toEqual([
+    ['send_recv', 'gpu0', 'gpu1'], ['send_recv', 'gpu1', 'gpu2'],
+  ]);
+  const analyzed = await analyzeScenario(reopened, preview.assets);
+  if (analyzed.status !== 'available') throw Error(JSON.stringify(analyzed.diagnostics.slice(0, 5)));
+  expect(validateResult(analyzed.result)).toEqual([]);
+  const steps = analyzed.result.decode?.steps;
+  for (const [index, step] of steps!.entries()) {
+    const layout = step.result.distributed!.layout;
+    const sends = layout.communications.map(row => row.evaluation);
+    expect(sends.map(row => count(row.cost.communications[0]?.groupSendBytes))).toEqual([4 * hidden, 4 * hidden]);
+    expect(sends.map(row => count(row.cost.seconds))).toEqual(Array(2).fill(3e-6 + (4 * hidden) / 100e9));
+    expect(step.memory.map(row => count(row.categoryBreakdown.find(item => item.category === 'state')?.bytes)))
+      .toEqual(counts.map(count => count * 2 * (3 + index) * perLayerToken));
+    const tiedAllocation = layout.storageAllocations.find(row => row.storageId === 'embedding')?.allocation;
+    expect(tiedAllocation?.perDevice.map(row => row.deviceId)).toEqual(['gpu0', 'gpu2']);
+    const oneRank = (id: string) => layout.localCosts.nodes.find(node => node.nodeId === id)?.placement;
+    expect(oneRank('embedding')).toMatchObject({ kind: 'placed', perDevice: [{ deviceId: 'gpu0' }] });
+    expect(oneRank('decoder[10]/qkv')).toMatchObject({ kind: 'placed', perDevice: [{ deviceId: 'gpu1' }] });
+    expect(oneRank('lm-head')).toMatchObject({ kind: 'placed', perDevice: [{ deviceId: 'gpu2' }] });
+  }
+  expect(await estimateKvCapacity(reopened, preview.assets)).toMatchObject({ status: 'available', report: {
+    averageBytesPerToken: layers * perLayerToken, budget: { status: 'available' },
+  } });
+  const shorter: Scenario = { ...scenario, bindings: [{ parameterKey: 'L', value: { kind: 'integer', value: 2 } }] };
+  expect(await previewParallelPreset({ ...input, scenario: shorter, assets, presetId: 'pp-decoder', network }))
+    .toMatchObject({ status: 'unavailable', message: expect.stringContaining('层链块数 2') });
+}, 150_000);

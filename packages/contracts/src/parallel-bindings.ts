@@ -34,6 +34,8 @@ export function nativeBindingIssues(b:Bindings,topology:Scenario['deviceTopology
 export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   const r=p.declaredPlan,errors:string[]=[],unique=(ids:string[],label:string)=>{if(new Set(ids).size!==ids.length)errors.push(label+' 重复');};
   if((p.strategy==='declared_plan')!==(r!==undefined))errors.push('declared_plan 必须且仅能提供声明式方案模板');
+  if((p.strategy==='pipeline')!==(p.pipeline!==undefined))errors.push('流水线预设必须独立声明层链与传输消息');
+  if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
   if(p.sharedPoolDegrees){
     if(p.strategy!=='tensor_sharded'||!(p.tensorShards.length||p.moduleRules?.length))errors.push('同池并行度需要轴分片预设和显式张量规则');
     unique(p.sharedPoolDegrees,'同池并行度');
