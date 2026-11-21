@@ -53,8 +53,9 @@ export function instantiateModel(input:Scenario,library:AssetDocument[],limits={
     const root=lookup(scenario.model);if(root.definition.kind!=='model')throw new FormulaError('reference_kind_mismatch','根资产必须为 model');track(root.definition,[root.assetId+'@'+root.revision]);
     const decodeContext=phase==='decode'?scenario.parallelPlan.decodeContext:undefined;
     if(decodeContext){
-      const origin=scenario.parallelPlan.generatedFrom,declared=root.parallelPresets?.find(preset=>preset.presetId===origin?.presetId&&preset.strategy==='decode_context_sharded')?.decodeContext;
+      const origin=scenario.parallelPlan.generatedFrom,preset=root.parallelPresets?.find(row=>row.presetId===origin?.presetId&&row.strategy==='decode_context_sharded'),declared=preset?.decodeContext;
       if(origin?.modelId!==root.assetId||origin.modelRevision!==root.revision||!declared||canonical(declared)!==canonical(decodeContext))throw new FormulaError('invalid_decode_context','Decode 上下文图须与当前固定模型预设匹配');
+      if(origin.requestDp&&!preset?.requestBatchSharding)throw new FormulaError('invalid_decode_context','此固定 Decode 模块未声明逐请求组的局部方程');
       if(scenario.workload.queryTokensPerRequest!==1)throw new FormulaError('invalid_decode_context','DCP 每步需要一个查询 token');
       track(decodeContext.replacement);
     }

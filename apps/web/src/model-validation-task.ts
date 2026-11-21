@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {ModelValidationReply,type ModelValidationTask} from './model-validation-worker.js';
+import {ModelValidationReply,type ModelValidationTask} from './model-validation-protocol.js';
 export type ModelValidationInput=ModelValidationTask extends infer T?T extends ModelValidationTask?Omit<T,'taskId'>:never:never;
 export function runModelValidationTask(task:ModelValidationTask,signal:AbortSignal):Promise<ModelValidationReply['reply']>{
  return new Promise((resolve,reject)=>{

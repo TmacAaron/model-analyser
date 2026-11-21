@@ -11,6 +11,7 @@ import { publishCanvasEdit,type CanvasEditPlan } from './canvas-editing.js';
 import {runCanvasEditTask} from './canvas-edit-task.js';
 import type {CanvasEditIntent,CanvasEditControls} from './canvas-edit-worker.js';
 import { ModelWorkspace } from './model-workspace.js';
+import { useModelValidation } from './model-validation-task.js';
 import { defaultDeclaredLayout,prepareDeclaredLayout } from './declared-layout-task.js';
 import { MemoryPeakEditor } from './memory-peak-view.js';
 import { useEffect,useRef,useState } from 'react';
@@ -72,6 +73,7 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
   const preview=useProjectTextPreview(text,draft?.editorFormat??'json',session.current,knownProject),project=preview.project??preview.pendingProject;
   useEffect(()=>{setIdentityEditing(false);return()=>{identityEdit.current?.abort();identityEdit.current=null;};},[text,draft?.draftId]);
   const active=project?.scenarios.find(s=>s.scenarioId===scenarioId)??project?.scenarios[0];
+  const modelUpgradeValidation=useModelValidation((active?.scenarioId??'')+'\n'+text);
   const latest=useRef({text,scenarioId:active?.scenarioId,projectId:project?.projectId});latest.current={text,scenarioId:active?.scenarioId,projectId:project?.projectId};const workspaceSession=session.current,workspaceNavigation=navigation.current;
   const quantizationPresets:QuantizationPresetChoice[]=[...new Map([
     ...(project?.assetSnapshots.flatMap(a=>a.definition.kind==='quantization'?[{ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
@@ -98,12 +100,28 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
       form.ref.assetId===item.preset?.assetId&&form.ref.revision===item.preset.revision)):active.quantizationOverrides;
     update({...project,assetSnapshots:mergeSnapshots(project.assetSnapshots,incoming),scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?{...s,quantizationOverrides:[...overrides,rule]}:s)});
   }
-  async function updateModelReference(){if(!active||!project)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current;try{
+  async function updateModelReference(){if(!active||!project)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current;
+   const live=()=>token===session.current&&operationNavigation===navigation.current&&snapshot.text===latest.current.text&&snapshot.scenarioId===latest.current.scenarioId;
+   try{
     const current=report?.assets.find(a=>a.kind==='model'&&a.assetId===active.model.assetId);if(!current)throw Error('资产库中没有该模型，项目仍可使用已保存快照');
     const model={assetId:current.assetId,revision:current.revision,kind:'model' as const};const snapshots=await request('snapshot',z.array(AssetDocument),{refs:[model]});
-    if(token!==session.current||operationNavigation!==navigation.current||snapshot.text!==latest.current.text||snapshot.scenarioId!==latest.current.scenarioId)throw Error('项目或方案已变化，未应用晚到的模型快照');
-    update({...project,assetSnapshots:mergeSnapshots(project.assetSnapshots,snapshots),scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?{...s,model}:s)});
-  }catch(e){setError(String(e));}}
+    if(!live())return;
+    const assets=mergeSnapshots(project.assetSnapshots,snapshots);
+    const next={...active,model};
+    const {decodeContext,generatedFrom:origin}=active.parallelPlan;
+    if(decodeContext){
+      const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
+      const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
+      if(!origin||!preset?.decodeContext||canonical(preset.decodeContext.module)!==canonical(decodeContext.module)||
+         preset.decodeContext.replacement.assetId!==decodeContext.replacement.assetId||origin.requestDp&&!preset.requestBatchSharding){
+        throw Error('新模型修订没有兼容的 Decode KV 布局');
+      }
+      next.parallelPlan={...active.parallelPlan,decodeContext:preset.decodeContext,generatedFrom:{...origin,modelRevision:model.revision}};
+      await modelUpgradeValidation.run({kind:'model',scenario:next,assets,validateLayout:true});
+      if(!live())return;
+    }
+    update({...project,assetSnapshots:assets,scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?next:s)});
+  }catch(e){if(live())setError(String(e));}}
   async function addScenario(){
     if(!project)return;const token=session.current,operationNavigation=navigation.current,snapshot=latest.current;
     try{

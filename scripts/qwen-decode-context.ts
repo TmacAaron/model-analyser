@@ -1,4 +1,4 @@
-import { AssetDocument, LocalCostRule, NodeId, ParallelPresetTemplate, TensorId, type Shape } from '@model-analyser/contracts';
+import { AssetDocument, LocalCostRule, NodeId, ParallelPresetTemplate, TensorId, type Shape, type ValueExpr } from '@model-analyser/contracts';
 import { bf16, Equations, fp32, GraphAuthor, ref, symbol, vector } from './model-authoring.js';
 
 const note = 'Decode uses one query per request and contiguous, equally sized KV slots. All ranks project the same token; the slot owner appends its K/V. FP32 max, denominator and weighted-value reductions merge the attention across ranks. The BF16 value matmul uses rounded unnormalized weights. This materialized reference scans the reserved slots and masks unused entries.';
@@ -118,4 +118,51 @@ export function addQwenDecodeContextPreset(decoder: AssetDocument, models: Asset
   });
   return [...models.map(model => AssetDocument.parse({ ...model, revision: model.revision + 1,
     parallelPresets: [...model.parallelPresets ?? [], preset] })), replacement, ...eq.assets];
+}
+
+/** Reuse the existing DCP formulas with the physical request slice bound locally. */
+export function addQwenDecodeRequestParallel(decoder: AssetDocument, models: AssetDocument[]) {
+  if (decoder.definition.kind !== 'module') throw Error('Expected the Qwen DCP module');
+  const graph = structuredClone(decoder.definition.graph);
+  const batchNote = 'Request replicas use the same DCP equations on their local batch slices. Each replica merges its own requests across its KV ranks.';
+  const localBatch = (value: ValueExpr, name: string): ValueExpr => {
+    if (value.kind !== 'formula') return value;
+    const binding = value.call.bindings.B;
+    return binding?.kind === 'symbol' && binding.name === 'B'
+      ? { ...value, call: { ...value.call, bindings: { ...value.call.bindings, B: symbol(name) } } }
+      : value;
+  };
+  for (const node of graph.nodes) {
+    if (node.body.kind !== 'opaque' || !node.body.localCost) throw Error('Missing Qwen DCP local cost '+node.nodeId);
+    const { cost, bindings } = node.body.localCost, input = node.body.inputs[0];
+    const axis = graph.tensors.find(tensor => tensor.tensorId === input?.tensorId)?.shape.find(row => row.semantic === 'batch');
+    if (!input || !axis) throw Error('Missing Qwen DCP request axis '+node.nodeId);
+    const batchBinding = (basis: 'logical' | 'allocated') => {
+      const existing = bindings.find(binding => binding.source.kind === 'tensor_axis' && binding.source.tensorId === input.tensorId &&
+        binding.source.axisId === axis.axisId && binding.source.basis === basis);
+      if (existing) return existing.symbol;
+      const name = basis + '_B';
+      bindings.push({ symbol: name, source: { kind: 'tensor_axis', tensorId: input.tensorId, axisId: axis.axisId, basis } });
+      return name;
+    };
+    const useful = batchBinding('logical'), executed = batchBinding('allocated');
+    for (const segment of cost.compute) {
+      segment.usefulOperations = localBatch(segment.usefulOperations, useful);
+      segment.executedOperations = localBatch(segment.executedOperations, executed);
+    }
+    for (const access of cost.memoryAccess) {
+      if (access.logicalBytes.kind !== 'storage_allocation') access.logicalBytes = localBatch(access.logicalBytes, executed);
+    }
+  }
+  const module = AssetDocument.parse({ ...decoder, revision: decoder.revision + 1,
+    sources: [...decoder.sources, { kind: 'note', text: batchNote }], definition: { kind: 'module', graph } });
+  const roots = models.map(model => AssetDocument.parse({ ...model, revision: model.revision + 1,
+    parallelPresets: model.parallelPresets?.map(preset => preset.decodeContext ? {
+      ...preset, requestBatchSharding: true, assumptions: [...preset.assumptions, batchNote],
+      decodeContext: { ...preset.decodeContext, replacement: ref(module) },
+      moduleRules: preset.moduleRules?.map(rule => rule.module.assetId === decoder.assetId && rule.module.revision === decoder.revision ?
+        { ...rule, module: ref(module) } : rule),
+    } : preset),
+  }));
+  return [...roots, module];
 }

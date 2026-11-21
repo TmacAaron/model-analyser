@@ -1,16 +1,9 @@
-import {z} from 'zod';
-import {AssetDocument,NodeId,ProjectDocument,Scenario} from '@model-analyser/contracts';
-import {instantiateModel} from '@model-analyser/core';
+import {NodeId,Scenario} from '@model-analyser/contracts';
+import {instantiateModel,resolveParallelPlan} from '@model-analyser/core';
 import {confirmConfigModel} from '../../../packages/contracts/src/config-import.js';
 import {confirmAscendQuantization} from '../../../packages/core/src/ascend-quantization.js';
-export type ModelValidationTask={taskId:string}&(
- {kind:'model';scenario:Scenario;assets:AssetDocument[]}|
- {kind:'targets';scenario:Scenario;assets:AssetDocument[];nodeIds:string[]}|
- {kind:'config';asset:AssetDocument;library:AssetDocument[]}|
- {kind:'ascend';project:ProjectDocument;scenarioId:string;importId:string;note:string});
-export const ModelValidationReply=z.strictObject({taskId:z.string(),reply:z.discriminatedUnion('kind',[
- z.strictObject({kind:z.literal('validated')}),z.strictObject({kind:z.literal('asset'),asset:AssetDocument}),z.strictObject({kind:z.literal('project'),project:ProjectDocument}),z.strictObject({kind:z.literal('error'),message:z.string()})])});
-export type ModelValidationReply=z.infer<typeof ModelValidationReply>;
+import type {ModelValidationReply,ModelValidationTask} from './model-validation-protocol.js';
+export type {ModelValidationTask} from './model-validation-protocol.js';
 /** Validation returns no publishable change until every requested check has succeeded. */
 export function evaluateModelValidationTask(task:ModelValidationTask):ModelValidationReply{
  try{
@@ -25,4 +18,24 @@ export function evaluateModelValidationTask(task:ModelValidationTask):ModelValid
   return {taskId:task.taskId,reply:{kind:'validated'}};
  }catch(e){return {taskId:task.taskId,reply:{kind:'error',message:e instanceof Error?e.message:'模型校验失败'}};}
 }
-if(typeof self!=='undefined'&&typeof document==='undefined')self.onmessage=(event:MessageEvent<ModelValidationTask>)=>self.postMessage(evaluateModelValidationTask(event.data));
+if(typeof self!=='undefined'&&typeof document==='undefined')self.onmessage=async(event:MessageEvent<ModelValidationTask>)=>{
+ const task=event.data;
+ if(task.kind!=='model'||!task.validateLayout){self.postMessage(evaluateModelValidationTask(task));return;}
+ try{
+  const {scenario}=task,workload=scenario.workload;
+  const first=workload.kind==='decode'&&workload.steps>1?{...scenario,workload:{...workload,steps:1}}:scenario;
+  if(first!==scenario){
+   const structure=evaluateModelValidationTask(task);
+   if(structure.reply.kind==='error'){self.postMessage(structure);return;}
+  }
+  const attempt=await resolveParallelPlan(first,task.assets);
+  if(attempt.status==='unavailable')throw Error(attempt.diagnostics.map(d=>d.message).join('；'));
+  const {execution,unassignedStorageIds,unassignedTensorUses,diagnostics}=attempt.result;
+  // Network-only collectives leave local HBM unknown while keeping a valid layout.
+  const errors=diagnostics.filter(d=>d.severity==='error'&&d.code!=='missing_communication_memory');
+  if(errors.length)throw Error(errors.map(d=>d.message).join('；'));
+  if(execution.status!=='available'||execution.result.blockedNodeIds.length||execution.result.unplacedCommunicationIndices.length||
+     unassignedStorageIds.length||unassignedTensorUses.length)throw Error('新模型修订无法沿用当前完整布局');
+  self.postMessage({taskId:task.taskId,reply:{kind:'validated'}});
+ }catch(e){self.postMessage({taskId:task.taskId,reply:{kind:'error',message:e instanceof Error?e.message:'新模型布局校验失败'}});}
+};

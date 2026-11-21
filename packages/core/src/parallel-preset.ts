@@ -15,6 +15,10 @@ const replicaPayloadFormula=AssetDocument.parse(replicaPayload);
 export const requestReplicaMeshAxis='$request';
 const requestAxis=requestReplicaMeshAxis;
 
+export function supportsRequestReplicas(preset:ParallelPresetTemplate){
+  return preset.strategy==='tensor_sharded'||preset.strategy==='decode_context_sharded'&&preset.requestBatchSharding===true;
+}
+
 function payloadPerReplica(payload:ValueExpr,replicas:number):ValueExpr{
   return {kind:'formula',call:{formula:{assetId:replicaPayloadFormula.assetId,revision:replicaPayloadFormula.revision,kind:'formula'},
     bindings:{bytes:payload,replicas:{kind:'literal',quantity:{value:replicas,unit:'count'}}}}};
@@ -64,7 +68,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     if(decodeContext&&(degree<2||request.expertMesh))throw Error('DCP 需要至少两张卡及单独的设备轴');
     const requestDp=request.requestDp??1,replicaWidth=degree/requestDp;
     if(request.requestDp){
-      if(preset.strategy!=='tensor_sharded'||!model.parallelPresets?.some(p=>p.strategy==='batch_sharded'&&p.phases.includes(scenario.workload.kind)))throw Error('当前模型未声明可与张量分片组合的请求 DP');
+      if(!supportsRequestReplicas(preset)||!model.parallelPresets?.some(p=>p.strategy==='batch_sharded'&&p.phases.includes(scenario.workload.kind)))throw Error('当前模型未声明此布局可与请求 DP 组合');
       if(!Number.isInteger(replicaWidth)||replicaWidth<2)throw Error('物理卡数须容纳完整的请求副本，每个副本至少两张并行卡');
       if(request.meshAxisId===requestAxis)throw Error('设备分片轴与请求轴重名');
       if(scenario.workload.batchSize%requestDp!==0)throw Error('Batch 必须能被请求 DP '+requestDp+' 整除');
@@ -82,7 +86,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     if(decodeContext){
       expansionPlan.decodeContext=decodeContext;
       expansionPlan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,
-        groupId:request.groupId,meshAxisId:request.meshAxisId};
+        groupId:request.groupId,meshAxisId:request.meshAxisId,...(request.requestDp?{requestDp:request.requestDp}:{})};
     }
     const expansionScenario=previousPipeline||previousDecodeContext||decodeContext
       ?{...scenario,deviceTopology:cleanTopology,parallelPlan:expansionPlan}:scenario;

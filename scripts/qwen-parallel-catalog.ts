@@ -5,7 +5,7 @@ import { canonical, validateAssets } from '../packages/contracts/src/validation.
 import { makeQwenParallelAssets } from './qwen-parallel-assets.js';
 import { addQwenPipelinePreset } from './qwen-pipeline.js';
 import { addQwenContextPreset } from './qwen-context-parallel.js';
-import { addQwenDecodeContextPreset } from './qwen-decode-context.js';
+import { addQwenDecodeContextPreset, addQwenDecodeRequestParallel } from './qwen-decode-context.js';
 
 const assets = makeQwenParallelAssets();
 const pipeline = assets.filter(asset => asset.definition.kind === 'model').map(addQwenPipelinePreset);
@@ -14,7 +14,10 @@ if (!decoder) throw Error('Missing Qwen decoder');
 const context = addQwenContextPreset(decoder, pipeline);
 const contextDecoder = context.find(asset => asset.definition.kind === 'module');
 if (!contextDecoder) throw Error('Missing Qwen context decoder');
-assets.push(...pipeline, ...context, ...addQwenDecodeContextPreset(contextDecoder, context.filter(asset => asset.definition.kind === 'model')));
+const decode = addQwenDecodeContextPreset(contextDecoder, context.filter(asset => asset.definition.kind === 'model'));
+const decodeLayer = decode.find(asset => asset.definition.kind === 'module');
+if (!decodeLayer) throw Error('Missing Qwen Decode context decoder');
+assets.push(...pipeline, ...context, ...decode, ...addQwenDecodeRequestParallel(decodeLayer, decode.filter(asset => asset.definition.kind === 'model')));
 assert.deepEqual(validateAssets(assets), []);
 for (const asset of assets) {
   const kind = asset.definition.kind;

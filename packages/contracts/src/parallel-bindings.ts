@@ -38,6 +38,7 @@ export function declaredRecipeIssues(p:ParallelPresetTemplate):string[]{
   if(p.pipeline&&(p.tensorShards.length||p.reductions.length||p.moduleRules))errors.push('流水线预设须按阶段分布，无额外张量分片规则');
   if((p.strategy==='query_sharded')!==(p.queryParallel!==undefined))errors.push('查询分片预设须声明查询轴和 KV 收集边界');
   if((p.strategy==='decode_context_sharded')!==(p.decodeContext!==undefined))errors.push('Decode 上下文预设须声明固定模块与替代模块');
+  if(p.requestBatchSharding&&p.strategy!=='decode_context_sharded')errors.push('此请求分片声明仅适用于 Decode 上下文预设');
   if(p.decodeContext&&(p.decodeContext.module.kind!=='module'||p.decodeContext.replacement.kind!=='module'||
     p.phases.some(phase=>phase!=='decode')||!p.moduleRules?.some(rule=>rule.module.assetId===p.decodeContext?.replacement.assetId&&rule.module.revision===p.decodeContext.replacement.revision)))
     errors.push('Decode 上下文预设仅用于 Decode，需声明替代模块的实际分片和归约');

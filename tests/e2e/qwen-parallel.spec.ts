@@ -25,7 +25,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.locator('.studio-layout-notice')).toContainText('2 张卡');
-  await page.getByRole('button', { name: '更新模型到 r5', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r6', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByLabel('Attention TP', { exact: true }).fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -39,7 +39,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const current = ProjectDocument.parse((await response.json()).data).scenarios[0]!;
-  expect(current.model.revision).toBe(5);
+  expect(current.model.revision).toBe(6);
   expect(current.deviceTopology.devices).toEqual([first, second]);
   expect(current.workload).toEqual(scenario.workload);
   expect(current.parallelPlan.communications).toHaveLength(28);
@@ -100,15 +100,16 @@ test('applies full Qwen3 PCP with replicated KV, restores the degree and returns
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
 });
 
-test('applies full Qwen3 DCP and displays the reserved cache capacity', async ({ page }) => {
+test('applies Qwen3 DCP within independent request groups and displays their cache capacity', async ({ page }) => {
   test.setTimeout(150_000);
   const base = makeQwenParallelAssets();
   const root = base.find(row => row.assetId === 'builtin:model:qwen3-1.7b')!;
   const decoder = base.find(row => row.definition.kind === 'module')!;
   const [pcpRoot, pcpDecoder, ...formulas] = addQwenContextPreset(decoder, [addQwenPipelinePreset(root)]);
-  const assets = [...addQwenDecodeContextPreset(pcpDecoder!, [pcpRoot!]), pcpDecoder!, ...formulas,
+  const [dcpRoot, dcpLayer, ...dcpFormulas] = addQwenDecodeContextPreset(pcpDecoder!, [pcpRoot!]);
+  const assets = [dcpRoot!, dcpLayer!, pcpDecoder!, ...formulas, ...dcpFormulas,
     ...base.filter(row => row.definition.kind === 'formula')];
-  const project = makeModelProject(assets, { kind: 'decode', batchSize: 1, contextTokensPerRequest: 3, queryTokensPerRequest: 1, steps: 2 }, 'Qwen3-1.7B DCP');
+  const project = makeModelProject(assets, { kind: 'decode', batchSize: 4, contextTokensPerRequest: 3, queryTokensPerRequest: 1, steps: 2 }, 'Qwen3-1.7B DP × DCP');
   project.projectId = randomUUID();
   project.scenarios[0]!.bindings = [{ parameterKey: 'M', value: { kind: 'integer', value: 8 } }];
   await page.goto('/');
@@ -118,6 +119,7 @@ test('applies full Qwen3 DCP and displays the reserved cache capacity', async ({
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   const dcp = page.getByLabel('序列与流水线 DCP', { exact: true });
+  const dp = page.getByLabel('Attention DP', { exact: true });
   await dcp.fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(logical).toContainText('每次模块调用 AllReduce × 3');
@@ -125,21 +127,40 @@ test('applies full Qwen3 DCP and displays the reserved cache capacity', async ({
   await expect(logical).toContainText('2 个实际设备 · 84 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '更新模型到 r6', exact: true }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(dcp).toHaveValue('2');
+  const upgrade = await page.request.get('/api/v1/project?id=' + project.projectId);
+  expect(upgrade.ok()).toBe(true);
+  const upgraded = ProjectDocument.parse((await upgrade.json()).data).scenarios[0]!;
+  expect(upgraded).toMatchObject({ model: { revision: 6 }, parallelPlan: {
+    generatedFrom: { modelRevision: 6 }, decodeContext: { replacement: { revision: 2 } },
+  } });
+  expect(upgraded.deviceTopology.devices).toHaveLength(2);
+  expect(upgraded.parallelPlan.communications).toHaveLength(84);
+  await dp.fill('2');
+  await expect(logical).toContainText('4 个逻辑槽位 · 2 组请求，每组 2 卡');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('4 个实际设备 · 84 个通信', { timeout: 45_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 4');
   await page.getByRole('button', { name: '容量', exact: true }).click();
   const capacity = page.getByRole('region', { name: 'KV 缓存容量', exact: true });
   await expect(capacity).toContainText('8 token / 请求', { timeout: 45_000 });
   await expect(capacity).toContainText('固定槽位，已用 5');
   await expect(capacity).toContainText('114,688 B / token');
   await capacity.getByText('逐卡显存与缓存分配', { exact: true }).click();
-  await expect(capacity.getByRole('row', { name: /^gpu0/ })).toContainText('448 KiB');
+  await expect(capacity.getByRole('row', { name: /^gpu0/ })).toContainText('896 KiB');
+  await expect(capacity).toContainText('本组每卡 57,344 B / token');
   await page.reload();
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(dcp).toHaveValue('2');
-  await dcp.fill('1');
+  await expect(dp).toHaveValue('2');
+  await dp.fill('1');
   await logical.getByRole('button', { name: '校验布局' }).click();
-  await expect(logical).toContainText('1 个实际设备 · 0 个通信', { timeout: 45_000 });
+  await expect(logical).toContainText('2 个实际设备 · 84 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
-  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 5');
 });
 
 test('uses isolated request groups for DP2 × TP2 and returns to two cards when DP is cleared', async ({ page }) => {

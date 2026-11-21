@@ -1,5 +1,5 @@
 import { DeviceId, type ParallelPresetTemplate, type Scenario, type ParallelPresetRequest } from '@model-analyser/contracts';
-import { expertMeshPresets, requestReplicaMeshAxis } from '@model-analyser/core';
+import { expertMeshPresets, requestReplicaMeshAxis, supportsRequestReplicas } from '@model-analyser/core';
 
 export const parallelFields = [
   { area: 'Attention', fields: [{ id: 'attentionTp', label: 'TP' }, { id: 'attentionDp', label: 'DP' }] },
@@ -54,7 +54,7 @@ export function matchingParallelPresets(degrees: Degrees, presets: ParallelPrese
     if (!presets.some(preset => preset.strategy === 'batch_sharded' && preset.phases.includes(scenario.workload.kind))) return [];
     return matchingParallelPresets({ ...degrees, attentionDp: 1 }, presets, scenario).flatMap(match => {
       const slots = match.slots * requestDp;
-      return match.preset.strategy === 'tensor_sharded' && slots <= 64 ? [{ ...match, slots, requestDp }] : [];
+      return supportsRequestReplicas(match.preset) && slots <= 64 ? [{ ...match, slots, requestDp }] : [];
     });
   }
   const { moeEp: ep, moeTp: tp, attentionTp, ...other } = degrees;
@@ -79,7 +79,7 @@ export function currentDegrees(scenario: Scenario, presets: ParallelPresetTempla
   if (!preset || !group || origin?.modelId !== scenario.model.assetId || origin.modelRevision !== scenario.model.revision) return undefined;
   const requestDp = origin.requestDp;
   const width = group.members.length / (requestDp ?? 1);
-  if (requestDp && (!Number.isInteger(width) || group.mesh?.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp ||
+  if (requestDp && (!supportsRequestReplicas(preset) || !Number.isInteger(width) || group.mesh?.axes.find(axis => axis.axisId === requestReplicaMeshAxis)?.size !== requestDp ||
       group.mesh.axes.find(axis => axis.axisId === origin.meshAxisId)?.size !== width)) return undefined;
   const degrees = declaredDegrees(scenario.model, preset, width);
   if (!degrees) return undefined;

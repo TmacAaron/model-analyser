@@ -22,7 +22,7 @@ Qwen3.5-397B-A17B r3／r4、GLM-5.2 r2 和 Kimi‑K3 r2／r3 的[全模型 MoE E
 
 Qwen3-0.6B、Qwen3-1.7B 和 Qwen3.8-27B 可从正式模型画布设置[解码层流水线](PARALLEL_PRESETS.md#qwen-解码层流水线)。已核对连续阶段的权重驻留、绑权副本、实际 SendRecv、Decode 缓存增长及 KV 预算。流水线与其他并行方式的组合、microbatch 重叠继续按 F03 核对。
 
-Qwen3-0.6B r5 和 Qwen3-1.7B r4 的[全模型 PCP](PARALLEL_PRESETS.md#qwen3-prefill-查询分片)使用实际的连续查询起点，每层收集当前 K/V，再写入复制的缓存。r6／r5 增加[全模型 DCP](PARALLEL_PRESETS.md#qwen3-decode-kv-分片)，均分固定 KV 槽位，并按 token 位置写缓存。已经核对跨步槽位归属、逐卡分配和注意力归约。其他模型的上下文并行及组合布局继续按 F03 核对。
+Qwen3-0.6B r5 和 Qwen3-1.7B r4 的[全模型 PCP](PARALLEL_PRESETS.md#qwen3-prefill-查询分片)使用实际的连续查询起点，每层收集当前 K/V，再写入复制的缓存。r6／r5 增加[全模型 DCP](PARALLEL_PRESETS.md#qwen3-decode-kv-分片)，均分固定 KV 槽位，并按 token 位置写缓存。r7／r6 的 DP × DCP 支持独立请求组，局部算量、三类归约和容量按组内请求与槽位计算。其他模型的上下文并行及组合布局继续按 F03 核对。
 
 Qwen3.5-397B-A17B r4 已接入[官方 FP8 权重和 FP8 执行](MODEL_REFERENCES.md#qwen35-397b-a17b-与-qwen38-27b)。逐卡计算权重缩放网格及稀疏专家读量。FP8 执行另计动态 FP32 激活缩放、E4M3FN 矩阵乘法和块缩放累加。H100 SXM r2 提供匹配的理论算力。其他模型的固定发布格式、W4A4/W4A8 执行覆盖和额外状态格式继续按 F09 验证。
 
