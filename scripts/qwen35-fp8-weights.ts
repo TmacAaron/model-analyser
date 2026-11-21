@@ -58,10 +58,10 @@ function verifyCheckpoint() {
   for (const key of ['linear_attn.A_log', 'linear_attn.norm.weight']) assert.equal(manifest.examples[prefix + key]?.weight.dtype, 'F32', key);
 }
 
-export function makeQwen35FP8WeightPreset(assets: AssetDocument[]) {
+export function makeQwen35FP8WeightPreset(assets: AssetDocument[], modelRevision: 4 | 5 = 4) {
   verifyCheckpoint();
   const asset = (id: string, kind: 'model' | 'module') => {
-    const value = assets.find(entry => entry.assetId === id && entry.revision === 4 && entry.definition.kind === kind);
+    const value = assets.find(entry => entry.assetId === id && entry.revision === (kind === 'model' ? modelRevision : 4) && entry.definition.kind === kind);
     if (!value) throw Error('Missing fixed text decoder asset ' + id);
     return ref(value);
   };
@@ -72,7 +72,7 @@ export function makeQwen35FP8WeightPreset(assets: AssetDocument[]) {
   const matrix = (storageId: string, outputAxis?: string) => ({ storageId: StorageId.parse(storageId), ...(outputAxis ? { axes: { out: outputAxis } } : {}) });
   const common = [matrix('expert-gate-up-weight', 'i'), matrix('expert-down-weight'),
     ...['shared-gate-weight', 'shared-up-weight', 'shared-down-weight'].map(id => matrix(id))];
-  return AssetDocument.parse({ documentType: 'asset', schemaVersion: 1, assetId: 'builtin:quantization:qwen3.5-397b-a17b-fp8-weights', revision: 1,
+  return AssetDocument.parse({ documentType: 'asset', schemaVersion: 1, assetId: 'builtin:quantization:qwen3.5-397b-a17b-fp8-weights', revision: modelRevision - 3,
     name: '官方 FP8 权重', parameters: [], tags: ['qwen', 'fp8', 'block128', 'published-weights'], sources: [
       { kind: 'url', url: base + '/config.json', checkedOn: '2026-11-21' },
       { kind: 'url', url: base + '/model.safetensors.index.json', checkedOn: '2026-11-21' },

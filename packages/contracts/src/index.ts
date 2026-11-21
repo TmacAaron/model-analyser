@@ -523,7 +523,7 @@ export const ProjectIndexEntry=ProjectDocument.pick({projectId:true,projectRevis
   scenarios:z.array(Scenario.pick({scenarioId:true,name:true,model:true})),assetSnapshotCount:Natural,
 });
 /** Navigation metadata only; full documents are read explicitly by identity. */
-export const WorkspaceCatalog=z.strictObject({assets:z.array(AssetIndexEntry),drafts:z.array(AssetDraftIndexEntry),projects:z.array(ProjectIndexEntry),projectDrafts:z.array(ProjectDraftIndexEntry),issues:z.array(ScanIssue),recoveries:z.array(RecoveryEntry)});
+export const WorkspaceCatalog=z.strictObject({assets:z.array(AssetIndexEntry),pinnedWeightPresets:z.array(AssetIndexEntry).optional(),drafts:z.array(AssetDraftIndexEntry),projects:z.array(ProjectIndexEntry),projectDrafts:z.array(ProjectDraftIndexEntry),issues:z.array(ScanIssue),recoveries:z.array(RecoveryEntry)});
 export const RequestAck = z.strictObject({requestId:Id});
 export const SaveDraftResponse = z.strictObject({requestId:Id,draft:AssetDraft});
 export const CommitResponse = z.strictObject({requestId:Id,asset:AssetDocument,headRevision:PositiveInt.optional()});

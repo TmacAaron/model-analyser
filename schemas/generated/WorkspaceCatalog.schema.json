@@ -5,64 +5,13 @@
     "assets": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "assetId": {
-            "$ref": "#/$defs/__schema0"
-          },
-          "kind": {
-            "$ref": "#/$defs/__schema1"
-          },
-          "revision": {
-            "$ref": "#/$defs/__schema2"
-          },
-          "name": {
-            "$ref": "#/$defs/__schema0"
-          },
-          "origin": {
-            "type": "string",
-            "enum": [
-              "builtin",
-              "user"
-            ]
-          },
-          "archived": {
-            "type": "boolean"
-          },
-          "format": {
-            "type": "string",
-            "enum": [
-              "json",
-              "yaml"
-            ]
-          },
-          "family": {
-            "$ref": "#/$defs/__schema0"
-          },
-          "configModelTypes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/__schema0"
-            }
-          },
-          "weightPresetModel": {
-            "$ref": "#/$defs/__schema4"
-          },
-          "weightPresetExecution": {
-            "type": "boolean",
-            "const": true
-          }
-        },
-        "required": [
-          "assetId",
-          "kind",
-          "revision",
-          "name",
-          "origin",
-          "archived",
-          "format"
-        ],
-        "additionalProperties": false
+        "$ref": "#/$defs/__schema0"
+      }
+    },
+    "pinnedWeightPresets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/__schema0"
       }
     },
     "drafts": {
@@ -79,18 +28,18 @@
             "const": 1
           },
           "draftId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "assetId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "assetKind": {
-            "$ref": "#/$defs/__schema1"
+            "$ref": "#/$defs/__schema2"
           },
           "baseRevision": {
             "anyOf": [
               {
-                "$ref": "#/$defs/__schema2"
+                "$ref": "#/$defs/__schema3"
               },
               {
                 "type": "null"
@@ -98,7 +47,7 @@
             ]
           },
           "draftGeneration": {
-            "$ref": "#/$defs/__schema3"
+            "$ref": "#/$defs/__schema4"
           },
           "updatedAt": {
             "type": "string",
@@ -116,7 +65,7 @@
             "type": "object",
             "properties": {
               "source": {
-                "$ref": "#/$defs/__schema4"
+                "$ref": "#/$defs/__schema5"
               },
               "mode": {
                 "type": "string",
@@ -152,13 +101,13 @@
         "type": "object",
         "properties": {
           "projectId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "projectRevision": {
-            "$ref": "#/$defs/__schema2"
+            "$ref": "#/$defs/__schema3"
           },
           "name": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "scenarios": {
             "type": "array",
@@ -166,13 +115,13 @@
               "type": "object",
               "properties": {
                 "scenarioId": {
-                  "$ref": "#/$defs/__schema0"
+                  "$ref": "#/$defs/__schema1"
                 },
                 "name": {
-                  "$ref": "#/$defs/__schema0"
+                  "$ref": "#/$defs/__schema1"
                 },
                 "model": {
-                  "$ref": "#/$defs/__schema4"
+                  "$ref": "#/$defs/__schema5"
                 }
               },
               "required": [
@@ -184,7 +133,7 @@
             }
           },
           "assetSnapshotCount": {
-            "$ref": "#/$defs/__schema3"
+            "$ref": "#/$defs/__schema4"
           }
         },
         "required": [
@@ -211,15 +160,15 @@
             "const": 1
           },
           "draftId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "projectId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "baseProjectRevision": {
             "anyOf": [
               {
-                "$ref": "#/$defs/__schema2"
+                "$ref": "#/$defs/__schema3"
               },
               {
                 "type": "null"
@@ -227,7 +176,7 @@
             ]
           },
           "draftGeneration": {
-            "$ref": "#/$defs/__schema3"
+            "$ref": "#/$defs/__schema4"
           },
           "updatedAt": {
             "type": "string",
@@ -260,7 +209,7 @@
         "type": "object",
         "properties": {
           "file": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "code": {
             "type": "string",
@@ -274,7 +223,7 @@
             ]
           },
           "message": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           }
         },
         "required": [
@@ -291,18 +240,18 @@
         "type": "object",
         "properties": {
           "assetId": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "revision": {
-            "$ref": "#/$defs/__schema2"
+            "$ref": "#/$defs/__schema3"
           },
           "name": {
-            "$ref": "#/$defs/__schema0"
+            "$ref": "#/$defs/__schema1"
           },
           "expectedRevision": {
             "anyOf": [
               {
-                "$ref": "#/$defs/__schema2"
+                "$ref": "#/$defs/__schema3"
               },
               {
                 "type": "null"
@@ -331,10 +280,70 @@
   "additionalProperties": false,
   "$defs": {
     "__schema0": {
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "kind": {
+          "$ref": "#/$defs/__schema2"
+        },
+        "revision": {
+          "$ref": "#/$defs/__schema3"
+        },
+        "name": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "builtin",
+            "user"
+          ]
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "json",
+            "yaml"
+          ]
+        },
+        "family": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "configModelTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema1"
+          }
+        },
+        "weightPresetModel": {
+          "$ref": "#/$defs/__schema5"
+        },
+        "weightPresetExecution": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "assetId",
+        "kind",
+        "revision",
+        "name",
+        "origin",
+        "archived",
+        "format"
+      ],
+      "additionalProperties": false
+    },
+    "__schema1": {
       "type": "string",
       "minLength": 1
     },
-    "__schema1": {
+    "__schema2": {
       "type": "string",
       "enum": [
         "model",
@@ -346,26 +355,26 @@
         "hardware"
       ]
     },
-    "__schema2": {
-      "minimum": 1,
-      "$ref": "#/$defs/__schema3"
-    },
     "__schema3": {
+      "minimum": 1,
+      "$ref": "#/$defs/__schema4"
+    },
+    "__schema4": {
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
     },
-    "__schema4": {
+    "__schema5": {
       "type": "object",
       "properties": {
         "assetId": {
-          "$ref": "#/$defs/__schema0"
+          "$ref": "#/$defs/__schema1"
         },
         "revision": {
-          "$ref": "#/$defs/__schema2"
+          "$ref": "#/$defs/__schema3"
         },
         "kind": {
-          "$ref": "#/$defs/__schema1"
+          "$ref": "#/$defs/__schema2"
         }
       },
       "required": [

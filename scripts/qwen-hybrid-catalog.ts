@@ -12,12 +12,19 @@ const assets = new Map<string, AssetDocument>();
 for (const release of ['qwen35', 'qwen38'] as const) {
   const latest = release === 'qwen35' ? makeQwenHybridParallelAssets(release, 4) : [];
   const parallel = makeQwenHybridParallelAssets(release);
-  const pipeline = release === 'qwen38' ? parallel.filter(row => row.definition.kind === 'model').map(addQwenPipelinePreset) : [];
+  const pipeline = release === 'qwen38' ? parallel.filter(row => row.definition.kind === 'model').map(model => addQwenPipelinePreset(model)) : [];
   const pipelineRequest = pipeline.map(addQwenPipelineRequestParallel);
   const published = release === 'qwen35' ? makeQwen35FP8WeightPreset(latest) : undefined;
+  const [moeModel, ...moeDependencies] = latest;
+  const qwen35PipelineAssets = moeModel ? [addQwenPipelinePreset(moeModel, { requestBatchSharding: true, attentionPresetId: 'tp-hybrid-attention' }),
+    ...moeDependencies] : [];
+  const publishedForPipeline = qwen35PipelineAssets.length ? makeQwen35FP8WeightPreset(qwen35PipelineAssets, 5) : undefined;
   for (const asset of [...makeQwenHybridAssets(release), ...parallel,
     ...pipeline, ...pipelineRequest, ...pipelineRequest.map(model=>addQwenPipelineAttentionParallel(model,'tp-hybrid-attention')),
-    ...(published ? [...makeQwenHybridParallelAssets(release, 3), ...latest, published, ...makeQwen35FP8ExecutionAssets(latest, published)] : [])]) {
+    ...(published ? [...makeQwenHybridParallelAssets(release, 3), ...latest, published, ...makeQwen35FP8ExecutionAssets(latest, published)] : []),
+    ...(publishedForPipeline ? [...qwen35PipelineAssets, publishedForPipeline,
+      ...makeQwen35FP8ExecutionAssets(qwen35PipelineAssets, publishedForPipeline)] : []),
+  ]) {
     const key = asset.assetId + '@' + asset.revision;
     const prior = assets.get(key);
     if (prior) assert.equal(canonical(prior), canonical(asset), asset.assetId);

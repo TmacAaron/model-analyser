@@ -101,10 +101,16 @@ export async function scanFiles(root:string,builtinRoot:string,scope:'all'|'revi
     const diagnostics=validateAssets([asset],usable).filter(d=>d.severity==='error');
     if(diagnostics.length){report.issues.push({file:display(source.file),code:'reference',message:diagnostics.map(d=>d.message).join('; ')});continue;}
     if(source.origin==='user'&&heads.get(asset.assetId)!==asset.revision)continue;
-    if(source.origin==='builtin'&&usable.some(a=>a.assetId===asset.assetId&&a.revision>asset.revision))continue;
+    const weightProfile=asset.definition.kind==='quantization'?asset.definition.modelWeights:undefined;
+    const newer=source.origin==='builtin'?usable.filter(a=>a.assetId===asset.assetId&&a.revision>asset.revision):[];
+    const pinned=newer.length>0;
+    if(pinned&&(scope!=='catalog'||!weightProfile||newer.some(a=>a.definition.kind==='quantization'&&
+      a.definition.modelWeights?.model.assetId===weightProfile.model.assetId&&
+      a.definition.modelWeights.model.revision===weightProfile.model.revision)))continue;
     const archiveFile=join(root,'assets','archive',storageKey(asset.assetId)+'.json');
     let archived=false;try{const raw=JSON.parse(await readFile(archiveFile,'utf8')) as unknown;z.strictObject({assetId:z.literal(asset.assetId)}).parse(raw);archived=true;}catch(e){if(!missing(e))issue(archiveFile,e);}
-    report.assets.push({assetId:asset.assetId,revision:asset.revision,kind:asset.definition.kind,name:asset.name,origin:source.origin,format:source.format,archived,...(asset.definition.kind==='model'?{family:asset.definition.family}:{}),...(asset.configMapping?{configModelTypes:asset.configMapping.modelTypes}:{}),
+    const entries=pinned?(catalog.pinnedWeightPresets??=[]):report.assets;
+    entries.push({assetId:asset.assetId,revision:asset.revision,kind:asset.definition.kind,name:asset.name,origin:source.origin,format:source.format,archived,...(asset.definition.kind==='model'?{family:asset.definition.family}:{}),...(asset.configMapping?{configModelTypes:asset.configMapping.modelTypes}:{}),
       ...(asset.definition.kind==='quantization'&&asset.definition.modelWeights?{weightPresetModel:asset.definition.modelWeights.model,
         ...(asset.definition.modelWeights.moduleRules.some(rule=>rule.execution?.length)?{weightPresetExecution:true as const}:{})}:{})});
   }

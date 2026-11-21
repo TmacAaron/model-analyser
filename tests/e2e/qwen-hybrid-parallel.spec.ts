@@ -75,7 +75,7 @@ test('Qwen3.5-397B EP8 shards experts separately from the global TopK selection'
   });
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
-  await page.getByRole('button', { name: '更新模型到 r4', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r5', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByRole('button', { name: '设备', exact: true }).click();
   await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');

@@ -6,7 +6,7 @@ import { DisplayUnitsControl } from './display-units.js';
 import { copyConfiguration } from '../../../packages/contracts/src/configuration-edit.js';
 import { removeQuantizationRule } from '../../../packages/contracts/src/ascend-quantization.js';
 import { AscendQuantizationEditor } from './ascend-quantization-view.js';
-import { calculationInput } from '@model-analyser/core';
+import { calculationInput, supportsRequestReplicas } from '@model-analyser/core';
 import { publishCanvasEdit,type CanvasEditPlan } from './canvas-editing.js';
 import {runCanvasEditTask} from './canvas-edit-task.js';
 import type {CanvasEditIntent,CanvasEditControls} from './canvas-edit-worker.js';
@@ -79,9 +79,9 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
     ...(project?.assetSnapshots.flatMap(a=>a.definition.kind==='quantization'?[{ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
       ...(a.definition.modelWeights?{weightPresetModel:a.definition.modelWeights.model,
         weightPresetExecution:a.definition.modelWeights.moduleRules.some(rule=>rule.execution?.length)}:{})}]:[])??[]),
-    ...(report?.assets.filter(a=>a.kind==='quantization'&&!a.archived).filter(a=>!project?.assetSnapshots.some(s=>s.assetId===a.assetId&&s.revision===a.revision)).map(a=>({
+    ...[...report?.assets??[],...report?.pinnedWeightPresets??[]].filter(a=>a.kind==='quantization'&&!a.archived).filter(a=>!project?.assetSnapshots.some(s=>s.assetId===a.assetId&&s.revision===a.revision)).map(a=>({
       ref:{assetId:a.assetId,revision:a.revision,kind:'quantization' as const},name:a.name,
-      ...(a.weightPresetModel?{weightPresetModel:a.weightPresetModel,weightPresetExecution:a.weightPresetExecution===true}:{})}))??[]),
+      ...(a.weightPresetModel?{weightPresetModel:a.weightPresetModel,weightPresetExecution:a.weightPresetExecution===true}:{})})),
   ].map(p=>[p.ref.assetId+'@'+p.ref.revision,p])).values()];
   const models=report?.assets.filter(a=>a.kind==='model'&&!a.archived)??[],hardwares=report?.assets.filter(a=>a.kind==='hardware'&&!a.archived)??[];
   const hardwareChoices=[...new Map([...(project?.assetSnapshots.filter(a=>a.definition.kind==='hardware').map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · 项目快照'}))??[]),...hardwares.map(a=>({ref:{assetId:a.assetId,revision:a.revision,kind:'hardware' as const},name:a.name+' · '+(a.origin==='builtin'?'内置库':'用户库')+' · '+a.assetId.slice(-8)}))].map(a=>[a.ref.assetId+'@'+a.ref.revision,a])).values()];
@@ -104,18 +104,42 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
    const live=()=>token===session.current&&operationNavigation===navigation.current&&snapshot.text===latest.current.text&&snapshot.scenarioId===latest.current.scenarioId;
    try{
     const current=report?.assets.find(a=>a.kind==='model'&&a.assetId===active.model.assetId);if(!current)throw Error('资产库中没有该模型，项目仍可使用已保存快照');
-    const model={assetId:current.assetId,revision:current.revision,kind:'model' as const};const snapshots=await request('snapshot',z.array(AssetDocument),{refs:[model]});
+    const model={assetId:current.assetId,revision:current.revision,kind:'model' as const};
+    const replacements=new Map<string,{previous:AssetDocument;ref:AssetRef}>();
+    for(const {preset} of active.quantizationOverrides){
+      if(!preset)continue;
+      const previous=project.assetSnapshots.find(asset=>asset.assetId===preset.assetId&&asset.revision===preset.revision);
+      if(previous?.definition.kind!=='quantization'||!previous.definition.modelWeights)continue;
+      const compatible=quantizationPresets.filter(choice=>choice.ref.assetId===preset.assetId&&
+        choice.weightPresetModel?.assetId===model.assetId&&choice.weightPresetModel.revision===model.revision)
+        .sort((a,b)=>b.ref.revision-a.ref.revision)[0];
+      if(!compatible)throw Error('新模型修订没有兼容的发布权重预设：'+previous.name);
+      replacements.set(preset.assetId+'@'+preset.revision,{previous,ref:compatible.ref});
+    }
+    const snapshots=await request('snapshot',z.array(AssetDocument),{refs:[model,...[...replacements.values()].map(row=>row.ref)]});
     if(!live())return;
     const assets=mergeSnapshots(project.assetSnapshots,snapshots);
-    const next={...active,model};
+    const next={...active,model,quantizationOverrides:active.quantizationOverrides.map(override=>{
+      const item=override.preset&&replacements.get(override.preset.assetId+'@'+override.preset.revision);
+      if(!item)return override;
+      const incoming=snapshots.find(asset=>asset.assetId===item.ref.assetId&&asset.revision===item.ref.revision);
+      if(item.previous.definition.kind!=='quantization'||incoming?.definition.kind!=='quantization'||
+        incoming.definition.modelWeights?.model.assetId!==model.assetId||incoming.definition.modelWeights.model.revision!==model.revision||
+        canonical(incoming.definition.modelWeights?.moduleRules)!==canonical(item.previous.definition.modelWeights?.moduleRules)||
+        canonical(incoming.definition.quantization)!==canonical(item.previous.definition.quantization)){
+        throw Error('发布权重预设的存储或执行规则已变化：'+item.previous.name);
+      }
+      return {...override,preset:item.ref};
+    })};
     const {decodeContext,generatedFrom:origin}=active.parallelPlan;
     const previous=project.assetSnapshots.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision)
       ?.parallelPresets?.find(preset=>preset.presetId===origin?.presetId);
-    if(decodeContext||previous?.queryParallel||previous?.pipeline){
-      const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
-      const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
+    const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
+    const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
+    const samePreset=previous&&preset&&canonical(previous)===canonical(preset);
+    if(decodeContext||previous?.queryParallel||previous?.pipeline||samePreset){
       if(!origin||!preset||origin.modelId!==active.model.assetId||
-         origin.requestDp&&!preset.requestBatchSharding){
+         origin.requestDp&&!supportsRequestReplicas(preset)){
         throw Error('新模型修订没有兼容的并行布局');
       }
       next.parallelPlan={...active.parallelPlan,generatedFrom:{...origin,modelRevision:model.revision}};

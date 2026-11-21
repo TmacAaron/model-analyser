@@ -8,7 +8,7 @@ import { addQwenContextPreset, addQwenPrefillRequestParallel } from './qwen-cont
 import { addQwenDecodeContextPreset, addQwenDecodeRequestParallel } from './qwen-decode-context.js';
 
 const assets = makeQwenParallelAssets();
-const pipeline = assets.filter(asset => asset.definition.kind === 'model').map(addQwenPipelinePreset);
+const pipeline = assets.filter(asset => asset.definition.kind === 'model').map(model => addQwenPipelinePreset(model));
 const decoder = assets.find(asset => asset.definition.kind === 'module');
 if (!decoder) throw Error('Missing Qwen decoder');
 const context = addQwenContextPreset(decoder, pipeline);

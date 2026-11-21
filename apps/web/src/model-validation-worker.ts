@@ -31,8 +31,8 @@ if(typeof self!=='undefined'&&typeof document==='undefined')self.onmessage=async
   const attempt=await resolveParallelPlan(first,task.assets);
   if(attempt.status==='unavailable')throw Error(attempt.diagnostics.map(d=>d.message).join('；'));
   const {execution,unassignedStorageIds,unassignedTensorUses,diagnostics}=attempt.result;
-  // Network-only collectives leave local HBM unknown while keeping a valid layout.
-  const errors=diagnostics.filter(d=>d.severity==='error'&&d.code!=='missing_communication_memory');
+  // Capacity findings and unmodeled collective HBM are reported by analysis and do not invalidate placement.
+  const errors=diagnostics.filter(d=>d.severity==='error'&&d.code!=='missing_communication_memory'&&d.code!=='capacity_exceeded');
   if(errors.length)throw Error(errors.map(d=>d.message).join('；'));
   if(execution.status!=='available'||execution.result.blockedNodeIds.length||execution.result.unplacedCommunicationIndices.length||
      unassignedStorageIds.length||unassignedTensorUses.length)throw Error('新模型修订无法沿用当前完整布局');
