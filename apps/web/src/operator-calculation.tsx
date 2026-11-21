@@ -153,7 +153,7 @@ function sourceAlgorithm(asset: AssetDocument, localId: string) {
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));
     return algorithm&&source?.kind==='url'?{algorithms:[algorithm],url:source.url}:undefined;
   }
-  if(asset.revision===1&&(id==='builtin:model:kimi-k3'||id.startsWith('builtin:module:kimi-k3-layer-'))){
+  if(asset.revision<=2&&(id==='builtin:model:kimi-k3'||id.startsWith('builtin:module:kimi-k3-layer-'))){
     const algorithm=kimiK3Algorithm(localId);
     const filename=localId==='bounded-decay'?'gate.py':localId==='recurrent'?'fused_recurrent.py':'modeling_kimi_linear.py';
     const source=asset.sources.find(item=>item.kind==='url'&&item.url.endsWith('/'+filename));

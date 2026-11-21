@@ -26,12 +26,15 @@ function depthMix(graph: GraphAuthor, prefix: string, archive: string, rows: str
     vectorWork('B * Q * (5 * ' + count + ' + (2 * ' + count + ' - 1) * H)'));
 }
 
-export function makeKimiK3Assets(): AssetDocument[] {
+export function makeKimiK3Assets(revision: 1 | 2 = 1): AssetDocument[] {
   const schedule = loadKimiK3();
   const parameters = [parameter('B', 1), parameter('Q', 4), parameter('C', 0, 0),
     ...schedule.dimensions.map(([key, value]) => parameter(key, value))];
-  const equations = new Equations('builtin:formula:kimi-k3', [...parameters, parameterP, parameter('depthBlock', 0, 0)], kimiK3Sources);
-  const base = { documentType: 'asset' as const, schemaVersion: 1 as const, revision: 1,
+  const parallel = revision === 2;
+  const formulaParameters = [...parameters, parameterP, parameter('depthBlock', 0, 0)];
+  const equations = new Equations('builtin:formula:kimi-k3', parallel ? [...formulaParameters, parameter('RouteSlots', 0, 0)] : formulaParameters,
+    kimiK3Sources, parallel ? new Map([['RouteSlots', 'K']]) : undefined);
+  const base = { documentType: 'asset' as const, schemaVersion: 1 as const, revision,
     tags: ['kimi', 'kimi-k3', 'kda', 'mla', 'attnres', 'bf16'], sources: kimiK3Sources };
   const modules: AssetDocument[] = [];
   function define(id: string, name: string, graph: GraphAuthor, historical: boolean) {
@@ -72,7 +75,7 @@ export function makeKimiK3Assets(): AssetDocument[] {
     }
     depthMix(graph, 'ffn', archived, rows, partial, 'ffn-mix');
     rmsnorm(graph, 'post-rmsnorm', 'ffn-mix', 'ffn-input');
-    addKimiFfn(graph, initial);
+    addKimiFfn(graph, initial, parallel);
     graph.tensor('y', hidden);
     graph.node('ffn-residual', 'Accumulate FFN into the current depth block', [partial, 'ffn-output'], ['y'], vectorWork('B * Q * H'));
     graph.output('y');

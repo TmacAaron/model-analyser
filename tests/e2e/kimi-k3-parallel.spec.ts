@@ -1,0 +1,50 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test } from '@playwright/test';
+import { AssetId } from '@model-analyser/contracts';
+import { makeKimiK3ParallelAssets } from '../../scripts/kimi-k3-parallel.js';
+import { makeModelProject } from '../../scripts/model-project.js';
+
+test('applies the shared Kimi-K3 TP and EP layout and budgets only growing MLA slots', async ({ page }) => {
+  test.setTimeout(480_000);
+  const [model, ...dependencies] = makeKimiK3ParallelAssets();
+  if (!model) throw Error('Missing Kimi-K3 model');
+  const project = makeModelProject([{ ...model, assetId: AssetId.parse('example:model:kimi-k3-parallel-' + randomUUID()) }, ...dependencies],
+    { kind: 'prefill', batchSize: 1, queryTokensPerRequest: 1, pastTokensPerRequest: 3 }, model.name);
+  await page.goto('/');
+  await page.getByLabel('导入模型工作区').setInputFiles({ name: 'kimi-k3-parallel.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await expect(page.locator('.canvas-breadcrumb')).toContainText('Kimi-K3');
+  const save = page.locator('.studio-save');
+  await expect(save).toContainText('已保存 · 修订 1');
+  await page.getByRole('button', { name: '设备', exact: true }).click();
+  await page.getByLabel('设备型号', { exact: true }).selectOption('builtin:hardware:amd-mi300x-192gb@1');
+  await expect(save).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '自定义参数', exact: true }).click();
+  await page.getByLabel('硬件名称', { exact: true }).fill('Kimi 容量验证 · 750 GB');
+  await page.getByLabel('硬件容量 byte', { exact: true }).fill('750000000000');
+  await page.getByRole('button', { name: '应用自定义参数', exact: true }).click();
+  await expect(save).toContainText('已保存 · 修订 3');
+
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await page.getByLabel('Attention TP', { exact: true }).fill('8');
+  await page.getByLabel('MoE EP', { exact: true }).fill('8');
+  const layout = page.getByRole('region', { name: '逻辑分片与通信' });
+  await expect(layout).toContainText('8 个逻辑槽位');
+  await layout.getByRole('button', { name: '校验布局' }).click();
+  await expect(layout).toContainText('8 个实际设备 · 185 个通信', { timeout: 160_000 });
+  await layout.getByRole('button', { name: '应用并行度' }).click();
+  await expect(save).toContainText('已保存 · 修订 4');
+
+  await page.getByRole('button', { name: '容量', exact: true }).click();
+  const capacity = page.getByRole('region', { name: 'KV 缓存容量' });
+  await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/, { timeout: 150_000 });
+  await expect(capacity).toContainText('每卡复制 27,648 B / token');
+  await expect(capacity).toContainText('其他持久状态');
+  await page.getByRole('button', { name: '分析此配置 ↗', exact: true }).click();
+  const cards = page.locator('.analysis-cards');
+  await expect(cards).toContainText('最大每卡生命周期峰值', { timeout: 150_000 });
+  await expect(cards.getByRole('button', { name: '查看理论耗时 · 串行来源' })).not.toContainText('不可用');
+  await page.reload();
+  await page.getByRole('button', { name: '并行方式', exact: true }).click();
+  await expect(page.getByLabel('Attention TP', { exact: true })).toHaveValue('8');
+  await expect(page.getByLabel('MoE EP', { exact: true })).toHaveValue('8');
+});

@@ -1,7 +1,9 @@
 import { expect, it } from 'vitest';
 import type { MetricValue } from '@model-analyser/contracts';
-import { analyzeScenario, estimateKvCapacity, instantiateModel } from '@model-analyser/core';
+import { analyzeScenario, estimateKvCapacity, instantiateModel, previewParallelPreset } from '@model-analyser/core';
+import { bindDegreePool, matchingParallelPresets, serialDegrees } from '../apps/web/src/parallel-degrees.js';
 import { makeKimiK3Assets } from '../scripts/kimi-k3-model.js';
+import { makeKimiK3ParallelAssets } from '../scripts/kimi-k3-parallel.js';
 import { makeModelProject } from '../scripts/model-project.js';
 
 const H = 7168, V = 163840, N = 96, D = 128, W = 4, QR = 1536, R = 512, DN = 128, DX = 64, DV = 128;
@@ -63,3 +65,48 @@ it('reconciles the full text ledger and separates KDA state from growing MLA slo
     devices: [{ otherStateBytes: fixedState }], budget: { status: 'no_room', reason: 'non_kv' },
   } });
 }, 150_000);
+
+const kdaShards = 2 * (5 * H * N * D + 3 * N * D * W + N * D * D + H * N) + 4 * N * (D + 1);
+const mlaShards = 2 * N * (QR * (DN + DX) + R * (DN + DV) + 2 * H * DV);
+const expertShards = 6 * E * M * J;
+const network = { bytesPerSecond: 100e9, latencySeconds: 3e-6 };
+
+function parallelProject(batchSize: number) {
+  const assets = makeKimiK3ParallelAssets();
+  const p = makeModelProject(assets, { kind: 'prefill', batchSize, queryTokensPerRequest: 1, pastTokensPerRequest: 3 }, 'Kimi-K3');
+  return { scenario: p.scenarios[0]!, assets: p.assetSnapshots, presets: assets[0]?.parallelPresets ?? [] };
+}
+
+it.each([
+  { presetId: 'tp-kimi-attention-ep', degree: 8, moe: { moeEp: 8 } },
+  { presetId: 'tp-kimi-attention-moe', degree: 2, moe: { moeTp: 2 } },
+])('accounts for all text layers in $presetId on $degree devices', async ({ presetId, degree, moe }) => {
+  const { scenario, assets, presets } = parallelProject(1);
+  const matching = matchingParallelPresets({ ...serialDegrees, attentionTp: degree, ...moe }, presets, scenario);
+  expect(matching.map(match => [match.preset.presetId, match.slots])).toEqual([[presetId, degree]]);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, degree), assets, presetId, network });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 6000));
+  const { preview } = attempt;
+  const sharded = linearLayers * kdaShards + fullLayers * mlaShards + 92 * expertShards;
+  expect(preview.allocations.map(row => [row.weightBytes, row.stateBytes])).toEqual(Array(degree).fill([
+    allWeights - sharded + sharded / degree, fixedState / degree + 4 * kvPerToken,
+  ]));
+  const from = (id: string) => preview.communications?.filter(row => row.placement?.afterNodeIds[0]?.endsWith('/' + id)) ?? [];
+  expect(from('kda-o-proj')).toHaveLength(69);
+  expect(from('mla-o-proj')).toHaveLength(24);
+  expect(from('combine')).toHaveLength(92);
+  expect(from('combine').every(row => row.source.tensorId.endsWith('::combined-latent') &&
+    row.placement?.beforeNodeIds[0]?.endsWith('/latent-rmsnorm'))).toBe(true);
+  const boundary = from('kda-o-proj').find(row => row.placement?.afterNodeIds[0] === 'start/boundary/kda-o-proj');
+  expect(boundary?.placement?.beforeNodeIds).toEqual(['start/boundary/ffn-depth-score', 'start/boundary/ffn-depth-mix', 'start/boundary/ffn-residual']);
+  expect(preview.communicationCount).toBe(185);
+}, 170_000);
+
+it('partitions depth activations, fixed KDA state and MLA slots by request in DP', async () => {
+  const { scenario, assets } = parallelProject(2);
+  const attempt = await previewParallelPreset({ ...bindDegreePool(scenario, 2), assets, presetId: 'dp-batch' });
+  if (attempt.status !== 'available') throw Error(attempt.message.slice(0, 6000));
+  expect(attempt.preview.allocations.map(row => [row.weightBytes, row.stateBytes]))
+    .toEqual(Array(2).fill([allWeights, fixedState + 4 * kvPerToken]));
+  expect(attempt.preview.communicationCount).toBe(0);
+}, 120_000);

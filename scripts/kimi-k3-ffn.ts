@@ -1,5 +1,6 @@
 import { GraphAuthor, fp32 } from './model-authoring.js';
 import { heads, int32, sequence, vectorWork, weight } from './deepseek-v4-attention.js';
+import type { Axis } from './deepseek-v4-attention.js';
 
 const hidden = sequence('H');
 
@@ -17,7 +18,7 @@ function addSituMlp(graph: GraphAuthor, prefix: string, width: string, output: s
     { useful: '2 * B * Q * H * (' + width + ')' });
 }
 
-export function addKimiFfn(graph: GraphAuthor, dense: boolean) {
+export function addKimiFfn(graph: GraphAuthor, dense: boolean, parallel = false) {
   if (dense) {
     addSituMlp(graph, 'dense', 'I', 'ffn-output');
     return;
@@ -37,19 +38,29 @@ export function addKimiFfn(graph: GraphAuthor, dense: boolean) {
   graph.node('latent-down', 'Project tokens to the routed expert latent width', ['ffn-input', 'latent-down-weight'], ['expert-latent'],
     { useful: '2 * B * Q * H * M' });
   graph.tensor('expert-input', heads('K', 'M'));
-  graph.node('dispatch', 'Dispatch latent tokens to selected experts', ['expert-latent', 'expert-ids'], ['expert-input']);
+  const slots = parallel ? 'RouteSlots' : 'K';
+  const scores = parallel ? 'owner-weights' : 'expert-weights';
+  const packedIds = parallel ? ['owner-ids'] : [];
+  if (parallel) {
+    const routeShape = heads('K', 'M').slice(0, 3);
+    graph.tensor('owner-ids', routeShape, { dtype: int32 });
+    graph.tensor(scores, routeShape, { dtype: fp32 });
+    graph.node('dispatch', 'Pack latent tokens and normalized scores for expert owners', ['expert-latent', 'expert-ids', 'expert-weights'],
+      ['expert-input', 'owner-ids', scores], undefined, { accessBytes: { 'expert-latent': `2 * B * Q * ${slots} * M` } });
+  } else graph.node('dispatch', 'Dispatch latent tokens to selected experts', ['expert-latent', 'expert-ids'], ['expert-input']);
   weight(graph, 'expert-gate-weight', ['E', 'M', 'J']); weight(graph, 'expert-up-weight', ['E', 'M', 'J']);
   weight(graph, 'expert-down-weight', ['E', 'J', 'M']);
-  graph.tensor('expert-gate-up-output', heads('K', '2 * J')); graph.tensor('expert-activation', heads('K', 'J'));
+  const paired: Axis[] = [...heads('K', 'J'), ['pair', 'custom', '2']];
+  graph.tensor('expert-gate-up-output', parallel ? paired : heads('K', '2 * J')); graph.tensor('expert-activation', heads('K', 'J'));
   graph.tensor('expert-output', heads('K', 'M')); graph.tensor('combined-latent', sequence('M'));
-  const read = '2 * min(E, B * Q * K) * M * J';
-  graph.node('expert-gate-up', 'Latent expert gate and up projections', ['expert-input', 'expert-gate-weight', 'expert-up-weight'],
-    ['expert-gate-up-output'], { useful: '4 * B * Q * K * M * J' }, { accessBytes: { 'expert-gate-weight': read, 'expert-up-weight': read } });
-  graph.node('expert-situ', 'Routed expert SiTU-GLU', ['expert-gate-up-output'], ['expert-activation'], vectorWork('15 * B * Q * K * J'));
-  graph.node('expert-down', 'Routed expert latent down projections', ['expert-activation', 'expert-down-weight'], ['expert-output'],
-    { useful: '2 * B * Q * K * M * J' }, { accessBytes: { 'expert-down-weight': read } });
-  graph.node('combine', 'Weighted sum in the expert latent space', ['expert-output', 'expert-weights'], ['combined-latent'],
-    vectorWork('B * Q * M * (2 * K - 1)'));
+  const read = `2 * min(E, B * Q * ${slots}) * M * J`;
+  graph.node('expert-gate-up', 'Latent expert gate and up projections', ['expert-input', 'expert-gate-weight', 'expert-up-weight', ...packedIds],
+    ['expert-gate-up-output'], { useful: `4 * B * Q * ${slots} * M * J` }, { accessBytes: { 'expert-gate-weight': read, 'expert-up-weight': read } });
+  graph.node('expert-situ', 'Routed expert SiTU-GLU', ['expert-gate-up-output'], ['expert-activation'], vectorWork(`15 * B * Q * ${slots} * J`));
+  graph.node('expert-down', 'Routed expert latent down projections', ['expert-activation', 'expert-down-weight', ...packedIds], ['expert-output'],
+    { useful: `2 * B * Q * ${slots} * M * J` }, { accessBytes: { 'expert-down-weight': read } });
+  graph.node('combine', 'Weighted sum in the expert latent space', ['expert-output', scores], ['combined-latent'],
+    vectorWork(parallel ? 'B * Q * M * max(0, 2 * RouteSlots - 1)' : 'B * Q * M * (2 * K - 1)'));
   weight(graph, 'latent-norm-weight', ['M']); graph.tensor('normalized-latent', sequence('M'));
   graph.node('latent-rmsnorm', 'Normalize the combined expert latent', ['combined-latent', 'latent-norm-weight'], ['normalized-latent'],
     vectorWork('5 * B * Q * M'));

@@ -127,9 +127,9 @@ r2 提供请求 DP、Attention TP、MoE EP／TP 及同池组合的理论估算�
 
 Gated MLA 的 NoPE 路径直接使用额外的 64 个通道。吸收键和值的上投影后，每层每 token 保存 512 维潜向量和 64 维共享键，BF16 合计 **27,648 B／token／请求**。KDA 的 FP32 递推矩阵和 BF16 短卷积缓冲合计 **454,459,392 B／请求**，计入固定显存。跨层残差归档是本次前向的激活。首层使用 Dense SiTU-GLU；后续 92 层从 896 个窄专家中选择 16 个，并将归一化后的窄空间汇总投影回隐藏宽度，再加两个共享专家的输出。
 
-预设使用 BF16 权重、FP32 递推状态、逐 token 的理论 KDA 算式和紧凑 MLA 缓存。发布检查点的 MXFP4 物理存储、真实 KDA chunk 内核、视觉编码器和多卡布局需要各自的配置。默认单张 A100 的 KV 预算为 `0 token / 请求`，可查看理论成本和每 token 的缓存占用。
+预设使用 BF16 权重、FP32 递推状态、逐 token 的理论 KDA 算式和紧凑 MLA 缓存。发布检查点的 MXFP4 物理存储、KDA 分块内核和视觉编码器需要各自的配置。默认单张 A100 的 KV 预算为 `0 token / 请求`，可查看理论成本和每 token 的缓存占用。
 
-`npm run reference:kimi-k3` 校对发布配置的 SHA‑256 和 87 份内置资产。固定来源为 [Kimi-K3 发布配置](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json)、[主解码器实现](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py)、[FLA 的有限下界门控](https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/gate.py)和 [vLLM 的混合缓存说明](https://vllm.ai/blog/2026-07-27-k3)。
+r2 提供请求 DP、Attention TP、MoE EP／TP 及同池组合的理论估算。`npm run reference:kimi-k3` 校对发布配置的 SHA‑256 和 104 份内置资产。 [并行口径](PARALLEL_PRESETS.md#kimi-k3) · [Kimi-K3 发布配置](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/config.json) · [主解码器实现](https://huggingface.co/moonshotai/Kimi-K3/blob/1f5d44f794ef598de7b6f529ef7923729b7e5408/modeling_kimi_linear.py) · [FLA 的有限下界门控](https://github.com/fla-org/flash-linear-attention/blob/479745d8a009a87fba4a4ab2440deede85b6e974/fla/ops/kda/gate.py) · [vLLM 混合缓存说明](https://vllm.ai/blog/2026-07-27-k3)
 
 ## 目标型号来源
 
