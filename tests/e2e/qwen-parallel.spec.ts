@@ -25,7 +25,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(page.locator('.studio-layout-notice')).toContainText('2 张卡');
-  await page.getByRole('button', { name: '更新模型到 r6', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r7', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
   await page.getByLabel('Attention TP', { exact: true }).fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
@@ -39,7 +39,7 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const current = ProjectDocument.parse((await response.json()).data).scenarios[0]!;
-  expect(current.model.revision).toBe(6);
+  expect(current.model.revision).toBe(7);
   expect(current.deviceTopology.devices).toEqual([first, second]);
   expect(current.workload).toEqual(scenario.workload);
   expect(current.parallelPlan.communications).toHaveLength(28);
@@ -60,13 +60,13 @@ test('upgrades the existing Qwen3-1.7B snapshot and runs full two-card Attention
   await expect(hbm).toContainText('通信本地 HBM 待核定');
 });
 
-test('applies full Qwen3 PCP with replicated KV, restores the degree and returns to one card', async ({ page }) => {
+test('upgrades active Qwen3 PCP and gathers K/V independently for each request group', async ({ page }) => {
   test.setTimeout(150_000);
   const base = makeQwenParallelAssets();
   const root = base.find(row => row.assetId === 'builtin:model:qwen3-0.6b')!;
   const decoder = base.find(row => row.definition.kind === 'module')!;
   const assets = [...addQwenContextPreset(decoder, [addQwenPipelinePreset(root)]), ...base.filter(row => row.definition.kind === 'formula')];
-  const project = makeModelProject(assets, { kind: 'prefill', batchSize: 1, queryTokensPerRequest: 4, pastTokensPerRequest: 3 }, 'Qwen3-0.6B PCP');
+  const project = makeModelProject(assets, { kind: 'prefill', batchSize: 4, queryTokensPerRequest: 4, pastTokensPerRequest: 3 }, 'Qwen3-0.6B DP × PCP');
   project.projectId = randomUUID();
   await page.goto('/');
   await page.getByLabel('导入模型工作区').setInputFiles({
@@ -75,6 +75,7 @@ test('applies full Qwen3 PCP with replicated KV, restores the degree and returns
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 1');
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   const pcp = page.getByLabel('序列与流水线 PCP', { exact: true });
+  const dp = page.getByLabel('Attention DP', { exact: true });
   await pcp.fill('2');
   const logical = page.getByRole('region', { name: '逻辑分片与通信' });
   await expect(logical).toContainText('每个注意力层收集当前 K 和 V');
@@ -82,22 +83,37 @@ test('applies full Qwen3 PCP with replicated KV, restores the degree and returns
   await expect(logical).toContainText('2 个实际设备 · 56 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
+  await page.getByRole('button', { name: '更新模型到 r8', exact: true }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(pcp).toHaveValue('2');
+  await dp.fill('2');
+  await expect(logical).toContainText('4 个逻辑槽位 · 2 组请求，每组 2 卡');
+  await expect(logical).toContainText('每层在各请求组内收集 K 和 V');
+  await logical.getByRole('button', { name: '校验布局' }).click();
+  await expect(logical).toContainText('4 个实际设备 · 56 个通信', { timeout: 45_000 });
+  await logical.getByRole('button', { name: '应用并行度' }).click();
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 4');
   await page.getByRole('button', { name: '容量', exact: true }).click();
   const capacity = page.getByRole('region', { name: 'KV 缓存容量', exact: true });
-  await expect(capacity).toContainText('每卡复制 114,688 B / token', { timeout: 45_000 });
+  await expect(capacity).toContainText('本组每卡 114,688 B / token', { timeout: 45_000 });
   await expect(capacity).toContainText(/[1-9][\d,]+ token \/ 请求/);
   const response = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(response.ok()).toBe(true);
   const applied = ProjectDocument.parse((await response.json()).data).scenarios[0];
-  expect(applied?.parallelPlan.communications.every(row => row.operation === 'all_gather')).toBe(true);
+  expect(applied).toMatchObject({ model: { revision: 8 }, parallelPlan: { generatedFrom: { modelRevision: 8, requestDp: 2 } } });
+  expect(applied?.parallelPlan.communications).toHaveLength(56);
+  expect(applied?.parallelPlan.communications.every(row => row.operation === 'all_gather' &&
+    row.destination.distribution.kind === 'sharded' && row.destination.distribution.axes.length === 1)).toBe(true);
   await page.reload();
   await page.getByRole('button', { name: '并行方式', exact: true }).click();
   await expect(pcp).toHaveValue('2');
+  await expect(dp).toHaveValue('2');
   await pcp.fill('1');
+  await dp.fill('1');
   await logical.getByRole('button', { name: '校验布局' }).click();
   await expect(logical).toContainText('1 个实际设备 · 0 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
-  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
+  await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 5');
 });
 
 test('applies Qwen3 DCP within independent request groups and displays their cache capacity', async ({ page }) => {
@@ -127,14 +143,14 @@ test('applies Qwen3 DCP within independent request groups and displays their cac
   await expect(logical).toContainText('2 个实际设备 · 84 个通信', { timeout: 45_000 });
   await logical.getByRole('button', { name: '应用并行度' }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 2');
-  await page.getByRole('button', { name: '更新模型到 r6', exact: true }).click();
+  await page.getByRole('button', { name: '更新模型到 r7', exact: true }).click();
   await expect(page.locator('.studio-save')).toContainText('已保存 · 修订 3');
   await expect(dcp).toHaveValue('2');
   const upgrade = await page.request.get('/api/v1/project?id=' + project.projectId);
   expect(upgrade.ok()).toBe(true);
   const upgraded = ProjectDocument.parse((await upgrade.json()).data).scenarios[0]!;
-  expect(upgraded).toMatchObject({ model: { revision: 6 }, parallelPlan: {
-    generatedFrom: { modelRevision: 6 }, decodeContext: { replacement: { revision: 2 } },
+  expect(upgraded).toMatchObject({ model: { revision: 7 }, parallelPlan: {
+    generatedFrom: { modelRevision: 7 }, decodeContext: { replacement: { revision: 2 } },
   } });
   expect(upgraded.deviceTopology.devices).toHaveLength(2);
   expect(upgraded.parallelPlan.communications).toHaveLength(84);

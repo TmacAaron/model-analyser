@@ -79,3 +79,11 @@ export function addQwenContextPreset(decoder: AssetDocument, models: AssetDocume
   });
   return [...roots, module, ...equations.assets];
 }
+
+export function addQwenPrefillRequestParallel(models: AssetDocument[]) {
+  const batchNote = 'Independent request groups gather current K/V along their query axis. The authored batch operands are scoped to the local request slice.';
+  return models.map(model => AssetDocument.parse({ ...model, revision: model.revision + 1,
+    parallelPresets: model.parallelPresets?.map(preset => preset.strategy === 'query_sharded'
+      ? { ...preset, requestBatchSharding: true, assumptions: [...preset.assumptions, batchNote] } : preset),
+  }));
+}

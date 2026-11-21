@@ -109,16 +109,27 @@ export function ProjectWorkbench({active:visible,surface='legacy',onOpenLibrary,
     const assets=mergeSnapshots(project.assetSnapshots,snapshots);
     const next={...active,model};
     const {decodeContext,generatedFrom:origin}=active.parallelPlan;
-    if(decodeContext){
+    const previous=project.assetSnapshots.find(asset=>asset.assetId===active.model.assetId&&asset.revision===active.model.revision)
+      ?.parallelPresets?.find(preset=>preset.presetId===origin?.presetId);
+    if(decodeContext||previous?.queryParallel){
       const target=snapshots.find(asset=>asset.assetId===model.assetId&&asset.revision===model.revision);
       const preset=target?.parallelPresets?.find(row=>row.presetId===origin?.presetId);
-      if(!origin||!preset?.decodeContext||canonical(preset.decodeContext.module)!==canonical(decodeContext.module)||
-         preset.decodeContext.replacement.assetId!==decodeContext.replacement.assetId||origin.requestDp&&!preset.requestBatchSharding){
-        throw Error('新模型修订没有兼容的 Decode KV 布局');
+      if(!origin||!preset||origin.modelId!==active.model.assetId||
+         origin.requestDp&&!preset.requestBatchSharding){
+        throw Error('新模型修订没有兼容的上下文并行布局');
       }
-      next.parallelPlan={...active.parallelPlan,decodeContext:preset.decodeContext,generatedFrom:{...origin,modelRevision:model.revision}};
-      await modelUpgradeValidation.run({kind:'model',scenario:next,assets,validateLayout:true});
-      if(!live())return;
+      next.parallelPlan={...active.parallelPlan,generatedFrom:{...origin,modelRevision:model.revision}};
+      if(decodeContext){
+        if(origin.modelRevision!==active.model.revision||!preset.decodeContext||canonical(preset.decodeContext.module)!==canonical(decodeContext.module)||
+           preset.decodeContext.replacement.assetId!==decodeContext.replacement.assetId)throw Error('新模型修订没有兼容的 Decode KV 布局');
+        next.parallelPlan.decodeContext=preset.decodeContext;
+      }else if(!preset.queryParallel||canonical(preset.queryParallel)!==canonical(previous?.queryParallel)){
+        throw Error('新模型修订没有兼容的 Prefill 查询分片布局');
+      }
+      if(preset.phases.includes(next.workload.kind)){
+        await modelUpgradeValidation.run({kind:'model',scenario:next,assets,validateLayout:true});
+        if(!live())return;
+      }
     }
     update({...project,assetSnapshots:assets,scenarios:project.scenarios.map(s=>s.scenarioId===active.scenarioId?next:s)});
   }catch(e){if(live())setError(String(e));}}

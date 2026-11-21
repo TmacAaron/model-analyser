@@ -1,4 +1,4 @@
-import { ParallelPresetRequest,ParallelPresetAttempt,Scenario,NodeId,AssetDocument,type TensorDistribution,type ParallelPresetPreview,type MetricValue,type ParallelPresetTemplate,type ResolvedGraph,type ValueExpr } from '@model-analyser/contracts';
+import { ParallelPresetRequest,ParallelPresetAttempt,Scenario,NodeId,type AssetDocument,type TensorDistribution,type ParallelPresetPreview,type MetricValue,type ParallelPresetTemplate,type ResolvedGraph } from '@model-analyser/contracts';
 import { instantiateModel } from './instantiate.js';
 import { calculationInput,computeInputHash } from './input-hash.js';
 import { resolveParallelPlan } from './parallel-plan.js';
@@ -8,20 +8,14 @@ import { materializeQueryParallelPreset, queryGatherTileFormula } from './query-
 import { FormulaError } from './formula.js';
 import { expertMeshPresets } from './expert-mesh-preset.js';
 import { canonical } from '../../contracts/src/validation.js';
-import replicaPayload from '../../../assets/builtin/formula/parallel-replica-payload.json' with {type:'json'};
+import { payloadPerReplica, replicaPayloadFormula, requestReplicaMeshAxis as requestAxis, soleBatchAxis } from './request-replica.js';
 
 type ExpertMesh = NonNullable<Scenario['parallelPlan']['generatedFrom']>['expertMesh'];
-const replicaPayloadFormula=AssetDocument.parse(replicaPayload);
-export const requestReplicaMeshAxis='$request';
-const requestAxis=requestReplicaMeshAxis;
+export { requestReplicaMeshAxis } from './request-replica.js';
 
 export function supportsRequestReplicas(preset:ParallelPresetTemplate){
-  return preset.strategy==='tensor_sharded'||preset.strategy==='decode_context_sharded'&&preset.requestBatchSharding===true;
-}
-
-function payloadPerReplica(payload:ValueExpr,replicas:number):ValueExpr{
-  return {kind:'formula',call:{formula:{assetId:replicaPayloadFormula.assetId,revision:replicaPayloadFormula.revision,kind:'formula'},
-    bindings:{bytes:payload,replicas:{kind:'literal',quantity:{value:replicas,unit:'count'}}}}};
+  return preset.strategy==='tensor_sharded'||
+    (preset.strategy==='decode_context_sharded'||preset.strategy==='query_sharded')&&preset.requestBatchSharding===true;
 }
 
 /** Map authored local ports through the same occurrence bindings used by the expanded graph. */
@@ -114,7 +108,7 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     const expanded=instantiateModel(expansionScenario,assets);if(expanded.status==='unavailable')throw Error(expanded.diagnostics.map(d=>d.code+' '+d.message).join('；'));const graph=expanded.resolved.graph;
     if(preset.strategy==='query_sharded'){
       if(request.expertMesh)throw Error('PCP 预设只使用查询分片');
-      const plan=materializeQueryParallelPreset(request,preset,expanded.resolved,degree);
+      const plan=materializeQueryParallelPreset(request,preset,expanded.resolved,replicaWidth);
       return await finishPreset(request,model,preset,topology,plan);
     }
     if(preset.strategy!=='tensor_sharded'&&!decodeContext&&(preset.tensorShards.length||preset.reductions.length||preset.moduleRules))throw Error('复制/DP 预设不能夹带隐式 TP 分片或归约');
@@ -157,14 +151,9 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
     }
     const replicated:TensorDistribution={kind:'replicated',groupId:group.groupId};
     const strategy=preset.strategy;
-    function batchAxis(shape:typeof graph.tensors[number]['shape']){
-      const axes=shape.filter(a=>a.semantic==='batch');
-      if(axes.length>1)throw Error('DP 快捷预设不猜测多 batch 轴含义');
-      return axes[0];
-    }
     function distribution(id:string,shape:typeof graph.tensors[number]['shape']):TensorDistribution {
       const layout=shardIds.get(id);
-      const batch=request.requestDp||strategy==='batch_sharded'?batchAxis(shape):undefined;
+      const batch=request.requestDp||strategy==='batch_sharded'?soleBatchAxis(shape):undefined;
       if(!batch)return layout??replicated;
       if(layout?.axes.some(axis=>axis.tensorAxisId===batch.axisId))throw Error('请求分片与现有张量分片使用同一轴：'+id);
       if(request.requestDp&&(batch.size.kind!=='literal'||batch.size.quantity.value%requestDp!==0))throw Error('请求轴无法均分：'+id);
@@ -200,10 +189,13 @@ export async function previewParallelPreset(input:ParallelPresetRequest):Promise
 
 async function finishPreset(request:ParallelPresetRequest,model:AssetDocument,preset:ParallelPresetTemplate,topology:Scenario['deviceTopology'],plan:Scenario['parallelPlan'],expertMesh?:ExpertMesh):Promise<ParallelPresetAttempt>{
     const {scenario,assets}=request;plan.generatedFrom={version:'parallel-preset.1',presetId:preset.presetId,modelId:model.assetId,modelRevision:model.revision,groupId:request.groupId,meshAxisId:request.meshAxisId,...(expertMesh?{expertMesh}:{}),...(request.requestDp?{requestDp:request.requestDp}:{})};
-    const formula=request.requestDp?replicaPayloadFormula:preset.strategy==='query_sharded'?queryGatherTileFormula:undefined;
-    const existing=formula&&assets.find(asset=>asset.assetId===formula.assetId&&asset.revision===formula.revision);
-    if(formula&&existing&&canonical(existing)!==canonical(formula))throw Error('通信公式与固定内置修订冲突');
-    const layoutAssets=formula&&!existing?[...assets,formula]:assets;
+    const formulas=[...(request.requestDp?[replicaPayloadFormula]:[]),...(preset.strategy==='query_sharded'?[queryGatherTileFormula]:[])];
+    const missing=formulas.filter(formula=>{
+      const existing=assets.find(asset=>asset.assetId===formula.assetId&&asset.revision===formula.revision);
+      if(existing&&canonical(existing)!==canonical(formula))throw Error('通信公式与固定内置修订冲突');
+      return !existing;
+    });
+    const layoutAssets=[...assets,...missing];
     const next=Scenario.parse({...scenario,deviceTopology:topology,parallelPlan:plan});
     const firstDecode=next.workload.kind==='decode'&&next.workload.steps>1?{...next,workload:{...next.workload,steps:1}}:undefined;
     const resolved=await resolveParallelPlan(firstDecode??next,layoutAssets);if(resolved.status==='unavailable')throw Error(resolved.diagnostics.map(d=>d.code+' '+d.message).join('；'));const result=resolved.result;

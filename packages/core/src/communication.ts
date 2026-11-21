@@ -53,7 +53,15 @@ export function evaluateCommunication(input:CommunicationDefinition,inputScope:M
       }
     }else if(c.operation==='all_reduce'&&(sk!=='partial'||dk!=='replicated'))throw new FormulaError('invalid_distribution','all_reduce 需要 partial → replicated 布局');
     if(c.operation==='reduce_scatter'&&(sk!=='partial'||dk!=='sharded'))throw new FormulaError('invalid_distribution','reduce_scatter 需要 partial → sharded 布局');
-    if(c.operation==='all_gather'&&(sk!=='sharded'||dk!=='replicated'))throw new FormulaError('invalid_distribution','all_gather 需要 sharded → replicated 布局');
+    if(c.operation==='all_gather'){
+      const sourceLayout=c.source.distribution,targetLayout=c.destination.distribution;
+      const grouped=sourceLayout.kind==='sharded'&&targetLayout.kind==='sharded'&&sourceLayout.policy.kind==='even'&&targetLayout.policy.kind==='even'&&
+        sourceLayout.groupId===group.groupId&&targetLayout.groupId===group.groupId&&sourceLayout.axes.length===targetLayout.axes.length+1&&
+        targetLayout.axes.every(axis=>sourceLayout.axes.some(shard=>shard.tensorAxisId===axis.tensorAxisId&&shard.meshAxisId===axis.meshAxisId))&&
+        canonical(from.result.dtype)===canonical(to.result.dtype)&&canonical(from.result.dtype)===canonical(c.payloadDtype);
+      if(sk!=='sharded'||dk!=='replicated'&&!grouped)throw new FormulaError('invalid_distribution',
+        'AllGather 须复制分片张量，或在同一网格内只收集一个均匀分片轴并保留其他轴');
+    }
     if(c.operation==='all_to_all'&&(!['sharded','manual'].includes(sk)||!['sharded','manual'].includes(dk)))throw new FormulaError('invalid_distribution','all_to_all 需要显式分片或手工局部布局');
     const provenance=context.provenance??{assetRefs:context.assets.map(a=>({assetId:a.assetId,revision:a.revision,kind:a.definition.kind})),formulaRefs:collectRefs(c),parameterSources:Object.keys(context.symbols).map(parameterKey=>({parameterKey,source:'evaluation_context'})),assumptions:[
       'Send and receive payload are explicitly declared per member; algorithmTraffic = send payload × trafficFactor, applied exactly once.',
